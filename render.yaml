@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: variathu-power-tools-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: DELHIVERY_API_TOKEN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
