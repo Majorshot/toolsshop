@@ -5,15 +5,12 @@ import {
   X,
   SlidersHorizontal,
   RotateCcw,
-  BatteryCharging,
   Disc,
   Hammer,
   Wrench,
   Wind,
   Sparkles,
   Layers,
-  ChevronDown,
-  ChevronUp,
   Check,
   Zap,
   ShieldCheck,
@@ -55,22 +52,18 @@ export const ShopPage = ({
   onSelectProduct
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showMobileFilter, setShowMobileFilter] = useState(false);
+
+  // Modal Visibility and Active Tab state
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState('category'); // 'category' | 'brand' | 'price' | 'power' | 'availability'
+
+  // Dynamic taxonomy from backend
   const [dynamicCategories, setDynamicCategories] = useState(DEFAULT_CATEGORIES);
   const [dynamicBrands, setDynamicBrands] = useState([]);
 
-  // Filter Search Inputs (Amazon / Flipkart inline filter search)
+  // Search queries inside filter modal (Amazon / Flipkart inline filter search)
   const [brandSearch, setBrandSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
-
-  // Accordion Toggle States
-  const [expanded, setExpanded] = useState({
-    categories: true,
-    brands: true,
-    price: true,
-    power: true,
-    availability: true
-  });
 
   // Price & Feature Filters
   const [priceFilter, setPriceFilter] = useState('all');
@@ -80,6 +73,23 @@ export const ShopPage = ({
   const [appliedMaxPrice, setAppliedMaxPrice] = useState('');
   const [powerFilter, setPowerFilter] = useState('all');
   const [inStockOnly, setInStockOnly] = useState(false);
+
+  // Lock body scroll and listen for ESC key when filter modal is open
+  useEffect(() => {
+    if (showFilterModal) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') setShowFilterModal(false);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [showFilterModal]);
 
   // Fetch taxonomy from backend
   useEffect(() => {
@@ -111,18 +121,11 @@ export const ShopPage = ({
     if (catParam) setActiveCategory(catParam);
   }, [searchParams]);
 
-  // Toggle Accordion Section
-  const toggleAccordion = (section) => {
-    setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
-  };
-
   // Dynamic Item Counts (Amazon / Flipkart style counts)
   const categoryCounts = useMemo(() => {
     const counts = {};
     products.forEach(p => {
-      if (p.category) {
-        counts[p.category] = (counts[p.category] || 0) + 1;
-      }
+      if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
     });
     return counts;
   }, [products]);
@@ -139,64 +142,102 @@ export const ShopPage = ({
   }, [products]);
 
   const cordlessCount = useMemo(() => {
-    return products.filter(p => p.cordless).length;
+    return products.filter(p => {
+      const txt = `${p.name} ${p.category} ${p.specs || ''}`.toLowerCase();
+      return txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
+    }).length;
   }, [products]);
 
   const cordedCount = useMemo(() => {
-    return products.filter(p => !p.cordless).length;
-  }, [products]);
+    return Math.max(0, products.length - cordlessCount);
+  }, [products.length, cordlessCount]);
 
   const inStockCount = useMemo(() => {
-    return products.filter(p => (typeof p.stock !== 'number' || p.stock > 0)).length;
+    return products.filter(p => p.stock !== 0 && p.inStock !== false).length;
   }, [products]);
 
-  // Filtered Options for inline searches
-  const filteredCategoriesList = useMemo(() => {
-    if (!categorySearch.trim()) return dynamicCategories;
-    const q = categorySearch.toLowerCase();
-    return dynamicCategories.filter(c => c.label.toLowerCase().includes(q) || c.id === 'all');
-  }, [dynamicCategories, categorySearch]);
-
+  // Filtered lists for inline searches
   const filteredBrandsList = useMemo(() => {
     if (!brandSearch.trim()) return dynamicBrands;
-    const q = brandSearch.toLowerCase();
-    return dynamicBrands.filter(b => b.toLowerCase().includes(q));
+    return dynamicBrands.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()));
   }, [dynamicBrands, brandSearch]);
 
-  // Apply Local Filters (Price, Power, InStock)
+  const filteredCategoriesList = useMemo(() => {
+    if (!categorySearch.trim()) return dynamicCategories;
+    return dynamicCategories.filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()));
+  }, [dynamicCategories, categorySearch]);
+
+  // Master product filtering logic
   const displayedProducts = useMemo(() => {
-    let list = Array.isArray(products) ? [...products] : [];
+    return products
+      .filter(product => {
+        // Category Filter
+        if (activeCategory && activeCategory !== 'all') {
+          if (product.category !== activeCategory) return false;
+        }
 
-    // Price Filter
-    if (priceFilter === 'under-3000') {
-      list = list.filter(p => p.price < 3000);
-    } else if (priceFilter === '3000-6000') {
-      list = list.filter(p => p.price >= 3000 && p.price <= 6000);
-    } else if (priceFilter === '6000-12000') {
-      list = list.filter(p => p.price >= 6000 && p.price <= 12000);
-    } else if (priceFilter === 'over-12000') {
-      list = list.filter(p => p.price > 12000);
-    } else if (priceFilter === 'custom') {
-      const min = appliedMinPrice ? Number(appliedMinPrice) : null;
-      const max = appliedMaxPrice ? Number(appliedMaxPrice) : null;
-      if (min !== null && !isNaN(min)) list = list.filter(p => p.price >= min);
-      if (max !== null && !isNaN(max)) list = list.filter(p => p.price <= max);
-    }
+        // Brand Filter
+        if (activeBrand && activeBrand !== 'all') {
+          if ((product.brand || '').toLowerCase() !== activeBrand.toLowerCase()) return false;
+        }
 
-    // Power Source Filter
-    if (powerFilter === 'cordless') {
-      list = list.filter(p => p.cordless === true);
-    } else if (powerFilter === 'corded') {
-      list = list.filter(p => !p.cordless);
-    }
+        // Price Filter
+        if (priceFilter === 'under-3000' && product.price >= 3000) return false;
+        if (priceFilter === '3000-6000' && (product.price < 3000 || product.price > 6000)) return false;
+        if (priceFilter === '6000-12000' && (product.price < 6000 || product.price > 12000)) return false;
+        if (priceFilter === 'over-12000' && product.price <= 12000) return false;
+        if (priceFilter === 'custom') {
+          const min = appliedMinPrice ? Number(appliedMinPrice) : 0;
+          const max = appliedMaxPrice ? Number(appliedMaxPrice) : Infinity;
+          if (product.price < min || product.price > max) return false;
+        }
 
-    // In Stock Only Filter
-    if (inStockOnly) {
-      list = list.filter(p => (typeof p.stock !== 'number' || p.stock > 0));
-    }
+        // Power Source Filter
+        if (powerFilter === 'cordless') {
+          const txt = `${product.name} ${product.category} ${product.specs || ''}`.toLowerCase();
+          const isCordless = txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
+          if (!isCordless) return false;
+        }
+        if (powerFilter === 'corded') {
+          const txt = `${product.name} ${product.category} ${product.specs || ''}`.toLowerCase();
+          const isCordless = txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
+          if (isCordless) return false;
+        }
 
-    return list;
-  }, [products, priceFilter, appliedMinPrice, appliedMaxPrice, powerFilter, inStockOnly]);
+        // Availability Filter
+        if (inStockOnly) {
+          if (product.stock === 0 || product.inStock === false) return false;
+        }
+
+        // Search Query Filter
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchName = product.name?.toLowerCase().includes(q);
+          const matchBrand = product.brand?.toLowerCase().includes(q);
+          const matchCat = product.category?.toLowerCase().includes(q);
+          const matchDesc = product.description?.toLowerCase().includes(q);
+          if (!matchName && !matchBrand && !matchCat && !matchDesc) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price-low') return a.price - b.price;
+        if (sortBy === 'price-high') return b.price - a.price;
+        return 0; // featured/default
+      });
+  }, [
+    products,
+    activeCategory,
+    activeBrand,
+    priceFilter,
+    appliedMinPrice,
+    appliedMaxPrice,
+    powerFilter,
+    inStockOnly,
+    searchQuery,
+    sortBy
+  ]);
 
   const handleApplyCustomPrice = (e) => {
     e.preventDefault();
@@ -241,349 +282,10 @@ export const ShopPage = ({
     (inStockOnly ? 1 : 0) +
     (searchQuery ? 1 : 0);
 
-  // Render Filter Content (reusable for Desktop Sidebar and Mobile Drawer)
-  const renderFilterAccordions = () => (
-    <>
-      {/* 1. CATEGORIES ACCORDION */}
-      <div className="filter-accordion-block">
-        <button
-          type="button"
-          className="filter-accordion-header"
-          onClick={() => toggleAccordion('categories')}
-          aria-expanded={expanded.categories}
-        >
-          <span>Category</span>
-          {expanded.categories ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {expanded.categories && (
-          <div>
-            {dynamicCategories.length > 7 && (
-              <div className="filter-search-box">
-                <Search size={13} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                <input
-                  type="text"
-                  placeholder="Filter categories..."
-                  value={categorySearch}
-                  onChange={(e) => setCategorySearch(e.target.value)}
-                />
-                {categorySearch && (
-                  <button
-                    onClick={() => setCategorySearch('')}
-                    style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            )}
-
-            <div className="filter-scroll-list">
-              {filteredCategoriesList.map(cat => {
-                const isActive = activeCategory === cat.id;
-                const count = cat.id === 'all' ? products.length : (categoryCounts[cat.id] || 0);
-
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    className={`filter-checkbox-item ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveCategory(cat.id);
-                      setSearchParams(prev => {
-                        if (cat.id === 'all') prev.delete('category');
-                        else prev.set('category', cat.id);
-                        return prev;
-                      });
-                    }}
-                    id={`filter-cat-${cat.id}`}
-                  >
-                    <div className="filter-custom-checkbox">
-                      {isActive && <Check size={11} strokeWidth={3} />}
-                    </div>
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {cat.label}
-                    </span>
-                    <span className="filter-count-badge">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 2. BRANDS ACCORDION */}
-      <div className="filter-accordion-block">
-        <button
-          type="button"
-          className="filter-accordion-header"
-          onClick={() => toggleAccordion('brands')}
-          aria-expanded={expanded.brands}
-        >
-          <span>Brand</span>
-          {expanded.brands ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {expanded.brands && (
-          <div>
-            {/* Quick Search inside Brand List */}
-            <div className="filter-search-box">
-              <Search size={13} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input
-                type="text"
-                placeholder="Search Brand (e.g. Bosch, Makita)..."
-                value={brandSearch}
-                onChange={(e) => setBrandSearch(e.target.value)}
-                id="input-brand-filter-search"
-              />
-              {brandSearch && (
-                <button
-                  onClick={() => setBrandSearch('')}
-                  style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-
-            <div className="filter-scroll-list">
-              {/* All Brands Option */}
-              <button
-                type="button"
-                className={`filter-checkbox-item ${activeBrand === 'all' ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveBrand('all');
-                  setSearchParams(prev => {
-                    prev.delete('brand');
-                    return prev;
-                  });
-                }}
-                id="filter-brand-all"
-              >
-                <div className="filter-custom-checkbox">
-                  {activeBrand === 'all' && <Check size={11} strokeWidth={3} />}
-                </div>
-                <span>All Brands</span>
-                <span className="filter-count-badge">({products.length})</span>
-              </button>
-
-              {/* Dynamic Brands from MongoDB */}
-              {filteredBrandsList.map(brand => {
-                const brandVal = brand.toLowerCase();
-                const isActive = activeBrand === brandVal;
-                const count = brandCounts[brandVal] || 0;
-
-                return (
-                  <button
-                    key={brand}
-                    type="button"
-                    className={`filter-checkbox-item ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      const next = isActive ? 'all' : brandVal;
-                      setActiveBrand(next);
-                      setSearchParams(prev => {
-                        if (next === 'all') prev.delete('brand');
-                        else prev.set('brand', next);
-                        return prev;
-                      });
-                    }}
-                    id={`filter-brand-${brandVal}`}
-                  >
-                    <div className="filter-custom-checkbox">
-                      {isActive && <Check size={11} strokeWidth={3} />}
-                    </div>
-                    <span>{brand}</span>
-                    <span className="filter-count-badge">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. PRICE ACCORDION (Amazon & Flipkart style presets + Go button) */}
-      <div className="filter-accordion-block">
-        <button
-          type="button"
-          className="filter-accordion-header"
-          onClick={() => toggleAccordion('price')}
-          aria-expanded={expanded.price}
-        >
-          <span>Price (₹)</span>
-          {expanded.price ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {expanded.price && (
-          <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '6px' }}>
-              {PRICE_PRESETS.map(preset => {
-                const isActive = priceFilter === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className={`filter-checkbox-item ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      setPriceFilter(preset.id);
-                      setAppliedMinPrice('');
-                      setAppliedMaxPrice('');
-                    }}
-                    id={`filter-price-${preset.id}`}
-                  >
-                    <div className="filter-custom-checkbox">
-                      {isActive && <Check size={11} strokeWidth={3} />}
-                    </div>
-                    <span>{preset.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Custom Min - Max with Go Button */}
-            <form onSubmit={handleApplyCustomPrice} className="filter-price-input-row">
-              <input
-                type="number"
-                placeholder="₹ Min"
-                value={minPriceInput}
-                onChange={(e) => setMinPriceInput(e.target.value)}
-                className="filter-price-field"
-                aria-label="Minimum price"
-                id="input-min-price"
-              />
-              <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>to</span>
-              <input
-                type="number"
-                placeholder="₹ Max"
-                value={maxPriceInput}
-                onChange={(e) => setMaxPriceInput(e.target.value)}
-                className="filter-price-field"
-                aria-label="Maximum price"
-                id="input-max-price"
-              />
-              <button type="submit" className="filter-price-go-btn" id="btn-apply-price-go">
-                Go
-              </button>
-            </form>
-          </div>
-        )}
-      </div>
-
-      {/* 4. POWER SOURCE / CORDLESS ACCORDION */}
-      <div className="filter-accordion-block">
-        <button
-          type="button"
-          className="filter-accordion-header"
-          onClick={() => toggleAccordion('power')}
-          aria-expanded={expanded.power}
-        >
-          <span>Power Source</span>
-          {expanded.power ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {expanded.power && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '6px' }}>
-            <button
-              type="button"
-              className={`filter-checkbox-item ${powerFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setPowerFilter('all')}
-            >
-              <div className="filter-custom-checkbox">
-                {powerFilter === 'all' && <Check size={11} strokeWidth={3} />}
-              </div>
-              <span>All Power Types</span>
-              <span className="filter-count-badge">({products.length})</span>
-            </button>
-
-            <button
-              type="button"
-              className={`filter-checkbox-item ${powerFilter === 'cordless' ? 'active' : ''}`}
-              onClick={() => setPowerFilter(powerFilter === 'cordless' ? 'all' : 'cordless')}
-              id="filter-power-cordless"
-            >
-              <div className="filter-custom-checkbox">
-                {powerFilter === 'cordless' && <Check size={11} strokeWidth={3} />}
-              </div>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Zap size={13} style={{ color: '#0284c7' }} />
-                <span>Cordless (Battery)</span>
-              </span>
-              <span className="filter-count-badge">({cordlessCount})</span>
-            </button>
-
-            <button
-              type="button"
-              className={`filter-checkbox-item ${powerFilter === 'corded' ? 'active' : ''}`}
-              onClick={() => setPowerFilter(powerFilter === 'corded' ? 'all' : 'corded')}
-              id="filter-power-corded"
-            >
-              <div className="filter-custom-checkbox">
-                {powerFilter === 'corded' && <Check size={11} strokeWidth={3} />}
-              </div>
-              <span>Corded / Electric</span>
-              <span className="filter-count-badge">({cordedCount})</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* 5. AVAILABILITY ACCORDION */}
-      <div className="filter-accordion-block">
-        <button
-          type="button"
-          className="filter-accordion-header"
-          onClick={() => toggleAccordion('availability')}
-          aria-expanded={expanded.availability}
-        >
-          <span>Availability</span>
-          {expanded.availability ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-
-        {expanded.availability && (
-          <div style={{ marginTop: '6px' }}>
-            <button
-              type="button"
-              className={`filter-checkbox-item ${inStockOnly ? 'active' : ''}`}
-              onClick={() => setInStockOnly(!inStockOnly)}
-              id="filter-in-stock-only"
-            >
-              <div className="filter-custom-checkbox">
-                {inStockOnly && <Check size={11} strokeWidth={3} />}
-              </div>
-              <span>In Stock Only</span>
-              <span className="filter-count-badge">({inStockCount})</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Kozhencherry Store Info Badge */}
-      <div
-        style={{
-          marginTop: '20px',
-          padding: '12px 14px',
-          background: '#f8fafc',
-          border: '1px solid #e2e8f0',
-          borderRadius: '10px',
-          fontSize: '0.78rem',
-          color: '#64748b',
-          lineHeight: 1.45
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: '700', marginBottom: '3px' }}>
-          <ShieldCheck size={14} style={{ color: 'var(--brand-primary)' }} />
-          <span>Variathu Guaranteed</span>
-        </div>
-        Authorized sales, official warranty & genuine spare parts at Poyanil Building, Kozhencherry.
-      </div>
-    </>
-  );
-
   return (
     <div style={{ padding: '16px 0 48px' }}>
       {/* Top Shop Banner / Header */}
-      <div style={{ marginBottom: '22px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '4px' }}>
           Equipment Catalog
         </h1>
@@ -592,7 +294,7 @@ export const ShopPage = ({
         </p>
       </div>
 
-      {/* Top Controls Bar */}
+      {/* Top Controls Bar with Filter Button (Saves screen space & opens filter modal) */}
       <div className="shop-top-controls">
         {/* Search Input */}
         <div className="search-input-clean">
@@ -614,8 +316,25 @@ export const ShopPage = ({
           )}
         </div>
 
-        {/* Results Counter & Sort */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+        {/* Action Controls: Filter Button, Tool Counter, Sort Dropdown */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Prominent Filter Button that opens modal */}
+          <button
+            type="button"
+            className={`shop-filter-trigger-btn ${hasActiveFilters ? 'active' : ''}`}
+            onClick={() => setShowFilterModal(true)}
+            id="btn-open-filter-modal"
+            title="Open Filter Dialog"
+          >
+            <SlidersHorizontal size={16} />
+            <span>Filters</span>
+            {activeFiltersCount > 0 && (
+              <span className="shop-filter-badge" id="filter-badge-counter">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
+
           <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
             Showing <strong style={{ color: '#0f172a' }}>{displayedProducts.length}</strong> Tools
           </span>
@@ -630,26 +349,10 @@ export const ShopPage = ({
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
           </select>
-
-          {/* Mobile Filter Toggle Button */}
-          <button
-            onClick={() => setShowMobileFilter(true)}
-            className="btn-icon"
-            style={{ display: 'inline-flex', position: 'relative' }}
-            title="Open Filters"
-            id="btn-open-mobile-filter"
-          >
-            <SlidersHorizontal size={18} />
-            {activeFiltersCount > 0 && (
-              <span className="badge-counter animate-fade-in" style={{ top: -5, right: -5 }}>
-                {activeFiltersCount}
-              </span>
-            )}
-          </button>
         </div>
       </div>
 
-      {/* ACTIVE FILTERS CHIPS BAR (Amazon & Flipkart style tags above product grid) */}
+      {/* ACTIVE FILTERS CHIPS BAR (Flipkart / Amazon style chips under top controls) */}
       {hasActiveFilters && (
         <div className="active-filters-chips-bar" id="active-filters-bar">
           <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -754,153 +457,548 @@ export const ShopPage = ({
         </div>
       )}
 
-      {/* Shop Layout: Desktop Sidebar + Product Grid */}
-      <div className="shop-layout">
-        {/* Left Sidebar Filter (Desktop) */}
-        <aside className="filter-sidebar-clean">
-          <div className="filter-sidebar-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <Filter size={15} style={{ color: 'var(--brand-primary)' }} />
-              <span style={{ fontSize: '0.9rem', fontWeight: '800', color: '#0f172a' }}>Filters</span>
-            </div>
-
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--brand-primary)',
-                  fontSize: '0.78rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-                id="btn-reset-filters-sidebar"
-              >
-                <RotateCcw size={12} /> Clear All
-              </button>
-            )}
-          </div>
-
-          {renderFilterAccordions()}
-        </aside>
-
-        {/* Product Grid Area */}
-        <main>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  border: '3px solid #e2e8f0',
-                  borderTopColor: 'var(--brand-primary)',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                  margin: '0 auto 14px'
-                }}
-              />
-              <p style={{ fontWeight: '600' }}>Loading equipment catalog...</p>
-            </div>
-          ) : error ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#dc2626' }}>
-              <p>{error}</p>
-            </div>
-          ) : displayedProducts.length === 0 ? (
+      {/* FULL-WIDTH PRODUCT CATALOG (No permanent sidebar eating horizontal space) */}
+      <main className="shop-catalog-container">
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '70px 0', color: '#64748b' }}>
             <div
               style={{
-                textAlign: 'center',
-                padding: '60px 20px',
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '16px'
+                width: '38px',
+                height: '38px',
+                border: '3px solid #e2e8f0',
+                borderTopColor: 'var(--brand-primary)',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+                margin: '0 auto 14px'
               }}
+            />
+            <p style={{ fontWeight: '600' }}>Loading equipment catalog...</p>
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '50px 0', color: '#dc2626' }}>
+            <p>{error}</p>
+          </div>
+        ) : displayedProducts.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px'
+            }}
+          >
+            <h4 style={{ color: '#0f172a', fontSize: '1.15rem', marginBottom: '6px' }}>
+              No tools match your active filters
+            </h4>
+            <p style={{ color: '#64748b', fontSize: '0.88rem', marginBottom: '16px' }}>
+              Try adjusting your brand, category, or price range criteria.
+            </p>
+            <button
+              className="btn-hero-clean"
+              onClick={handleResetFilters}
+              style={{ fontSize: '0.86rem', padding: '10px 20px' }}
             >
-              <h4 style={{ color: '#0f172a', fontSize: '1.15rem', marginBottom: '6px' }}>
-                No tools match your active filters
-              </h4>
-              <p style={{ color: '#64748b', fontSize: '0.88rem', marginBottom: '16px' }}>
-                Try adjusting your brand, category, or price range criteria.
-              </p>
-              <button
-                className="btn-hero-clean"
-                onClick={handleResetFilters}
-                style={{ fontSize: '0.86rem', padding: '10px 20px' }}
-              >
-                Reset All Filters
-              </button>
-            </div>
-          ) : (
-            <div className="product-grid">
-              {displayedProducts.map(product => (
-                <ProductCard
-                  key={product.id || product._id}
-                  product={product}
-                  onSelectProduct={onSelectProduct}
-                />
-              ))}
-            </div>
-          )}
-        </main>
-      </div>
+              Reset All Filters
+            </button>
+          </div>
+        ) : (
+          <div className="product-grid">
+            {displayedProducts.map(product => (
+              <ProductCard
+                key={product.id || product._id}
+                product={product}
+                onSelectProduct={onSelectProduct}
+              />
+            ))}
+          </div>
+        )}
+      </main>
 
-      {/* MOBILE FILTER DRAWER (Amazon / Flipkart Style Slide-Over Panel) */}
-      {showMobileFilter && (
-        <div className="mobile-filter-overlay" onClick={() => setShowMobileFilter(false)}>
-          <div className="mobile-filter-drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="mobile-filter-drawer-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Filter size={18} style={{ color: 'var(--brand-primary)' }} />
-                <strong style={{ fontSize: '1rem', color: '#0f172a' }}>
-                  Filters {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}
-                </strong>
+      {/* AMAZON & FLIPKART STYLE FILTER MODAL DIALOG */}
+      {showFilterModal && (
+        <div className="filter-modal-overlay" onClick={() => setShowFilterModal(false)}>
+          <div
+            className="filter-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Modal Header */}
+            <div className="filter-modal-header">
+              <div className="filter-modal-title-wrap">
+                <div className="filter-modal-icon-badge">
+                  <SlidersHorizontal size={18} />
+                </div>
+                <div>
+                  <h3 className="filter-modal-title">Filters</h3>
+                  <span className="filter-modal-subtitle">
+                    {activeFiltersCount > 0
+                      ? `${activeFiltersCount} filter${activeFiltersCount > 1 ? 's' : ''} currently active`
+                      : 'Refine machinery by brand, category, price & power type'}
+                  </span>
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {hasActiveFilters && (
                   <button
                     type="button"
+                    className="filter-modal-clear-btn"
                     onClick={handleResetFilters}
-                    style={{ background: 'none', border: 'none', color: 'var(--brand-primary)', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer' }}
+                    id="btn-modal-clear-all"
                   >
-                    Clear All
+                    <RotateCcw size={13} />
+                    <span>Clear All</span>
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={() => setShowMobileFilter(false)}
-                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
+                  className="filter-modal-close-btn"
+                  onClick={() => setShowFilterModal(false)}
+                  aria-label="Close filters modal"
+                  id="btn-close-filter-modal"
                 >
                   <X size={20} />
                 </button>
               </div>
             </div>
 
-            <div className="mobile-filter-drawer-body">
-              {renderFilterAccordions()}
+            {/* Modal Body: Left Tabs + Right Options Panel */}
+            <div className="filter-modal-body">
+              {/* Left Vertical Tabs (Flipkart / Amazon Style) */}
+              <div className="filter-modal-tabs" role="tablist">
+                {/* Category Tab */}
+                <button
+                  type="button"
+                  className={`filter-tab-btn ${activeModalTab === 'category' ? 'active' : ''}`}
+                  onClick={() => setActiveModalTab('category')}
+                  role="tab"
+                  aria-selected={activeModalTab === 'category'}
+                  id="tab-filter-category"
+                >
+                  <div className="filter-tab-btn-content">
+                    <span className="filter-tab-label">Category</span>
+                    {activeCategory !== 'all' && <span className="filter-tab-active-dot" />}
+                  </div>
+                  <span className="filter-tab-count-sub">
+                    {activeCategory !== 'all'
+                      ? (dynamicCategories.find(c => c.id === activeCategory)?.label || activeCategory)
+                      : 'All'}
+                  </span>
+                </button>
+
+                {/* Brand Tab */}
+                <button
+                  type="button"
+                  className={`filter-tab-btn ${activeModalTab === 'brand' ? 'active' : ''}`}
+                  onClick={() => setActiveModalTab('brand')}
+                  role="tab"
+                  aria-selected={activeModalTab === 'brand'}
+                  id="tab-filter-brand"
+                >
+                  <div className="filter-tab-btn-content">
+                    <span className="filter-tab-label">Brand</span>
+                    {activeBrand !== 'all' && <span className="filter-tab-active-dot" />}
+                  </div>
+                  <span className="filter-tab-count-sub">
+                    {activeBrand !== 'all' ? activeBrand : 'All'}
+                  </span>
+                </button>
+
+                {/* Price Tab */}
+                <button
+                  type="button"
+                  className={`filter-tab-btn ${activeModalTab === 'price' ? 'active' : ''}`}
+                  onClick={() => setActiveModalTab('price')}
+                  role="tab"
+                  aria-selected={activeModalTab === 'price'}
+                  id="tab-filter-price"
+                >
+                  <div className="filter-tab-btn-content">
+                    <span className="filter-tab-label">Price (₹)</span>
+                    {priceFilter !== 'all' && <span className="filter-tab-active-dot" />}
+                  </div>
+                  <span className="filter-tab-count-sub">
+                    {priceFilter === 'custom'
+                      ? `₹${appliedMinPrice || '0'} - ₹${appliedMaxPrice || 'Max'}`
+                      : priceFilter !== 'all'
+                      ? PRICE_PRESETS.find(p => p.id === priceFilter)?.label
+                      : 'Any'}
+                  </span>
+                </button>
+
+                {/* Power Source Tab */}
+                <button
+                  type="button"
+                  className={`filter-tab-btn ${activeModalTab === 'power' ? 'active' : ''}`}
+                  onClick={() => setActiveModalTab('power')}
+                  role="tab"
+                  aria-selected={activeModalTab === 'power'}
+                  id="tab-filter-power"
+                >
+                  <div className="filter-tab-btn-content">
+                    <span className="filter-tab-label">Power Source</span>
+                    {powerFilter !== 'all' && <span className="filter-tab-active-dot" />}
+                  </div>
+                  <span className="filter-tab-count-sub">
+                    {powerFilter === 'cordless' ? 'Cordless' : powerFilter === 'corded' ? 'Corded' : 'All'}
+                  </span>
+                </button>
+
+                {/* Availability Tab */}
+                <button
+                  type="button"
+                  className={`filter-tab-btn ${activeModalTab === 'availability' ? 'active' : ''}`}
+                  onClick={() => setActiveModalTab('availability')}
+                  role="tab"
+                  aria-selected={activeModalTab === 'availability'}
+                  id="tab-filter-availability"
+                >
+                  <div className="filter-tab-btn-content">
+                    <span className="filter-tab-label">Availability</span>
+                    {inStockOnly && <span className="filter-tab-active-dot" />}
+                  </div>
+                  <span className="filter-tab-count-sub">
+                    {inStockOnly ? 'In Stock Only' : 'All'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Right Panel Content */}
+              <div className="filter-modal-panel">
+                {/* 1. CATEGORY TAB PANEL */}
+                {activeModalTab === 'category' && (
+                  <div>
+                    <div className="filter-panel-header">
+                      <h4>Equipment Categories</h4>
+                      <span className="filter-panel-hint">Select a specialized machinery category</span>
+                    </div>
+
+                    {dynamicCategories.length > 6 && (
+                      <div className="filter-search-box">
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                        <input
+                          type="text"
+                          placeholder="Filter categories..."
+                          value={categorySearch}
+                          onChange={(e) => setCategorySearch(e.target.value)}
+                        />
+                        {categorySearch && (
+                          <button
+                            type="button"
+                            onClick={() => setCategorySearch('')}
+                            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="filter-options-grid">
+                      {filteredCategoriesList.map(cat => {
+                        const isActive = activeCategory === cat.id;
+                        const count = cat.id === 'all' ? products.length : (categoryCounts[cat.id] || 0);
+
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            className={`filter-pill-option ${isActive ? 'active' : ''}`}
+                            onClick={() => {
+                              setActiveCategory(cat.id);
+                              setSearchParams(prev => {
+                                if (cat.id === 'all') prev.delete('category');
+                                else prev.set('category', cat.id);
+                                return prev;
+                              });
+                            }}
+                            id={`modal-filter-cat-${cat.id}`}
+                          >
+                            <div className="filter-custom-checkbox">
+                              {isActive && <Check size={12} strokeWidth={3} />}
+                            </div>
+                            <span className="filter-option-name">{cat.label}</span>
+                            <span className="filter-count-badge">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. BRAND TAB PANEL */}
+                {activeModalTab === 'brand' && (
+                  <div>
+                    <div className="filter-panel-header">
+                      <h4>Manufacturer Brands</h4>
+                      <span className="filter-panel-hint">Authorized brand warranties supported by Variathu</span>
+                    </div>
+
+                    <div className="filter-search-box">
+                      <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                      <input
+                        type="text"
+                        placeholder="Search Brand (e.g. Bosch, Makita, Stanley)..."
+                        value={brandSearch}
+                        onChange={(e) => setBrandSearch(e.target.value)}
+                        id="modal-brand-filter-search"
+                      />
+                      {brandSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setBrandSearch('')}
+                          style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="filter-options-grid">
+                      {/* All Brands Option */}
+                      <button
+                        type="button"
+                        className={`filter-pill-option ${activeBrand === 'all' ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveBrand('all');
+                          setSearchParams(prev => { prev.delete('brand'); return prev; });
+                        }}
+                        id="modal-filter-brand-all"
+                      >
+                        <div className="filter-custom-checkbox">
+                          {activeBrand === 'all' && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <span className="filter-option-name">All Brands</span>
+                        <span className="filter-count-badge">({products.length})</span>
+                      </button>
+
+                      {filteredBrandsList.map(brand => {
+                        const brandVal = brand.toLowerCase();
+                        const isActive = activeBrand === brandVal;
+                        const count = brandCounts[brandVal] || 0;
+
+                        return (
+                          <button
+                            key={brand}
+                            type="button"
+                            className={`filter-pill-option ${isActive ? 'active' : ''}`}
+                            onClick={() => {
+                              const next = isActive ? 'all' : brandVal;
+                              setActiveBrand(next);
+                              setSearchParams(prev => {
+                                if (next === 'all') prev.delete('brand');
+                                else prev.set('brand', next);
+                                return prev;
+                              });
+                            }}
+                            id={`modal-filter-brand-${brandVal}`}
+                          >
+                            <div className="filter-custom-checkbox">
+                              {isActive && <Check size={12} strokeWidth={3} />}
+                            </div>
+                            <span className="filter-option-name">{brand}</span>
+                            <span className="filter-count-badge">({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. PRICE TAB PANEL */}
+                {activeModalTab === 'price' && (
+                  <div>
+                    <div className="filter-panel-header">
+                      <h4>Price Range (₹)</h4>
+                      <span className="filter-panel-hint">Select price brackets or specify custom budget</span>
+                    </div>
+
+                    <div className="filter-options-column">
+                      {PRICE_PRESETS.map(preset => {
+                        const isActive = priceFilter === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            className={`filter-pill-option ${isActive ? 'active' : ''}`}
+                            onClick={() => {
+                              setPriceFilter(preset.id);
+                              setAppliedMinPrice('');
+                              setAppliedMaxPrice('');
+                            }}
+                            id={`modal-filter-price-${preset.id}`}
+                          >
+                            <div className="filter-custom-checkbox">
+                              {isActive && <Check size={12} strokeWidth={3} />}
+                            </div>
+                            <span className="filter-option-name">{preset.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Min - Max with Go Button */}
+                    <div className="filter-custom-price-block">
+                      <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#1e293b' }}>
+                        Custom Price Limits
+                      </span>
+                      <form onSubmit={handleApplyCustomPrice} className="filter-price-input-row">
+                        <input
+                          type="number"
+                          placeholder="₹ Min"
+                          value={minPriceInput}
+                          onChange={(e) => setMinPriceInput(e.target.value)}
+                          className="filter-price-field"
+                          id="modal-input-min-price"
+                        />
+                        <span style={{ color: '#94a3b8', fontWeight: '600' }}>-</span>
+                        <input
+                          type="number"
+                          placeholder="₹ Max"
+                          value={maxPriceInput}
+                          onChange={(e) => setMaxPriceInput(e.target.value)}
+                          className="filter-price-field"
+                          id="modal-input-max-price"
+                        />
+                        <button type="submit" className="filter-price-go-btn" id="modal-btn-apply-price">
+                          Go
+                        </button>
+                      </form>
+                      {priceFilter === 'custom' && (appliedMinPrice || appliedMaxPrice) && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--brand-primary)', fontWeight: '700' }}>
+                          Active range: ₹{appliedMinPrice || '0'} to ₹{appliedMaxPrice || 'Max'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. POWER SOURCE TAB PANEL */}
+                {activeModalTab === 'power' && (
+                  <div>
+                    <div className="filter-panel-header">
+                      <h4>Power Source</h4>
+                      <span className="filter-panel-hint">Select battery cordless or heavy-duty corded electric</span>
+                    </div>
+
+                    <div className="filter-options-column">
+                      <button
+                        type="button"
+                        className={`filter-pill-option ${powerFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => setPowerFilter('all')}
+                        id="modal-filter-power-all"
+                      >
+                        <div className="filter-custom-checkbox">
+                          {powerFilter === 'all' && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <span className="filter-option-name">All Power Types</span>
+                        <span className="filter-count-badge">({products.length})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`filter-pill-option ${powerFilter === 'cordless' ? 'active' : ''}`}
+                        onClick={() => setPowerFilter(powerFilter === 'cordless' ? 'all' : 'cordless')}
+                        id="modal-filter-power-cordless"
+                      >
+                        <div className="filter-custom-checkbox">
+                          {powerFilter === 'cordless' && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <span className="filter-option-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Zap size={14} style={{ color: '#0284c7' }} />
+                          <span>Cordless (Battery)</span>
+                        </span>
+                        <span className="filter-count-badge">({cordlessCount})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`filter-pill-option ${powerFilter === 'corded' ? 'active' : ''}`}
+                        onClick={() => setPowerFilter(powerFilter === 'corded' ? 'all' : 'corded')}
+                        id="modal-filter-power-corded"
+                      >
+                        <div className="filter-custom-checkbox">
+                          {powerFilter === 'corded' && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <span className="filter-option-name">Corded / Electric</span>
+                        <span className="filter-count-badge">({cordedCount})</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. AVAILABILITY TAB PANEL */}
+                {activeModalTab === 'availability' && (
+                  <div>
+                    <div className="filter-panel-header">
+                      <h4>Stock Availability</h4>
+                      <span className="filter-panel-hint">Variathu warehouse Kozhencherry stock status</span>
+                    </div>
+
+                    <div className="filter-options-column">
+                      <button
+                        type="button"
+                        className={`filter-pill-option ${!inStockOnly ? 'active' : ''}`}
+                        onClick={() => setInStockOnly(false)}
+                        id="modal-filter-stock-all"
+                      >
+                        <div className="filter-custom-checkbox">
+                          {!inStockOnly && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <span className="filter-option-name">All Equipment</span>
+                        <span className="filter-count-badge">({products.length})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`filter-pill-option ${inStockOnly ? 'active' : ''}`}
+                        onClick={() => setInStockOnly(true)}
+                        id="modal-filter-stock-instock"
+                      >
+                        <div className="filter-custom-checkbox">
+                          {inStockOnly && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <span className="filter-option-name">In Stock Only (Ready for Pickup)</span>
+                        <span className="filter-count-badge">({inStockCount})</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="mobile-filter-drawer-footer">
+            {/* Modal Footer */}
+            <div className="filter-modal-footer">
               <button
                 type="button"
-                className="btn-hero-secondary"
-                onClick={() => setShowMobileFilter(false)}
-                style={{ flex: 1, justifyContent: 'center' }}
+                className="filter-modal-reset-btn"
+                onClick={handleResetFilters}
+                id="modal-btn-reset-all"
               >
-                Cancel
+                <RotateCcw size={14} />
+                <span>Reset All</span>
               </button>
-              <button
-                type="button"
-                className="btn-hero-clean"
-                onClick={() => setShowMobileFilter(false)}
-                style={{ flex: 2, justifyContent: 'center' }}
-              >
-                Apply ({displayedProducts.length} Tools)
-              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="filter-modal-cancel-btn"
+                  onClick={() => setShowFilterModal(false)}
+                  id="modal-btn-cancel"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="filter-modal-apply-btn"
+                  onClick={() => setShowFilterModal(false)}
+                  id="modal-btn-apply-filters"
+                >
+                  Show {displayedProducts.length} Tools
+                </button>
+              </div>
             </div>
           </div>
         </div>
