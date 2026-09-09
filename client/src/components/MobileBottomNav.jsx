@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
 export const MobileBottomNav = () => {
-  const { totalItemsCount, setIsCartOpen } = useCart();
+  const { totalItemsCount } = useCart();
   const { isLoggedIn, isStoreOwner } = useAuth();
 
   const accountPath = !isLoggedIn ? '/login' : (isStoreOwner ? '/admin' : '/account');
@@ -32,10 +32,9 @@ export const MobileBottomNav = () => {
         <span>Shop</span>
       </NavLink>
 
-      <button
-        type="button"
-        className="nav-bottom-item"
-        onClick={() => setIsCartOpen(true)}
+      <NavLink
+        to="/cart"
+        className={({ isActive }) => `nav-bottom-item ${isActive ? 'active' : ''}`}
         id="mobile-nav-cart"
       >
         <ShoppingCart size={20} />
@@ -45,7 +44,7 @@ export const MobileBottomNav = () => {
             {totalItemsCount}
           </span>
         )}
-      </button>
+      </NavLink>
 
       <NavLink
         to="/about"

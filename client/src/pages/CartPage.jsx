@@ -407,7 +407,7 @@ export const CartPage = ({ onOpenCheckout }) => {
                 <Tag size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                 <input
                   type="text"
-                  placeholder="Coupon (e.g. KOZHENCHERRY10)"
+                  placeholder="Enter promo coupon code"
                   value={inputCoupon}
                   onChange={(e) => setInputCoupon(e.target.value)}
                   style={{

@@ -7,7 +7,6 @@ import { ShopPage } from './pages/ShopPage';
 import { AboutPage } from './pages/AboutPage';
 import { CartPage } from './pages/CartPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
-import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { StoreInfoModal } from './components/StoreInfoModal';
 import { AdminModal } from './components/AdminModal';
@@ -118,8 +117,8 @@ const MainApp = () => {
         storeInfo={storeInfo}
       />
 
-      {/* Routes Container */}
-      <div className="container">
+      {/* Routes Content */}
+      <main className="app-main-content">
         <Routes>
           <Route
             path="/"
@@ -133,48 +132,50 @@ const MainApp = () => {
           <Route
             path="/shop"
             element={
-              <ShopPage
-                products={products}
-                loading={loading}
-                error={error}
-                activeCategory={activeCategory}
-                setActiveCategory={setActiveCategory}
-                activeBrand={activeBrand}
-                setActiveBrand={setActiveBrand}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
-              />
+              <div className="container">
+                <ShopPage
+                  products={products}
+                  loading={loading}
+                  error={error}
+                  activeCategory={activeCategory}
+                  setActiveCategory={setActiveCategory}
+                  activeBrand={activeBrand}
+                  setActiveBrand={setActiveBrand}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
+                />
+              </div>
             }
           />
           <Route
             path="/product/:id"
-            element={<ProductDetailPage />}
+            element={<div className="container"><ProductDetailPage /></div>}
           />
           <Route
             path="/about"
-            element={<AboutPage />}
+            element={<div className="container"><AboutPage /></div>}
           />
           <Route
             path="/cart"
-            element={<CartPage onOpenCheckout={() => setIsCheckoutOpen(true)} />}
+            element={<div className="container"><CartPage onOpenCheckout={() => setIsCheckoutOpen(true)} /></div>}
           />
           <Route
             path="/login"
-            element={<LoginPage />}
+            element={<div className="container"><LoginPage /></div>}
           />
           <Route
             path="/account"
-            element={<CustomerAccountPage />}
+            element={<div className="container"><CustomerAccountPage /></div>}
           />
           <Route
             path="/admin"
-            element={<StoreDashboardPage onProductUpdated={loadProducts} />}
+            element={<div className="container"><StoreDashboardPage onProductUpdated={loadProducts} /></div>}
           />
         </Routes>
-      </div>
+      </main>
 
       {/* Floating Speed-Dial WhatsApp Button */}
       <a
@@ -256,10 +257,7 @@ const MainApp = () => {
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
 
-      {/* Cart Drawer */}
-      <CartDrawer
-        onOpenCheckout={() => setIsCheckoutOpen(true)}
-      />
+
 
       {/* Checkout Modal */}
       {isCheckoutOpen && (

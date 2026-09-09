@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { X, Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle, Package, Truck, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
 export const ProductDetailModal = ({ product, onClose }) => {
-  const { addToCart, setIsCartOpen } = useCart();
+  const { addToCart } = useCart();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   const [activeImg, setActiveImg] = useState(0);
 
@@ -16,7 +18,7 @@ export const ProductDetailModal = ({ product, onClose }) => {
   const handleAddAndOpenCart = () => {
     addToCart(product, quantity);
     onClose();
-    setIsCartOpen(true);
+    navigate('/cart');
   };
 
   const getWhatsAppOrderUrl = () => {

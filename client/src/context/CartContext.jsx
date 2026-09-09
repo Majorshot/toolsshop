@@ -143,23 +143,11 @@ export const CartProvider = ({ children }) => {
         return { success: false, message: res?.message || "Invalid coupon code" };
       }
     } catch (err) {
-      // Offline fallback
-      if (cleanCode === 'KOZHENCHERRY10' || cleanCode === 'VARIATHU10') {
-        setActiveCoupon({ code: cleanCode, discountType: 'percentage', discountValue: 10, usageLimitPerUser: 0 });
-        setAppliedDiscount(10);
-        setCouponCode(cleanCode);
-        showToast("🎉 Coupon Applied! 10% Special Kozhencherry Discount");
-        return { success: true, message: "10% Discount applied!" };
-      } else if (cleanCode === 'PROTOOLS5') {
-        setActiveCoupon({ code: cleanCode, discountType: 'percentage', discountValue: 5, usageLimitPerUser: 0 });
-        setAppliedDiscount(5);
-        setCouponCode(cleanCode);
-        showToast("🎉 Coupon Applied! 5% Pro Discount");
-        return { success: true, message: "5% Discount applied!" };
-      } else {
-        showToast("Invalid coupon code. Try KOZHENCHERRY10");
-        return { success: false, message: "Invalid coupon code" };
-      }
+      console.error("Coupon validation error:", err);
+      setActiveCoupon(null);
+      setAppliedDiscount(0);
+      showToast("Invalid or expired coupon code");
+      return { success: false, message: "Invalid or expired coupon code" };
     }
   };
 

@@ -1,6 +1,22 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, MapPin, Phone, ShieldCheck, MessageCircle, Menu, X, Home, Grid, Info, ChevronRight, User, LogOut } from 'lucide-react';
+import {
+  Search,
+  ShoppingCart,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  MessageCircle,
+  Menu,
+  X,
+  Home,
+  Grid,
+  Info,
+  ChevronRight,
+  User,
+  LogOut,
+  Mail
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +25,7 @@ export const Navbar = ({
   onOpenAdminModal,
   storeInfo
 }) => {
-  const { totalItemsCount, setIsCartOpen } = useCart();
+  const { totalItemsCount } = useCart();
   const { user, isLoggedIn, isStoreOwner, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -17,41 +33,34 @@ export const Navbar = ({
   const closeMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <header>
-      {/* Top Notice Bar */}
-      <div className="top-notice-bar">
+    <header className="main-site-header">
+      {/* Top Quick Contact Bar: Phone & Email */}
+      <div className="top-contact-strip">
         <div className="container">
-          <div className="top-notice-inner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="location-tag">
-                <MapPin size={12} /> Poyanil Junction, Kozhencherry, Kerala
-              </span>
-              <span style={{ fontSize: '0.76rem', color: '#64748b', display: 'none' }} className="d-sm-inline">
-                Near St Thomas HSS Ground
+          <div className="top-contact-inner">
+            <div className="top-contact-left">
+              <span className="top-contact-location">
+                <MapPin size={11} style={{ color: 'var(--brand-primary)' }} />
+                <span>Poyanil Junction, Kozhencherry, Kerala</span>
               </span>
             </div>
 
-            <div className="top-notice-links">
-              <a href="tel:+919447123456" title="Call Kozhencherry Store">
-                <Phone size={13} style={{ color: 'var(--brand-primary)' }} />
+            <div className="top-contact-right">
+              <a href="tel:+919447123456" className="top-contact-item" title="Call Store">
+                <Phone size={11} style={{ color: 'var(--brand-primary)' }} />
                 <span>+91 94471 23456</span>
               </a>
-              <a
-                href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20have%20an%20inquiry."
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: '#16a34a' }}
-                title="Chat on WhatsApp"
-              >
-                <MessageCircle size={13} />
-                <span>WhatsApp Direct</span>
+              <span className="top-contact-sep">•</span>
+              <a href="mailto:variathupowertools@gmail.com" className="top-contact-item" title="Email Store">
+                <Mail size={11} style={{ color: 'var(--brand-primary)' }} />
+                <span>variathupowertools@gmail.com</span>
               </a>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Clean Minimal Navbar */}
+      {/* Sleek Minimal Unified Navbar */}
       <nav className="navbar">
         <div className="container">
           <div className="nav-inner">
@@ -75,7 +84,7 @@ export const Navbar = ({
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
                 <div className="brand-text">
-                  <h1>VARIATHU <span>TOOLS</span></h1>
+                  <h1>VARIATHU <span>POWER TOOLS</span></h1>
                   <p>
                     <MapPin size={11} style={{ color: 'var(--brand-primary)' }} />
                     Kozhencherry, Pathanamthitta
@@ -109,77 +118,9 @@ export const Navbar = ({
               </NavLink>
             </div>
 
-            {/* Action Buttons & Top Login Button */}
+            {/* Right side: Only Essential Actions (Search, Account/Portal, Cart) */}
             <div className="nav-actions">
-              {/* Top Login / Account Button */}
-              {isLoggedIn ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Link
-                    to={isStoreOwner ? '/admin' : '/account'}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: isStoreOwner ? '#0f172a' : 'var(--brand-light)',
-                      color: isStoreOwner ? '#ffffff' : 'var(--brand-primary)',
-                      border: isStoreOwner ? 'none' : '1px solid var(--brand-border)',
-                      padding: '7px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      fontWeight: '700',
-                      textDecoration: 'none'
-                    }}
-                    id="top-account-btn"
-                  >
-                    {isStoreOwner ? <ShieldCheck size={15} /> : <User size={15} />}
-                    <span>{isStoreOwner ? 'Store Portal' : (user.name?.split(' ')[0] || 'My Orders')}</span>
-                  </Link>
-
-                  <button
-                    onClick={() => { logout(); navigate('/'); }}
-                    style={{
-                      background: 'none',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      width: '36px',
-                      height: '36px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#64748b',
-                      cursor: 'pointer'
-                    }}
-                    title="Sign Out"
-                    id="top-logout-btn"
-                  >
-                    <LogOut size={15} />
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/login"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#0f172a',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: '700',
-                    textDecoration: 'none',
-                    boxShadow: 'var(--shadow-xs)'
-                  }}
-                  id="top-login-btn"
-                >
-                  <User size={16} style={{ color: 'var(--brand-primary)' }} />
-                  <span>Login</span>
-                </Link>
-              )}
-
-              {/* Quick Search Link */}
+              {/* Quick Search Button */}
               <Link
                 to="/shop"
                 className="btn-icon"
@@ -189,22 +130,43 @@ export const Navbar = ({
                 <Search size={18} />
               </Link>
 
-              {/* Store Location Modal */}
-              <button
-                type="button"
-                className="btn-icon"
-                onClick={onOpenStoreModal}
-                title="Store Location & Hours in Kozhencherry"
-                id="nav-store-info-btn"
-              >
-                <MapPin size={18} />
-              </button>
+              {/* Login / User / Portal */}
+              {isLoggedIn ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Link
+                    to={isStoreOwner ? '/admin' : '/account'}
+                    className={isStoreOwner ? 'nav-portal-pill' : 'nav-user-pill'}
+                    id="top-account-btn"
+                    title={isStoreOwner ? 'Store Owner Dashboard' : 'My Account & Orders'}
+                  >
+                    {isStoreOwner ? <ShieldCheck size={14} /> : <User size={14} />}
+                    <span>{isStoreOwner ? 'Portal' : (user.name?.split(' ')[0] || 'Account')}</span>
+                  </Link>
 
-              {/* Shopping Cart Drawer Trigger */}
-              <button
-                type="button"
+                  <button
+                    onClick={() => { logout(); navigate('/'); }}
+                    className="btn-logout-subtle"
+                    title="Sign Out"
+                    id="top-logout-btn"
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="nav-login-btn"
+                  id="top-login-btn"
+                >
+                  <User size={15} />
+                  <span>Login</span>
+                </Link>
+              )}
+
+              {/* Shopping Cart Link -> Full Cart Page */}
+              <Link
+                to="/cart"
                 className="btn-icon"
-                onClick={() => setIsCartOpen(true)}
                 title="Shopping Cart"
                 id="nav-cart-btn"
                 style={{ position: 'relative' }}
@@ -215,7 +177,7 @@ export const Navbar = ({
                     {totalItemsCount}
                   </span>
                 )}
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -234,13 +196,14 @@ export const Navbar = ({
                   style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover' }}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
-                <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '1rem' }}>
-                  VARIATHU <span style={{ color: 'var(--brand-primary)' }}>TOOLS</span>
+                <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.98rem' }}>
+                  VARIATHU <span style={{ color: 'var(--brand-primary)' }}>POWER TOOLS</span>
                 </span>
               </div>
               <button
                 onClick={closeMenu}
                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}
+                aria-label="Close Navigation"
               >
                 <X size={20} />
               </button>
@@ -328,7 +291,7 @@ export const Navbar = ({
                 onClick={closeMenu}
               >
                 <Grid size={18} style={{ color: 'var(--brand-primary)' }} />
-                <span>Shop All Tools</span>
+                <span>Shop Equipment</span>
                 <ChevronRight size={16} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
               </NavLink>
 
@@ -341,25 +304,6 @@ export const Navbar = ({
                 <span>About & Workshop</span>
                 <ChevronRight size={16} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
               </NavLink>
-
-              {/* Category Quick Links in Drawer */}
-              <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', display: 'block', marginBottom: '8px', paddingLeft: '14px' }}>
-                  Featured Categories
-                </span>
-                <Link to="/shop?category=cordless" className="mobile-drawer-link" onClick={closeMenu}>
-                  <span>⚡ Cordless Power Tools</span>
-                </Link>
-                <Link to="/shop?category=grinders-cutters" className="mobile-drawer-link" onClick={closeMenu}>
-                  <span>⚙️ Grinders & Cutters</span>
-                </Link>
-                <Link to="/shop?category=hammers" className="mobile-drawer-link" onClick={closeMenu}>
-                  <span>🔨 Rotary & Demo Hammers</span>
-                </Link>
-                <Link to="/shop?category=woodworking" className="mobile-drawer-link" onClick={closeMenu}>
-                  <span>🪵 Woodworking Planers & Saws</span>
-                </Link>
-              </div>
             </div>
 
             {/* Drawer Footer Contact */}

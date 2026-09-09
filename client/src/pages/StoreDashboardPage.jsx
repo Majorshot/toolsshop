@@ -2308,7 +2308,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             <div style={{ textAlign: 'center', padding: '48px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
               <Percent size={36} style={{ color: '#94a3b8', margin: '0 auto 12px', display: 'block' }} />
               <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>No Active Promo Codes</strong>
-              <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>Create promo codes like ONAM10, KOZHENCHERRY10, or WORKSHOP500 to offer customer discounts.</p>
+              <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>Create custom promotional discount codes to offer customer savings during checkout.</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>

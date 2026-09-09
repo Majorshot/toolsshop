@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const seedProducts = require('../data/seedProducts');
+const dns = require('dns');
+try { dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']); } catch (e) {}
 
 const DATA_FILE = path.join(__dirname, '..', 'data', 'store.json');
 
@@ -28,14 +30,13 @@ const storeInfo = {
   },
   services: [
     "Authorized Sales & Warranty Support",
-    "On-site Power Tool Servicing & Armature Rewinding",
-    "Genuine Carbon Brushes & Spare Parts",
-    "Bulk Contractor & Industrial Supply"
+    "On-Site Equipment Repair & Overhaul",
+    "Genuine Armatures, Switches, Carbon Brushes & Spares",
+    "Express Pickup at Poyanil Building"
   ]
 };
 
-// Initial store state
-function loadStoreData() {
+function initStoreData() {
   try {
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
@@ -46,53 +47,11 @@ function loadStoreData() {
         modified = true;
       }
       if (!parsed.coupons || !Array.isArray(parsed.coupons)) {
-        parsed.coupons = [
-          { id: "c-1", code: "KOZHENCHERRY10", description: "Special 10% Kozhencherry Local Discount", discountType: "percentage", discountValue: 10, minOrderAmount: 0, active: true, usageCount: 14 },
-          { id: "c-2", code: "VARIATHU10", description: "10% Variathu Welcome Discount", discountType: "percentage", discountValue: 10, minOrderAmount: 0, active: true, usageCount: 9 },
-          { id: "c-3", code: "PROTOOLS5", description: "5% Discount on Heavy Duty Pro Equipment", discountType: "percentage", discountValue: 5, minOrderAmount: 1000, active: true, usageCount: 22 },
-          { id: "c-4", code: "WORKSHOP500", description: "Flat ₹500 off on major tool purchases", discountType: "flat", discountValue: 500, minOrderAmount: 5000, active: true, usageCount: 5 }
-        ];
+        parsed.coupons = [];
         modified = true;
       }
       if (!parsed.repairs || !Array.isArray(parsed.repairs)) {
-        parsed.repairs = [
-          {
-            id: "rep-1",
-            jobId: "VPT-REP-101",
-            customerName: "Santhosh Varghese",
-            customerPhone: "+91 94472 33445",
-            toolBrand: "Bosch",
-            toolModel: "Bosch GDC 120 Marble Cutter",
-            serialNumber: "SN-847291",
-            issueDescription: "Heavy sparking from armature & intermittent power cut",
-            estimatedCost: 650,
-            finalCost: 650,
-            advancePaid: 200,
-            status: "Repaired & Ready",
-            technicianNotes: "Replaced original Bosch carbon brushes (1619P02844) & polished commutator",
-            handoverOtp: "5284",
-            handoverVerified: false,
-            createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-          },
-          {
-            id: "rep-2",
-            jobId: "VPT-REP-102",
-            customerName: "Babu Chettiar",
-            customerPhone: "+91 98471 66554",
-            toolBrand: "Makita",
-            toolModel: "Makita HR2470 Rotary Hammer",
-            serialNumber: "MK-092834",
-            issueDescription: "Hammering mechanism stuck, only rotation works",
-            estimatedCost: 1200,
-            finalCost: 0,
-            advancePaid: 500,
-            status: "Diagnosing",
-            technicianNotes: "Gearbox stripped; piston O-ring worn out, checking striker pin",
-            handoverOtp: "7419",
-            handoverVerified: false,
-            createdAt: new Date(Date.now() - 86400000 * 1).toISOString()
-          }
-        ];
+        parsed.repairs = [];
         modified = true;
       }
       if (modified) {
@@ -106,32 +65,9 @@ function loadStoreData() {
 
   const initial = {
     products: [...seedProducts],
-    orders: [
-      {
-        id: "ORD-1001",
-        customer: {
-          name: "Raju Thomas",
-          phone: "+91 98471 88990",
-          address: "Thekkethil House, Kozhencherry",
-          district: "Pathanamthitta",
-          pincode: "689641"
-        },
-        items: [
-          {
-            id: "vpt-001",
-            name: "Bosch GDC 120 Professional Marble Cutter",
-            price: 3850,
-            quantity: 1,
-            image: "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80"
-          }
-        ],
-        totalAmount: 3850,
-        deliveryType: "store-pickup",
-        paymentMethod: "UPI",
-        status: "Ready for Pickup",
-        date: new Date().toISOString()
-      }
-    ]
+    orders: [],
+    coupons: [],
+    repairs: []
   };
 
   saveStoreData(initial);
@@ -146,8 +82,7 @@ function saveStoreData(data) {
   }
 }
 
-const dns = require('dns');
-try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
+
 
 // Mongoose Schemas & Models
 const productSchema = new mongoose.Schema({
@@ -264,61 +199,7 @@ async function tryConnectMongo() {
         console.log("Seeded initial product catalog to MongoDB Atlas.");
       }
 
-      if (CouponModel) {
-        const couponCount = await CouponModel.countDocuments();
-        if (couponCount === 0) {
-          await CouponModel.insertMany([
-            { code: "KOZHENCHERRY10", description: "Special 10% Kozhencherry Local Discount", discountType: "percentage", discountValue: 10, minOrderAmount: 0, active: true, usageCount: 14 },
-            { code: "VARIATHU10", description: "10% Variathu Welcome Discount", discountType: "percentage", discountValue: 10, minOrderAmount: 0, active: true, usageCount: 9 },
-            { code: "PROTOOLS5", description: "5% Discount on Heavy Duty Pro Equipment", discountType: "percentage", discountValue: 5, minOrderAmount: 1000, active: true, usageCount: 22 },
-            { code: "WORKSHOP500", description: "Flat ₹500 off on major tool purchases", discountType: "flat", discountValue: 500, minOrderAmount: 5000, active: true, usageCount: 5 }
-          ]);
-          console.log("Seeded default promotional coupons to MongoDB Atlas.");
-        }
-      }
 
-      if (RepairModel) {
-        const repairCount = await RepairModel.countDocuments();
-        if (repairCount === 0) {
-          await RepairModel.insertMany([
-            {
-              jobId: "VPT-REP-101",
-              customerName: "Santhosh Varghese",
-              customerPhone: "+91 94472 33445",
-              toolBrand: "Bosch",
-              toolModel: "Bosch GDC 120 Marble Cutter",
-              serialNumber: "SN-847291",
-              issueDescription: "Heavy sparking from armature & intermittent power cut",
-              estimatedCost: 650,
-              finalCost: 650,
-              advancePaid: 200,
-              status: "Repaired & Ready",
-              technicianNotes: "Replaced original Bosch carbon brushes (1619P02844) & polished commutator",
-              handoverOtp: "5284",
-              handoverVerified: false,
-              createdAt: new Date(Date.now() - 86400000 * 2).toISOString()
-            },
-            {
-              jobId: "VPT-REP-102",
-              customerName: "Babu Chettiar",
-              customerPhone: "+91 98471 66554",
-              toolBrand: "Makita",
-              toolModel: "Makita HR2470 Rotary Hammer",
-              serialNumber: "MK-092834",
-              issueDescription: "Hammering mechanism stuck, only rotation works",
-              estimatedCost: 1200,
-              finalCost: 0,
-              advancePaid: 500,
-              status: "Diagnosing",
-              technicianNotes: "Gearbox stripped; piston O-ring worn out, checking striker pin",
-              handoverOtp: "7419",
-              handoverVerified: false,
-              createdAt: new Date(Date.now() - 86400000 * 1).toISOString()
-            }
-          ]);
-          console.log("Seeded sample workshop repair tickets to MongoDB Atlas.");
-        }
-      }
 
       if (reconnectTimer) {
         clearInterval(reconnectTimer);
