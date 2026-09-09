@@ -25,11 +25,21 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
-    // Allow all origins in dev, or check whitelist in production
-    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error('Not allowed by CORS'));
+    // In dev (no ALLOWED_ORIGINS set), allow everything
+    if (allowedOrigins.length === 0) return callback(null, true);
+    // Check exact match
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Check wildcard patterns (e.g. *.vercel.app)
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed.startsWith('*.')) {
+        const domain = allowed.slice(1); // ".vercel.app"
+        return origin.endsWith(domain);
+      }
+      return false;
+    });
+    if (isAllowed) return callback(null, true);
+    console.log(`CORS blocked origin: ${origin}`);
+    callback(null, false);
   },
   credentials: true
 }));
