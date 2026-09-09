@@ -1464,61 +1464,307 @@ header.main-site-header {
   }
 }
 
+/* ==========================================================================
+   AMAZON & FLIPKART STYLE FILTER SIDEBAR & ACCORDIONS
+   ========================================================================== */
+
 .filter-sidebar-clean {
   background: #ffffff;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 22px;
+  padding: 18px 20px;
   box-shadow: var(--shadow-xs);
   height: fit-content;
 }
 
-.filter-group {
-  margin-bottom: 22px;
-}
-
-.filter-group:last-child {
-  margin-bottom: 0;
-}
-
-.filter-heading {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
+.filter-sidebar-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1.5px solid var(--border-subtle);
 }
 
-.filter-option-btn {
+.filter-accordion-block {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.filter-accordion-block:last-child {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.filter-accordion-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 8px 10px;
   background: none;
   border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 0.84rem;
-  font-weight: 500;
-  text-align: left;
+  padding: 4px 0;
   cursor: pointer;
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.filter-accordion-header:hover {
+  color: var(--brand-primary);
+}
+
+.filter-search-box {
+  position: relative;
+  margin: 10px 0 8px;
+}
+
+.filter-search-box input {
+  width: 100%;
+  height: 32px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 24px 0 28px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.filter-search-box input:focus {
+  border-color: var(--brand-primary);
+  background: #ffffff;
+}
+
+/* Scrollable Container with max-height so 50+ options never blow up page height */
+.filter-scroll-list {
+  max-height: 195px;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.filter-scroll-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filter-scroll-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.filter-scroll-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+/* Amazon / Flipkart Checkbox Style Item */
+.filter-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.82rem;
+  color: #334155;
+  text-align: left;
+  background: transparent;
+  border: none;
+  width: 100%;
   transition: all var(--transition-fast);
 }
 
-.filter-option-btn:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+.filter-checkbox-item:hover {
+  background: #f8fafc;
+  color: #0f172a;
 }
 
-.filter-option-btn.active {
+.filter-checkbox-item.active {
   background: var(--brand-light);
   color: var(--brand-primary);
   font-weight: 700;
+}
+
+.filter-custom-checkbox {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  border: 1.5px solid #94a3b8;
+  border-radius: 4px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.filter-checkbox-item.active .filter-custom-checkbox {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+
+.filter-count-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.filter-checkbox-item.active .filter-count-badge {
+  color: var(--brand-primary);
+  font-weight: 700;
+}
+
+/* Custom Price Inputs (Amazon / Flipkart Go button) */
+.filter-price-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.filter-price-field {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 0.78rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  outline: none;
+}
+
+.filter-price-field:focus {
+  border-color: var(--brand-primary);
+}
+
+.filter-price-go-btn {
+  height: 32px;
+  padding: 0 12px;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.78rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.filter-price-go-btn:hover {
+  background: var(--brand-primary);
+}
+
+/* Active Filter Chips Bar (Flipkart / Amazon style above grid) */
+.active-filters-chips-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.active-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.active-filter-chip button {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.active-filter-chip button:hover {
+  color: #dc2626;
+}
+
+.btn-clear-all-chips {
+  font-size: 0.76rem;
+  color: var(--brand-primary);
+  font-weight: 700;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: auto;
+  text-decoration: underline;
+}
+
+/* Mobile Slide-Over Filter Drawer */
+.mobile-filter-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease;
+}
+
+.mobile-filter-drawer {
+  background: #ffffff;
+  width: 88%;
+  max-width: 360px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mobile-filter-drawer-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-filter-drawer-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.mobile-filter-drawer-footer {
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  gap: 10px;
+  background: #f8fafc;
 }
 
 .shop-top-controls {

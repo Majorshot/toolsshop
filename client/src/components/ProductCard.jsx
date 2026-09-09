@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, ShoppingCart, MessageCircle, Zap } from 'lucide-react';
+import { ShoppingCart, MessageCircle, Zap, ShieldCheck } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export const ProductCard = ({ product, onSelectProduct }) => {
@@ -72,17 +72,15 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           {product.name}
         </h4>
 
-        {/* Rating */}
-        <div className="card-rating-row">
-          <div className="card-rating-stars">
-            <Star size={13} fill="#fbbf24" stroke="#fbbf24" />
-            <span style={{ fontWeight: 700, marginLeft: 4 }}>{product.rating}</span>
-          </div>
-          <span className="card-reviews-count">({product.reviewsCount})</span>
-
-          {product.cordless && (
-            <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.68rem', color: '#00d4ff', fontWeight: '700' }}>
+        {/* Feature Tag (Star rating removed per user request) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '4px 0 8px', minHeight: '18px' }}>
+          {product.cordless ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
               <Zap size={11} /> Cordless
+            </span>
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1px 6px', borderRadius: '4px', fontWeight: '600' }}>
+              <ShieldCheck size={11} /> Official Warranty
             </span>
           )}
         </div>
