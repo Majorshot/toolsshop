@@ -36,7 +36,8 @@ const storeInfo = {
   ]
 };
 
-function initStoreData() {
+function loadStoreData() {
+const initStoreData = loadStoreData;
   try {
     if (fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
