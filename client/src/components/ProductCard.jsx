@@ -1,11 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, MessageCircle, Zap, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, MessageCircle, Zap, ShieldCheck, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export const ProductCard = ({ product, onSelectProduct }) => {
-  const { addToCart } = useCart();
+  const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
+
+  const cartItem = cart?.find(item => item.id === product.id);
+  const cartQty = cartItem ? cartItem.quantity : 0;
 
   const handleCardClick = () => {
     if (onSelectProduct) {
@@ -62,6 +65,12 @@ export const ProductCard = ({ product, onSelectProduct }) => {
             {product.discount}
           </span>
         )}
+
+        {cartQty > 0 && (
+          <span className="card-in-cart-indicator" title={`${cartQty} in your shopping cart`}>
+            <ShoppingCart size={11} /> {cartQty} in Cart
+          </span>
+        )}
       </div>
 
       {/* Card Body */}
@@ -95,15 +104,66 @@ export const ProductCard = ({ product, onSelectProduct }) => {
 
         {/* Action Buttons */}
         <div className="card-action-row">
-          <button
-            className="btn-card-add"
-            onClick={handleAddToCart}
-            title="Add tool to cart"
-            id={`btn-add-${product.id}`}
-          >
-            <ShoppingCart size={15} />
-            <span>Add</span>
-          </button>
+          {cartQty > 0 ? (
+            <div
+              className="btn-card-stepper"
+              id={`btn-qty-stepper-${product.id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="btn-card-stepper-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                    navigator.vibrate(20);
+                  }
+                  if (cartQty <= 1) {
+                    removeFromCart(product.id);
+                  } else {
+                    updateQuantity(product.id, cartQty - 1);
+                  }
+                }}
+                title="Decrease quantity"
+                aria-label="Decrease quantity"
+                id={`btn-stepper-minus-${product.id}`}
+              >
+                <Minus size={14} strokeWidth={2.5} />
+              </button>
+
+              <span className="btn-card-stepper-val" title={`${cartQty} in cart`}>
+                {cartQty}
+              </span>
+
+              <button
+                type="button"
+                className="btn-card-stepper-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                    navigator.vibrate(20);
+                  }
+                  addToCart(product, 1);
+                }}
+                disabled={cartQty >= (product.stock ?? 999)}
+                title={cartQty >= (product.stock ?? 999) ? `Max stock (${product.stock}) reached` : "Increase quantity"}
+                aria-label="Increase quantity"
+                id={`btn-stepper-plus-${product.id}`}
+              >
+                <Plus size={14} strokeWidth={2.5} />
+              </button>
+            </div>
+          ) : (
+            <button
+              className="btn-card-add"
+              onClick={handleAddToCart}
+              title="Add tool to cart"
+              id={`btn-add-${product.id}`}
+            >
+              <ShoppingCart size={15} />
+              <span>Add</span>
+            </button>
+          )}
 
           <a
             href={getWhatsAppLink({ stopPropagation: () => {} })}

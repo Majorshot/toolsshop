@@ -101,113 +101,119 @@ export const CartPage = ({ onOpenCheckout }) => {
   }
 
   return (
-    <div style={{ padding: '24px 0 60px' }}>
+    <div className="cart-page-wrapper">
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: '#64748b', marginBottom: '16px' }}>
-        <Link to="/" style={{ color: '#64748b', textDecoration: 'none' }}>Home</Link>
+      <div className="cart-breadcrumb">
+        <Link to="/">Home</Link>
         <ChevronRight size={14} />
-        <Link to="/shop" style={{ color: '#64748b', textDecoration: 'none' }}>Shop</Link>
+        <Link to="/shop">Shop</Link>
         <ChevronRight size={14} />
         <span style={{ color: '#0f172a', fontWeight: '700' }}>Shopping Cart</span>
       </div>
 
-      <h1 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', marginBottom: '24px', letterSpacing: '-0.02em' }}>
-        Equipment Shopping Cart ({cart.length} items)
+      <h1 className="cart-page-title">
+        Equipment Shopping Cart ({cart.length} item{cart.length > 1 ? 's' : ''})
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', alignItems: 'start' }}>
+      <div className="cart-page-grid">
         {/* Left: Cart Items List */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow-xs)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="cart-items-container">
+          <div className="cart-items-list">
             {cart.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  display: 'flex',
-                  gap: '16px',
-                  paddingBottom: '16px',
-                  borderBottom: '1px solid #f1f5f9',
-                  alignItems: 'center'
-                }}
-              >
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover', background: '#f8fafc', border: '1px solid #e2e8f0' }}
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
-                  }}
-                />
+              <div key={item.id} className="cart-item-card" id={`cart-item-${item.id}`}>
+                {/* Top Section: Image & Product Details */}
+                <div className="cart-item-top-row">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="cart-item-thumbnail"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
 
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#ea580c', textTransform: 'uppercase' }}>
-                    {item.brand}
-                  </span>
-                  <h3 style={{ fontSize: '0.96rem', fontWeight: '700', color: '#0f172a', margin: '2px 0 6px', lineHeight: 1.3 }}>
-                    {item.name}
-                  </h3>
-                  <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
-                    Unit Price: <strong style={{ color: '#0f172a' }}>{formatPrice(item.price)}</strong>
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: '#0284c7', marginTop: '2px', fontWeight: '600' }}>
-                    🚚 Courier: {item.deliveryCost === 0 ? <strong style={{ color: '#16a34a' }}>FREE</strong> : <strong>₹{item.deliveryCost ?? 120}/unit</strong>}
+                  <div className="cart-item-details">
+                    <span className="cart-item-brand">
+                      {item.brand}
+                    </span>
+                    <h3 className="cart-item-title">
+                      {item.name}
+                    </h3>
+                    <div className="cart-item-pricing-meta">
+                      <span className="cart-item-unit-price">
+                        Unit Price: <strong>{formatPrice(item.price)}</strong>
+                      </span>
+                      <span className="cart-item-courier-tag">
+                        🚚 Courier: {item.deliveryCost === 0 ? <strong style={{ color: '#16a34a' }}>FREE</strong> : <strong>₹{item.deliveryCost ?? 120}/unit</strong>}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
-                  <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                    {formatPrice(item.price * item.quantity)}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="qty-counter">
+                {/* Bottom Bar: Stepper & Remove on Left, Line Total on Right */}
+                <div className="cart-item-bottom-bar">
+                  <div className="cart-item-actions-left">
+                    <div className="cart-item-stepper">
                       <button
-                        className="btn-qty"
+                        type="button"
+                        className="cart-stepper-btn"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         title="Decrease quantity"
+                        aria-label="Decrease quantity"
+                        id={`btn-cart-minus-${item.id}`}
                       >
                         <Minus size={14} />
                       </button>
-                      <span className="qty-value" style={{ color: '#0f172a' }}>{item.quantity}</span>
+                      <span className="cart-stepper-val">{item.quantity}</span>
                       <button
-                        className="btn-qty"
+                        type="button"
+                        className="cart-stepper-btn"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         disabled={item.quantity >= (item.stock ?? 999)}
                         title={item.quantity >= (item.stock ?? 999) ? `Only ${item.stock} in stock` : "Increase quantity"}
-                        style={{
-                          opacity: item.quantity >= (item.stock ?? 999) ? 0.4 : 1,
-                          cursor: item.quantity >= (item.stock ?? 999) ? 'not-allowed' : 'pointer'
-                        }}
+                        aria-label="Increase quantity"
+                        id={`btn-cart-plus-${item.id}`}
                       >
                         <Plus size={14} />
                       </button>
                     </div>
 
                     <button
+                      type="button"
                       onClick={() => removeFromCart(item.id)}
-                      style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '6px' }}
-                      title="Remove"
+                      className="cart-item-remove-btn"
+                      title="Remove item from cart"
+                      id={`btn-cart-remove-${item.id}`}
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={15} />
+                      <span>Remove</span>
                     </button>
                   </div>
-                  {item.quantity >= (item.stock ?? 999) && (
-                    <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: '700' }}>
-                      Max stock ({item.stock ?? 1} unit)
-                    </span>
-                  )}
+
+                  <div className="cart-item-total-wrap">
+                    <div className="cart-item-total-price">
+                      {formatPrice(item.price * item.quantity)}
+                    </div>
+                    {item.quantity >= (item.stock ?? 999) && (
+                      <span className="cart-item-max-stock-tag">
+                        Max stock ({item.stock ?? 1} unit{item.stock > 1 ? 's' : ''})
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
-            <Link to="/shop" style={{ color: '#ea580c', fontSize: '0.86rem', fontWeight: '700', textDecoration: 'none' }}>
+          <div className="cart-items-footer-links">
+            <Link to="/shop" className="cart-continue-btn">
               ← Continue Shopping
             </Link>
             <button
+              type="button"
               onClick={clearCart}
-              style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer' }}
+              className="cart-clear-btn"
+              id="btn-clear-cart"
             >
               Clear Cart
             </button>
@@ -215,8 +221,8 @@ export const CartPage = ({ onOpenCheckout }) => {
         </div>
 
         {/* Right: Summary Card */}
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-xs)' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', marginBottom: '18px' }}>
+        <div className="cart-summary-card">
+          <h2 className="cart-summary-heading">
             Order Summary
           </h2>
 
@@ -225,19 +231,12 @@ export const CartPage = ({ onOpenCheckout }) => {
             <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
               Select Delivery Preference
             </span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="cart-delivery-selector">
               <div
                 onClick={() => setDeliveryType('store-pickup')}
-                style={{
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                  background: deliveryType === 'store-pickup' ? 'rgba(234, 88, 12, 0.06)' : '#ffffff',
-                  cursor: 'pointer',
-                  textAlign: 'center'
-                }}
+                className={`cart-delivery-pill ${deliveryType === 'store-pickup' ? 'active' : 'inactive'}`}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#0f172a', fontWeight: '700', fontSize: '0.86rem' }}>
+                <div className="cart-delivery-pill-header">
                   <MapPin size={15} style={{ color: '#ea580c' }} />
                   <span>Store Pickup</span>
                 </div>
@@ -246,16 +245,9 @@ export const CartPage = ({ onOpenCheckout }) => {
 
               <div
                 onClick={() => setDeliveryType('kerala-courier')}
-                style={{
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                  background: deliveryType === 'kerala-courier' ? 'rgba(234, 88, 12, 0.06)' : '#ffffff',
-                  cursor: 'pointer',
-                  textAlign: 'center'
-                }}
+                className={`cart-delivery-pill ${deliveryType === 'kerala-courier' ? 'active' : 'inactive'}`}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#0f172a', fontWeight: '700', fontSize: '0.86rem' }}>
+                <div className="cart-delivery-pill-header">
                   <Truck size={15} style={{ color: '#0284c7' }} />
                   <span>Courier</span>
                 </div>
@@ -445,14 +437,14 @@ export const CartPage = ({ onOpenCheckout }) => {
           )}
 
           {/* Calculations */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '0.9rem' }}>
+          <div className="cart-calc-box">
+            <div className="cart-calc-row">
               <span>Subtotal</span>
               <span style={{ color: '#0f172a', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>{formatPrice(subtotal)}</span>
             </div>
 
             {discountAmount > 0 && activeCoupon && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#16a34a', fontSize: '0.9rem' }}>
+              <div className="cart-calc-row" style={{ color: '#16a34a' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>
                     Discount ({activeCoupon.code} • {activeCoupon.discountType === 'flat' ? `₹${activeCoupon.discountValue} OFF` : `${activeCoupon.discountValue}% OFF`})
@@ -479,24 +471,25 @@ export const CartPage = ({ onOpenCheckout }) => {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', fontSize: '0.9rem' }}>
+            <div className="cart-calc-row">
               <span>Delivery Fee ({deliveryType === 'store-pickup' ? 'Store Pickup' : 'Courier'})</span>
               <span style={{ color: deliveryFee === 0 ? '#16a34a' : '#0f172a', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
                 {deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}
               </span>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0f172a', paddingTop: '14px', fontSize: '1.25rem', fontWeight: '800' }}>
+            <div className="cart-calc-total-row">
               <span style={{ color: '#0f172a' }}>Total Amount</span>
               <span style={{ color: '#ea580c', fontFamily: 'var(--font-mono)' }}>{formatPrice(finalTotal)}</span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="cart-actions-column">
             <button
               className="btn-hero-clean"
               onClick={onOpenCheckout}
               style={{ justifyContent: 'center', width: '100%', padding: '14px', fontSize: '0.96rem' }}
+              id="btn-cart-checkout"
             >
               <span>Proceed to Checkout</span>
               <ArrowRight size={18} />
@@ -508,6 +501,7 @@ export const CartPage = ({ onOpenCheckout }) => {
               rel="noopener noreferrer"
               className="btn-hero-clean"
               style={{ justifyContent: 'center', width: '100%', background: '#16a34a', textDecoration: 'none', padding: '14px', fontSize: '0.96rem' }}
+              id="btn-cart-whatsapp"
             >
               <MessageCircle size={18} />
               <span>Send Order on WhatsApp</span>
