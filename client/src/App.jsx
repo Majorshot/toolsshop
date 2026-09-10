@@ -31,8 +31,8 @@ const MainApp = () => {
   const { toastMessage } = useCart() || {};
   const navigate = useNavigate();
 
-  // Products & Filter States
-  const [products, setProducts] = useState([]);
+  // All Catalog Products (Unfiltered base for HomePage, Catalog counts and Shop)
+  const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -49,18 +49,13 @@ const MainApp = () => {
   // Store information
   const [storeInfo, setStoreInfo] = useState(null);
 
-  // Load products
+  // Load all products for the store (unfiltered base)
   const loadProducts = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.getProducts({
-        category: activeCategory,
-        brand: activeBrand,
-        search: searchQuery,
-        sortBy
-      });
-      setProducts(res.data || []);
+      const res = await api.getProducts();
+      setAllProducts(res.data || []);
     } catch (err) {
       console.error(err);
       setError('Could not load power tools. Please verify backend connection.');
@@ -71,7 +66,7 @@ const MainApp = () => {
 
   useEffect(() => {
     loadProducts();
-  }, [activeCategory, activeBrand, searchQuery, sortBy]);
+  }, []);
 
   useEffect(() => {
     api.getStoreInfo()
@@ -124,7 +119,7 @@ const MainApp = () => {
             path="/"
             element={
               <HomePage
-                products={products}
+                products={allProducts}
                 onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
               />
             }
@@ -134,7 +129,7 @@ const MainApp = () => {
             element={
               <div className="container">
                 <ShopPage
-                  products={products}
+                  products={allProducts}
                   loading={loading}
                   error={error}
                   activeCategory={activeCategory}

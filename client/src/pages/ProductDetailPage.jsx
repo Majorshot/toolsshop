@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
-  Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle2, 
+  Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle, CheckCircle2, 
   Package, Truck, Zap, ArrowLeft, ChevronRight, ChevronLeft, Share2, Award, 
   RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers, Maximize2, ZoomIn, ZoomOut, Camera, X
 } from 'lucide-react';
@@ -12,7 +12,7 @@ import { ProductCard } from '../components/ProductCard';
 export const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -78,10 +78,59 @@ export const ProductDetailPage = () => {
   const maxStock = typeof product?.stock === 'number' ? product.stock : 999;
   const isOutOfStock = maxStock <= 0;
 
+  // Live in-cart quantity
+  const cartItem = cart?.find(
+    item => item.id === product?.id ||
+            item.id === id ||
+            String(item._id) === String(product?._id) ||
+            String(item.id) === String(id)
+  );
+  const inCartQty = cartItem ? cartItem.quantity : 0;
+
+  // Sync quantity with in-cart count when product is in cart
+  useEffect(() => {
+    if (inCartQty > 0) {
+      setQuantity(inCartQty);
+    }
+  }, [inCartQty]);
+
+  const handleIncreaseQty = () => {
+    if (isOutOfStock) return;
+    const targetQty = Math.min(maxStock, quantity + 1);
+    if (targetQty === quantity) return;
+    setQuantity(targetQty);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+    if (inCartQty > 0 && product) {
+      updateQuantity(product.id || id, targetQty);
+    }
+  };
+
+  const handleDecreaseQty = () => {
+    if (isOutOfStock) return;
+    if (quantity <= 1) {
+      if (inCartQty > 0 && product) {
+        removeFromCart(product.id || id);
+        setQuantity(1);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+      }
+      return;
+    }
+    const targetQty = quantity - 1;
+    setQuantity(targetQty);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+    if (inCartQty > 0 && product) {
+      updateQuantity(product.id || id, targetQty);
+    }
+  };
+
   const handleAddToCart = () => {
     if (!product || isOutOfStock) return;
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(35);
+    }
+    if (inCartQty > 0) {
+      navigate('/cart');
+      return;
     }
     const safeQty = Math.max(1, Math.min(quantity, maxStock));
     addToCart(product, safeQty);
@@ -89,8 +138,10 @@ export const ProductDetailPage = () => {
 
   const handleBuyNow = () => {
     if (!product || isOutOfStock) return;
-    const safeQty = Math.max(1, Math.min(quantity, maxStock));
-    addToCart(product, safeQty);
+    if (inCartQty === 0) {
+      const safeQty = Math.max(1, Math.min(quantity, maxStock));
+      addToCart(product, safeQty);
+    }
     navigate('/cart');
   };
 
@@ -307,11 +358,6 @@ export const ProductDetailPage = () => {
               </div>
 
               {/* Badges on mobile slider */}
-              {product.badge && (
-                <span className="gallery-badge-top-left">
-                  {product.badge}
-                </span>
-              )}
               {product.cordless && (
                 <span className="gallery-badge-cordless">
                   <Zap size={11} /> Cordless 20V
@@ -381,12 +427,6 @@ export const ProductDetailPage = () => {
                 />
 
                 {/* Badges */}
-                {product.badge && (
-                  <span className="gallery-badge-top-left">
-                    {product.badge}
-                  </span>
-                )}
-
                 {product.cordless && (
                   <span className="gallery-badge-cordless">
                     <Zap size={12} /> Cordless 20V XR
@@ -621,46 +661,73 @@ export const ProductDetailPage = () => {
               marginBottom: '26px' 
             }}
           >
+            {/* Quantity Selector & Live Cart Sync */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <label style={{ fontSize: '0.86rem', fontWeight: '700', color: '#0f172a' }}>Quantity:</label>
-              <div className="qty-counter" style={{ background: '#ffffff', opacity: isOutOfStock ? 0.5 : 1 }}>
-                <button
-                  className="btn-qty"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1 || isOutOfStock}
-                  style={{
-                    width: '34px',
-                    height: '34px',
-                    fontSize: '1.1rem',
-                    cursor: (quantity <= 1 || isOutOfStock) ? 'not-allowed' : 'pointer'
-                  }}
-                  title="Decrease quantity"
-                >
-                  -
-                </button>
-                <span className="qty-value" style={{ minWidth: '36px', textAlign: 'center', fontWeight: '800' }}>
-                  {isOutOfStock ? 0 : quantity}
-                </span>
-                <button
-                  className="btn-qty"
-                  onClick={() => setQuantity(Math.min(maxStock, quantity + 1))}
-                  disabled={quantity >= maxStock || isOutOfStock}
-                  style={{
-                    width: '34px',
-                    height: '34px',
-                    fontSize: '1.1rem',
-                    cursor: (quantity >= maxStock || isOutOfStock) ? 'not-allowed' : 'pointer',
-                    opacity: (quantity >= maxStock || isOutOfStock) ? 0.4 : 1
-                  }}
-                  title={quantity >= maxStock ? `Only ${maxStock} in stock` : 'Increase quantity'}
-                >
-                  +
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '700' }}>Quantity:</span>
+                <div className="qty-counter">
+                  <button
+                    className="btn-qty"
+                    onClick={handleDecreaseQty}
+                    disabled={(quantity <= 1 && inCartQty === 0) || isOutOfStock}
+                    style={{
+                      width: '34px',
+                      height: '34px',
+                      fontSize: '1.1rem',
+                      cursor: ((quantity <= 1 && inCartQty === 0) || isOutOfStock) ? 'not-allowed' : 'pointer'
+                    }}
+                    title={inCartQty > 0 && quantity <= 1 ? "Remove from cart" : "Decrease quantity"}
+                    id="btn-pdp-qty-minus"
+                  >
+                    -
+                  </button>
+                  <span className="qty-value" style={{ minWidth: '36px', textAlign: 'center', fontWeight: '800' }}>
+                    {isOutOfStock ? 0 : quantity}
+                  </span>
+                  <button
+                    className="btn-qty"
+                    onClick={handleIncreaseQty}
+                    disabled={quantity >= maxStock || isOutOfStock}
+                    style={{
+                      width: '34px',
+                      height: '34px',
+                      fontSize: '1.1rem',
+                      cursor: (quantity >= maxStock || isOutOfStock) ? 'not-allowed' : 'pointer',
+                      opacity: (quantity >= maxStock || isOutOfStock) ? 0.4 : 1
+                    }}
+                    title={quantity >= maxStock ? `Only ${maxStock} in stock` : 'Increase quantity'}
+                    id="btn-pdp-qty-plus"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
 
               <span style={{ fontSize: '0.88rem', color: '#64748b' }}>
                 Subtotal: <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)' }}>{formatPrice(product.price * (isOutOfStock ? 0 : quantity))}</strong>
               </span>
+
+              {inCartQty > 0 && (
+                <span
+                  style={{
+                    fontSize: '0.78rem',
+                    color: '#16a34a',
+                    fontWeight: '800',
+                    background: '#f0fdf4',
+                    border: '1.5px solid #86efac',
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                  title="Currently in your cart"
+                  id="pdp-in-cart-status"
+                >
+                  <CheckCircle size={13} />
+                  <span>{inCartQty} in Cart (Live)</span>
+                </span>
+              )}
 
               {quantity >= maxStock && !isOutOfStock && (
                 <span style={{ fontSize: '0.76rem', color: '#dc2626', fontWeight: '700', background: '#fef2f2', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '4px' }}>
@@ -680,12 +747,23 @@ export const ProductDetailPage = () => {
                   justifyContent: 'center',
                   fontSize: '0.9rem',
                   opacity: isOutOfStock ? 0.5 : 1,
-                  cursor: isOutOfStock ? 'not-allowed' : 'pointer'
+                  cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                  background: inCartQty > 0 ? '#16a34a' : undefined,
+                  borderColor: inCartQty > 0 ? '#16a34a' : undefined
                 }}
                 id="btn-pdp-add-cart"
               >
-                <ShoppingCart size={18} />
-                <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
+                {inCartQty > 0 ? (
+                  <>
+                    <CheckCircle size={18} />
+                    <span>In Cart ({inCartQty}) • View Cart</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart size={18} />
+                    <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
+                  </>
+                )}
               </button>
 
               <button

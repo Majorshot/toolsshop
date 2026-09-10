@@ -54,12 +54,6 @@ export const ProductCard = ({ product, onSelectProduct }) => {
           loading="lazy"
         />
 
-        {product.badge && (
-          <span className="card-badge">
-            {product.badge}
-          </span>
-        )}
-
         {product.discount && (
           <span className="card-discount-badge">
             {product.discount}
