@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle2, 
-  Package, Truck, Zap, ArrowLeft, ChevronRight, Share2, Award, 
-  RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers
+  Package, Truck, Zap, ArrowLeft, ChevronRight, ChevronLeft, Share2, Award, 
+  RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers, Maximize2, ZoomIn, ZoomOut, Camera, X
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { api } from '../services/api';
@@ -22,6 +22,14 @@ export const ProductDetailPage = () => {
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Full Screen Lightbox & Mobile Slider state
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
+  const [fullScreenIdx, setFullScreenIdx] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const mobileSliderRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   // Fetch current product and related products
   useEffect(() => {
@@ -102,6 +110,96 @@ export const ProductDetailPage = () => {
     return `https://wa.me/919447123456?text=${text}`;
   };
 
+  const rawGallery = Array.isArray(product?.images) && product.images.length > 0
+    ? product.images.map(s => typeof s === 'string' ? s.trim() : '').filter(Boolean)
+    : (product?.image ? [product.image] : []);
+  const galleryImages = rawGallery.length > 0 
+    ? rawGallery 
+    : ['https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80'];
+
+  const openFullScreen = (index = 0) => {
+    setFullScreenIdx(index);
+    setIsZoomed(false);
+    setIsFullScreenOpen(true);
+  };
+
+  const closeFullScreen = () => {
+    setIsFullScreenOpen(false);
+    setIsZoomed(false);
+  };
+
+  const nextFullScreenImage = (e) => {
+    if (e) e.stopPropagation();
+    setIsZoomed(false);
+    setFullScreenIdx((prev) => (prev + 1) % galleryImages.length);
+  };
+
+  const prevFullScreenImage = (e) => {
+    if (e) e.stopPropagation();
+    setIsZoomed(false);
+    setFullScreenIdx((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+  };
+
+  // Keyboard navigation & body scroll lock for full screen modal
+  useEffect(() => {
+    if (isFullScreenOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') closeFullScreen();
+        if (e.key === 'ArrowRight') nextFullScreenImage();
+        if (e.key === 'ArrowLeft') prevFullScreenImage();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isFullScreenOpen, galleryImages.length]);
+
+  // Handle scroll on mobile swipe slider to update active indicator
+  const handleMobileSliderScroll = () => {
+    if (!mobileSliderRef.current) return;
+    const { scrollLeft, clientWidth } = mobileSliderRef.current;
+    if (clientWidth > 0) {
+      const newIdx = Math.round(scrollLeft / clientWidth);
+      if (newIdx !== activeImgIdx && newIdx >= 0 && newIdx < galleryImages.length) {
+        setActiveImgIdx(newIdx);
+      }
+    }
+  };
+
+  // Scroll mobile slider programmatically when dot/thumbnail tapped
+  const scrollToSlide = (idx) => {
+    setActiveImgIdx(idx);
+    if (mobileSliderRef.current) {
+      const clientWidth = mobileSliderRef.current.clientWidth;
+      mobileSliderRef.current.scrollTo({
+        left: idx * clientWidth,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        nextFullScreenImage();
+      } else {
+        prevFullScreenImage();
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '80px 20px', textAlign: 'center', minHeight: '60vh' }}>
@@ -140,12 +238,6 @@ export const ProductDetailPage = () => {
     );
   }
 
-  const rawGallery = Array.isArray(product.images) && product.images.length > 0
-    ? product.images.map(s => typeof s === 'string' ? s.trim() : '').filter(Boolean)
-    : (product.image ? [product.image] : []);
-  const galleryImages = rawGallery.length > 0 
-    ? rawGallery 
-    : ['https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80'];
   const discountAmount = product.originalPrice && product.originalPrice > product.price 
     ? product.originalPrice - product.price 
     : 0;
@@ -184,161 +276,165 @@ export const ProductDetailPage = () => {
       </nav>
 
       {/* Main E-Commerce Product Layout: Two Columns (Amazon / Flipkart Style) */}
-      <div 
-        style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-          gap: '36px',
-          alignItems: 'flex-start',
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '32px 28px',
-          boxShadow: 'var(--shadow-xs)',
-          marginBottom: '48px'
-        }}
-      >
+      <div className="product-detail-card">
         {/* ================= LEFT COLUMN: PRODUCT GALLERY ================= */}
-        <div style={{ position: 'sticky', top: '90px' }}>
-          <div style={{ display: 'flex', gap: '16px', flexDirection: 'row-reverse' }}>
-            {/* Main Stage Image */}
-            <div
-              style={{
-                flex: 1,
-                aspectRatio: '1 / 1',
-                borderRadius: '14px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                overflow: 'hidden'
-              }}
-            >
-              <img
-                src={galleryImages[activeImgIdx] || product.image}
-                alt={product.name}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  padding: '16px',
-                  transition: 'transform 0.3s ease'
-                }}
-                id="main-product-image"
-              />
-
-              {/* Badges */}
-              {product.badge && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '14px',
-                    left: '14px',
-                    background: '#0f172a',
-                    color: '#ffffff',
-                    fontSize: '0.74rem',
-                    fontWeight: '800',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-                  }}
-                >
-                  {product.badge}
-                </span>
-              )}
-
-              {product.cordless && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    bottom: '14px',
-                    left: '14px',
-                    background: 'rgba(2, 132, 199, 0.95)',
-                    color: '#ffffff',
-                    fontSize: '0.72rem',
-                    fontWeight: '800',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <Zap size={12} /> Cordless 20V XR
-                </span>
-              )}
-
-              {/* Share button */}
-              <button
-                onClick={handleShare}
-                style={{
-                  position: 'absolute',
-                  top: '14px',
-                  right: '14px',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#475569',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--shadow-xs)'
-                }}
-                title="Share link"
-              >
-                {copiedLink ? <Check size={16} style={{ color: '#16a34a' }} /> : <Share2 size={16} />}
-              </button>
-            </div>
-
-            {/* Thumbnail Strip (Flipkart style on left) */}
-            {galleryImages.length > 1 && (
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '10px',
-                  width: '68px',
-                  flexShrink: 0
-                }}
+        <div className="product-gallery-col">
+          {/* 1. MOBILE SWIPEABLE CAROUSEL (Amazon & Flipkart Style on Mobile) */}
+          <div className="mobile-product-gallery">
+            <div className="mobile-slider-wrapper">
+              <div
+                className="mobile-slider-track no-scrollbar"
+                ref={mobileSliderRef}
+                onScroll={handleMobileSliderScroll}
               >
                 {galleryImages.map((imgUrl, idx) => (
-                  <button
+                  <div
                     key={idx}
-                    onClick={() => setActiveImgIdx(idx)}
-                    onMouseEnter={() => setActiveImgIdx(idx)}
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '10px',
-                      border: activeImgIdx === idx ? '2px solid var(--brand-primary)' : '1px solid #e2e8f0',
-                      background: '#ffffff',
-                      padding: '4px',
-                      cursor: 'pointer',
-                      overflow: 'hidden',
-                      boxShadow: activeImgIdx === idx ? '0 0 0 2px var(--brand-border)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                    title={`View photo ${idx + 1}`}
+                    className="mobile-slide-item"
+                    onClick={() => openFullScreen(idx)}
+                    title="Tap to view full screen"
                   >
-                    <img 
-                      src={imgUrl} 
-                      alt={`View thumbnail ${idx + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    <img
+                      src={imgUrl}
+                      alt={`${product.name} view ${idx + 1}`}
+                      className="mobile-slide-img"
                       onError={(e) => {
                         e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
                       }}
                     />
-                  </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Badges on mobile slider */}
+              {product.badge && (
+                <span className="gallery-badge-top-left">
+                  {product.badge}
+                </span>
+              )}
+              {product.cordless && (
+                <span className="gallery-badge-cordless">
+                  <Zap size={11} /> Cordless 20V
+                </span>
+              )}
+
+              {/* Action button on mobile slider */}
+              <div className="gallery-top-right-actions">
+                <button
+                  type="button"
+                  onClick={() => openFullScreen(activeImgIdx)}
+                  className="gallery-action-circle-btn"
+                  title="View full screen"
+                >
+                  <Maximize2 size={16} />
+                </button>
+              </div>
+
+              {/* Image counter pill (Amazon/Flipkart style) */}
+              <div className="mobile-gallery-counter-pill">
+                <Camera size={11} />
+                <span>{activeImgIdx + 1} / {galleryImages.length}</span>
+              </div>
+            </div>
+
+            {/* Pagination dots (Flipkart style) */}
+            {galleryImages.length > 1 && (
+              <div className="mobile-gallery-dots">
+                {galleryImages.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => scrollToSlide(idx)}
+                    className={`mobile-slider-dot ${activeImgIdx === idx ? 'active' : ''}`}
+                    aria-label={`Slide ${idx + 1}`}
+                  />
                 ))}
               </div>
             )}
+
+            {/* Tap to expand hint */}
+            <div
+              className="tap-to-expand-hint"
+              onClick={() => openFullScreen(activeImgIdx)}
+            >
+              <Maximize2 size={12} />
+              <span>Tap image to view full screen</span>
+            </div>
+          </div>
+
+          {/* 2. DESKTOP GALLERY (Flipkart Vertical Strip + Stage Preview on >= 768px) */}
+          <div className="desktop-product-gallery">
+            <div style={{ display: 'flex', gap: '16px', flexDirection: 'row-reverse' }}>
+              {/* Main Stage Image */}
+              <div
+                className="desktop-main-stage"
+                onClick={() => openFullScreen(activeImgIdx)}
+                title="Click to view full screen"
+              >
+                <img
+                  src={galleryImages[activeImgIdx] || product.image}
+                  alt={product.name}
+                  id="main-product-image"
+                  onError={(e) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                  }}
+                />
+
+                {/* Badges */}
+                {product.badge && (
+                  <span className="gallery-badge-top-left">
+                    {product.badge}
+                  </span>
+                )}
+
+                {product.cordless && (
+                  <span className="gallery-badge-cordless">
+                    <Zap size={12} /> Cordless 20V XR
+                  </span>
+                )}
+
+                {/* Top action button */}
+                <div className="gallery-top-right-actions">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); openFullScreen(activeImgIdx); }}
+                    className="gallery-action-circle-btn"
+                    title="View full screen"
+                  >
+                    <Maximize2 size={16} />
+                  </button>
+                </div>
+
+                <div className="desktop-expand-badge">
+                  <Maximize2 size={12} />
+                  <span>Click to zoom</span>
+                </div>
+              </div>
+
+              {/* Thumbnail Strip (Flipkart style on left) */}
+              {galleryImages.length > 1 && (
+                <div className="desktop-thumbnails-strip">
+                  {galleryImages.map((imgUrl, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActiveImgIdx(idx)}
+                      onMouseEnter={() => setActiveImgIdx(idx)}
+                      className={`desktop-thumb-btn ${activeImgIdx === idx ? 'active' : ''}`}
+                      title={`View photo ${idx + 1}`}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Thumbnail ${idx + 1}`}
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -753,6 +849,124 @@ export const ProductDetailPage = () => {
           </div>
         )}
       </section>
+
+      {/* ================= FULL SCREEN IMAGE VIEWER MODAL (LIGHTBOX) ================= */}
+      {isFullScreenOpen && (
+        <div
+          className="fullscreen-image-modal-overlay"
+          onClick={closeFullScreen}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Top Bar */}
+          <div className="fullscreen-modal-header" onClick={(e) => e.stopPropagation()}>
+            <div className="fullscreen-header-title">
+              <span className="fullscreen-brand">{product.brand}</span>
+              <span className="fullscreen-prod-name">{product.name}</span>
+            </div>
+
+            <div className="fullscreen-header-controls">
+              <span className="fullscreen-counter">
+                {fullScreenIdx + 1} / {galleryImages.length}
+              </span>
+
+              <button
+                type="button"
+                className="fullscreen-ctrl-btn"
+                onClick={() => setIsZoomed(!isZoomed)}
+                title={isZoomed ? "Reset Zoom" : "Zoom In"}
+              >
+                {isZoomed ? <ZoomOut size={18} /> : <ZoomIn size={18} />}
+              </button>
+
+              <button
+                type="button"
+                className="fullscreen-close-btn"
+                onClick={closeFullScreen}
+                title="Close Fullscreen (Esc)"
+              >
+                <X size={22} />
+              </button>
+            </div>
+          </div>
+
+          {/* Main Stage Image in Full Screen */}
+          <div
+            className="fullscreen-stage-container"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeFullScreen();
+            }}
+          >
+            {galleryImages.length > 1 && (
+              <button
+                type="button"
+                className="fullscreen-nav-arrow fullscreen-nav-prev"
+                onClick={prevFullScreenImage}
+                title="Previous image"
+              >
+                <ChevronLeft size={28} />
+              </button>
+            )}
+
+            <div
+              className={`fullscreen-img-wrapper ${isZoomed ? 'zoomed' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsZoomed(!isZoomed);
+              }}
+              title={isZoomed ? "Click to reset zoom" : "Click to zoom in"}
+            >
+              <img
+                src={galleryImages[fullScreenIdx]}
+                alt={`${product.name} full view`}
+                className="fullscreen-active-img"
+                onError={(e) => {
+                  e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                }}
+              />
+            </div>
+
+            {galleryImages.length > 1 && (
+              <button
+                type="button"
+                className="fullscreen-nav-arrow fullscreen-nav-next"
+                onClick={nextFullScreenImage}
+                title="Next image"
+              >
+                <ChevronRight size={28} />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Thumbnail Strip */}
+          {galleryImages.length > 1 && (
+            <div className="fullscreen-bottom-strip no-scrollbar" onClick={(e) => e.stopPropagation()}>
+              {galleryImages.map((imgUrl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setIsZoomed(false);
+                    setFullScreenIdx(idx);
+                  }}
+                  className={`fullscreen-strip-thumb ${fullScreenIdx === idx ? 'active' : ''}`}
+                  title={`View photo ${idx + 1}`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`Thumbnail ${idx + 1}`}
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
+

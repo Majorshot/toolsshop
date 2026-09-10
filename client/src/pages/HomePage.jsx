@@ -38,10 +38,11 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
   const navigate = useNavigate();
   const featuredTools = products.slice(0, 8);
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const categoryScrollRef = useRef(null);
 
-  // Fetch categories that owner created/added in portal (same taxonomy as ShopPage filter)
+  // Fetch categories & brands that owner created/added in portal (dynamic backend taxonomy)
   useEffect(() => {
     api.getTaxonomy()
       .then(res => {
@@ -50,9 +51,18 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
           const valid = res.categories.filter(c => c.id !== 'all');
           setCategories(valid.slice(0, 5));
         }
+        if (res && res.brands && res.brands.length > 0) {
+          setBrands(res.brands);
+        }
       })
       .catch(err => console.error("Error fetching portal taxonomy:", err));
   }, []);
+
+  // Dynamic brands from backend taxonomy with fallback to catalog products
+  const displayBrands = (brands && brands.length > 0)
+    ? brands
+    : Array.from(new Set((products || []).map(p => p.brand).filter(Boolean)));
+
 
   // Real products from backend for hero section (no hardcoded data)
   const heroProducts = (products && products.length > 0)
@@ -278,18 +288,27 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
           </div>
         </section>
 
-        {/* Brand Partners Marquee */}
-        <section className="brand-strip-clean">
-          <span className="brand-strip-title">Authorized Brand Partners</span>
-          <div className="brand-names-row">
-            <Link to="/shop?brand=bosch" className="brand-name-item">BOSCH</Link>
-            <Link to="/shop?brand=makita" className="brand-name-item">MAKITA</Link>
-            <Link to="/shop?brand=dewalt" className="brand-name-item">DEWALT</Link>
-            <Link to="/shop?brand=dongcheng" className="brand-name-item">DONGCHENG</Link>
-            <Link to="/shop?brand=hikoki" className="brand-name-item">HiKOKI</Link>
-            <Link to="/shop?brand=stanley" className="brand-name-item">STANLEY</Link>
-          </div>
-        </section>
+        {/* Dynamic Brand Partners from Backend (Curated subset + View All button) */}
+        {displayBrands.length > 0 && (
+          <section className="brand-strip-clean">
+            <span className="brand-strip-title">Authorized Brand Partners</span>
+            <div className="brand-names-row">
+              {displayBrands.slice(0, 6).map((brand) => (
+                <Link
+                  key={brand}
+                  to={`/shop?brand=${encodeURIComponent(brand.toLowerCase())}`}
+                  className="brand-name-item"
+                >
+                  {brand.toUpperCase()}
+                </Link>
+              ))}
+              <Link to="/shop" className="brand-name-item brand-view-all-pill" id="home-brands-view-all-btn">
+                <span>VIEW ALL</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Featured Bestsellers Section */}
         <section style={{ marginBottom: '48px' }}>

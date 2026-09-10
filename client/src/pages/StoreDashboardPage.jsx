@@ -1036,7 +1036,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   if (!user) return null;
 
   return (
-    <div style={{ padding: '24px 0 60px' }}>
+    <div className="store-dashboard-wrapper">
       {/* Toast Notification */}
       {notification && (
         <div
@@ -1064,57 +1064,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       )}
 
       {/* Store Header Banner */}
-      <div
-        style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '24px',
-          boxShadow: 'var(--shadow-xs)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '14px',
-              background: '#0f172a',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <ShieldCheck size={28} />
+      <div className="store-portal-header-banner">
+        <div className="store-portal-brand-wrap">
+          <div className="store-portal-icon">
+            <ShieldCheck size={26} />
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a' }}>
-                Store Owner Portal
-              </h1>
-              <span
-                style={{
-                  background: '#f1f5f9',
-                  color: '#0f172a',
-                  fontSize: '0.72rem',
-                  fontWeight: '800',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  border: '1px solid #cbd5e1'
-                }}
-              >
-                ADMIN ACCESS
-              </span>
+            <div className="store-portal-title-row">
+              <h1>Store Owner Portal</h1>
+              <span className="store-admin-badge">ADMIN ACCESS</span>
             </div>
-            <p style={{ fontSize: '0.84rem', color: '#64748b' }}>
+            <p className="store-portal-subtitle">
               Variathu Power Tools • Poyanil Building, Kozhencherry, Kerala
             </p>
           </div>
@@ -1122,16 +1083,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
         <button
           onClick={() => { logout(); navigate('/'); }}
-          style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            borderRadius: '8px',
-            padding: '9px 16px',
-            fontSize: '0.84rem',
-            fontWeight: '700',
-            cursor: 'pointer'
-          }}
+          className="store-logout-btn"
           id="btn-store-logout"
         >
           Sign Out of Store
@@ -1139,23 +1091,19 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       </div>
 
       {/* Feature 6: Revenue Analytics & CSV Export Toolbar */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', marginBottom: '24px', boxShadow: 'var(--shadow-xs)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BarChart3 size={20} style={{ color: '#ea580c' }} />
+      <div className="store-analytics-card">
+        <div className="store-analytics-header">
+          <div className="store-analytics-title-wrap">
+            <BarChart3 size={22} style={{ color: '#ea580c', flexShrink: 0 }} />
             <div>
-              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                Store Analytics & Financial Reports
-              </h3>
-              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
-                Period revenue, payment method breakdowns, and accounting exports
-              </p>
+              <h3>Store Analytics & Financial Reports</h3>
+              <p>Period revenue, payment method breakdowns, and accounting exports</p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div className="store-analytics-actions">
             {/* Period Selector Tabs */}
-            <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+            <div className="store-period-selector">
               {[
                 { id: 'today', label: 'Today' },
                 { id: 'week', label: 'This Week' },
@@ -1166,17 +1114,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   key={period.id}
                   type="button"
                   onClick={() => setAnalyticsPeriod(period.id)}
-                  style={{
-                    padding: '5px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: analyticsPeriod === period.id ? '#0f172a' : 'transparent',
-                    color: analyticsPeriod === period.id ? '#ffffff' : '#64748b',
-                    fontSize: '0.78rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
+                  className={`store-period-btn ${analyticsPeriod === period.id ? 'active' : ''}`}
                   id={`btn-period-${period.id}`}
                 >
                   {period.label}
@@ -1188,20 +1126,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             <button
               type="button"
               onClick={handleExportOrdersCSV}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '7px 14px',
-                background: '#16a34a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 2px 4px rgba(22, 163, 74, 0.2)'
-              }}
+              className="store-csv-export-btn"
               title="Export all orders as Excel-compatible CSV for GST & Tally accounting"
               id="btn-export-orders-csv"
             >
@@ -1212,98 +1137,75 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
 
         {/* 4 Analytics Metric Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
-            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>
+        <div className="store-analytics-grid">
+          <div className="store-analytics-metric-card">
+            <span className="store-metric-label">
               Revenue ({analyticsPeriod === 'all' ? 'All Time' : analyticsPeriod === 'today' ? 'Today' : analyticsPeriod === 'week' ? 'Past 7 Days' : 'This Month'})
             </span>
-            <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+            <div className="store-metric-value-huge">
               {formatPrice(periodRevenue)}
             </div>
-            <span style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: '600' }}>
+            <span className="store-metric-subtext">
               {periodOrders.length} order{periodOrders.length === 1 ? '' : 's'} in selected period
             </span>
           </div>
 
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
-            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>
+          <div className="store-analytics-metric-card">
+            <span className="store-metric-label">
               Payment Method Breakdown
             </span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700' }}>UPI / Digital:</span>
-                <div style={{ fontSize: '0.98rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                  {formatPrice(upiRevenue)} <span style={{ fontSize: '0.7rem', color: '#64748b' }}>({upiOrders.length})</span>
-                </div>
+            <div className="store-metric-split-list">
+              <div className="store-metric-split-item">
+                <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● UPI / Digital</span>
+                <span className="store-metric-item-value">{formatPrice(upiRevenue)} <small>({upiOrders.length})</small></span>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.72rem', color: '#ea580c', fontWeight: '700' }}>Cash at Counter:</span>
-                <div style={{ fontSize: '0.98rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                  {formatPrice(cashRevenue)} <span style={{ fontSize: '0.7rem', color: '#64748b' }}>({cashOrders.length})</span>
-                </div>
+              <div className="store-metric-split-item">
+                <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● Cash at Counter</span>
+                <span className="store-metric-item-value">{formatPrice(cashRevenue)} <small>({cashOrders.length})</small></span>
               </div>
             </div>
           </div>
 
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
-            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>
+          <div className="store-analytics-metric-card">
+            <span className="store-metric-label">
               Order Fulfillment Split
             </span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: '700' }}>Store Pickup:</span>
-                <div style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                  {pickupOrdersCount} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>orders</span>
-                </div>
+            <div className="store-metric-split-list">
+              <div className="store-metric-split-item">
+                <span className="store-metric-item-label" style={{ color: '#0284c7' }}>● Store Pickup</span>
+                <span className="store-metric-item-value">{pickupOrdersCount} <small>orders</small></span>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.72rem', color: '#7c3aed', fontWeight: '700' }}>Courier Express:</span>
-                <div style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                  {courierOrdersCount} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>parcels</span>
-                </div>
+              <div className="store-metric-split-item">
+                <span className="store-metric-item-label" style={{ color: '#7c3aed' }}>● Courier Express</span>
+                <span className="store-metric-item-value">{courierOrdersCount} <small>parcels</small></span>
               </div>
             </div>
           </div>
 
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
-            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase' }}>
+          <div className="store-analytics-metric-card">
+            <span className="store-metric-label">
               Workshop & Repairs Active
             </span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#ea580c', fontWeight: '700' }}>In Workshop:</span>
-                <div style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                  {repairs.filter(r => r.status !== 'Handed Over').length} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>jobs</span>
-                </div>
+            <div className="store-metric-split-list">
+              <div className="store-metric-split-item">
+                <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● In Workshop</span>
+                <span className="store-metric-item-value">{repairs.filter(r => r.status !== 'Handed Over').length} <small>jobs</small></span>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700' }}>Ready for Pickup:</span>
-                <div style={{ fontSize: '1.15rem', fontWeight: '800', color: '#16a34a', fontFamily: 'var(--font-mono)' }}>
-                  {repairs.filter(r => r.status === 'Repaired & Ready').length} <span style={{ fontSize: '0.72rem', color: '#64748b' }}>ready</span>
-                </div>
+              <div className="store-metric-split-item">
+                <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● Ready for Pickup</span>
+                <span className="store-metric-item-value" style={{ color: '#16a34a' }}>{repairs.filter(r => r.status === 'Repaired & Ready').length} <small>ready</small></span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs (5 Tabs) */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', overflowX: 'auto', flexWrap: 'wrap' }}>
+      {/* Navigation Tabs (5 Tabs) - Horizontal Scroll Strip on Mobile */}
+      <div className="store-nav-tabs-bar" role="tablist">
         <button
+          type="button"
           onClick={() => setActiveTab('orders')}
-          style={{
-            padding: '9px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'orders' ? '#0f172a' : '#f1f5f9',
-            color: activeTab === 'orders' ? '#ffffff' : '#64748b',
-            fontWeight: '700',
-            fontSize: '0.84rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
+          className={`store-nav-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
           id="store-tab-orders"
         >
           <ShoppingBag size={16} />
@@ -1311,46 +1213,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('inventory')}
-          style={{
-            padding: '9px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'inventory' ? '#0f172a' : '#f1f5f9',
-            color: activeTab === 'inventory' ? '#ffffff' : '#64748b',
-            fontWeight: '700',
-            fontSize: '0.84rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
+          className={`store-nav-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
           id="store-tab-inventory"
         >
           <Package size={16} />
           <span>Inventory & Stock ({products.length})</span>
           {lowStockCount > 0 && (
-            <span style={{ background: '#dc2626', color: '#ffffff', padding: '1px 6px', borderRadius: '9999px', fontSize: '0.7rem', fontWeight: '800' }}>
+            <span className="store-nav-badge-alert">
               {lowStockCount} low
             </span>
           )}
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('coupons')}
-          style={{
-            padding: '9px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'coupons' ? '#0f172a' : '#f1f5f9',
-            color: activeTab === 'coupons' ? '#ffffff' : '#64748b',
-            fontWeight: '700',
-            fontSize: '0.84rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
+          className={`store-nav-tab-btn ${activeTab === 'coupons' ? 'active' : ''}`}
           id="store-tab-coupons"
         >
           <Percent size={16} />
@@ -1358,20 +1238,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('repairs')}
-          style={{
-            padding: '9px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'repairs' ? '#0f172a' : '#f1f5f9',
-            color: activeTab === 'repairs' ? '#ffffff' : '#64748b',
-            fontWeight: '700',
-            fontSize: '0.84rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
+          className={`store-nav-tab-btn ${activeTab === 'repairs' ? 'active' : ''}`}
           id="store-tab-repairs"
         >
           <Wrench size={16} />
@@ -1379,20 +1248,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </button>
 
         <button
+          type="button"
           onClick={() => setActiveTab('taxonomy')}
-          style={{
-            padding: '9px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'taxonomy' ? '#0f172a' : '#f1f5f9',
-            color: activeTab === 'taxonomy' ? '#ffffff' : '#64748b',
-            fontWeight: '700',
-            fontSize: '0.84rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
+          className={`store-nav-tab-btn ${activeTab === 'taxonomy' ? 'active' : ''}`}
           id="store-tab-taxonomy"
         >
           <Layers size={16} />
@@ -1402,7 +1260,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       {/* TAB 1: CUSTOMER ORDERS MANAGER */}
       {activeTab === 'orders' && (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-xs)' }}>
+        <div className="store-tab-content-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
@@ -1740,15 +1598,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       {/* TAB 2: INVENTORY & EQUIPMENT CONTROL */}
       {activeTab === 'inventory' && (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-xs)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div className="store-tab-content-card">
+          <div className="store-section-header">
             <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
-                Inventory & Product Control
-              </h2>
-              <p style={{ fontSize: '0.84rem', color: '#64748b' }}>
-                Add, edit prices, update stock levels, or remove tools from the store catalog.
-              </p>
+              <h2>Inventory & Product Control</h2>
+              <p>Add, edit prices, update stock levels, or remove tools from the store catalog.</p>
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -1765,38 +1619,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           {/* Search, Filter & Sort Bar */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '18px',
-              flexWrap: 'wrap',
-              background: '#f8fafc',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0'
-            }}
-          >
+          <div className="store-inventory-toolbar">
             {/* 1. Search Box */}
-            <div style={{ flex: '1 1 260px', minWidth: '220px', position: 'relative' }}>
+            <div className="store-inv-search-wrap">
               <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
                 placeholder="Search tools by name, brand, SKU..."
                 value={inventorySearch}
                 onChange={(e) => setInventorySearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '38px',
-                  padding: '0 30px 0 34px',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  color: '#0f172a',
-                  fontSize: '0.84rem',
-                  outline: 'none'
-                }}
+                className="store-inv-search-input"
                 id="input-inventory-search"
               />
               {inventorySearch && (
@@ -1824,22 +1656,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             {/* 2. Filter by Company / Brand */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Company:</span>
+            <div className="store-inv-filter-group">
+              <label>Company:</label>
               <select
                 value={inventoryBrandFilter}
                 onChange={(e) => handleBrandFilterChange(e.target.value)}
+                className="store-inv-select"
                 style={{
-                  height: '38px',
-                  padding: '0 10px',
                   background: inventoryBrandFilter !== 'all' ? '#eff6ff' : '#ffffff',
-                  border: inventoryBrandFilter !== 'all' ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  color: inventoryBrandFilter !== 'all' ? '#0369a1' : '#0f172a',
-                  fontSize: '0.82rem',
-                  fontWeight: '700',
-                  outline: 'none',
-                  cursor: 'pointer'
+                  borderColor: inventoryBrandFilter !== 'all' ? '#0284c7' : '#cbd5e1',
+                  color: inventoryBrandFilter !== 'all' ? '#0369a1' : '#0f172a'
                 }}
                 id="select-filter-brand"
               >
@@ -1856,22 +1682,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             {/* 3. Filter by Category */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Category:</span>
+            <div className="store-inv-filter-group">
+              <label>Category:</label>
               <select
                 value={inventoryCategoryFilter}
                 onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+                className="store-inv-select"
                 style={{
-                  height: '38px',
-                  padding: '0 10px',
                   background: inventoryCategoryFilter !== 'all' ? '#eff6ff' : '#ffffff',
-                  border: inventoryCategoryFilter !== 'all' ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  color: inventoryCategoryFilter !== 'all' ? '#0369a1' : '#0f172a',
-                  fontSize: '0.82rem',
-                  fontWeight: '700',
-                  outline: 'none',
-                  cursor: 'pointer'
+                  borderColor: inventoryCategoryFilter !== 'all' ? '#0284c7' : '#cbd5e1',
+                  color: inventoryCategoryFilter !== 'all' ? '#0369a1' : '#0f172a'
                 }}
                 id="select-filter-category"
               >
@@ -1890,22 +1710,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             {/* 4. Sort By */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Sort:</span>
+            <div className="store-inv-filter-group sort-group">
+              <label>Sort:</label>
               <select
                 value={inventorySortFilter}
                 onChange={(e) => setInventorySortFilter(e.target.value)}
+                className="store-inv-select"
                 style={{
-                  height: '38px',
-                  padding: '0 10px',
                   background: inventorySortFilter !== 'default' ? '#fff7ed' : '#ffffff',
-                  border: inventorySortFilter !== 'default' ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  color: inventorySortFilter !== 'default' ? '#c2410c' : '#0f172a',
-                  fontSize: '0.82rem',
-                  fontWeight: '700',
-                  outline: 'none',
-                  cursor: 'pointer'
+                  borderColor: inventorySortFilter !== 'default' ? '#ea580c' : '#cbd5e1',
+                  color: inventorySortFilter !== 'default' ? '#c2410c' : '#0f172a'
                 }}
                 id="select-sort-inventory"
               >
@@ -1921,20 +1735,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             <button
               type="button"
               onClick={() => setShowLowStockOnly(prev => !prev)}
+              className="store-inv-chip-btn"
               style={{
-                height: '38px',
-                padding: '0 12px',
                 background: showLowStockOnly ? '#dc2626' : '#fffbeb',
                 border: showLowStockOnly ? '1.5px solid #b91c1c' : '1px solid #fde68a',
-                borderRadius: '8px',
-                color: showLowStockOnly ? '#ffffff' : '#b45309',
-                fontSize: '0.78rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s'
+                color: showLowStockOnly ? '#ffffff' : '#b45309'
               }}
               title="Show tools with 3 or fewer units in inventory"
               id="btn-filter-low-stock"
@@ -1947,19 +1752,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             <button
               type="button"
               onClick={handleDistributorWhatsAppReorder}
+              className="store-inv-chip-btn"
               style={{
-                height: '38px',
-                padding: '0 12px',
                 background: '#f0fdf4',
                 border: '1.5px solid #86efac',
-                borderRadius: '8px',
-                color: '#16a34a',
-                fontSize: '0.78rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
+                color: '#16a34a'
               }}
               title="Generate a grouped purchase order text and send to distributor rep on WhatsApp"
               id="btn-reorder-whatsapp"
@@ -1973,19 +1770,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <button
                 type="button"
                 onClick={handleResetInventoryFilters}
+                className="store-inv-chip-btn store-inv-reset-btn"
                 style={{
-                  height: '38px',
-                  padding: '0 12px',
                   background: '#fef2f2',
                   border: '1px solid #fecaca',
-                  borderRadius: '8px',
-                  color: '#dc2626',
-                  fontSize: '0.78rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
+                  color: '#dc2626'
                 }}
                 id="btn-reset-inventory-filters"
               >
@@ -2037,77 +1826,44 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               {filteredProducts.map((prod) => (
                 <div
                   key={prod.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    gap: '14px',
-                    flexWrap: 'wrap'
-                  }}
+                  className="store-product-item-card"
                   id={`store-tool-row-${prod.id}`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="store-product-main-info">
                     <img
                       src={prod.image}
                       alt={prod.name}
-                      style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', background: '#ffffff', border: '1px solid #e2e8f0' }}
+                      className="store-product-thumbnail"
                     />
-                    <div>
-                      <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#ea580c', textTransform: 'uppercase' }}>
+                    <div className="store-product-details">
+                      <span className="store-product-meta-badge">
                         {prod.brand} • {prod.category}
                       </span>
-                      <h4 style={{ fontSize: '0.92rem', fontWeight: '700', color: '#0f172a', margin: '2px 0' }}>
+                      <h4 className="store-product-name">
                         {prod.name}
                       </h4>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+                      <div className="store-product-stock-wrap">
                         {/* Feature 2: Quick Inline Stock Stepper */}
-                        <div style={{ display: 'inline-flex', alignItems: 'center', background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
+                        <div className="store-stock-stepper">
                           <button
                             type="button"
                             onClick={() => handleQuickStockStep(prod, -1)}
                             disabled={steppingStockId === prod.id || (prod.stock || 0) <= 0}
                             style={{
-                              width: '24px',
-                              height: '24px',
-                              border: 'none',
-                              background: '#f1f5f9',
                               cursor: (prod.stock || 0) <= 0 ? 'not-allowed' : 'pointer',
-                              fontWeight: '800',
-                              fontSize: '0.86rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#475569'
                             }}
                             title="Decrease stock by 1"
                             id={`btn-stock-dec-${prod.id}`}
                           >
                             −
                           </button>
-                          <span style={{ padding: '0 8px', fontSize: '0.78rem', fontWeight: '800', fontFamily: 'var(--font-mono)', color: prod.stock <= 3 ? '#dc2626' : '#0f172a' }}>
+                          <span style={{ color: prod.stock <= 3 ? '#dc2626' : '#0f172a' }}>
                             {prod.stock} units
                           </span>
                           <button
                             type="button"
                             onClick={() => handleQuickStockStep(prod, 1)}
                             disabled={steppingStockId === prod.id}
-                            style={{
-                              width: '24px',
-                              height: '24px',
-                              border: 'none',
-                              background: '#f1f5f9',
-                              cursor: 'pointer',
-                              fontWeight: '800',
-                              fontSize: '0.86rem',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#475569'
-                            }}
                             title="Increase stock by 1"
                             id={`btn-stock-inc-${prod.id}`}
                           >
@@ -2129,7 +1885,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div className="store-product-actions-bar">
                     {/* Feature 2: Inline Quick Price Edit */}
                     {editingPriceId === prod.id ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#ffffff', padding: '4px 6px', borderRadius: '8px', border: '2px solid #ea580c' }}>
@@ -2169,25 +1925,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       <div
                         onClick={() => handleStartEditingPrice(prod)}
                         title="Click to edit price directly"
-                        style={{
-                          textAlign: 'right',
-                          cursor: 'pointer',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          border: '1px dashed transparent',
-                          transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#eff6ff';
-                          e.currentTarget.style.borderColor = '#93c5fd';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.borderColor = 'transparent';
-                        }}
+                        className="store-product-price-section"
                         id={`display-price-${prod.id}`}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'flex-end' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
                             {formatPrice(prod.price)}
                           </span>
@@ -2201,49 +1942,27 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </div>
                     )}
 
-                    <button
-                      onClick={() => openEditProduct(prod)}
-                      style={{
-                        padding: '8px 12px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        color: '#0f172a',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                      title="Edit Product Details & Specs"
-                      id={`btn-edit-${prod.id}`}
-                    >
-                      <Edit3 size={14} />
-                      <span>Full Edit</span>
-                    </button>
+                    <div className="store-product-btn-group">
+                      <button
+                        onClick={() => openEditProduct(prod)}
+                        className="store-btn-edit"
+                        title="Edit Product Details & Specs"
+                        id={`btn-edit-${prod.id}`}
+                      >
+                        <Edit3 size={14} />
+                        <span>Full Edit</span>
+                      </button>
 
-                    <button
-                      onClick={() => triggerDeleteProduct(prod)}
-                      style={{
-                        padding: '8px 12px',
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        color: '#dc2626',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                      title="Delete Product from Catalog"
-                      id={`btn-delete-${prod.id || prod._id}`}
-                    >
-                      <Trash2 size={14} />
-                      <span>Delete</span>
-                    </button>
+                      <button
+                        onClick={() => triggerDeleteProduct(prod)}
+                        className="store-btn-delete"
+                        title="Delete Product from Catalog"
+                        id={`btn-delete-${prod.id || prod._id}`}
+                      >
+                        <Trash2 size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2254,7 +1973,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       {/* TAB 3: PROMOTIONS & COUPONS MANAGER (Feature 4) */}
       {activeTab === 'coupons' && (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-xs)' }}>
+        <div className="store-tab-content-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2427,8 +2146,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       {/* TAB 4: WORKSHOP SERVICE & REPAIRS TRACKER (Feature 5) */}
       {activeTab === 'repairs' && (
-        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-xs)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div className="store-tab-content-card">
+          <div className="store-section-header">
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Wrench size={20} style={{ color: '#ea580c' }} />
@@ -2696,9 +2415,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       )}
 
       {activeTab === 'taxonomy' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+        <div className="store-taxonomy-grid">
           {/* Brands Management Card */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-xs)' }}>
+          <div className="store-tab-content-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <Tag size={20} style={{ color: '#ea580c' }} />
               <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
@@ -2782,7 +2501,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           {/* Categories Management Card */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: 'var(--shadow-xs)' }}>
+          <div className="store-tab-content-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <Layers size={20} style={{ color: '#ea580c' }} />
               <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>

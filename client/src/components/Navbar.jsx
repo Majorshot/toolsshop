@@ -130,38 +130,40 @@ export const Navbar = ({
                 <Search size={18} />
               </Link>
 
-              {/* Login / User / Portal */}
-              {isLoggedIn ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Link
-                    to={isStoreOwner ? '/admin' : '/account'}
-                    className={isStoreOwner ? 'nav-portal-pill' : 'nav-user-pill'}
-                    id="top-account-btn"
-                    title={isStoreOwner ? 'Store Owner Dashboard' : 'My Account & Orders'}
-                  >
-                    {isStoreOwner ? <ShieldCheck size={14} /> : <User size={14} />}
-                    <span>{isStoreOwner ? 'Portal' : (user.name?.split(' ')[0] || 'Account')}</span>
-                  </Link>
+              {/* Login / User / Portal (Desktop only - mobile uses bottom bar and menu drawer) */}
+              <div className="nav-auth-desktop-wrap">
+                {isLoggedIn ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Link
+                      to={isStoreOwner ? '/admin' : '/account'}
+                      className={isStoreOwner ? 'nav-portal-pill' : 'nav-user-pill'}
+                      id="top-account-btn"
+                      title={isStoreOwner ? 'Store Owner Dashboard' : 'My Account & Orders'}
+                    >
+                      {isStoreOwner ? <ShieldCheck size={14} /> : <User size={14} />}
+                      <span>{isStoreOwner ? 'Portal' : (user.name?.split(' ')[0] || 'Account')}</span>
+                    </Link>
 
-                  <button
-                    onClick={() => { logout(); navigate('/'); }}
-                    className="btn-logout-subtle"
-                    title="Sign Out"
-                    id="top-logout-btn"
+                    <button
+                      onClick={() => { logout(); navigate('/'); }}
+                      className="btn-logout-subtle"
+                      title="Sign Out"
+                      id="top-logout-btn"
+                    >
+                      <LogOut size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="nav-login-btn"
+                    id="top-login-btn"
                   >
-                    <LogOut size={14} />
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/login"
-                  className="nav-login-btn"
-                  id="top-login-btn"
-                >
-                  <User size={15} />
-                  <span>Login</span>
-                </Link>
-              )}
+                    <User size={15} />
+                    <span>Login</span>
+                  </Link>
+                )}
+              </div>
 
               {/* Shopping Cart Link -> Full Cart Page */}
               <Link

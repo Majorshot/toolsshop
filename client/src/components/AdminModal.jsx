@@ -25,9 +25,21 @@ export const AdminModal = ({ onClose, onProductUpdated }) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [taxonomy, setTaxonomy] = useState({
+    brands: ['Bosch', 'Makita', 'DeWalt', 'Dongcheng', 'HiKOKI', 'Stanley', 'iBELL', 'TOMAHAWK'],
+    categories: []
+  });
 
   useEffect(() => {
     loadOrders();
+    api.getTaxonomy().then(res => {
+      if (res && res.brands) {
+        setTaxonomy({
+          brands: res.brands || [],
+          categories: res.categories || []
+        });
+      }
+    }).catch(err => console.error("AdminModal taxonomy error:", err));
   }, []);
 
   const loadOrders = async () => {
@@ -270,12 +282,9 @@ export const AdminModal = ({ onClose, onProductUpdated }) => {
                     onChange={(e) => setForm({ ...form, brand: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.84rem' }}
                   >
-                    <option value="Bosch">Bosch</option>
-                    <option value="Makita">Makita</option>
-                    <option value="DeWalt">DeWalt</option>
-                    <option value="Dongcheng">Dongcheng</option>
-                    <option value="HiKOKI">HiKOKI</option>
-                    <option value="Stanley">Stanley</option>
+                    {(taxonomy.brands || []).map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -286,12 +295,20 @@ export const AdminModal = ({ onClose, onProductUpdated }) => {
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.84rem' }}
                   >
-                    <option value="cordless">Cordless Tools</option>
-                    <option value="grinders-cutters">Grinders & Cutters</option>
-                    <option value="hammers">Hammer Drills</option>
-                    <option value="woodworking">Woodworking</option>
-                    <option value="washers-blowers">Washers & Blowers</option>
-                    <option value="accessories">Accessories & Bits</option>
+                    {taxonomy.categories && taxonomy.categories.length > 0 ? (
+                      taxonomy.categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="cordless">Cordless Tools</option>
+                        <option value="grinders-cutters">Grinders & Cutters</option>
+                        <option value="hammers">Hammer Drills</option>
+                        <option value="woodworking">Woodworking</option>
+                        <option value="washers-blowers">Washers & Blowers</option>
+                        <option value="accessories">Accessories & Bits</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
