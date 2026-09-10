@@ -2440,6 +2440,52 @@ header.main-site-header {
   color: var(--text-primary);
 }
 
+/* Checkout Modal Enhanced Layout */
+.checkout-modal-form {
+  padding: 24px;
+}
+
+.checkout-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.checkout-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.checkout-options-grid > div {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 12px 8px;
+  }
+  .modal-content {
+    border-radius: 16px;
+    max-height: calc(100vh - 24px);
+    width: 100%;
+  }
+  .modal-header {
+    padding: 14px 16px;
+  }
+  .checkout-modal-form {
+    padding: 16px 14px;
+  }
+  .checkout-form-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .checkout-options-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
+
 /* Cart Drawer */
 .cart-drawer-overlay {
   position: fixed;

@@ -36,6 +36,7 @@ export const CheckoutModal = ({ onClose }) => {
     verifyCouponWithPhone,
     recordDeviceCouponRedemption,
     deliveryFee,
+    totalCourierFee,
     deliveryType,
     setDeliveryType,
     finalTotal
@@ -49,7 +50,7 @@ export const CheckoutModal = ({ onClose }) => {
     landmark: '',
     district: 'Pathanamthitta',
     pincode: '689641',
-    paymentMethod: 'upi', // 'upi' or 'cod'
+    paymentMethod: 'razorpay', // 'razorpay' (Online) or 'cash' (Pay at store / COD)
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,13 +148,13 @@ export const CheckoutModal = ({ onClose }) => {
     setIsSubmitting(true);
 
     try {
-      const isPrepaid = formData.paymentMethod === 'upi';
+      const isPrepaid = formData.paymentMethod === 'razorpay' || formData.paymentMethod === 'upi';
 
       const orderPayload = {
         customer: {
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
           address: formData.address || (deliveryType === 'store-pickup' ? 'Poyanil Building Store Pickup' : ''),
           landmark: formData.landmark,
           district: formData.district,
@@ -174,15 +175,21 @@ export const CheckoutModal = ({ onClose }) => {
       };
 
       // LIVE RAZORPAY CHECKOUT MODAL
-      if (isPrepaid && typeof window !== 'undefined' && window.Razorpay) {
+      if (isPrepaid) {
+        if (typeof window === 'undefined' || !window.Razorpay) {
+          setErrorMsg('Razorpay payment gateway could not be loaded. Please check your network connection or choose Cash Payment.');
+          setIsSubmitting(false);
+          return;
+        }
+
         setIsProcessingPayment(true);
 
         const rzpOrderRes = await api.createRazorpayOrder(
           finalTotal,
           `rcpt_${Date.now().toString().slice(-6)}`,
           {
-            customer_name: formData.name,
-            customer_phone: formData.phone,
+            customer_name: formData.name.trim(),
+            customer_phone: formData.phone.trim(),
             delivery_type: deliveryType
           }
         );
@@ -194,16 +201,18 @@ export const CheckoutModal = ({ onClose }) => {
           amount: rzpOrder.amount,
           currency: rzpOrder.currency || 'INR',
           name: 'Variathu Power Tools',
-          description: `Order for ${formData.name} • Poyanil Building, Kozhencherry`,
+          description: `Order for ${formData.name.trim()} • Poyanil Building, Kozhencherry`,
           image: '/logo.jpg',
           order_id: rzpOrder.id,
           prefill: {
-            name: formData.name,
-            contact: formData.phone,
-            email: formData.email || 'variathupowertools@gmail.com'
+            name: formData.name.trim(),
+            contact: formData.phone.trim(),
+            email: formData.email.trim() || 'variathupowertools@gmail.com'
           },
           notes: {
-            address: 'Poyanil Building, Kozhencherry, Kerala - 689641'
+            address: formData.address || 'Poyanil Building, Kozhencherry, Kerala - 689641',
+            district: formData.district || 'Pathanamthitta',
+            pincode: formData.pincode || '689641'
           },
           theme: {
             color: '#ea580c'
@@ -254,13 +263,13 @@ export const CheckoutModal = ({ onClose }) => {
         return;
       }
 
-      // Fallback or COD (Pay at store / upon delivery)
-      const generatedTxn = isPrepaid ? `TXN-VPT-${Date.now().toString().slice(-8)}` : null;
+      // Cash Payment (Pay at store counter OR Cash on Delivery)
+      const cashMethod = deliveryType === 'store-pickup' ? 'PAY_AT_STORE' : 'COD';
       const result = await api.createOrder({
         ...orderPayload,
-        paymentMethod: formData.paymentMethod.toUpperCase(),
-        paymentStatus: isPrepaid ? 'PAID' : 'PENDING',
-        transactionId: generatedTxn
+        paymentMethod: cashMethod,
+        paymentStatus: 'PENDING',
+        transactionId: null
       });
 
       try {
@@ -285,8 +294,11 @@ export const CheckoutModal = ({ onClose }) => {
     let text = `*VARIATHU POWER TOOLS - ORDER CONFIRMATION*\n`;
     text += `Order ID: *${order.id}*\n`;
     text += `Customer: ${order.customer.name} (${order.customer.phone})\n`;
-    text += `Delivery: ${order.deliveryType === 'store-pickup' ? 'Store Pickup' : 'Courier (' + order.customer.district + ')'}\n`;
-    text += `Payment: ${order.paymentMethod} (${order.paymentStatus || 'CONFIRMED'})\n`;
+    text += `Delivery: ${order.deliveryType === 'store-pickup' ? 'Store Pickup (Poyanil Building)' : 'Courier (' + order.customer.district + ')'}\n`;
+    const payTitle = order.paymentMethod === 'RAZORPAY_UPI'
+      ? 'Razorpay Online (Verified)'
+      : (order.paymentMethod === 'PAY_AT_STORE' ? 'Pay at Store Counter' : 'Cash on Delivery (COD)');
+    text += `Payment: ${payTitle} (${order.paymentStatus || 'CONFIRMED'})\n`;
     if (order.transactionId) text += `Transaction ID: ${order.transactionId}\n`;
     if (order.pickupOtp) text += `Pickup OTP: *${order.pickupOtp}*\n`;
     if (order.awb) text += `Courier AWB: *${order.awb}*\n`;
@@ -485,7 +497,7 @@ export const CheckoutModal = ({ onClose }) => {
           </div>
         ) : (
           /* Checkout Form */
-          <form onSubmit={handleSubmitOrder} style={{ padding: '24px' }}>
+          <form onSubmit={handleSubmitOrder} className="checkout-modal-form">
             {errorMsg && (
               <div
                 style={{
@@ -508,28 +520,35 @@ export const CheckoutModal = ({ onClose }) => {
 
             {/* Delivery Preference */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+              <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
                 Delivery Preference
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div className="checkout-options-grid">
                 <div
                   onClick={() => setDeliveryType('store-pickup')}
                   style={{
-                    padding: '12px',
+                    padding: '12px 14px',
                     borderRadius: '10px',
-                    border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1px solid #e2e8f0',
-                    background: deliveryType === 'store-pickup' ? 'rgba(234,88,12,0.06)' : '#ffffff',
+                    border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                    background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px'
+                    gap: '4px',
+                    transition: 'all 0.2s ease'
                   }}
+                  id="checkout-delivery-store"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
-                    <MapPin size={16} style={{ color: '#ea580c' }} />
-                    <span>Store Pickup (FREE)</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
+                      <MapPin size={16} style={{ color: '#ea580c' }} />
+                      <span>Store Pickup</span>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '800', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>
+                      FREE
+                    </span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
                     Poyanil Building, Kozhencherry
                   </span>
                 </div>
@@ -537,22 +556,29 @@ export const CheckoutModal = ({ onClose }) => {
                 <div
                   onClick={() => setDeliveryType('kerala-courier')}
                   style={{
-                    padding: '12px',
+                    padding: '12px 14px',
                     borderRadius: '10px',
-                    border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1px solid #e2e8f0',
-                    background: deliveryType === 'kerala-courier' ? 'rgba(234,88,12,0.06)' : '#ffffff',
+                    border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                    background: deliveryType === 'kerala-courier' ? '#fff7ed' : '#ffffff',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px'
+                    gap: '4px',
+                    transition: 'all 0.2s ease'
                   }}
+                  id="checkout-delivery-courier"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
-                    <Truck size={16} style={{ color: '#0284c7' }} />
-                    <span>Courier</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
+                      <Truck size={16} style={{ color: '#0284c7' }} />
+                      <span>Courier Delivery</span>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '800', background: (totalCourierFee || 0) === 0 ? '#dcfce7' : '#ffedd5', color: (totalCourierFee || 0) === 0 ? '#15803d' : '#ea580c', padding: '2px 6px', borderRadius: '4px' }}>
+                      {(totalCourierFee || 0) === 0 ? 'FREE' : formatPrice(totalCourierFee || 0)}
+                    </span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    Speed Post / Courier ({deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)})
+                  <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                    Express Doorstep Delivery
                   </span>
                 </div>
               </div>
@@ -560,7 +586,7 @@ export const CheckoutModal = ({ onClose }) => {
 
             {/* Customer Inputs */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="checkout-form-grid-2">
                 <div>
                   <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
                     Full Name *
@@ -582,6 +608,7 @@ export const CheckoutModal = ({ onClose }) => {
                       fontSize: '0.86rem',
                       outline: 'none'
                     }}
+                    id="checkout-input-name"
                   />
                 </div>
 
@@ -606,6 +633,7 @@ export const CheckoutModal = ({ onClose }) => {
                       fontSize: '0.86rem',
                       outline: 'none'
                     }}
+                    id="checkout-input-phone"
                   />
                 </div>
               </div>
@@ -619,6 +647,7 @@ export const CheckoutModal = ({ onClose }) => {
                     <input
                       type="text"
                       name="address"
+                      required
                       placeholder="e.g. Thekkethil House, Kozhencherry East"
                       value={formData.address}
                       onChange={handleChange}
@@ -632,10 +661,11 @@ export const CheckoutModal = ({ onClose }) => {
                         fontSize: '0.86rem',
                         outline: 'none'
                       }}
+                      id="checkout-input-address"
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="checkout-form-grid-2">
                     <div>
                       <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
                         Kerala District
@@ -654,6 +684,7 @@ export const CheckoutModal = ({ onClose }) => {
                           fontSize: '0.86rem',
                           outline: 'none'
                         }}
+                        id="checkout-select-district"
                       >
                         {KERALA_DISTRICTS.map(dist => (
                           <option key={dist} value={dist}>{dist}</option>
@@ -663,7 +694,7 @@ export const CheckoutModal = ({ onClose }) => {
 
                     <div>
                       <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
-                        Pincode
+                        Pincode (6-digit)
                       </label>
                       <input
                         type="text"
@@ -682,6 +713,7 @@ export const CheckoutModal = ({ onClose }) => {
                           fontSize: '0.86rem',
                           outline: 'none'
                         }}
+                        id="checkout-input-pincode"
                       />
                       {pincodeCheck && (
                         <div style={{ marginTop: '6px', fontSize: '0.74rem' }}>
@@ -708,139 +740,270 @@ export const CheckoutModal = ({ onClose }) => {
 
             {/* Payment Method */}
             <div style={{ marginBottom: '22px' }}>
-              <label style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+              <label style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
                 Payment Method
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+              
+              <div className="checkout-options-grid" style={{ marginBottom: '12px' }}>
+                {/* Option 1: Razorpay Online */}
                 <div
-                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'upi' }))}
+                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'razorpay' }))}
                   style={{
-                    padding: '12px',
+                    padding: '14px 12px',
                     borderRadius: '10px',
-                    border: formData.paymentMethod === 'upi' ? '2px solid #ea580c' : '1px solid #e2e8f0',
-                    background: formData.paymentMethod === 'upi' ? 'rgba(234,88,12,0.06)' : '#ffffff',
+                    border: formData.paymentMethod === 'razorpay' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                    background: formData.paymentMethod === 'razorpay' ? '#fff7ed' : '#ffffff',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
+                    flexDirection: 'column',
+                    gap: '6px',
+                    position: 'relative',
+                    transition: 'all 0.2s ease'
                   }}
+                  id="payment-method-razorpay"
                 >
-                  <QrCode size={20} style={{ color: '#0284c7' }} />
-                  <div>
-                    <strong style={{ color: '#0f172a', fontSize: '0.88rem', display: 'block' }}>UPI QR / GPay</strong>
-                    <span style={{ fontSize: '0.74rem', color: '#64748b' }}>PhonePe, Paytm, Any UPI</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        background: formData.paymentMethod === 'razorpay' ? '#ea580c' : '#f1f5f9',
+                        color: formData.paymentMethod === 'razorpay' ? '#ffffff' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <ShieldCheck size={16} />
+                      </div>
+                      <strong style={{ color: '#0f172a', fontSize: '0.88rem' }}>Razorpay Online</strong>
+                    </div>
+                    {formData.paymentMethod === 'razorpay' && (
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ea580c' }} />
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', lineHeight: 1.3 }}>
+                    UPI (GPay, PhonePe, Paytm), Cards & NetBanking
                   </div>
                 </div>
 
+                {/* Option 2: Cash (Pay at Store or COD) */}
                 <div
-                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'cod' }))}
+                  onClick={() => setFormData(prev => ({ ...prev, paymentMethod: 'cash' }))}
                   style={{
-                    padding: '12px',
+                    padding: '14px 12px',
                     borderRadius: '10px',
-                    border: formData.paymentMethod === 'cod' ? '2px solid #ea580c' : '1px solid #e2e8f0',
-                    background: formData.paymentMethod === 'cod' ? 'rgba(234,88,12,0.06)' : '#ffffff',
+                    border: formData.paymentMethod === 'cash' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                    background: formData.paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px'
+                    flexDirection: 'column',
+                    gap: '6px',
+                    position: 'relative',
+                    transition: 'all 0.2s ease'
                   }}
+                  id="payment-method-cash"
                 >
-                  <Banknote size={20} style={{ color: '#16a34a' }} />
-                  <div>
-                    <strong style={{ color: '#0f172a', fontSize: '0.88rem', display: 'block' }}>
-                      {deliveryType === 'store-pickup' ? 'Pay at Store' : 'Cash on Delivery'}
-                    </strong>
-                    <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Pay upon receipt</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        background: formData.paymentMethod === 'cash' ? '#16a34a' : '#f1f5f9',
+                        color: formData.paymentMethod === 'cash' ? '#ffffff' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Banknote size={16} />
+                      </div>
+                      <strong style={{ color: '#0f172a', fontSize: '0.88rem' }}>
+                        {deliveryType === 'store-pickup' ? 'Pay at Store' : 'Cash on Delivery'}
+                      </strong>
+                    </div>
+                    {formData.paymentMethod === 'cash' && (
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16a34a' }} />
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', lineHeight: 1.3 }}>
+                    {deliveryType === 'store-pickup' ? 'Pay upon counter collection' : 'Pay in cash upon doorstep receipt'}
                   </div>
                 </div>
               </div>
 
-              {/* UPI QR Display */}
-              {formData.paymentMethod === 'upi' && (
+              {/* Informational Callout for selected payment method (Clean, zero fake QR) */}
+              {formData.paymentMethod === 'razorpay' ? (
                 <div
                   style={{
                     background: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     borderRadius: '10px',
-                    padding: '16px',
+                    padding: '12px 14px',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px'
+                    alignItems: 'flex-start',
+                    gap: '12px'
                   }}
+                  id="razorpay-info-badge"
                 >
                   <div
                     style={{
-                      background: '#ffffff',
-                      padding: '8px',
+                      background: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      color: '#059669',
                       borderRadius: '8px',
-                      border: '1px solid #e2e8f0',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
+                      padding: '6px',
+                      flexShrink: 0,
+                      marginTop: '2px'
                     }}
                   >
-                    <QrCode size={64} color="#0f172a" />
+                    <ShieldCheck size={20} />
                   </div>
-                  <div>
-                    <h5 style={{ color: '#0f172a', fontSize: '0.9rem', fontWeight: '700', marginBottom: '2px' }}>
-                      Scan & Pay with Any UPI App
-                    </h5>
-                    <p style={{ color: '#64748b', fontSize: '0.76rem', marginBottom: '4px' }}>
-                      UPI ID: <strong style={{ color: '#0284c7' }}>variathupowertools@okaxis</strong>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#0f172a' }}>
+                        Official Razorpay Secure Checkout
+                      </span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '800', background: '#e0f2fe', color: '#0369a1', padding: '2px 6px', borderRadius: '4px' }}>
+                        100% SECURE
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                      Pay instantly via <strong>Google Pay, PhonePe, Paytm, BHIM UPI</strong>, Credit/Debit Cards, or 50+ NetBanking options. Complete with automated digital receipt.
                     </p>
-                    <p style={{ color: '#16a34a', fontSize: '0.82rem', fontWeight: '700' }}>
-                      Amount: {formatPrice(finalTotal)}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px'
+                  }}
+                  id="cash-info-badge"
+                >
+                  <div
+                    style={{
+                      background: '#fef3c7',
+                      border: '1px solid #fde68a',
+                      color: '#d97706',
+                      borderRadius: '8px',
+                      padding: '6px',
+                      flexShrink: 0,
+                      marginTop: '2px'
+                    }}
+                  >
+                    <Banknote size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.84rem', fontWeight: '700', color: '#0f172a' }}>
+                        {deliveryType === 'store-pickup' ? 'Pay at Kozhencherry Store Counter' : 'Cash on Delivery (COD)'}
+                      </span>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '800', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px' }}>
+                        NO ADVANCE PAYMENT
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                      {deliveryType === 'store-pickup'
+                        ? 'Inspect your equipment in person at Poyanil Building, Kozhencherry. Pay via cash or UPI at the counter.'
+                        : 'Pay the exact order amount in cash to the Delhivery express courier agent upon doorstep delivery.'}
                     </p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Total breakdown */}
+            {/* Order Price Breakdown */}
             <div
               style={{
-                borderTop: '1px solid #e2e8f0',
-                paddingTop: '16px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                marginBottom: '18px'
               }}
             >
-              <div>
-                <span style={{ fontSize: '0.82rem', color: '#64748b', display: 'block' }}>Total Amount:</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.82rem', color: '#64748b' }}>
+                <span>Items Subtotal ({cart.reduce((s, i) => s + i.quantity, 0)} items)</span>
+                <span style={{ color: '#0f172a', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>{formatPrice(subtotal)}</span>
+              </div>
+
+              {discountAmount > 0 && activeCoupon && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.82rem', color: '#16a34a' }}>
+                  <span>Coupon Discount ({activeCoupon.code})</span>
+                  <span style={{ fontWeight: '700', fontFamily: 'var(--font-mono)' }}>-{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.82rem', color: '#64748b' }}>
+                <span>Delivery ({deliveryType === 'store-pickup' ? 'Store Pickup' : 'Express Courier'})</span>
+                <span style={{ color: deliveryFee === 0 ? '#16a34a' : '#0f172a', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
+                  {deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}
+                </span>
+              </div>
+
+              <div
+                style={{
+                  borderTop: '1px dashed #cbd5e1',
+                  paddingTop: '10px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>Total Payable Amount</span>
                 <span style={{ fontSize: '1.35rem', fontWeight: '800', color: '#ea580c', fontFamily: 'var(--font-mono)' }}>
                   {formatPrice(finalTotal)}
                 </span>
-                {discountAmount > 0 && activeCoupon && (
-                  <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '800', display: 'block', marginTop: '2px' }}>
-                    🏷️ Coupon {activeCoupon.code} applied (-{formatPrice(discountAmount)})
-                  </span>
-                )}
-                {deliveryType === 'kerala-courier' && (
-                  <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                    (Includes {deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)} Delhivery courier fee)
-                  </span>
-                )}
               </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting || isProcessingPayment}
-                className="btn-hero-clean"
-                style={{ padding: '12px 24px', opacity: (isSubmitting || isProcessingPayment) ? 0.7 : 1 }}
-                id="confirm-place-order-btn"
-              >
-                <span>
-                  {isProcessingPayment
-                    ? 'Capturing Payment...'
-                    : (isSubmitting
-                        ? 'Confirming Order...'
-                        : (formData.paymentMethod === 'upi'
-                            ? `Pay ${formatPrice(finalTotal)} via UPI & Confirm`
-                            : 'Confirm & Place Order'))}
+            {/* Action Submit Button */}
+            <button
+              type="submit"
+              disabled={isSubmitting || isProcessingPayment}
+              className="btn-hero-clean"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '0.96rem',
+                justifyContent: 'center',
+                borderRadius: '10px',
+                opacity: (isSubmitting || isProcessingPayment) ? 0.7 : 1,
+                background: formData.paymentMethod === 'razorpay' ? 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)' : '#0f172a',
+                boxShadow: formData.paymentMethod === 'razorpay' ? '0 4px 14px rgba(234, 88, 12, 0.35)' : '0 4px 14px rgba(15, 23, 42, 0.25)'
+              }}
+              id="confirm-place-order-btn"
+            >
+              {isProcessingPayment ? (
+                <span>Opening Secure Razorpay Portal...</span>
+              ) : isSubmitting ? (
+                <span>Processing Order...</span>
+              ) : formData.paymentMethod === 'razorpay' ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldCheck size={18} />
+                  <span>Pay {formatPrice(finalTotal)} via Razorpay</span>
                 </span>
-              </button>
+              ) : (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle size={18} />
+                  <span>
+                    {deliveryType === 'store-pickup'
+                      ? `Confirm Store Pickup • ${formatPrice(finalTotal)}`
+                      : `Place COD Order • ${formatPrice(finalTotal)}`}
+                  </span>
+                </span>
+              )}
+            </button>
+
+            <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.72rem', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <ShieldCheck size={14} style={{ color: '#16a34a' }} />
+              <span>100% Verified Order • Variathu Power Tools, Kozhencherry</span>
             </div>
           </form>
         )}
