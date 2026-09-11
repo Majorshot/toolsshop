@@ -3623,7 +3623,7 @@ header.main-site-header {
   }
 }
 
-/* 5 Main Navigation Tabs: Sleek Horizontal Scroll on Mobile */
+/* 6 Main Navigation Tabs: Sleek Horizontal Scroll on Mobile */
 .store-nav-tabs-bar {
   display: flex;
   gap: 8px;
@@ -3633,12 +3633,21 @@ header.main-site-header {
   overflow-x: auto;
   flex-wrap: nowrap;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
 .store-nav-tabs-bar::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+
+.store-nav-tabs-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.store-nav-tabs-bar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .store-nav-tab-btn {
