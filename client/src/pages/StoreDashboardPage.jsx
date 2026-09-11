@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -74,6 +74,35 @@ export const resolveCourierConfig = (partnerName = '') => {
 export const StoreDashboardPage = ({ onProductUpdated }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Drag-to-scroll for tabs bar
+  const tabsBarRef = useRef(null);
+  const [isDraggingTabs, setIsDraggingTabs] = useState(false);
+  const dragStartRef = useRef({ x: 0, scrollLeft: 0 });
+  const dragMovedRef = useRef(false);
+
+  const handleTabsDragStart = useCallback((e) => {
+    if (!tabsBarRef.current) return;
+    setIsDraggingTabs(true);
+    dragMovedRef.current = false;
+    dragStartRef.current = {
+      x: e.pageX - tabsBarRef.current.offsetLeft,
+      scrollLeft: tabsBarRef.current.scrollLeft
+    };
+  }, []);
+
+  const handleTabsDragMove = useCallback((e) => {
+    if (!isDraggingTabs || !tabsBarRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - tabsBarRef.current.offsetLeft;
+    const walk = (x - dragStartRef.current.x) * 1.5;
+    if (Math.abs(walk) > 3) dragMovedRef.current = true;
+    tabsBarRef.current.scrollLeft = dragStartRef.current.scrollLeft - walk;
+  }, [isDraggingTabs]);
+
+  const handleTabsDragEnd = useCallback(() => {
+    setIsDraggingTabs(false);
+  }, []);
 
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'inventory'
   const [orders, setOrders] = useState([]);
@@ -1314,8 +1343,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
       </div>
 
-      {/* Navigation Tabs (5 Tabs) - Horizontal Scroll Strip on Mobile */}
-      <div className="store-nav-tabs-bar" role="tablist">
+      {/* Navigation Tabs (6 Tabs) - Horizontal Scroll Strip with Drag-to-Scroll */}
+      <div
+        className="store-nav-tabs-bar"
+        role="tablist"
+        ref={tabsBarRef}
+        onMouseDown={handleTabsDragStart}
+        onMouseMove={handleTabsDragMove}
+        onMouseUp={handleTabsDragEnd}
+        onMouseLeave={handleTabsDragEnd}
+        style={{ cursor: isDraggingTabs ? 'grabbing' : 'grab' }}
+      >
         <button
           type="button"
           onClick={() => setActiveTab('orders')}

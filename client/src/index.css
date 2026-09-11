@@ -3635,6 +3635,8 @@ header.main-site-header {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .store-nav-tabs-bar::-webkit-scrollbar {
