@@ -35,6 +35,17 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (updates) => {
+    setUser(prev => {
+      if (!prev) return updates;
+      const updated = { ...prev, ...updates };
+      try {
+        localStorage.setItem('vpt_user', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
   const isStoreOwner = user?.role === 'store';
   const isCustomer = user?.role === 'customer';
 
@@ -46,7 +57,8 @@ export const AuthProvider = ({ children }) => {
         isStoreOwner,
         isCustomer,
         login,
-        logout
+        logout,
+        updateUser
       }}
     >
       {children}
@@ -60,7 +72,8 @@ const defaultAuthContext = {
   isStoreOwner: false,
   isCustomer: false,
   login: async () => {},
-  logout: () => {}
+  logout: () => {},
+  updateUser: () => {}
 };
 
 export const useAuth = () => useContext(AuthContext) || defaultAuthContext;

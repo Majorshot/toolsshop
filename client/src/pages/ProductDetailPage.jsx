@@ -645,7 +645,7 @@ export const ProductDetailPage = () => {
                   ) : (
                     <span><strong>₹{product.deliveryCost ?? 120}</strong> delivery fee</span>
                   )}{' '}
-                  (Delhivery Partner • Speed delivery across Kerala)
+                  (DTDC, Professional, Alleppey & Delhivery • Speed delivery across Kerala)
                 </span>
               </div>
             </div>

@@ -16,7 +16,7 @@ A modern full-stack web application for **Variathu Power Tools**, Kozhencherry, 
 ### Backend (`/server`)
 * **Runtime:** Node.js & Express
 * **Database:** MongoDB Atlas (with Mongoose) + local JSON resilient fallback mode
-* **Integrations:** Razorpay Node SDK, Delhivery Pincode API
+* **Integrations:** Razorpay Node SDK, Multi-Courier Logistics Hub (DTDC, The Professional Couriers, Alleppey Parcel Service & Delhivery)
 
 ---
 
@@ -34,7 +34,7 @@ Copy the `.env.example` templates to `.env`:
 ```bash
 cp server/.env.example server/.env
 ```
-Fill in your `MONGODB_URI`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `DELHIVERY_API_TOKEN`.
+Fill in your `MONGODB_URI`, `RAZORPAY_KEY_ID`, and `RAZORPAY_KEY_SECRET`.
 
 **In `/client`:**
 ```bash

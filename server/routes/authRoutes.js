@@ -31,18 +31,57 @@ router.post('/login', async (req, res) => {
       }
     } else {
       // Customer Login
-      const customerIdentifier = identifier ? identifier.trim() : '+91 98471 88990';
-      const customerName = name ? name.trim() : (customerIdentifier.includes('98471') ? 'Raju Thomas' : 'Valued Customer');
+      const customerIdentifier = identifier ? identifier.trim() : '';
+      const cleanDigits = customerIdentifier.replace(/[^0-9]/g, '').slice(-10);
+
+      let customerName = name ? name.trim() : '';
+      let customerEmail = customerIdentifier.includes('@') ? customerIdentifier : '';
+      let customerPhone = customerIdentifier;
+      let customerLocation = 'Kozhencherry, Pathanamthitta';
+
+      // Auto-fetch real customer name and details from past orders in MongoDB Atlas
+      if (cleanDigits.length >= 7 || customerIdentifier.includes('@')) {
+        try {
+          const pastOrders = await db.getCustomerOrders(cleanDigits || customerIdentifier);
+          if (pastOrders && pastOrders.length > 0) {
+            const pastOrder = pastOrders.find(
+              o => o.customer?.name && o.customer.name.trim() !== '' && !o.customer.name.toLowerCase().includes('valued customer')
+            ) || pastOrders[0];
+
+            if (pastOrder && pastOrder.customer) {
+              if (!customerName && pastOrder.customer.name) {
+                customerName = pastOrder.customer.name.trim();
+              }
+              if (!customerEmail && pastOrder.customer.email && pastOrder.customer.email.includes('@')) {
+                customerEmail = pastOrder.customer.email.trim();
+              }
+              if (pastOrder.customer.phone && !customerPhone) {
+                customerPhone = pastOrder.customer.phone.trim();
+              }
+              if (pastOrder.customer.district) {
+                customerLocation = `${pastOrder.customer.district}, Kerala`;
+              }
+            }
+          }
+        } catch (lookupErr) {
+          console.warn("Could not lookup past customer orders for login:", lookupErr.message);
+        }
+      }
+
+      // If still no name found, use clean fallback (never generic 'Valued Customer')
+      if (!customerName) {
+        customerName = customerIdentifier.includes('98471') ? 'Raju Thomas' : (cleanDigits ? `Customer (${cleanDigits.slice(-4)})` : 'Customer');
+      }
 
       return res.json({
         success: true,
         user: {
           id: `cust-${Date.now().toString().slice(-4)}`,
           name: customerName,
-          phone: customerIdentifier,
-          email: customerIdentifier.includes('@') ? customerIdentifier : `${customerName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+          phone: customerPhone,
+          email: customerEmail, // Real email or empty string - NO fake email!
           role: 'customer',
-          location: 'Kozhencherry, Pathanamthitta'
+          location: customerLocation
         }
       });
     }

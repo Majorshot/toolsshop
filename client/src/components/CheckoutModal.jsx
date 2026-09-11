@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, CheckCircle, MapPin, Truck, QrCode, Banknote, ShieldCheck, MessageCircle, AlertCircle, ArrowRight, FileText, Smartphone } from 'lucide-react';
+import { X, CheckCircle, MapPin, Truck, QrCode, Banknote, ShieldCheck, MessageCircle, AlertCircle, ArrowRight, FileText, Smartphone, Mail } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -43,9 +43,9 @@ export const CheckoutModal = ({ onClose }) => {
   } = useCart();
 
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    name: user?.name && !user.name.toLowerCase().includes('valued customer') ? user.name : '',
     phone: user?.phone || '',
-    email: user?.email || '',
+    email: user?.email && !user.email.includes('valuedcustomer') ? user.email : '',
     address: '',
     landmark: '',
     district: 'Pathanamthitta',
@@ -89,9 +89,9 @@ export const CheckoutModal = ({ onClose }) => {
     if (user) {
       setFormData(prev => ({
         ...prev,
-        name: prev.name || user.name || '',
+        name: prev.name || (user.name && !user.name.toLowerCase().includes('valued customer') ? user.name : ''),
         phone: prev.phone || user.phone || '',
-        email: prev.email || user.email || ''
+        email: prev.email || (user.email && !user.email.includes('valuedcustomer') ? user.email : '')
       }));
     }
   }, [user]);
@@ -170,6 +170,7 @@ export const CheckoutModal = ({ onClose }) => {
         })),
         totalAmount: finalTotal,
         deliveryType,
+        courierPartner: null,
         couponCode: activeCoupon?.code || null,
         discountAmount: discountAmount || 0
       };
@@ -196,6 +197,15 @@ export const CheckoutModal = ({ onClose }) => {
 
         const rzpOrder = rzpOrderRes.order;
 
+        const prefillOptions = {
+          name: formData.name.trim(),
+          contact: formData.phone.trim()
+        };
+        // ONLY pass email if the customer explicitly provided one
+        if (formData.email && formData.email.trim()) {
+          prefillOptions.email = formData.email.trim();
+        }
+
         const options = {
           key: rzpOrderRes.keyId || 'rzp_test_TZQUSp5JtcBjMs',
           amount: rzpOrder.amount,
@@ -204,11 +214,7 @@ export const CheckoutModal = ({ onClose }) => {
           description: `Order for ${formData.name.trim()} • Poyanil Building, Kozhencherry`,
           image: '/logo.jpg',
           order_id: rzpOrder.id,
-          prefill: {
-            name: formData.name.trim(),
-            contact: formData.phone.trim(),
-            email: formData.email.trim() || 'variathupowertools@gmail.com'
-          },
+          prefill: prefillOptions,
           notes: {
             address: formData.address || 'Poyanil Building, Kozhencherry, Kerala - 689641',
             district: formData.district || 'Pathanamthitta',
@@ -410,22 +416,22 @@ export const CheckoutModal = ({ onClose }) => {
             ) : (
               <div
                 style={{
-                  background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.05) 0%, rgba(2, 132, 199, 0.12) 100%)',
-                  border: '1.5px dashed #0284c7',
+                  background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.05) 0%, rgba(234, 88, 12, 0.12) 100%)',
+                  border: '1.5px dashed #ea580c',
                   borderRadius: '12px',
                   padding: '16px',
                   marginBottom: '18px',
                   textAlign: 'center'
                 }}
               >
-                <span style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
-                  🚚 Courier Dispatch AWB
+                <span style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
+                  📦 Order Placed • Processing at Shop
                 </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)', margin: '4px 0' }}>
-                  {completedOrder.awb || 'DLHVY-KL-8491'}
-                </div>
-                <p style={{ fontSize: '0.78rem', color: '#475569', margin: 0 }}>
-                  Carrier: <strong>Kerala Speed Express (Delhivery Partner)</strong> • Expected: Tomorrow by 5 PM
+                <p style={{ fontSize: '0.86rem', color: '#0f172a', fontWeight: '700', margin: '4px 0 2px' }}>
+                  Testing & packaging in progress at Poyanil Building, Kozhencherry.
+                </p>
+                <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
+                  Your courier partner & live tracking AWB link will be updated on your customer account as soon as dispatched.
                 </p>
               </div>
             )}
@@ -578,7 +584,7 @@ export const CheckoutModal = ({ onClose }) => {
                     </span>
                   </div>
                   <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
-                    Express Doorstep Delivery
+                    DTDC, Professional, Alleppey & Delhivery
                   </span>
                 </div>
               </div>
@@ -595,7 +601,7 @@ export const CheckoutModal = ({ onClose }) => {
                     type="text"
                     name="name"
                     required
-                    placeholder="e.g. Mathew Varghese"
+                    placeholder="e.g. Rahul Sharma"
                     value={formData.name}
                     onChange={handleChange}
                     style={{
@@ -620,7 +626,7 @@ export const CheckoutModal = ({ onClose }) => {
                     type="tel"
                     name="phone"
                     required
-                    placeholder="+91 98470 XXXXX"
+                    placeholder="+91 98470 12345"
                     value={formData.phone}
                     onChange={handleChange}
                     style={{
@@ -638,31 +644,86 @@ export const CheckoutModal = ({ onClose }) => {
                 </div>
               </div>
 
+              {/* Email Address (Optional) */}
+              <div>
+                <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginBottom: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Email Address (Optional)</span>
+                  <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 'normal' }}>Optional &bull; For Razorpay receipt & order tracking</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="e.g. customer@example.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px 10px 36px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      color: '#0f172a',
+                      fontSize: '0.86rem',
+                      outline: 'none'
+                    }}
+                    id="checkout-input-email"
+                  />
+                </div>
+              </div>
+
               {deliveryType === 'kerala-courier' && (
                 <>
-                  <div>
-                    <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
-                      Delivery Address / House Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      required
-                      placeholder="e.g. Thekkethil House, Kozhencherry East"
-                      value={formData.address}
-                      onChange={handleChange}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '8px',
-                        color: '#0f172a',
-                        fontSize: '0.86rem',
-                        outline: 'none'
-                      }}
-                      id="checkout-input-address"
-                    />
+                  <div className="checkout-form-grid-2">
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                        Delivery Address / House Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="address"
+                        required
+                        placeholder="e.g. 12/45 Green Valley, Near Bridge"
+                        value={formData.address}
+                        onChange={handleChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          color: '#0f172a',
+                          fontSize: '0.86rem',
+                          outline: 'none'
+                        }}
+                        id="checkout-input-address"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                        Landmark (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="landmark"
+                        placeholder="e.g. Opposite Post Office"
+                        value={formData.landmark}
+                        onChange={handleChange}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          color: '#0f172a',
+                          fontSize: '0.86rem',
+                          outline: 'none'
+                        }}
+                        id="checkout-input-landmark"
+                      />
+                    </div>
                   </div>
 
                   <div className="checkout-form-grid-2">
@@ -719,15 +780,15 @@ export const CheckoutModal = ({ onClose }) => {
                         <div style={{ marginTop: '6px', fontSize: '0.74rem' }}>
                           {pincodeCheck.checking ? (
                             <span style={{ color: '#0284c7', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              Checking Delhivery Express serviceability...
+                              Checking courier serviceability...
                             </span>
                           ) : pincodeCheck.serviceable ? (
                             <span style={{ color: '#16a34a', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              ✅ Delhivery Serviceable {pincodeCheck.city ? `(${pincodeCheck.city})` : ''} • Express Doorstep Courier
+                              ✅ Serviceable {pincodeCheck.city ? `(${pincodeCheck.city})` : ''} • DTDC, Professional, Alleppey & Delhivery
                             </span>
                           ) : (
                             <span style={{ color: '#dc2626', fontWeight: '700' }}>
-                              ⚠️ {pincodeCheck.message || 'Pincode outside standard Delhivery zones'}
+                              ⚠️ {pincodeCheck.message || 'Pincode outside standard express zones'}
                             </span>
                           )}
                         </div>
@@ -911,7 +972,7 @@ export const CheckoutModal = ({ onClose }) => {
                     <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
                       {deliveryType === 'store-pickup'
                         ? 'Inspect your equipment in person at Poyanil Building, Kozhencherry. Pay via cash or UPI at the counter.'
-                        : 'Pay the exact order amount in cash to the Delhivery express courier agent upon doorstep delivery.'}
+                        : 'Pay the exact order amount in cash to the courier delivery executive upon doorstep delivery.'}
                     </p>
                   </div>
                 </div>

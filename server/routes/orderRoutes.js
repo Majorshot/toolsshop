@@ -25,11 +25,11 @@ router.get('/customer/:identifier', async (req, res) => {
 // PUT update order status (Store Owner)
 router.put('/:id/status', async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, courierPartner, awb } = req.body;
     if (!status) {
       return res.status(400).json({ success: false, message: "Status is required" });
     }
-    const updated = await db.updateOrderStatus(req.params.id, status);
+    const updated = await db.updateOrderStatus(req.params.id, status, { courierPartner, awb });
     if (!updated) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
@@ -123,6 +123,20 @@ router.post('/:id/pay', async (req, res) => {
       message: "Payment captured successfully. Order marked as PAID.",
       data: order
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST cancel order with automatic refund (Customer or Store Owner)
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    const { reason, cancelledBy } = req.body || {};
+    const result = await db.cancelOrder(req.params.id, { reason, cancelledBy });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

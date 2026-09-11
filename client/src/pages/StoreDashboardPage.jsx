@@ -1,16 +1,75 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import Barcode from '../components/Barcode';
 
 const STATUS_OPTIONS = [
-  'Confirmed',
-  'Processing in Workshop',
-  'Ready for Pickup at Poyanil Building',
+  'Order Placed',
   'Dispatched via Courier',
+  'Ready for Pickup at Poyanil Building',
   'Completed'
 ];
+
+export const COURIER_PARTNERS = [
+  {
+    id: 'dtdc',
+    name: 'DTDC Express',
+    badge: 'DTDC',
+    color: '#dc2626',
+    bg: '#fef2f2',
+    border: '#fca5a5',
+    tagline: 'Red & Blue Surface Express',
+    portalUrl: 'https://www.dtdc.com/track-your-shipment/',
+    awbPlaceholder: 'e.g. D58291042',
+    generateAwb: () => `D${Math.floor(10000000 + Math.random() * 90000000)}`
+  },
+  {
+    id: 'tpc',
+    name: 'The Professional Couriers',
+    badge: 'TPC',
+    color: '#0284c7',
+    bg: '#f0f9ff',
+    border: '#bae6fd',
+    tagline: 'TPC India Domestic Network',
+    portalUrl: 'https://www.tpcindia.com/',
+    awbPlaceholder: 'e.g. KLB38920194',
+    generateAwb: () => `KLB${Math.floor(10000000 + Math.random() * 90000000)}`
+  },
+  {
+    id: 'aps',
+    name: 'Alleppey Parcel Service (APS Cargo)',
+    badge: 'APS',
+    color: '#059669',
+    bg: '#ecfdf5',
+    border: '#a7f3d0',
+    tagline: 'Kerala Parcel Cargo Logistics',
+    portalUrl: 'https://www.apscargo.com/index',
+    awbPlaceholder: 'e.g. APS682914',
+    generateAwb: () => `APS${Math.floor(100000 + Math.random() * 900000)}`
+  },
+  {
+    id: 'delhivery',
+    name: 'Delhivery',
+    badge: 'DELHIVERY',
+    color: '#d97706',
+    bg: '#fffbeb',
+    border: '#fde68a',
+    tagline: 'Pan-India Express Surface',
+    portalUrl: 'https://www.delhivery.com/',
+    awbPlaceholder: 'e.g. 142985720193',
+    generateAwb: () => `${Math.floor(100000000000 + Math.random() * 900000000000)}`
+  }
+];
+
+export const resolveCourierConfig = (partnerName = '') => {
+  const p = (partnerName || '').toLowerCase();
+  if (p.includes('prof') || p.includes('tpc')) return COURIER_PARTNERS[1];
+  if (p.includes('alep') || p.includes('aps') || p.includes('alleppey')) return COURIER_PARTNERS[2];
+  if (p.includes('delhivery')) return COURIER_PARTNERS[3];
+  return COURIER_PARTNERS[0];
+};
 
 export const StoreDashboardPage = ({ onProductUpdated }) => {
   const { user, logout } = useAuth();
@@ -62,43 +121,55 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Live Delhivery API & Tracking Tester State
-  const [showDelhiveryModal, setShowDelhiveryModal] = useState(false);
-  const [activeDelhiveryTab, setActiveDelhiveryTab] = useState('tracking'); // 'tracking' | 'pincode' | 'guide'
-  const [testWaybill, setTestWaybill] = useState('');
-  const [testPincode, setTestPincode] = useState('689641');
-  const [trackingResult, setTrackingResult] = useState(null);
-  const [pincodeResult, setPincodeResult] = useState(null);
-  const [loadingTrackingTest, setLoadingTrackingTest] = useState(false);
-  const [loadingPincodeTest, setLoadingPincodeTest] = useState(false);
+  // Dispatch Order Modal state
+  const [dispatchModalOrder, setDispatchModalOrder] = useState(null);
+  const [dispatchForm, setDispatchForm] = useState({
+    courierPartner: 'DTDC Express',
+    awb: ''
+  });
 
-  const handleTestDelhiveryTracking = async (e) => {
-    if (e) e.preventDefault();
-    if (!testWaybill.trim()) return;
-    setLoadingTrackingTest(true);
-    setTrackingResult(null);
+  // Store Cancel Order & Auto-Refund Modal State
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelReasonInput, setCancelReasonInput] = useState('Customer requested cancellation');
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+
+  const handleConfirmStoreCancel = async () => {
+    if (!orderToCancel) return;
+    setIsCancellingOrder(true);
     try {
-      const res = await api.trackDelhiveryShipment(testWaybill.trim());
-      setTrackingResult(res.data || res);
+      const res = await api.cancelOrder(orderToCancel.id, {
+        reason: cancelReasonInput || 'Cancelled by store manager',
+        cancelledBy: 'store'
+      });
+      showNotification(res.message || `Order ${orderToCancel.id} cancelled successfully!`);
+      setOrderToCancel(null);
+      loadOrders();
+      loadProducts();
+      if (onProductUpdated) onProductUpdated();
     } catch (err) {
-      setTrackingResult({ error: err.message, found: false });
+      alert(`Failed to cancel order: ${err.message}`);
     } finally {
-      setLoadingTrackingTest(false);
+      setIsCancellingOrder(false);
     }
   };
 
-  const handleTestDelhiveryPincode = async (e) => {
+  const handleConfirmDispatch = async (e) => {
     if (e) e.preventDefault();
-    if (!testPincode.trim()) return;
-    setLoadingPincodeTest(true);
-    setPincodeResult(null);
+    if (!dispatchModalOrder) return;
+    const partner = dispatchForm.courierPartner || 'DTDC Express';
+    const cfg = resolveCourierConfig(partner);
+    const finalAwb = dispatchForm.awb.trim() || cfg.generateAwb();
+
     try {
-      const res = await api.checkShippingPincode(testPincode.trim());
-      setPincodeResult(res);
+      await api.updateOrderStatus(dispatchModalOrder.id, 'Dispatched via Courier', {
+        courierPartner: partner,
+        awb: finalAwb
+      });
+      showNotification(`Order ${dispatchModalOrder.id} dispatched via ${partner}! (AWB: ${finalAwb})`);
+      setDispatchModalOrder(null);
+      loadOrders();
     } catch (err) {
-      setPincodeResult({ error: err.message, serviceable: false });
-    } finally {
-      setLoadingPincodeTest(false);
+      alert(err.message);
     }
   };
 
@@ -112,17 +183,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  // Dynamic Taxonomy State (Brands & Categories)
+  // Dynamic Taxonomy State (Brands & Categories from MongoDB Atlas)
   const [taxonomy, setTaxonomy] = useState({
-    brands: ['Bosch', 'Makita', 'DeWalt', 'Dongcheng', 'HiKOKI', 'Stanley'],
-    categories: [
-      { id: 'cordless', name: 'Cordless Tools' },
-      { id: 'grinders-cutters', name: 'Grinders & Cutters' },
-      { id: 'hammers', name: 'Hammer Drills' },
-      { id: 'woodworking', name: 'Woodworking' },
-      { id: 'washers-blowers', name: 'Washers & Blowers' },
-      { id: 'accessories', name: 'Accessories & Bits' }
-    ]
+    brands: [],
+    categories: []
   });
   const [loadingTaxonomy, setLoadingTaxonomy] = useState(false);
 
@@ -806,6 +870,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    const targetOrder = orders.find(o => o.id === orderId);
+    if (newStatus.toLowerCase().includes('dispatch') && targetOrder && targetOrder.deliveryType !== 'store-pickup') {
+      const cfg = resolveCourierConfig(targetOrder.courierPartner);
+      setDispatchForm({
+        courierPartner: cfg.name,
+        awb: targetOrder.awb || ''
+      });
+      setDispatchModalOrder(targetOrder);
+      return;
+    }
+
     try {
       await api.updateOrderStatus(orderId, newStatus);
       showNotification(`Order ${orderId} updated to "${newStatus}"`);
@@ -1256,6 +1331,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           <Layers size={16} />
           <span>Categories & Brands ({taxonomy.categories.length + taxonomy.brands.length})</span>
         </button>
+
       </div>
 
       {/* TAB 1: CUSTOMER ORDERS MANAGER */}
@@ -1401,20 +1477,38 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         {/* Automation: Payment Status Badge */}
                         <span
                           style={{
-                            background: order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
-                            color: order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
-                            border: `1px solid ${order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
+                            background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
+                            color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
+                            border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
                             padding: '2px 8px',
                             borderRadius: '6px',
                             fontSize: '0.72rem',
                             fontWeight: '800'
                           }}
                         >
-                          {order.paymentStatus === 'PAID' ? `PAID (${order.transactionId || 'UPI'})` : 'PENDING PAYMENT'}
+                          {order.paymentStatus === 'REFUNDED'
+                            ? `REFUNDED (${order.refundId || 'UPI'})`
+                            : order.paymentStatus === 'PAID'
+                            ? `PAID (${order.transactionId || 'UPI'})`
+                            : 'PENDING PAYMENT'}
                         </span>
 
-                        {/* Automation: Pickup OTP or Courier AWB */}
-                        {order.deliveryType === 'store-pickup' ? (
+                        {/* Order Stage Badge */}
+                        {order.status === 'Cancelled' ? (
+                          <span
+                            style={{
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: '700'
+                            }}
+                          >
+                            Cancelled by {order.cancelledBy || 'User'}
+                          </span>
+                        ) : order.deliveryType === 'store-pickup' ? (
                           <span
                             style={{
                               background: order.handoverVerified ? '#ecfdf5' : '#f1f5f9',
@@ -1428,19 +1522,45 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           >
                             {order.handoverVerified ? `✅ Handover Verified` : `Pickup OTP: ${order.pickupOtp || '4819'}`}
                           </span>
-                        ) : (
+                        ) : (order.awb && order.awb.trim()) ? (() => {
+                          const cfg = resolveCourierConfig(order.courierPartner);
+                          return (
+                            <span
+                              style={{
+                                background: cfg.bg,
+                                color: cfg.color,
+                                border: `1px solid ${cfg.border}`,
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: '700',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <span style={{ fontWeight: '900', color: cfg.color }}>
+                                {cfg.badge}
+                              </span>
+                              • AWB: {order.awb}
+                            </span>
+                          );
+                        })() : (
                           <span
                             style={{
-                              background: '#f0f9ff',
-                              color: '#0284c7',
-                              border: '1px solid #bae6fd',
+                              background: '#fffbeb',
+                              color: '#b45309',
+                              border: '1px solid #fde68a',
                               padding: '2px 8px',
                               borderRadius: '6px',
                               fontSize: '0.72rem',
-                              fontWeight: '700'
+                              fontWeight: '700',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
                             }}
                           >
-                            AWB: {order.awb || 'DLHVY-KL-8491'}
+                            ⏳ Needs Courier Dispatch
                           </span>
                         )}
                       </div>
@@ -1458,30 +1578,76 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         {formatPrice(order.totalAmount)}
                       </span>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700' }}>
-                          Update Status:
-                        </label>
-                        <select
-                          value={order.status}
-                          onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#ffffff',
-                            border: '2px solid #ea580c',
-                            borderRadius: '8px',
-                            fontSize: '0.82rem',
-                            fontWeight: '700',
-                            color: '#ea580c',
-                            cursor: 'pointer',
-                            outline: 'none'
-                          }}
-                          id={`select-status-${order.id}`}
-                        >
-                          {STATUS_OPTIONS.map(st => (
-                            <option key={st} value={st}>{st}</option>
-                          ))}
-                        </select>
+                      <div>
+                        {order.status === 'Cancelled' ? (
+                          <span
+                            style={{
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              padding: '5px 12px',
+                              borderRadius: '9999px',
+                              fontSize: '0.76rem',
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                          >
+                            ❌ Cancelled {order.paymentStatus === 'REFUNDED' ? '• Refunded' : ''}
+                          </span>
+                        ) : order.deliveryType === 'store-pickup' ? (
+                          <span
+                            style={{
+                              background: order.handoverVerified ? '#ecfdf5' : '#eff6ff',
+                              color: order.handoverVerified ? '#16a34a' : '#0284c7',
+                              border: `1px solid ${order.handoverVerified ? '#bbf7d0' : '#bae6fd'}`,
+                              padding: '5px 12px',
+                              borderRadius: '9999px',
+                              fontSize: '0.76rem',
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                          >
+                            {order.handoverVerified ? '✅ Collected at Store' : '🏬 Ready for Store Pickup'}
+                          </span>
+                        ) : (order.awb && order.awb.trim()) ? (
+                          <span
+                            style={{
+                              background: '#ecfdf5',
+                              color: '#16a34a',
+                              border: '1px solid #bbf7d0',
+                              padding: '5px 12px',
+                              borderRadius: '9999px',
+                              fontSize: '0.76rem',
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                          >
+                            ✅ Dispatched via Courier
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              background: 'rgba(234, 88, 12, 0.08)',
+                              color: '#ea580c',
+                              border: '1px solid rgba(234, 88, 12, 0.25)',
+                              padding: '5px 12px',
+                              borderRadius: '9999px',
+                              fontSize: '0.76rem',
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                          >
+                            📦 Order Placed • Processing at Shop
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1499,8 +1665,51 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     ))}
                   </div>
 
-                  {/* Order Actions: Invoices, Shipping Labels, Customer Contact */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                  {/* Order Actions: Invoices, Shipping Labels, Customer Contact & Cancel */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {/* Cancel Order Action */}
+                    {order.status !== 'Cancelled' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrderToCancel(order);
+                          setCancelReasonInput('Customer requested cancellation');
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#ffffff',
+                          border: '1px solid #fecaca',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        title="Cancel this order and automatically issue a full refund if paid online"
+                        id={`btn-cancel-order-${order.id}`}
+                      >
+                        <XCircle size={13} style={{ color: '#dc2626' }} />
+                        <span>Cancel Order</span>
+                      </button>
+                    ) : (
+                      <span
+                        style={{
+                          padding: '6px 10px',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '0.74rem',
+                          fontWeight: '700',
+                          color: '#64748b'
+                        }}
+                      >
+                        {order.paymentStatus === 'REFUNDED' ? `Refund ID: ${order.refundId || 'Processed'}` : 'Order Cancelled'}
+                      </span>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => setSelectedOrderForInvoice(order)}
@@ -1523,6 +1732,38 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       <Printer size={13} style={{ color: '#0284c7' }} />
                       <span>Print GST Invoice</span>
                     </button>
+
+                    {order.deliveryType !== 'store-pickup' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cfg = resolveCourierConfig(order.courierPartner);
+                          setDispatchForm({
+                            courierPartner: cfg.name,
+                            awb: order.awb || ''
+                          });
+                          setDispatchModalOrder(order);
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          background: order.awb ? '#f0f9ff' : '#eff6ff',
+                          border: `1px solid ${order.awb ? '#bae6fd' : '#bfdbfe'}`,
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          color: '#0284c7',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        title="Assign Courier Partner & Enter Consignment AWB"
+                        id={`btn-dispatch-order-${order.id}`}
+                      >
+                        <Truck size={13} style={{ color: '#0284c7' }} />
+                        <span>{order.awb ? 'Update Courier Details' : 'Dispatch via Courier'}</span>
+                      </button>
+                    )}
 
                     <button
                       type="button"
@@ -2590,6 +2831,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
       )}
 
+
       {/* ADD / EDIT PRODUCT MODAL */}
       {isAddModalOpen && (
         <div className="modal-overlay" onClick={() => setIsAddModalOpen(false)}>
@@ -3382,8 +3624,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
         </div>
       )}
-      {/* Modal: Live Delhivery API & Tracking Tester */}
-      {showDelhiveryModal && (
+
+      {/* ========================================================================= */}
+      {/* MODAL: DISPATCH ORDER VIA DTDC / THE PROFESSIONAL COURIERS                 */}
+      {/* ========================================================================= */}
+      {dispatchModalOrder && (
         <div
           style={{
             position: 'fixed',
@@ -3396,410 +3641,290 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             justifyContent: 'center',
             padding: '20px'
           }}
-          onClick={() => setShowDelhiveryModal(false)}
+          onClick={() => setDispatchModalOrder(null)}
         >
           <div
             style={{
               background: '#ffffff',
               borderRadius: '16px',
-              maxWidth: '660px',
+              maxWidth: '560px',
               width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
               border: '1px solid #e2e8f0',
-              padding: '26px'
+              padding: '24px'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Truck size={18} />
-                  </div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                    Delhivery Logistics Live API & Tracking Console
-                  </h3>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#f0f9ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Truck size={20} />
                 </div>
-                <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0, fontFamily: 'var(--font-mono)' }}>
-                  Production Host: <strong>track.delhivery.com</strong> • Token: <strong>943a9342...c388a</strong> (Active)
-                </p>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    Dispatch Courier Shipment
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    Order ID: <strong>{dispatchModalOrder.id}</strong> • {dispatchModalOrder.customer?.name}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => setShowDelhiveryModal(false)}
+                onClick={() => setDispatchModalOrder(null)}
                 style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}
-                id="btn-close-delhivery-test"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Sub-tabs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', background: '#f8fafc', padding: '4px', borderRadius: '10px', marginBottom: '20px' }}>
-              <button
-                type="button"
-                onClick={() => setActiveDelhiveryTab('tracking')}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: activeDelhiveryTab === 'tracking' ? '#0284c7' : 'transparent',
-                  color: activeDelhiveryTab === 'tracking' ? '#ffffff' : '#64748b',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                📦 Track AWB
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveDelhiveryTab('pincode')}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: activeDelhiveryTab === 'pincode' ? '#0284c7' : 'transparent',
-                  color: activeDelhiveryTab === 'pincode' ? '#ffffff' : '#64748b',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                📍 Pincode Check
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveDelhiveryTab('guide')}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  background: activeDelhiveryTab === 'guide' ? '#0284c7' : 'transparent',
-                  color: activeDelhiveryTab === 'guide' ? '#ffffff' : '#64748b',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                📖 Delhivery Site Guide
-              </button>
-            </div>
+            <form onSubmit={handleConfirmDispatch} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Destination Box */}
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                  Ship To Destination
+                </span>
+                <div style={{ fontWeight: '700', color: '#0f172a' }}>
+                  {dispatchModalOrder.customer?.address || 'Doorstep Delivery'}
+                </div>
+                <div style={{ color: '#475569', fontSize: '0.76rem' }}>
+                  District: {dispatchModalOrder.customer?.district || 'Kerala'} • PIN: {dispatchModalOrder.customer?.pincode || '689641'}
+                </div>
+              </div>
 
-            {/* TAB 1: Live AWB Tracking */}
-            {activeDelhiveryTab === 'tracking' && (
+              {/* Select Courier Partner (4 Partners) */}
               <div>
-                <form onSubmit={handleTestDelhiveryTracking} style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                    Enter Delhivery Waybill / AWB Number:
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="e.g. 148293847192 or DLHVY-KL-8491"
-                      value={testWaybill}
-                      onChange={(e) => setTestWaybill(e.target.value)}
-                      style={{
-                        flex: 1,
-                        height: '42px',
-                        borderRadius: '8px',
-                        border: '1.5px solid #cbd5e1',
-                        padding: '0 12px',
-                        fontSize: '0.88rem',
-                        fontFamily: 'var(--font-mono)',
-                        outline: 'none'
-                      }}
-                      id="input-test-waybill"
-                    />
-                    <button
-                      type="submit"
-                      disabled={loadingTrackingTest || !testWaybill.trim()}
-                      style={{
-                        background: '#0284c7',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '0 18px',
-                        fontWeight: '800',
-                        fontSize: '0.84rem',
-                        cursor: loadingTrackingTest ? 'not-allowed' : 'pointer',
-                        opacity: loadingTrackingTest ? 0.7 : 1
-                      }}
-                      id="btn-run-track-test"
-                    >
-                      {loadingTrackingTest ? 'Querying API...' : 'Track Live'}
-                    </button>
-                  </div>
-                </form>
+                <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
+                  Select Logistics Partner *
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px' }}>
+                  {COURIER_PARTNERS.map(cp => {
+                    const isSelected = dispatchForm.courierPartner === cp.name;
+                    return (
+                      <div
+                        key={cp.id}
+                        onClick={() => {
+                          setDispatchForm(prev => ({
+                            ...prev,
+                            courierPartner: cp.name,
+                            awb: prev.awb ? prev.awb : cp.generateAwb()
+                          }));
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: isSelected ? `2px solid ${cp.color}` : '1px solid #cbd5e1',
+                          background: isSelected ? cp.bg : '#ffffff',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '900', padding: '1px 5px', borderRadius: '4px', background: isSelected ? cp.color : '#f1f5f9', color: isSelected ? '#ffffff' : '#475569' }}>
+                            {cp.badge}
+                          </span>
+                          <strong style={{ color: isSelected ? cp.color : '#0f172a', fontSize: '0.84rem' }}>{cp.name}</strong>
+                        </div>
+                        <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>{cp.tagline}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-                {/* Quick Helper Pills */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>Quick Test AWBs:</span>
+              {/* Consignment AWB input */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700' }}>
+                    Consignment / AWB / LR Number *
+                  </label>
                   <button
                     type="button"
-                    onClick={() => { setTestWaybill('1234567890'); }}
-                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 8px', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                    onClick={() => {
+                      const cfg = resolveCourierConfig(dispatchForm.courierPartner);
+                      setDispatchForm(prev => ({ ...prev, awb: cfg.generateAwb() }));
+                    }}
+                    style={{ fontSize: '0.72rem', color: '#0284c7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700' }}
                   >
-                    1234567890 (Sample)
+                    + Auto-Generate Sample AWB
                   </button>
-                  {orders.find(o => o.awb) && (
-                    <button
-                      type="button"
-                      onClick={() => { setTestWaybill(orders.find(o => o.awb).awb); }}
-                      style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', borderRadius: '6px', padding: '3px 8px', fontSize: '0.72rem', cursor: 'pointer', fontFamily: 'var(--font-mono)', fontWeight: '700' }}
-                    >
-                      Use Placed Order AWB ({orders.find(o => o.awb).awb})
-                    </button>
-                  )}
                 </div>
 
-                {/* Tracking Response Card */}
-                {trackingResult && (
-                  <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '800', background: trackingResult.statusCode === 200 ? '#ecfdf5' : '#fef2f2', color: trackingResult.statusCode === 200 ? '#15803d' : '#b91c1c', padding: '2px 8px', borderRadius: '6px', border: trackingResult.statusCode === 200 ? '1px solid #86efac' : '1px solid #fecaca' }}>
-                          HTTP {trackingResult.statusCode || 200} OK
-                        </span>
-                        <span style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a' }}>
-                          Waybill: {trackingResult.waybill}
-                        </span>
-                      </div>
-                      <a
-                        href={`https://www.delhivery.com/track/package/${encodeURIComponent(trackingResult.waybill)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.76rem', color: '#0284c7', textDecoration: 'none', fontWeight: '700', background: '#ffffff', border: '1px solid #bae6fd', padding: '3px 8px', borderRadius: '6px' }}
-                      >
-                        <span>Check on Delhivery.com</span>
-                        <ExternalLink size={12} />
-                      </a>
-                    </div>
-
-                    {trackingResult.found ? (
-                      <div>
-                        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '12px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
-                          <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#16a34a', marginBottom: '4px' }}>
-                            ● {trackingResult.status}
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: '#475569' }}>
-                            Origin: <strong>{trackingResult.origin}</strong> → Destination: <strong>{trackingResult.destination || 'In Transit'}</strong>
-                          </div>
-                          {trackingResult.expectedDeliveryDate && (
-                            <div style={{ fontSize: '0.78rem', color: '#0284c7', marginTop: '4px', fontWeight: '700' }}>
-                              Expected Delivery: {new Date(trackingResult.expectedDeliveryDate).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
-                            </div>
-                          )}
-                        </div>
-
-                        {trackingResult.scans && trackingResult.scans.length > 0 && (
-                          <div style={{ background: '#ffffff', borderRadius: '8px', padding: '12px', border: '1px solid #e2e8f0' }}>
-                            <div style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
-                              Live Scan History
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {trackingResult.scans.map((scan, sIdx) => (
-                                <div key={sIdx} style={{ fontSize: '0.76rem', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
-                                  <span style={{ color: '#0f172a', fontWeight: '600' }}>{scan.scanDetail} ({scan.location})</span>
-                                  <span style={{ color: '#64748b' }}>{scan.scanDateTime}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px' }}>
-                        <div style={{ fontSize: '0.84rem', fontWeight: '700', color: '#1e40af', marginBottom: '4px' }}>
-                          ℹ️ Live Delhivery API Response:
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#334155', lineHeight: 1.5, marginBottom: '8px' }}>
-                          {trackingResult.delhiveryError || trackingResult.message}
-                        </div>
-                        <p style={{ fontSize: '0.74rem', color: '#64748b', margin: 0 }}>
-                          💡 <strong>How Delhivery Tracking Works:</strong> The API accepted the token and responded with 200 OK. In Delhivery production, an AWB number only produces live scan history once a shipment order is booked/created in your Delhivery account.
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Raw JSON Debug Box */}
-                    {trackingResult.raw && (
-                      <details style={{ marginTop: '12px' }}>
-                        <summary style={{ fontSize: '0.72rem', color: '#64748b', cursor: 'pointer', fontWeight: '700' }}>
-                          View Raw Delhivery JSON Response
-                        </summary>
-                        <pre style={{ background: '#0f172a', color: '#f8fafc', padding: '10px', borderRadius: '8px', fontSize: '0.7rem', overflowX: 'auto', marginTop: '6px' }}>
-                          {JSON.stringify(trackingResult.raw, null, 2)}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
-                )}
+                <input
+                  type="text"
+                  required
+                  value={dispatchForm.awb}
+                  onChange={(e) => setDispatchForm({ ...dispatchForm, awb: e.target.value })}
+                  placeholder={resolveCourierConfig(dispatchForm.courierPartner).awbPlaceholder}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    color: '#0f172a',
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: '700'
+                  }}
+                  id="input-dispatch-awb"
+                />
+                <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Enter the consignment / LR number from your physical receipt (DTDC, Professional, Alleppey, or Delhivery).
+                </span>
               </div>
-            )}
 
-            {/* TAB 2: Pincode Serviceability */}
-            {activeDelhiveryTab === 'pincode' && (
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setDispatchModalOrder(null)}
+                  style={{ padding: '9px 16px', background: '#f1f5f9', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '9px 20px',
+                    background: '#ea580c',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    fontWeight: '700',
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  id="btn-confirm-dispatch"
+                >
+                  <Check size={16} />
+                  <span>Confirm Dispatch & Save</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: CANCEL ORDER & TRIGGER AUTOMATIC ONLINE REFUND (Store Manager)      */}
+      {/* ========================================================================= */}
+      {orderToCancel && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => !isCancellingOrder && setOrderToCancel(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0',
+              padding: '24px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+            id="modal-store-cancel-order"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <XCircle size={22} />
+              </div>
               <div>
-                <form onSubmit={handleTestDelhiveryPincode} style={{ marginBottom: '16px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                    Enter 6-Digit Delivery Pincode:
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={testPincode}
-                      onChange={(e) => setTestPincode(e.target.value.replace(/\D/g, ''))}
-                      style={{
-                        flex: 1,
-                        height: '42px',
-                        borderRadius: '8px',
-                        border: '1.5px solid #cbd5e1',
-                        padding: '0 12px',
-                        fontSize: '0.88rem',
-                        fontFamily: 'var(--font-mono)',
-                        outline: 'none'
-                      }}
-                      id="input-test-pincode"
-                    />
-                    <button
-                      type="submit"
-                      disabled={loadingPincodeTest || !testPincode.trim()}
-                      style={{
-                        background: '#0284c7',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '0 18px',
-                        fontWeight: '800',
-                        fontSize: '0.84rem',
-                        cursor: loadingPincodeTest ? 'not-allowed' : 'pointer'
-                      }}
-                      id="btn-run-pincode-test"
-                    >
-                      {loadingPincodeTest ? 'Checking...' : 'Check Serviceability'}
-                    </button>
-                  </div>
-                </form>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  Cancel Order {orderToCancel.id}?
+                </h3>
+                <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                  Customer: <strong>{orderToCancel.customer?.name}</strong> ({orderToCancel.customer?.phone}) • Amount: <strong>{formatPrice(orderToCancel.totalAmount)}</strong>
+                </span>
+              </div>
+            </div>
 
-                {/* Quick Pincode Pills */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '18px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>Kerala Hubs:</span>
-                  {[
-                    { pin: '689641', label: 'Kozhencherry (Hub Origin)' },
-                    { pin: '682001', label: 'Ernakulam / Kochi' },
-                    { pin: '695001', label: 'Trivandrum' },
-                    { pin: '673001', label: 'Kozhikode' }
-                  ].map(p => (
-                    <button
-                      key={p.pin}
-                      type="button"
-                      onClick={() => { setTestPincode(p.pin); }}
-                      style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '3px 8px', fontSize: '0.72rem', cursor: 'pointer' }}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
+            {orderToCancel.paymentStatus === 'PAID' ? (
+              <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.84rem', color: '#166534' }}>
+                <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <span>⚡ Automatic Full Online Refund</span>
                 </div>
-
-                {pincodeResult && (
-                  <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '800', background: pincodeResult.serviceable ? '#ecfdf5' : '#fef2f2', color: pincodeResult.serviceable ? '#15803d' : '#b91c1c', padding: '3px 10px', borderRadius: '6px', border: pincodeResult.serviceable ? '1px solid #86efac' : '1px solid #fecaca' }}>
-                        {pincodeResult.serviceable ? '✅ DIRECT EXPRESS SERVICEABLE' : '❌ OUTSIDE DIRECT ZONE'}
-                      </span>
-                      <span style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a' }}>
-                        PIN: {pincodeResult.pincode}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '12px' }}>
-                      <div style={{ background: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>COD Available</span>
-                        <strong style={{ fontSize: '0.86rem', color: pincodeResult.codAvailable ? '#16a34a' : '#dc2626' }}>
-                          {pincodeResult.codAvailable ? 'YES (Active)' : 'NO'}
-                        </strong>
-                      </div>
-                      <div style={{ background: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>Prepaid Dispatch</span>
-                        <strong style={{ fontSize: '0.86rem', color: pincodeResult.prepaidAvailable ? '#16a34a' : '#dc2626' }}>
-                          {pincodeResult.prepaidAvailable ? 'YES (Active)' : 'NO'}
-                        </strong>
-                      </div>
-                      <div style={{ background: '#ffffff', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>District / State</span>
-                        <strong style={{ fontSize: '0.86rem', color: '#0f172a' }}>
-                          {pincodeResult.district || 'Pathanamthitta'}, {pincodeResult.state || 'KL'}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                Because this order was paid online via Razorpay/UPI, confirming cancellation will <strong>automatically trigger an immediate full refund of {formatPrice(orderToCancel.totalAmount)}</strong> to the customer's account and restore tool inventory stock.
+              </div>
+            ) : (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.84rem', color: '#475569' }}>
+                This order is unpaid / Pay at Store. Cancelling will void the order and restore the reserved tool stock in the catalog.
               </div>
             )}
 
-            {/* TAB 3: Delhivery Portal Testing Guide */}
-            {activeDelhiveryTab === 'guide' && (
-              <div style={{ fontSize: '0.84rem', color: '#334155', lineHeight: 1.6 }}>
-                <h4 style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
-                  How to Test Delhivery API Directly on Delhivery's Site:
-                </h4>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                Cancellation Reason (Stored for Records):
+              </label>
+              <input
+                type="text"
+                value={cancelReasonInput}
+                onChange={(e) => setCancelReasonInput(e.target.value)}
+                placeholder="e.g. Customer requested cancellation / Out of stock"
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '0.86rem',
+                  color: '#0f172a'
+                }}
+                id="input-store-cancel-reason"
+              />
+            </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <strong style={{ color: '#0284c7' }}>Step 1: Open Delhivery One Portal</strong>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Go to <a href="https://one.delhivery.com" target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', fontWeight: '700' }}>one.delhivery.com</a> and sign in with your registered Delhivery credentials.
-                    </p>
-                  </div>
-
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <strong style={{ color: '#0284c7' }}>Step 2: Go to API Settings / Test our API</strong>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      In Delhivery left sidebar, go to <strong>Settings → API & Webhooks</strong>. Click <strong>Test our API</strong> or open the Developer API Console.
-                    </p>
-                  </div>
-
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <strong style={{ color: '#0284c7' }}>Step 3: Test Pincode Serviceability API</strong>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Select the <strong>Pincode Serviceability API</strong>. Enter <code>filter_codes: 689641</code>. Click <strong>Execute / Test</strong>. It will immediately return <code>200 OK</code> showing pickup and delivery capability.
-                    </p>
-                  </div>
-
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <strong style={{ color: '#0284c7' }}>Step 4: Test Tracking API (Why you need an actual AWB)</strong>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                      Select <strong>Track Package API</strong> (<code>/api/v1/packages/json/</code>). Delhivery requires an actual Waybill / AWB. If you enter random digits like <code>12345</code>, Delhivery responds <code>"Data does not exists for provided Waybill"</code>. To get tracking scans, book a forward order in Delhivery (under Orders → Create Order) or use an AWB from a live parcel.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 type="button"
-                onClick={() => setShowDelhiveryModal(false)}
+                onClick={() => setOrderToCancel(null)}
+                disabled={isCancellingOrder}
                 style={{
-                  background: '#0f172a',
-                  color: '#ffffff',
-                  border: 'none',
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  color: '#475569',
+                  padding: '9px 16px',
                   borderRadius: '8px',
-                  padding: '9px 18px',
-                  fontWeight: '700',
                   fontSize: '0.84rem',
+                  fontWeight: '700',
                   cursor: 'pointer'
                 }}
               >
-                Close Console
+                Keep Order
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmStoreCancel}
+                disabled={isCancellingOrder}
+                style={{
+                  background: '#dc2626',
+                  border: 'none',
+                  color: '#ffffff',
+                  padding: '9px 18px',
+                  borderRadius: '8px',
+                  fontSize: '0.84rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)'
+                }}
+                id="btn-confirm-store-cancel"
+              >
+                {isCancellingOrder ? 'Cancelling & Refunding...' : 'Confirm Cancel & Refund'}
               </button>
             </div>
           </div>
@@ -4330,7 +4455,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   <div style={{ fontWeight: '800', color: '#0f172a' }}>
                     {selectedOrderForInvoice.deliveryType === 'store-pickup' 
                       ? '🏢 Counter Handover at Poyanil Building, Kozhencherry' 
-                      : '🚚 Kerala Speed Express Doorstep Delivery (Delhivery Partner)'}
+                      : `🚚 ${selectedOrderForInvoice.courierPartner || 'Courier'} Doorstep Delivery`}
                   </div>
                   {selectedOrderForInvoice.pickupOtp && (
                     <div style={{ marginTop: '4px', color: '#ea580c' }}>
@@ -4524,27 +4649,33 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               >
                 {/* Header Partner Bar */}
                 <div style={{ borderBottom: '2px solid #000000', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ fontSize: '1.05rem', fontWeight: '900', letterSpacing: '-0.02em' }}>
-                      DELHIVERY EXPRESS
-                    </strong>
-                    <div style={{ fontSize: '0.68rem', fontWeight: '700' }}>Kerala Speed Surface Logistics</div>
-                  </div>
+                  {(() => {
+                    const cfg = resolveCourierConfig(selectedOrderForLabel.courierPartner);
+                    return (
+                      <div>
+                        <strong style={{ fontSize: '1.05rem', fontWeight: '900', letterSpacing: '-0.02em', color: cfg.color }}>
+                          {cfg.name.toUpperCase()}
+                        </strong>
+                        <div style={{ fontSize: '0.68rem', fontWeight: '700' }}>
+                          {cfg.tagline} • Kozhencherry Hub
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div style={{ border: '2px solid #000000', padding: '4px 8px', fontWeight: '900', fontSize: '0.82rem', textTransform: 'uppercase' }}>
                     {selectedOrderForLabel.paymentStatus === 'PAID' ? 'PREPAID' : 'COD - ₹' + selectedOrderForLabel.totalAmount}
                   </div>
                 </div>
 
-                {/* Simulated Barcode */}
-                <div style={{ textAlign: 'center', padding: '12px 0 8px', borderBottom: '2px solid #000000' }}>
-                  <div style={{ height: '36px', display: 'flex', justifyContent: 'center', alignItems: 'stretch', gap: '2px' }}>
-                    {[3,1,2,4,1,3,2,1,4,2,3,1,2,3,1,4,2,1,3,2,4,1,2,3,1,3,2,1,4,2,1,3,2,1,4,2,3,1].map((w, i) => (
-                      <div key={i} style={{ width: `${w * 2}px`, background: '#000000' }} />
-                    ))}
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: '900', letterSpacing: '0.15em', marginTop: '4px' }}>
-                    {selectedOrderForLabel.awb || 'DLHVY-KL-689641'}
-                  </div>
+                {/* Official Code 128 Courier Barcode (Decodable by Handheld Laser/Optical Scanners) */}
+                <div style={{ textAlign: 'center', padding: '12px 6px 10px', borderBottom: '2px solid #000000', background: '#ffffff' }}>
+                  <Barcode
+                    value={selectedOrderForLabel.awb || resolveCourierConfig(selectedOrderForLabel.courierPartner).generateAwb()}
+                    width={2}
+                    height={62}
+                    fontSize={15}
+                    displayValue={true}
+                  />
                 </div>
 
                 {/* Destination Address (Giant PIN) */}
@@ -4559,7 +4690,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     Ph: {selectedOrderForLabel.customer?.phone}
                   </div>
                   <div style={{ fontSize: '0.82rem', marginTop: '4px', lineHeight: 1.3 }}>
-                    {selectedOrderForLabel.customer?.address || 'Poyanil Junction, Kozhencherry'}
+                    {selectedOrderForLabel.customer?.address || 'Customer Delivery Address'}
                   </div>
                   <div style={{ fontSize: '0.85rem', fontWeight: '700', marginTop: '2px' }}>
                     District: {selectedOrderForLabel.customer?.district || 'Pathanamthitta'}, KERALA
@@ -4599,6 +4730,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* Global CSS for Clean A4 / 4x6 Label Printing */}
       <style>{`
         @media print {
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
+          html, body {
+            height: auto !important;
+            min-height: 0 !important;
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
           body * {
             visibility: hidden !important;
           }
@@ -4607,6 +4749,13 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           }
           #printable-label-modal-content, #printable-label-modal-content * {
             visibility: visible !important;
+          }
+          #printable-label-modal-content img {
+            visibility: visible !important;
+            display: block !important;
+            image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: pixelated !important;
+            -ms-interpolation-mode: nearest-neighbor !important;
           }
           #printable-invoice-modal-content {
             position: absolute !important;
@@ -4620,7 +4769,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             border: none !important;
           }
           #printable-label-modal-content {
-            position: absolute !important;
+            position: fixed !important;
             left: 0 !important;
             top: 0 !important;
             width: 380px !important;
@@ -4628,7 +4777,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             padding: 16px !important;
             background: #ffffff !important;
             box-shadow: none !important;
-            border: 2px solid #000000 !important;
+            border: 2.5px solid #000000 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           .no-print {
             display: none !important;

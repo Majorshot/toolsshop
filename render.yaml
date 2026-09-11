@@ -15,7 +15,5 @@ services:
         sync: false
       - key: RAZORPAY_KEY_SECRET
         sync: false
-      - key: DELHIVERY_API_TOKEN
-        sync: false
       - key: ALLOWED_ORIGINS
         sync: false

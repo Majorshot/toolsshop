@@ -138,15 +138,27 @@ export const api = {
     return await res.json();
   },
 
-  // Admin: Update order status
-  async updateOrderStatus(orderId, status) {
+  // Admin: Update order status (with optional courier partner & AWB consignment)
+  async updateOrderStatus(orderId, status, extra = {}) {
     const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, ...extra }),
     });
     if (!res.ok) throw new Error('Failed to update order status');
     return await res.json();
+  },
+
+  // Cancel order with automatic online refund
+  async cancelOrder(orderId, options = {}) {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to cancel order');
+    return data;
   },
 
   // Store information
@@ -224,16 +236,23 @@ export const api = {
     return await res.json();
   },
 
-  // Delhivery Logistics Partner APIs
+  // Logistics & Courier Partner APIs (DTDC Express & The Professional Couriers)
   async checkShippingPincode(pincode) {
     const res = await fetch(`${API_BASE}/shipping/check-pincode/${encodeURIComponent(pincode)}`);
     if (!res.ok) throw new Error('Failed to check pincode serviceability');
     return await res.json();
   },
 
-  async trackDelhiveryShipment(waybill) {
-    const res = await fetch(`${API_BASE}/shipping/track/${encodeURIComponent(waybill)}`);
-    if (!res.ok) throw new Error('Failed to track Delhivery shipment');
+  async getAvailableCouriers() {
+    const res = await fetch(`${API_BASE}/shipping/couriers`);
+    if (!res.ok) throw new Error('Failed to fetch courier partners');
+    return await res.json();
+  },
+
+  async trackShipment(courierIdentifier, waybill) {
+    const courierPart = courierIdentifier ? `${encodeURIComponent(courierIdentifier)}/` : '';
+    const res = await fetch(`${API_BASE}/shipping/track/${courierPart}${encodeURIComponent(waybill)}`);
+    if (!res.ok) throw new Error('Failed to fetch tracking information');
     return await res.json();
   },
 

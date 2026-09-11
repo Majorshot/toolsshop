@@ -243,7 +243,7 @@ export const LoginPage = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Raju Thomas"
+                  placeholder="e.g. Rahul Sharma"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   style={{
@@ -269,7 +269,7 @@ export const LoginPage = () => {
                   <input
                     type="text"
                     required
-                    placeholder="+91 98471 88990"
+                    placeholder="+91 98470 12345"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     style={{
