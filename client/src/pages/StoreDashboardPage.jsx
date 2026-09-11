@@ -1366,6 +1366,21 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
         <button
           type="button"
+          onClick={() => setActiveTab('cancellations')}
+          className={`store-nav-tab-btn ${activeTab === 'cancellations' ? 'active' : ''}`}
+          id="store-tab-cancellations"
+        >
+          <Ban size={16} />
+          <span>Cancel Requests</span>
+          {pendingCancellationRequests.length > 0 && (
+            <span className="store-nav-badge-alert" style={{ background: '#dc2626', color: '#fff' }}>
+              {pendingCancellationRequests.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('inventory')}
           className={`store-nav-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
           id="store-tab-inventory"
@@ -1407,21 +1422,6 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         >
           <Layers size={16} />
           <span>Categories & Brands ({taxonomy.categories.length + taxonomy.brands.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('cancellations')}
-          className={`store-nav-tab-btn ${activeTab === 'cancellations' ? 'active' : ''}`}
-          id="store-tab-cancellations"
-        >
-          <Ban size={16} />
-          <span>Cancel Requests</span>
-          {pendingCancellationRequests.length > 0 && (
-            <span className="store-nav-badge-alert" style={{ background: '#dc2626', color: '#fff' }}>
-              {pendingCancellationRequests.length}
-            </span>
-          )}
         </button>
 
       </div>
