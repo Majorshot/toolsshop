@@ -142,4 +142,32 @@ router.post('/:id/cancel', async (req, res) => {
   }
 });
 
+// POST request cancellation for dispatched orders (Customer)
+router.post('/:id/request-cancel', async (req, res) => {
+  try {
+    const { reason } = req.body || {};
+    const result = await db.requestCancellation(req.params.id, { reason });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST reject cancellation request (Store Owner)
+router.post('/:id/reject-cancel', async (req, res) => {
+  try {
+    const result = await db.rejectCancellationRequest(req.params.id);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
+

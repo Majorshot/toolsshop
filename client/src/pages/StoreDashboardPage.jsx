@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -132,6 +132,45 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [cancelReasonInput, setCancelReasonInput] = useState('Customer requested cancellation');
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+
+  // Cancellation Requests Tab State
+  const [approvingCancelId, setApprovingCancelId] = useState(null);
+  const [rejectingCancelId, setRejectingCancelId] = useState(null);
+
+  const pendingCancellationRequests = orders.filter(
+    o => o.cancellationRequested && (o.status || '').toLowerCase() !== 'cancelled'
+  );
+
+  const handleApproveCancellationRequest = async (order) => {
+    setApprovingCancelId(order.id);
+    try {
+      const res = await api.cancelOrder(order.id, {
+        reason: order.cancellationRequestReason || 'Customer cancellation request approved by store',
+        cancelledBy: 'store'
+      });
+      showNotification(res.message || `Order ${order.id} cancelled & refund processed!`);
+      loadOrders();
+      loadProducts();
+      if (onProductUpdated) onProductUpdated();
+    } catch (err) {
+      showNotification(`Failed: ${err.message}`);
+    } finally {
+      setApprovingCancelId(null);
+    }
+  };
+
+  const handleRejectCancellationRequest = async (order) => {
+    setRejectingCancelId(order.id);
+    try {
+      const res = await api.rejectCancellation(order.id);
+      showNotification(res.message || `Cancellation request for ${order.id} rejected.`);
+      loadOrders();
+    } catch (err) {
+      showNotification(`Failed: ${err.message}`);
+    } finally {
+      setRejectingCancelId(null);
+    }
+  };
 
   const handleConfirmStoreCancel = async () => {
     if (!orderToCancel) return;
@@ -1330,6 +1369,21 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         >
           <Layers size={16} />
           <span>Categories & Brands ({taxonomy.categories.length + taxonomy.brands.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('cancellations')}
+          className={`store-nav-tab-btn ${activeTab === 'cancellations' ? 'active' : ''}`}
+          id="store-tab-cancellations"
+        >
+          <Ban size={16} />
+          <span>Cancel Requests</span>
+          {pendingCancellationRequests.length > 0 && (
+            <span className="store-nav-badge-alert" style={{ background: '#dc2626', color: '#fff' }}>
+              {pendingCancellationRequests.length}
+            </span>
+          )}
         </button>
 
       </div>
@@ -2828,6 +2882,213 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 6: CANCELLATION REQUESTS */}
+      {activeTab === 'cancellations' && (
+        <div className="store-tab-content-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
+                Customer Cancellation Requests
+              </h2>
+              <p style={{ fontSize: '0.84rem', color: '#64748b' }}>
+                Review and approve/reject cancellation requests from customers for dispatched orders.
+              </p>
+            </div>
+            <button
+              onClick={loadOrders}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                color: '#0f172a',
+                borderRadius: '8px',
+                padding: '9px 14px',
+                fontSize: '0.82rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <RefreshCw size={14} />
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          {pendingCancellationRequests.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 20px' }}>
+              <CheckCircle2 size={40} style={{ color: '#16a34a', margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: '700', marginBottom: '6px' }}>
+                No Pending Requests
+              </h3>
+              <p style={{ fontSize: '0.86rem', color: '#64748b' }}>
+                All cancellation requests have been processed. When customers request to cancel dispatched orders, they will appear here for your review.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {pendingCancellationRequests.map((order) => {
+                const courierCfg = resolveCourierConfig(order.courierPartner);
+                return (
+                  <div
+                    key={order.id}
+                    style={{
+                      background: '#fffbeb',
+                      border: '1.5px solid #fde68a',
+                      borderRadius: '14px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.08)'
+                    }}
+                    id={`cancel-request-${order.id}`}
+                  >
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                          <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>{order.id}</strong>
+                          <span
+                            style={{
+                              background: '#fef3c7',
+                              color: '#b45309',
+                              border: '1px solid #fde68a',
+                              padding: '2px 10px',
+                              borderRadius: '9999px',
+                              fontSize: '0.72rem',
+                              fontWeight: '800'
+                            }}
+                          >
+                            ⏳ CANCELLATION REQUESTED
+                          </span>
+                          {order.paymentStatus === 'PAID' && (
+                            <span style={{ background: '#ecfdf5', color: '#15803d', border: '1px solid #86efac', padding: '2px 10px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: '800' }}>
+                              PAID (Refund Required)
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: '#64748b', display: 'block' }}>
+                          Customer: <strong>{order.customer?.name || 'Unknown'}</strong> • Phone: <strong>{order.customer?.phone || 'N/A'}</strong>
+                        </span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                          ₹{Number(order.totalAmount).toLocaleString('en-IN')}
+                        </span>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          {order.paymentMethod}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Courier & AWB Info */}
+                    <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      <div
+                        style={{
+                          minWidth: '36px',
+                          height: '28px',
+                          padding: '0 8px',
+                          borderRadius: '6px',
+                          background: courierCfg.color,
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: '900',
+                          fontSize: '0.7rem'
+                        }}
+                      >
+                        {courierCfg.badge}
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: '#0f172a' }}>
+                        <strong>{courierCfg.name}</strong>
+                        {order.awb && (
+                          <span style={{ marginLeft: '10px', fontFamily: 'var(--font-mono)', color: '#0369a1', fontWeight: '700' }}>
+                            AWB: {order.awb}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Customer Reason */}
+                    {order.cancellationRequestReason && (
+                      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.82rem' }}>
+                        <span style={{ color: '#64748b', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                          Customer's Reason
+                        </span>
+                        <span style={{ color: '#0f172a' }}>{order.cancellationRequestReason}</span>
+                      </div>
+                    )}
+
+                    {/* Request timestamp */}
+                    {order.cancellationRequestedAt && (
+                      <div style={{ fontSize: '0.74rem', color: '#a16207', marginBottom: '14px' }}>
+                        Requested on: {new Date(order.cancellationRequestedAt).toLocaleDateString()} at {new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+
+                    {/* Ordered Items Summary */}
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '14px' }}>
+                      <strong>Items:</strong> {order.items?.map(i => `${i.name} (×${i.quantity})`).join(', ')}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleRejectCancellationRequest(order)}
+                        disabled={rejectingCancelId === order.id || approvingCancelId === order.id}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          color: '#475569',
+                          padding: '9px 16px',
+                          borderRadius: '8px',
+                          fontSize: '0.84rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          opacity: (rejectingCancelId === order.id || approvingCancelId === order.id) ? 0.6 : 1
+                        }}
+                        id={`btn-reject-cancel-${order.id}`}
+                      >
+                        <X size={14} />
+                        <span>{rejectingCancelId === order.id ? 'Rejecting...' : 'Reject Request'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApproveCancellationRequest(order)}
+                        disabled={approvingCancelId === order.id || rejectingCancelId === order.id}
+                        style={{
+                          background: '#dc2626',
+                          border: 'none',
+                          color: '#ffffff',
+                          padding: '9px 18px',
+                          borderRadius: '8px',
+                          fontSize: '0.84rem',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 8px rgba(220, 38, 38, 0.2)',
+                          opacity: (approvingCancelId === order.id || rejectingCancelId === order.id) ? 0.6 : 1
+                        }}
+                        id={`btn-approve-cancel-${order.id}`}
+                      >
+                        <CheckCircle2 size={14} />
+                        <span>{approvingCancelId === order.id ? 'Processing Cancel & Refund...' : 'Approve Cancel & Refund'}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

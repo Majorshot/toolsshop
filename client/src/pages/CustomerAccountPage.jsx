@@ -49,20 +49,36 @@ export const CustomerAccountPage = () => {
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [cancelFeedback, setCancelFeedback] = useState(null);
 
+  // Determine if cancel should be instant or request-based
+  const isCancelOrderDispatched = (order) => {
+    return Boolean(order?.awb && String(order.awb).trim() !== '') || (order?.status || '').toLowerCase().includes('dispatch');
+  };
+
   const handleConfirmCustomerCancel = async () => {
     if (!customerCancelOrder) return;
     setCancellingOrder(true);
     try {
-      const res = await api.cancelOrder(customerCancelOrder.id, {
-        reason: 'Customer cancelled from account dashboard',
-        cancelledBy: 'customer'
-      });
-      setCustomerCancelOrder(null);
-      setCancelFeedback(res.message || 'Order cancelled successfully.');
-      setTimeout(() => setCancelFeedback(null), 6000);
+      if (isCancelOrderDispatched(customerCancelOrder)) {
+        // Dispatched order → submit cancellation request
+        const res = await api.requestCancellation(customerCancelOrder.id, {
+          reason: 'Customer requested cancellation from account dashboard'
+        });
+        setCustomerCancelOrder(null);
+        setCancelFeedback(res.message || 'Cancellation request submitted. Awaiting store approval.');
+        setTimeout(() => setCancelFeedback(null), 8000);
+      } else {
+        // Non-dispatched order → instant cancel
+        const res = await api.cancelOrder(customerCancelOrder.id, {
+          reason: 'Customer cancelled from account dashboard',
+          cancelledBy: 'customer'
+        });
+        setCustomerCancelOrder(null);
+        setCancelFeedback(res.message || 'Order cancelled successfully.');
+        setTimeout(() => setCancelFeedback(null), 6000);
+      }
       loadCustomerOrders();
     } catch (err) {
-      alert(`Failed to cancel order: ${err.message}`);
+      alert(`Failed: ${err.message}`);
     } finally {
       setCancellingOrder(false);
     }
@@ -286,6 +302,8 @@ export const CustomerAccountPage = () => {
             const courierCfg = resolveCourierPartner(order.courierPartner);
 
             // Compute top badge text and colors
+            const hasPendingCancelRequest = Boolean(order.cancellationRequested && order.status !== 'Cancelled');
+
             let statusBadgeText = 'Order Placed • Processing at Shop';
             let statusBadgeBg = 'rgba(234, 88, 12, 0.08)';
             let statusBadgeColor = '#ea580c';
@@ -296,6 +314,11 @@ export const CustomerAccountPage = () => {
               statusBadgeBg = '#fef2f2';
               statusBadgeColor = '#dc2626';
               statusBadgeBorder = '#fecaca';
+            } else if (hasPendingCancelRequest) {
+              statusBadgeText = 'Cancellation Requested • Awaiting Approval';
+              statusBadgeBg = '#fffbeb';
+              statusBadgeColor = '#b45309';
+              statusBadgeBorder = '#fde68a';
             } else if (isPickup) {
               if (order.handoverVerified || (order.status || '').toLowerCase().includes('completed')) {
                 statusBadgeText = 'Handover Completed';
@@ -634,6 +657,39 @@ export const CustomerAccountPage = () => {
                   </div>
                 )}
 
+                {/* Cancellation Requested Banner */}
+                {hasPendingCancelRequest && (
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.12) 100%)',
+                      border: '1.5px solid #fde68a',
+                      borderRadius: '12px',
+                      padding: '14px 18px',
+                      marginBottom: '18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <AlertCircle size={18} />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '0.9rem', color: '#92400e', display: 'block' }}>
+                        Cancellation Request Submitted
+                      </strong>
+                      <p style={{ fontSize: '0.8rem', color: '#78350f', margin: '2px 0 0', lineHeight: 1.5 }}>
+                        Your cancellation request is being reviewed by the store manager at Variathu Power Tools. You'll see the updated status here once it's processed. If approved, a full refund will be initiated automatically.
+                      </p>
+                      {order.cancellationRequestedAt && (
+                        <span style={{ fontSize: '0.72rem', color: '#a16207', display: 'block', marginTop: '4px' }}>
+                          Requested on: {new Date(order.cancellationRequestedAt).toLocaleDateString()} at {new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Items in Order */}
                 <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', marginBottom: '16px' }}>
                   <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>
@@ -667,15 +723,15 @@ export const CustomerAccountPage = () => {
 
                 {/* Bottom Action Buttons: GST Invoice & WhatsApp & Cancel Order */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  {/* Cancel Order button: Available for all active orders (not already cancelled) */}
-                  {!isCancelled && (
+                  {/* Cancel / Request Cancellation button */}
+                  {!isCancelled && !hasPendingCancelRequest && (
                     <button
                       type="button"
                       onClick={() => setCustomerCancelOrder(order)}
                       style={{
-                        background: '#ffffff',
-                        border: '1px solid #fecaca',
-                        color: '#dc2626',
+                        background: isDispatched ? '#fffbeb' : '#ffffff',
+                        border: `1px solid ${isDispatched ? '#fde68a' : '#fecaca'}`,
+                        color: isDispatched ? '#b45309' : '#dc2626',
                         padding: '8px 14px',
                         borderRadius: '8px',
                         fontSize: '0.82rem',
@@ -685,11 +741,11 @@ export const CustomerAccountPage = () => {
                         alignItems: 'center',
                         gap: '6px'
                       }}
-                      title="Cancel order and get immediate automatic refund if paid online"
+                      title={isDispatched ? 'Request cancellation for dispatched order (requires store approval)' : 'Cancel order and get immediate automatic refund if paid online'}
                       id={`btn-customer-cancel-${order.id}`}
                     >
-                      <XCircle size={15} />
-                      <span>Cancel Order</span>
+                      {isDispatched ? <AlertCircle size={15} /> : <XCircle size={15} />}
+                      <span>{isDispatched ? 'Request Cancellation' : 'Cancel Order'}</span>
                     </button>
                   )}
 
@@ -888,7 +944,7 @@ export const CustomerAccountPage = () => {
           </div>
         </div>
       )}
-      {/* Customer Cancel Order Confirmation Modal */}
+      {/* Customer Cancel / Request Cancellation Modal */}
       {customerCancelOrder && (
         <div className="modal-overlay" onClick={() => !cancellingOrder && setCustomerCancelOrder(null)}>
           <div
@@ -897,78 +953,97 @@ export const CustomerAccountPage = () => {
             style={{ maxWidth: '480px', padding: '24px', textAlign: 'left' }}
             id="modal-customer-cancel-order"
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <XCircle size={22} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Cancel Order {customerCancelOrder.id}?
-                </h3>
-                <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                  Total Amount: {formatPrice(customerCancelOrder.totalAmount)}
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const isDispatchedModal = isCancelOrderDispatched(customerCancelOrder);
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDispatchedModal ? '#fef3c7' : '#fee2e2', color: isDispatchedModal ? '#b45309' : '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {isDispatchedModal ? <AlertCircle size={22} /> : <XCircle size={22} />}
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                        {isDispatchedModal ? 'Request Cancellation' : 'Cancel Order'} {customerCancelOrder.id}?
+                      </h3>
+                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                        Total Amount: {formatPrice(customerCancelOrder.totalAmount)}
+                      </span>
+                    </div>
+                  </div>
 
-            {customerCancelOrder.paymentStatus === 'PAID' ? (
-              <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.84rem', color: '#166534' }}>
-                <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <span>⚡ Instant Online Refund Guaranteed</span>
-                </div>
-                Because you paid online via Razorpay/UPI, a <strong>full refund of {formatPrice(customerCancelOrder.totalAmount)}</strong> will be automatically refunded to your original payment account.
-              </div>
-            ) : (
-              <p style={{ fontSize: '0.86rem', color: '#475569', marginBottom: '16px' }}>
-                Are you sure you want to cancel this order? This will cancel your equipment reservation at our Poyanil Building counter.
-              </p>
-            )}
+                  {isDispatchedModal ? (
+                    <>
+                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.84rem', color: '#92400e' }}>
+                        <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <span>📦 Order Already Dispatched</span>
+                        </div>
+                        This order has been dispatched via courier <strong>(AWB: {customerCancelOrder.awb})</strong>. Since it's already in transit, your cancellation request will be sent to the store manager for review.
+                      </div>
+                      <p style={{ fontSize: '0.84rem', color: '#475569', marginBottom: '16px', lineHeight: 1.5 }}>
+                        The store manager at Variathu Power Tools will review your request and coordinate with the courier partner. If approved, a full refund will be processed automatically.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      {customerCancelOrder.paymentStatus === 'PAID' ? (
+                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.84rem', color: '#166534' }}>
+                          <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                            <span>⚡ Instant Online Refund Guaranteed</span>
+                          </div>
+                          Because you paid online via Razorpay/UPI, a <strong>full refund of {formatPrice(customerCancelOrder.totalAmount)}</strong> will be automatically refunded to your original payment account.
+                        </div>
+                      ) : (
+                        <p style={{ fontSize: '0.86rem', color: '#475569', marginBottom: '16px' }}>
+                          Are you sure you want to cancel this order? This will cancel your equipment reservation at our Poyanil Building counter.
+                        </p>
+                      )}
+                    </>
+                  )}
 
-            {Boolean(customerCancelOrder.awb) && (
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', fontSize: '0.82rem', color: '#1e40af' }}>
-                <strong>📦 Courier Consignment Dispatched ({customerCancelOrder.awb}):</strong> Cancelling will automatically refund your payment and instruct our workshop staff to halt/recall this consignment with the courier partner.
-              </div>
-            )}
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCustomerCancelOrder(null)}
+                      disabled={cancellingOrder}
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        color: '#475569',
+                        padding: '9px 16px',
+                        borderRadius: '8px',
+                        fontSize: '0.84rem',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Keep Order
+                    </button>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setCustomerCancelOrder(null)}
-                disabled={cancellingOrder}
-                style={{
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  color: '#475569',
-                  padding: '9px 16px',
-                  borderRadius: '8px',
-                  fontSize: '0.84rem',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                Keep Order
-              </button>
-
-              <button
-                type="button"
-                onClick={handleConfirmCustomerCancel}
-                disabled={cancellingOrder}
-                style={{
-                  background: '#dc2626',
-                  border: 'none',
-                  color: '#ffffff',
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  fontSize: '0.84rem',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)'
-                }}
-                id="btn-confirm-customer-cancel"
-              >
-                {cancellingOrder ? 'Processing Refund...' : 'Yes, Cancel & Refund'}
-              </button>
-            </div>
+                    <button
+                      type="button"
+                      onClick={handleConfirmCustomerCancel}
+                      disabled={cancellingOrder}
+                      style={{
+                        background: isDispatchedModal ? '#b45309' : '#dc2626',
+                        border: 'none',
+                        color: '#ffffff',
+                        padding: '9px 18px',
+                        borderRadius: '8px',
+                        fontSize: '0.84rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        boxShadow: isDispatchedModal ? '0 2px 8px rgba(180, 83, 9, 0.25)' : '0 2px 8px rgba(220, 38, 38, 0.25)'
+                      }}
+                      id="btn-confirm-customer-cancel"
+                    >
+                      {cancellingOrder
+                        ? (isDispatchedModal ? 'Submitting Request...' : 'Processing Refund...')
+                        : (isDispatchedModal ? 'Submit Cancellation Request' : 'Yes, Cancel & Refund')}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

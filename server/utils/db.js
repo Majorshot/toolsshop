@@ -95,7 +95,10 @@ const orderSchema = new mongoose.Schema({
   refundedAt: String,
   cancelledAt: String,
   cancelledBy: String,
-  cancellationReason: String
+  cancellationReason: String,
+  cancellationRequested: { type: Boolean, default: false },
+  cancellationRequestedAt: String,
+  cancellationRequestReason: String
 }, { timestamps: true, strict: false });
 
 const taxonomySchema = new mongoose.Schema({
@@ -562,6 +565,69 @@ const db = {
         : `Order ${orderId} has been cancelled successfully.`,
       order: updatedOrder,
       refund: refundDetails
+    };
+  },
+
+  async requestCancellation(orderId, { reason = 'Customer requested cancellation' } = {}) {
+    ensureMongoConnected();
+    const order = await OrderModel.findOne({ id: orderId });
+    if (!order) {
+      return { success: false, message: 'Order not found' };
+    }
+    if (order.status === 'Cancelled') {
+      return { success: false, message: 'Order is already cancelled' };
+    }
+    if (order.cancellationRequested) {
+      return { success: false, message: 'Cancellation request already submitted for this order. Awaiting store approval.' };
+    }
+
+    const updated = await OrderModel.findOneAndUpdate(
+      { id: orderId },
+      {
+        $set: {
+          cancellationRequested: true,
+          cancellationRequestedAt: new Date().toISOString(),
+          cancellationRequestReason: reason
+        }
+      },
+      { new: true }
+    ).lean();
+
+    return {
+      success: true,
+      message: `Cancellation request submitted for order ${orderId}. The store manager will review and approve it shortly.`,
+      order: updated
+    };
+  },
+
+  async rejectCancellationRequest(orderId) {
+    ensureMongoConnected();
+    const order = await OrderModel.findOne({ id: orderId });
+    if (!order) {
+      return { success: false, message: 'Order not found' };
+    }
+    if (!order.cancellationRequested) {
+      return { success: false, message: 'No pending cancellation request for this order' };
+    }
+
+    const updated = await OrderModel.findOneAndUpdate(
+      { id: orderId },
+      {
+        $set: {
+          cancellationRequested: false,
+          cancellationRequestReason: ''
+        },
+        $unset: {
+          cancellationRequestedAt: 1
+        }
+      },
+      { new: true }
+    ).lean();
+
+    return {
+      success: true,
+      message: `Cancellation request for order ${orderId} has been rejected by the store manager.`,
+      order: updated
     };
   },
 

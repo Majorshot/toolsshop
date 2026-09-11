@@ -161,6 +161,29 @@ export const api = {
     return data;
   },
 
+  // Request cancellation for dispatched orders (customer)
+  async requestCancellation(orderId, options = {}) {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/request-cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to submit cancellation request');
+    return data;
+  },
+
+  // Reject cancellation request (store manager)
+  async rejectCancellation(orderId) {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/reject-cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to reject cancellation request');
+    return data;
+  },
+
   // Store information
   async getStoreInfo() {
     const res = await fetch(`${API_BASE}/store`);
