@@ -496,9 +496,8 @@ const db = {
       sort.createdAt = -1;
     }
 
-    // High Performance Projection: Exclude heavy descriptions and specs for catalog lists
-    // Cuts JSON payload by ~85% for 1,000+ products
-    const listFields = 'id name brand category price originalPrice discount rating reviewsCount badge stock cordless image deliveryCost';
+    // High Performance Projection: Include essential list fields and image galleries
+    const listFields = 'id name brand category price originalPrice discount rating reviewsCount badge stock cordless image images deliveryCost';
 
     const page = parseInt(options.page || filters.page, 10);
     const limit = parseInt(options.limit || filters.limit, 10);

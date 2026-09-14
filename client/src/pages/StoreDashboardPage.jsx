@@ -1064,7 +1064,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
-  const openEditProduct = (prod) => {
+  const openEditProduct = async (prod) => {
     setEditingProduct(prod);
     const existingImages = Array.isArray(prod.images) && prod.images.length > 0
       ? prod.images.filter(Boolean)
@@ -1087,6 +1087,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setShowAddBrandInline(false);
     setShowAddCatInline(false);
     setIsAddModalOpen(true);
+
+    // Asynchronously fetch complete product document from API to ensure all image URLs are loaded
+    try {
+      const res = await api.getProduct(prod.id);
+      const fullProd = res?.data || res;
+      if (fullProd) {
+        const fullImages = Array.isArray(fullProd.images) && fullProd.images.length > 0
+          ? fullProd.images.filter(Boolean)
+          : (fullProd.image ? [fullProd.image] : []);
+
+        if (fullImages.length > 0) {
+          setProductForm(prev => ({
+            ...prev,
+            image: fullProd.image || fullImages[0] || prev.image,
+            images: fullImages,
+            description: fullProd.description !== undefined ? fullProd.description : prev.description
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch full product details for edit:", err.message);
+    }
   };
 
   const openNewProduct = () => {
@@ -3389,7 +3411,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       id="btn-inline-brand-toggle"
                     >
                       <Plus size={12} />
-                      <span>{showAddBrandInline ? 'Cancel' : '+ Add Brand'}</span>
+                      <span>{showAddBrandInline ? 'Cancel' : 'Add Brand'}</span>
                     </button>
                   </div>
 
@@ -3449,7 +3471,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       id="btn-inline-cat-toggle"
                     >
                       <Plus size={12} />
-                      <span>{showAddCatInline ? 'Cancel' : '+ Add Category'}</span>
+                      <span>{showAddCatInline ? 'Cancel' : 'Add Category'}</span>
                     </button>
                   </div>
 
@@ -3567,7 +3589,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     id="btn-add-image-link"
                   >
                     <Plus size={13} />
-                    <span>+ Add Image Link</span>
+                    <span>Add Image Link</span>
                   </button>
                 </div>
 
