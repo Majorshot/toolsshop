@@ -1637,12 +1637,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               {orders.map((order) => (
                 <div
                   key={order.id}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '20px'
-                  }}
+                  className="store-order-card"
                   id={`store-order-row-${order.id}`}
                 >
                   {/* OTP THING AT TOP OF PRODUCT ORDER (STORE PICKUP ORDERS ONLY) */}
@@ -1685,7 +1680,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       {!order.handoverVerified && (
                         <form
                           onSubmit={(e) => handleVerifySingleOrderOtp(e, order.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: '260px' }}
                         >
                           <input
                             type="text"
@@ -1694,7 +1689,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                             value={orderOtpInputs[order.id] || ''}
                             onChange={(e) => setOrderOtpInputs({ ...orderOtpInputs, [order.id]: e.target.value })}
                             style={{
-                              width: '110px',
+                              flex: 1,
                               padding: '7px 10px',
                               textAlign: 'center',
                               fontSize: '0.92rem',
@@ -1713,7 +1708,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                             type="submit"
                             disabled={verifyingOrderId === order.id}
                             className="btn-hero-clean"
-                            style={{ padding: '7px 14px', fontSize: '0.78rem' }}
+                            style={{ padding: '7px 14px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
                             id={`btn-verify-otp-${order.id}`}
                           >
                             <span>{verifyingOrderId === order.id ? 'Verifying...' : 'Verify & Handover'}</span>
@@ -1723,191 +1718,203 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>{order.id}</strong>
-                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                          {new Date(order.date).toLocaleDateString()} at {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                  {/* Order Top Row: Order ID & Total Amount */}
+                  <div className="store-order-top-row">
+                    <span className="store-order-id-label">{order.id}</span>
+                    <span className="store-order-price-val">{formatPrice(order.totalAmount)}</span>
+                  </div>
 
-                        {/* Automation: Payment Status Badge */}
+                  {/* Status & Fulfillment Badges Bar */}
+                  <div className="store-order-badges-wrap">
+                    {/* Order Status Badge */}
+                    {order.status === 'Cancelled' ? (
+                      <span
+                        style={{
+                          background: '#fef2f2',
+                          color: '#dc2626',
+                          border: '1px solid #fecaca',
+                          padding: '3px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        ❌ Cancelled {order.paymentStatus === 'REFUNDED' ? '• Refunded' : ''}
+                      </span>
+                    ) : order.deliveryType === 'store-pickup' ? (
+                      <span
+                        style={{
+                          background: order.handoverVerified ? '#ecfdf5' : '#eff6ff',
+                          color: order.handoverVerified ? '#16a34a' : '#0284c7',
+                          border: `1px solid ${order.handoverVerified ? '#bbf7d0' : '#bae6fd'}`,
+                          padding: '3px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        {order.handoverVerified ? '✅ Collected at Store' : '🏬 Ready for Store Pickup'}
+                      </span>
+                    ) : (order.awb && order.awb.trim()) ? (
+                      <span
+                        style={{
+                          background: '#ecfdf5',
+                          color: '#16a34a',
+                          border: '1px solid #bbf7d0',
+                          padding: '3px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        ✅ Dispatched via Courier
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          background: 'rgba(234, 88, 12, 0.08)',
+                          color: '#ea580c',
+                          border: '1px solid rgba(234, 88, 12, 0.25)',
+                          padding: '3px 10px',
+                          borderRadius: '9999px',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                      >
+                        📦 Order Placed • Processing at Shop
+                      </span>
+                    )}
+
+                    {/* Automation: Payment Status Badge */}
+                    <span
+                      style={{
+                        background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
+                        color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
+                        border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
+                        padding: '3px 10px',
+                        borderRadius: '9999px',
+                        fontSize: '0.74rem',
+                        fontWeight: '800'
+                      }}
+                    >
+                      {order.paymentStatus === 'REFUNDED'
+                        ? `REFUNDED (${order.refundId || 'UPI'})`
+                        : order.paymentStatus === 'PAID'
+                        ? `PAID (${order.transactionId || 'UPI'})`
+                        : 'PENDING PAYMENT'}
+                    </span>
+
+                    {/* Order Stage Badge / Courier AWB */}
+                    {order.status === 'Cancelled' ? (
+                      <span
+                        style={{
+                          background: '#fef2f2',
+                          color: '#dc2626',
+                          border: '1px solid #fecaca',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700'
+                        }}
+                      >
+                        Cancelled by {order.cancelledBy || 'store'}
+                      </span>
+                    ) : order.deliveryType === 'store-pickup' ? (
+                      <span
+                        style={{
+                          background: order.handoverVerified ? '#ecfdf5' : '#f1f5f9',
+                          color: order.handoverVerified ? '#16a34a' : '#ea580c',
+                          border: '1px solid #e2e8f0',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700'
+                        }}
+                      >
+                        {order.handoverVerified ? `✅ Handover Verified` : `Pickup OTP: ${order.pickupOtp || '4819'}`}
+                      </span>
+                    ) : (order.awb && order.awb.trim()) ? (() => {
+                      const cfg = resolveCourierConfig(order.courierPartner);
+                      return (
                         <span
                           style={{
-                            background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
-                            color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
-                            border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
-                            padding: '2px 8px',
+                            background: cfg.bg,
+                            color: cfg.color,
+                            border: `1px solid ${cfg.border}`,
+                            padding: '3px 8px',
                             borderRadius: '6px',
                             fontSize: '0.72rem',
-                            fontWeight: '800'
+                            fontWeight: '700',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
                           }}
                         >
-                          {order.paymentStatus === 'REFUNDED'
-                            ? `REFUNDED (${order.refundId || 'UPI'})`
-                            : order.paymentStatus === 'PAID'
-                            ? `PAID (${order.transactionId || 'UPI'})`
-                            : 'PENDING PAYMENT'}
+                          <span style={{ fontWeight: '900', color: cfg.color }}>{cfg.badge}</span>
+                          • AWB: {order.awb}
                         </span>
-
-                        {/* Order Stage Badge */}
-                        {order.status === 'Cancelled' ? (
-                          <span
-                            style={{
-                              background: '#fef2f2',
-                              color: '#dc2626',
-                              border: '1px solid #fecaca',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              fontSize: '0.72rem',
-                              fontWeight: '700'
-                            }}
-                          >
-                            Cancelled by {order.cancelledBy || 'User'}
-                          </span>
-                        ) : order.deliveryType === 'store-pickup' ? (
-                          <span
-                            style={{
-                              background: order.handoverVerified ? '#ecfdf5' : '#f1f5f9',
-                              color: order.handoverVerified ? '#16a34a' : '#ea580c',
-                              border: '1px solid #e2e8f0',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              fontSize: '0.72rem',
-                              fontWeight: '700'
-                            }}
-                          >
-                            {order.handoverVerified ? `✅ Handover Verified` : `Pickup OTP: ${order.pickupOtp || '4819'}`}
-                          </span>
-                        ) : (order.awb && order.awb.trim()) ? (() => {
-                          const cfg = resolveCourierConfig(order.courierPartner);
-                          return (
-                            <span
-                              style={{
-                                background: cfg.bg,
-                                color: cfg.color,
-                                border: `1px solid ${cfg.border}`,
-                                padding: '2px 8px',
-                                borderRadius: '6px',
-                                fontSize: '0.72rem',
-                                fontWeight: '700',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <span style={{ fontWeight: '900', color: cfg.color }}>
-                                {cfg.badge}
-                              </span>
-                              • AWB: {order.awb}
-                            </span>
-                          );
-                        })() : (
-                          <span
-                            style={{
-                              background: '#fffbeb',
-                              color: '#b45309',
-                              border: '1px solid #fde68a',
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              fontSize: '0.72rem',
-                              fontWeight: '700',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            ⏳ Needs Courier Dispatch
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: '0.86rem', color: '#0f172a', fontWeight: '700', marginTop: '4px' }}>
-                        Customer: {order.customer?.name} • <a href={`tel:${order.customer?.phone}`} style={{ color: '#ea580c', textDecoration: 'none' }}>{order.customer?.phone}</a>
-                      </div>
-                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                        Mode: <strong style={{ color: '#0284c7' }}>{order.deliveryType === 'store-pickup' ? 'Store Pickup at Poyanil Building' : 'Courier (' + (order.customer?.district || 'Kerala') + ')'}</strong>
-                      </div>
-                    </div>
-
-                    {/* Status Controller */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                      <span style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                        {formatPrice(order.totalAmount)}
+                      );
+                    })() : (
+                      <span
+                        style={{
+                          background: '#fffbeb',
+                          color: '#b45309',
+                          border: '1px solid #fde68a',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        ⏳ Needs Courier Dispatch
                       </span>
+                    )}
+                  </div>
 
+                  {/* Customer Info & Order Metadata Card */}
+                  <div className="store-order-meta-card">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                       <div>
-                        {order.status === 'Cancelled' ? (
-                          <span
-                            style={{
-                              background: '#fef2f2',
-                              color: '#dc2626',
-                              border: '1px solid #fecaca',
-                              padding: '5px 12px',
-                              borderRadius: '9999px',
-                              fontSize: '0.76rem',
-                              fontWeight: '800',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                          >
-                            ❌ Cancelled {order.paymentStatus === 'REFUNDED' ? '• Refunded' : ''}
-                          </span>
-                        ) : order.deliveryType === 'store-pickup' ? (
-                          <span
-                            style={{
-                              background: order.handoverVerified ? '#ecfdf5' : '#eff6ff',
-                              color: order.handoverVerified ? '#16a34a' : '#0284c7',
-                              border: `1px solid ${order.handoverVerified ? '#bbf7d0' : '#bae6fd'}`,
-                              padding: '5px 12px',
-                              borderRadius: '9999px',
-                              fontSize: '0.76rem',
-                              fontWeight: '800',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                          >
-                            {order.handoverVerified ? '✅ Collected at Store' : '🏬 Ready for Store Pickup'}
-                          </span>
-                        ) : (order.awb && order.awb.trim()) ? (
-                          <span
-                            style={{
-                              background: '#ecfdf5',
-                              color: '#16a34a',
-                              border: '1px solid #bbf7d0',
-                              padding: '5px 12px',
-                              borderRadius: '9999px',
-                              fontSize: '0.76rem',
-                              fontWeight: '800',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                          >
-                            ✅ Dispatched via Courier
-                          </span>
-                        ) : (
-                          <span
-                            style={{
-                              background: 'rgba(234, 88, 12, 0.08)',
-                              color: '#ea580c',
-                              border: '1px solid rgba(234, 88, 12, 0.25)',
-                              padding: '5px 12px',
-                              borderRadius: '9999px',
-                              fontSize: '0.76rem',
-                              fontWeight: '800',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px'
-                            }}
-                          >
-                            📦 Order Placed • Processing at Shop
-                          </span>
-                        )}
+                        <strong>Customer:</strong> {order.customer?.name} &bull; <a href={`tel:${order.customer?.phone}`} style={{ color: '#ea580c', fontWeight: '700', textDecoration: 'none' }}>{order.customer?.phone}</a>
                       </div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {new Date(order.date).toLocaleDateString()} at {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <div style={{ color: '#475569', fontSize: '0.78rem' }}>
+                      <strong>Delivery:</strong> {order.deliveryType === 'store-pickup' ? 'Counter Pickup at Poyanil Building' : `Courier Delivery (${order.customer?.district || 'Pathanamthitta'}, PIN: ${order.customer?.pincode || '689641'})`}
                     </div>
                   </div>
+
+                  {/* Cancelled Alert Box (if applicable) */}
+                  {order.status === 'Cancelled' && (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', fontWeight: '700' }}>
+                        <XCircle size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
+                        <span>Order Cancelled by {order.cancelledBy || 'store'} {order.cancelReason ? `(${order.cancelReason})` : ''}</span>
+                      </div>
+                      {order.paymentStatus === 'REFUNDED' && (
+                        <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
+                          ⚡ Refund Reference: {order.refundId || 'Processed'}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Items List */}
                   <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', fontSize: '0.82rem' }}>
@@ -1939,66 +1946,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   </div>
 
                   {/* Order Actions: Invoices, Shipping Labels, Customer Contact & Cancel */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {/* Cancel Order Action */}
-                    {order.status !== 'Cancelled' ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOrderToCancel(order);
-                          setCancelReasonInput('Customer requested cancellation');
-                        }}
-                        style={{
-                          padding: '6px 12px',
-                          background: '#ffffff',
-                          border: '1px solid #fecaca',
-                          borderRadius: '6px',
-                          fontSize: '0.78rem',
-                          fontWeight: '700',
-                          color: '#dc2626',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                        title="Cancel this order and automatically issue a full refund if paid online"
-                        id={`btn-cancel-order-${order.id}`}
-                      >
-                        <XCircle size={13} style={{ color: '#dc2626' }} />
-                        <span>Cancel Order</span>
-                      </button>
-                    ) : (
-                      <span
-                        style={{
-                          padding: '6px 10px',
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '6px',
-                          fontSize: '0.74rem',
-                          fontWeight: '700',
-                          color: '#64748b'
-                        }}
-                      >
-                        {order.paymentStatus === 'REFUNDED' ? `Refund ID: ${order.refundId || 'Processed'}` : 'Order Cancelled'}
-                      </span>
-                    )}
-
+                  <div className="store-order-actions-grid">
                     <button
                       type="button"
                       onClick={() => setSelectedOrderForInvoice(order)}
-                      style={{
-                        padding: '6px 12px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        color: '#0f172a',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
+                      className="btn-store-action"
                       title="Generate and print A4 GST Tax Invoice for customer"
                       id={`btn-print-invoice-${order.id}`}
                     >
@@ -2017,18 +1969,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           });
                           setDispatchModalOrder(order);
                         }}
+                        className="btn-store-action"
                         style={{
-                          padding: '6px 12px',
                           background: order.awb ? '#f0f9ff' : '#eff6ff',
-                          border: `1px solid ${order.awb ? '#bae6fd' : '#bfdbfe'}`,
-                          borderRadius: '6px',
-                          fontSize: '0.78rem',
-                          fontWeight: '700',
                           color: '#0284c7',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px'
+                          borderColor: order.awb ? '#bae6fd' : '#bfdbfe'
                         }}
                         title="Assign Courier Partner & Enter Consignment AWB"
                         id={`btn-dispatch-order-${order.id}`}
@@ -2041,19 +1986,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     <button
                       type="button"
                       onClick={() => setSelectedOrderForLabel(order)}
-                      style={{
-                        padding: '6px 12px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        color: '#0f172a',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
+                      className="btn-store-action"
                       title="Generate and print 4x6 Courier Shipping Label with barcode"
                       id={`btn-print-label-${order.id}`}
                     >
@@ -2063,19 +1996,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                     <a
                       href={`tel:${order.customer?.phone}`}
-                      style={{
-                        padding: '6px 12px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '600',
-                        color: '#0f172a',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
+                      className="btn-store-action"
                     >
                       <Phone size={13} style={{ color: '#ea580c' }} />
                       <span>Call Customer</span>
@@ -2085,23 +2006,29 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       href={`https://wa.me/${(order.customer?.phone || '').replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(order.customer?.name || '')},%20this%20is%20Variathu%20Power%20Tools%20Kozhencherry%20regarding%20your%20order%20${order.id}.`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        padding: '6px 12px',
-                        background: '#f0fdf4',
-                        border: '1px solid #bbf7d0',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        color: '#16a34a',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
+                      className="btn-store-action btn-store-whatsapp btn-span-2"
+                      id={`btn-whatsapp-order-${order.id}`}
                     >
                       <MessageCircle size={13} />
                       <span>WhatsApp Customer</span>
                     </a>
+
+                    {/* Cancel Order Action */}
+                    {order.status !== 'Cancelled' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrderToCancel(order);
+                          setCancelReasonInput('Customer requested cancellation');
+                        }}
+                        className="btn-store-action btn-store-cancel btn-span-2"
+                        title="Cancel this order and automatically issue a full refund if paid online"
+                        id={`btn-cancel-order-${order.id}`}
+                      >
+                        <XCircle size={13} style={{ color: '#dc2626' }} />
+                        <span>Cancel Order</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
