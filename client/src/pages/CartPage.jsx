@@ -37,6 +37,8 @@ export const CartPage = ({ onOpenCheckout }) => {
 
   const formatPrice = (num) => '₹' + num.toLocaleString('en-IN');
 
+  const hasOutOfStockItems = cart.some(item => typeof item.stock === 'number' && item.stock <= 0);
+
   const handleApplyCoupon = (e) => {
     e.preventDefault();
     if (!inputCoupon.trim()) return;
@@ -194,7 +196,11 @@ export const CartPage = ({ onOpenCheckout }) => {
                     <div className="cart-item-total-price">
                       {formatPrice(item.price * item.quantity)}
                     </div>
-                    {item.quantity >= (item.stock ?? 999) && (
+                    {(item.stock ?? 999) <= 0 ? (
+                      <span className="cart-item-max-stock-tag" style={{ background: '#fef2f2', color: '#dc2626', borderColor: '#fecaca' }}>
+                        ⚠️ Out of Stock (Please remove)
+                      </span>
+                    ) : item.quantity >= (item.stock ?? 999) && (
                       <span className="cart-item-max-stock-tag">
                         Max stock ({item.stock ?? 1} unit{item.stock > 1 ? 's' : ''})
                       </span>
@@ -485,10 +491,23 @@ export const CartPage = ({ onOpenCheckout }) => {
           </div>
 
           <div className="cart-actions-column">
+            {hasOutOfStockItems && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', color: '#991b1b', fontSize: '0.82rem', fontWeight: '700', marginBottom: '8px' }}>
+                ⚠️ Some items in your cart are currently out of stock. Please remove them before proceeding to checkout.
+              </div>
+            )}
             <button
               className="btn-hero-clean"
               onClick={onOpenCheckout}
-              style={{ justifyContent: 'center', width: '100%', padding: '14px', fontSize: '0.96rem' }}
+              disabled={hasOutOfStockItems}
+              style={{
+                justifyContent: 'center',
+                width: '100%',
+                padding: '14px',
+                fontSize: '0.96rem',
+                opacity: hasOutOfStockItems ? 0.5 : 1,
+                cursor: hasOutOfStockItems ? 'not-allowed' : 'pointer'
+              }}
               id="btn-cart-checkout"
             >
               <span>Proceed to Checkout</span>

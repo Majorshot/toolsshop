@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle, CheckCircle2, 
   Package, Truck, Zap, ArrowLeft, ChevronRight, ChevronLeft, Share2, Award, 
-  RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers, Maximize2, ZoomIn, ZoomOut, Camera, X
+  RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers, Maximize2, ZoomIn, ZoomOut, Camera, X, Ban
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { api } from '../services/api';
@@ -358,11 +358,15 @@ export const ProductDetailPage = () => {
               </div>
 
               {/* Badges on mobile slider */}
-              {product.cordless && (
+              {isOutOfStock ? (
+                <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#dc2626', color: '#ffffff', padding: '4px 9px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)' }}>
+                  <Ban size={12} strokeWidth={2.5} /> Out of Stock
+                </span>
+              ) : product.cordless ? (
                 <span className="gallery-badge-cordless">
                   <Zap size={11} /> Cordless 20V
                 </span>
-              )}
+              ) : null}
 
               {/* Action button on mobile slider */}
               <div className="gallery-top-right-actions">
@@ -427,11 +431,15 @@ export const ProductDetailPage = () => {
                 />
 
                 {/* Badges */}
-                {product.cordless && (
+                {isOutOfStock ? (
+                  <span style={{ position: 'absolute', top: '14px', left: '14px', background: '#dc2626', color: '#ffffff', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)' }}>
+                    <Ban size={13} strokeWidth={2.5} /> Out of Stock
+                  </span>
+                ) : product.cordless ? (
                   <span className="gallery-badge-cordless">
                     <Zap size={12} /> Cordless 20V XR
                   </span>
-                )}
+                ) : null}
 
                 {/* Top action button */}
                 <div className="gallery-top-right-actions">
