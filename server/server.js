@@ -2,6 +2,7 @@ const dns = require('dns');
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 require('dotenv').config();
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
 const db = require('./utils/db');
 const productRoutes = require('./routes/productRoutes');
@@ -46,6 +47,7 @@ app.use(cors({
   },
   credentials: true
 }));
+app.use(compression({ threshold: 1024 }));
 app.use(express.json());
 
 // Request logger for debugging

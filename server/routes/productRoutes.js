@@ -5,6 +5,7 @@ const db = require('../utils/db');
 // GET all products with filtering, search, and optional pagination
 router.get('/', async (req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
     const { category, brand, cordless, search, sortBy, page, limit } = req.query;
     const result = await db.getProducts({ category, brand, cordless, search, sortBy }, { page, limit });
     if (Array.isArray(result)) {
@@ -28,6 +29,7 @@ router.get('/', async (req, res) => {
 // GET taxonomy (brands & categories) - Must be before /:id
 router.get('/meta/taxonomy', async (req, res) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     const tax = await db.getTaxonomy();
     res.json({ success: true, ...tax });
   } catch (err) {

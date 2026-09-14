@@ -377,7 +377,12 @@ async function tryConnectMongo() {
 
   try {
     if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 6000 });
+      await mongoose.connect(mongoUri, {
+        serverSelectionTimeoutMS: 6000,
+        maxPoolSize: 50,
+        minPoolSize: 5,
+        socketTimeoutMS: 30000
+      });
     }
     if (mongoose.connection.readyState === 1) {
       isMongoConnected = true;
@@ -456,15 +461,42 @@ function ensureMongoConnected() {
   }
 }
 
+// High-Speed In-Memory Cache for Catalog Lookups (1ms response for concurrent devices)
+let catalogCache = null;
+let catalogCacheTime = 0;
+const CATALOG_CACHE_TTL = 60 * 1000; // 60 seconds
+
+function invalidateCatalogCache() {
+  catalogCache = null;
+  catalogCacheTime = 0;
+}
+
 const db = {
   initDB,
   getStoreInfo: () => storeInfo,
+  invalidateCatalogCache,
 
   // ==========================================
   // PRODUCTS (Strict MongoDB Atlas)
   // ==========================================
   async getProducts(filters = {}, options = {}) {
     ensureMongoConnected();
+
+    const isDefaultQuery = 
+      (!filters.category || filters.category === 'all') &&
+      (!filters.brand || filters.brand === 'all') &&
+      !filters.search &&
+      filters.cordless === undefined &&
+      (!filters.sortBy || filters.sortBy === 'featured') &&
+      !options.page &&
+      !options.limit &&
+      !filters.page &&
+      !filters.limit;
+
+    if (isDefaultQuery && catalogCache && (Date.now() - catalogCacheTime < CATALOG_CACHE_TTL)) {
+      return catalogCache;
+    }
+
     let query = {};
 
     if (filters.category && filters.category !== 'all') {
@@ -517,7 +549,12 @@ const db = {
       };
     }
 
-    return await ProductModel.find(query).select(listFields).sort(sort).lean();
+    const items = await ProductModel.find(query).select(listFields).sort(sort).lean();
+    if (isDefaultQuery) {
+      catalogCache = items;
+      catalogCacheTime = Date.now();
+    }
+    return items;
   },
 
   async getProductById(id) {
@@ -532,14 +569,18 @@ const db = {
     const id = productData.id || `vpt-${Date.now().toString().slice(-4)}`;
     const newProduct = { ...productData, id };
     const created = new ProductModel(newProduct);
-    return await created.save();
+    const saved = await created.save();
+    invalidateCatalogCache();
+    return saved;
   },
 
   async updateProduct(id, updates) {
     ensureMongoConnected();
     const isObjectId = mongoose.isValidObjectId(id);
     const query = isObjectId ? { $or: [{ id: String(id) }, { _id: id }] } : { id: String(id) };
-    return await ProductModel.findOneAndUpdate(query, updates, { new: true }).lean();
+    const updated = await ProductModel.findOneAndUpdate(query, updates, { new: true }).lean();
+    invalidateCatalogCache();
+    return updated;
   },
 
   async deleteProduct(id) {
@@ -547,6 +588,7 @@ const db = {
     const isObjectId = mongoose.isValidObjectId(id);
     const query = isObjectId ? { $or: [{ id: String(id) }, { _id: id }] } : { id: String(id) };
     const res = await ProductModel.deleteOne(query);
+    invalidateCatalogCache();
     return res.deletedCount > 0;
   },
 
@@ -632,6 +674,7 @@ const db = {
     if (deleteProducts) {
       const res = await ProductModel.deleteMany({ brand: { $regex: new RegExp(`^${clean}$`, 'i') } });
       deletedProductsCount = res.deletedCount || 0;
+      invalidateCatalogCache();
     }
     return { success: true, brands: updatedBrands, deletedProductsCount };
   },
@@ -646,6 +689,7 @@ const db = {
     if (deleteProducts) {
       const res = await ProductModel.deleteMany({ category: categoryId });
       deletedProductsCount = res.deletedCount || 0;
+      invalidateCatalogCache();
     }
     return { success: true, categories: updatedCategories, deletedProductsCount };
   },
@@ -711,6 +755,7 @@ const db = {
           );
         }
       }
+      invalidateCatalogCache();
     }
 
     const created = new OrderModel(newOrder);
@@ -796,6 +841,7 @@ const db = {
           { $inc: { stock: qty } }
         );
       }
+      invalidateCatalogCache();
     }
 
     const updatedOrder = await OrderModel.findOneAndUpdate(
