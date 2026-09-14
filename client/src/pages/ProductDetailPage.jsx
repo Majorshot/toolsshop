@@ -528,26 +528,6 @@ export const ProductDetailPage = () => {
             {product.name}
           </h1>
 
-          {/* Verification Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
-            <span 
-              style={{ 
-                fontSize: '0.76rem', 
-                color: '#15803d', 
-                background: '#f0fdf4', 
-                border: '1px solid #bbf7d0', 
-                padding: '3px 10px', 
-                borderRadius: '6px', 
-                fontWeight: '700',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <Check size={13} /> 100% Genuine Kerala Stock
-            </span>
-          </div>
-
           {/* Price Box (Amazon / Flipkart Style) */}
           <div 
             style={{ 

@@ -1916,7 +1916,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </span>
                     {order.items?.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: idx < order.items.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                        <span>• <strong>{item.name}</strong> (x{item.quantity})</span>
+                        <span>
+                          • {item.product || item.id ? (
+                            <a
+                              href={`/product/${item.product || item.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#0f172a', fontWeight: '700', textDecoration: 'none' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = '#ea580c'; e.currentTarget.style.textDecoration = 'underline'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.textDecoration = 'none'; }}
+                              title="View product page"
+                            >
+                              {item.name}
+                            </a>
+                          ) : (
+                            <strong>{item.name}</strong>
+                          )} (x{item.quantity})
+                        </span>
                         <span style={{ color: '#0f172a', fontWeight: '700' }}>{formatPrice(item.price * item.quantity)}</span>
                       </div>
                     ))}
@@ -2329,18 +2345,35 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   id={`store-tool-row-${prod.id}`}
                 >
                   <div className="store-product-main-info">
-                    <img
-                      src={prod.image}
-                      alt={prod.name}
-                      className="store-product-thumbnail"
-                    />
+                    <a
+                      href={`/product/${prod.id || prod._id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="store-product-thumb-link"
+                      title={`View ${prod.name} on live store`}
+                    >
+                      <img
+                        src={prod.image}
+                        alt={prod.name}
+                        className="store-product-thumbnail"
+                      />
+                    </a>
                     <div className="store-product-details">
                       <span className="store-product-meta-badge">
                         {prod.brand} • {prod.category}
                       </span>
-                      <h4 className="store-product-name">
-                        {prod.name}
-                      </h4>
+                      <a
+                        href={`/product/${prod.id || prod._id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="store-product-title-link"
+                        title={`View ${prod.name} on live store`}
+                      >
+                        <h4 className="store-product-name">
+                          {prod.name}
+                        </h4>
+                        <ExternalLink size={13} className="store-product-ext-icon" />
+                      </a>
                       <div className="store-product-stock-wrap">
                         {/* Feature 2: Quick Inline Stock Stepper */}
                         <div className="store-stock-stepper">
@@ -4587,18 +4620,48 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                                   {it.image ? (
-                                    <img
-                                      src={it.image}
-                                      alt={it.name}
-                                      style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '4px', background: '#ffffff', border: '1px solid #e2e8f0', flexShrink: 0 }}
-                                    />
+                                    it.product || it.id || it.productId ? (
+                                      <a
+                                        href={`/product/${it.product || it.id || it.productId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={`View ${it.name} on live store`}
+                                        style={{ display: 'inline-flex', flexShrink: 0, textDecoration: 'none' }}
+                                      >
+                                        <img
+                                          src={it.image}
+                                          alt={it.name}
+                                          style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '4px', background: '#ffffff', border: '1px solid #e2e8f0', cursor: 'pointer' }}
+                                        />
+                                      </a>
+                                    ) : (
+                                      <img
+                                        src={it.image}
+                                        alt={it.name}
+                                        style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '4px', background: '#ffffff', border: '1px solid #e2e8f0', flexShrink: 0 }}
+                                      />
+                                    )
                                   ) : (
                                     <div style={{ width: '32px', height: '32px', borderRadius: '4px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexShrink: 0 }}>
                                       <Package size={16} />
                                     </div>
                                   )}
                                   <div style={{ minWidth: 0 }}>
-                                    <span style={{ fontWeight: '700', color: '#0f172a' }}>{it.name}</span>
+                                    {it.product || it.id || it.productId ? (
+                                      <a
+                                        href={`/product/${it.product || it.id || it.productId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title={`View ${it.name} on live store`}
+                                        style={{ fontWeight: '700', color: '#0f172a', textDecoration: 'none' }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.color = '#ea580c'; e.currentTarget.style.textDecoration = 'underline'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.textDecoration = 'none'; }}
+                                      >
+                                        {it.name}
+                                      </a>
+                                    ) : (
+                                      <span style={{ fontWeight: '700', color: '#0f172a' }}>{it.name}</span>
+                                    )}
                                     <span style={{ color: '#64748b', fontSize: '0.76rem', marginLeft: '8px' }}>
                                       Qty: <strong>{it.quantity || 1}</strong> &bull; {formatPrice(it.price)} each
                                     </span>
