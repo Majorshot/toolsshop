@@ -1112,7 +1112,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   const formatPrice = (num) => '₹' + Number(num || 0).toLocaleString('en-IN');
 
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  // Helper to determine if an order was cancelled or refunded
+  const isCancelledOrder = (o) => {
+    if (!o) return false;
+    const st = (o.status || '').toLowerCase();
+    const ps = (o.paymentStatus || '').toUpperCase();
+    return st.includes('cancel') || st.includes('refund') || ps === 'REFUNDED' || ps === 'CANCELLED' || o.isCancelled === true;
+  };
+
+  // Helper to determine if order was paid online / digital (UPI, Razorpay, Netbanking, Cards)
+  const isOnlinePayment = (o) => {
+    if (!o) return false;
+    const pm = (o.paymentMethod || '').toUpperCase();
+    if (['UPI', 'RAZORPAY', 'CARD', 'NETBANKING', 'ONLINE', 'PREPAID', 'WALLET'].some(k => pm.includes(k))) return true;
+    if (o.transactionId && !String(o.transactionId).startsWith('COD')) return true;
+    if (o.razorpayPaymentId || o.razorpayOrderId || o.refundId) return true;
+    if ((o.paymentStatus === 'PAID' || o.paymentStatus === 'REFUNDED') && !['COD', 'CASH', 'PAY_AT_STORE', 'COUNTER'].some(k => pm.includes(k))) {
+      return true;
+    }
+    return false;
+  };
+
+  const totalRevenue = orders.filter(o => !isCancelledOrder(o)).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
   // Feature 6: Period Revenue & Order Analytics
   const now = new Date();
@@ -1132,14 +1153,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     return true;
   });
 
-  const periodRevenue = periodOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const upiOrders = periodOrders.filter(o => ['UPI', 'RAZORPAY', 'CARD', 'NETBANKING'].includes((o.paymentMethod || '').toUpperCase()));
+  // Split into active and cancelled/refunded
+  const activePeriodOrders = periodOrders.filter(o => !isCancelledOrder(o));
+  const cancelledPeriodOrders = periodOrders.filter(o => isCancelledOrder(o));
+
+  // Net active store revenue (excluding refunded/cancelled amounts)
+  const periodRevenue = activePeriodOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+  // Digital vs Cash breakdowns for ACTIVE orders
+  const upiOrders = activePeriodOrders.filter(o => isOnlinePayment(o));
   const upiRevenue = upiOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const cashOrders = periodOrders.filter(o => !['UPI', 'RAZORPAY', 'CARD', 'NETBANKING'].includes((o.paymentMethod || '').toUpperCase()));
+  const cashOrders = activePeriodOrders.filter(o => !isOnlinePayment(o));
   const cashRevenue = cashOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-  const pickupOrdersCount = periodOrders.filter(o => (o.deliveryType || '').includes('pickup')).length;
-  const courierOrdersCount = periodOrders.filter(o => !(o.deliveryType || '').includes('pickup')).length;
+  // Total refunded amount in selected period
+  const periodRefundedAmount = cancelledPeriodOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+  const pickupOrdersCount = activePeriodOrders.filter(o => (o.deliveryType || '').includes('pickup')).length;
+  const courierOrdersCount = activePeriodOrders.filter(o => !(o.deliveryType || '').includes('pickup')).length;
 
   const lowStockItems = products.filter(p => (p.stock ?? 0) <= 3);
   const lowStockCount = lowStockItems.length;
@@ -1374,7 +1405,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               {formatPrice(periodRevenue)}
             </div>
             <span className="store-metric-subtext">
-              {periodOrders.length} order{periodOrders.length === 1 ? '' : 's'} in selected period
+              {activePeriodOrders.length} active order{activePeriodOrders.length === 1 ? '' : 's'} in selected period
+              {cancelledPeriodOrders.length > 0 && (
+                <span style={{ color: '#dc2626', display: 'block', fontSize: '0.72rem', marginTop: '2px', fontWeight: '700' }}>
+                  ({cancelledPeriodOrders.length} cancelled/refunded order excluded)
+                </span>
+              )}
             </span>
           </div>
 
@@ -1391,6 +1427,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● Cash at Counter</span>
                 <span className="store-metric-item-value">{formatPrice(cashRevenue)} <small>({cashOrders.length})</small></span>
               </div>
+              {periodRefundedAmount > 0 && (
+                <div className="store-metric-split-item" style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '4px' }}>
+                  <span className="store-metric-item-label" style={{ color: '#64748b' }}>↩ Refunded Online</span>
+                  <span className="store-metric-item-value" style={{ color: '#dc2626' }}>{formatPrice(periodRefundedAmount)} <small>({cancelledPeriodOrders.length})</small></span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1407,6 +1449,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <span className="store-metric-item-label" style={{ color: '#7c3aed' }}>● Courier Express</span>
                 <span className="store-metric-item-value">{courierOrdersCount} <small>parcels</small></span>
               </div>
+              {cancelledPeriodOrders.length > 0 && (
+                <div className="store-metric-split-item" style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '4px' }}>
+                  <span className="store-metric-item-label" style={{ color: '#64748b' }}>● Cancelled</span>
+                  <span className="store-metric-item-value" style={{ color: '#64748b' }}>{cancelledPeriodOrders.length} <small>cancelled</small></span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -4389,20 +4437,37 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             {/* Quick Stats Banner */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>LIFETIME SPEND</span>
-                <strong style={{ fontSize: '1.1rem', color: '#16a34a' }}>{formatPrice(selectedCustomerForModal.totalSpent || 0)}</strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>TOTAL ORDERS</span>
-                <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{selectedCustomerForModal.totalOrders || 0}</strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>CUSTOMER STATUS</span>
-                <strong style={{ fontSize: '0.9rem', color: '#ea580c' }}>{(selectedCustomerForModal.totalSpent || 0) >= 20000 ? '⭐ VIP Client' : 'Active Customer'}</strong>
-              </div>
-            </div>
+            {(() => {
+              const activeCustOrders = (customerOrderHistory || []).filter(o => !isCancelledOrder(o));
+              const activeCustTotalSpent = activeCustOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+              const activeCustTotalOrders = activeCustOrders.length;
+              const totalCancelledAmount = (customerOrderHistory || []).filter(o => isCancelledOrder(o)).reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>LIFETIME SPEND</span>
+                    <strong style={{ fontSize: '1.1rem', color: '#16a34a' }}>{formatPrice(activeCustTotalSpent)}</strong>
+                    {totalCancelledAmount > 0 && (
+                      <span style={{ fontSize: '0.68rem', color: '#dc2626', display: 'block', fontWeight: '700' }}>({formatPrice(totalCancelledAmount)} refunded)</span>
+                    )}
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>TOTAL ORDERS</span>
+                    <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{activeCustTotalOrders} active</strong>
+                    {customerOrderHistory.length > activeCustTotalOrders && (
+                      <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>({customerOrderHistory.length} total placed)</span>
+                    )}
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>CUSTOMER STATUS</span>
+                    <strong style={{ fontSize: '0.88rem', color: '#ea580c' }}>
+                      {activeCustTotalSpent >= 20000 ? '⭐ VIP Client' : activeCustTotalOrders > 0 ? 'Active Customer' : customerOrderHistory.length > 0 ? 'Cancelled / Refunded' : 'Registered Client'}
+                    </strong>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Order History */}
             <h4 style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -4415,23 +4480,148 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             ) : customerOrderHistory.length === 0 ? (
               <p style={{ color: '#94a3b8', fontSize: '0.84rem', fontStyle: 'italic', marginBottom: '20px' }}>No recorded online orders yet.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                {customerOrderHistory.map((ord) => (
-                  <div key={ord.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: '800', fontSize: '0.86rem', color: '#0f172a' }}>{ord.id}</div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                        {new Date(ord.date || ord.createdAt).toLocaleDateString()} • {(ord.items || []).length} items • {ord.deliveryType === 'store-pickup' ? 'Counter Pickup' : 'Courier'}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                {customerOrderHistory.map((ord) => {
+                  const isCancelled = isCancelledOrder(ord);
+                  const isOnline = isOnlinePayment(ord);
+
+                  return (
+                    <div
+                      key={ord.id}
+                      style={{
+                        background: isCancelled ? '#fffafb' : '#ffffff',
+                        border: isCancelled ? '1.5px solid #fecaca' : '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                      }}
+                    >
+                      {/* Top row: Order ID, Date, Delivery, Payment, Status & Total */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <strong style={{ fontSize: '0.96rem', color: '#0f172a' }}>{ord.id}</strong>
+                            <span
+                              style={{
+                                fontSize: '0.72rem',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontWeight: '800',
+                                background: isCancelled ? '#fee2e2' : ord.status === 'Completed' ? '#dcfce7' : '#fef3c7',
+                                color: isCancelled ? '#dc2626' : ord.status === 'Completed' ? '#15803d' : '#b45309'
+                              }}
+                            >
+                              {isCancelled ? (ord.refundId ? `Cancelled • Refunded (${ord.refundId})` : 'Cancelled') : ord.status}
+                            </span>
+                            {ord.cancelledBy && (
+                              <span style={{ fontSize: '0.68rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '1px 6px', borderRadius: '4px' }}>
+                                Cancelled by {ord.cancelledBy}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>📅 {new Date(ord.date || ord.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                            <span>•</span>
+                            <span>{ord.deliveryType === 'store-pickup' ? '🏬 Counter Pickup' : '🚚 Courier Doorstep'}</span>
+                            <span>•</span>
+                            <span style={{ fontWeight: '700', color: isOnline ? '#16a34a' : '#ea580c' }}>
+                              {isOnline ? '💳 Online / UPI' : '💵 Cash at Counter'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: '900', fontSize: '1.05rem', color: isCancelled ? '#94a3b8' : '#16a34a', textDecoration: isCancelled ? 'line-through' : 'none' }}>
+                            {formatPrice(ord.totalAmount)}
+                          </div>
+                          {isCancelled && (
+                            <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: '800', display: 'block' }}>
+                              ₹ Refunded
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Purchased Products / Items Section */}
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Package size={13} style={{ color: '#ea580c' }} />
+                          <span>Purchased Equipment ({(ord.items || []).length})</span>
+                        </div>
+
+                        {(ord.items && ord.items.length > 0) ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {ord.items.map((it, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '5px 0',
+                                  borderBottom: idx < ord.items.length - 1 ? '1px dashed #e2e8f0' : 'none',
+                                  fontSize: '0.82rem'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+                                  {it.image ? (
+                                    <img
+                                      src={it.image}
+                                      alt={it.name}
+                                      style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '4px', background: '#ffffff', border: '1px solid #e2e8f0', flexShrink: 0 }}
+                                    />
+                                  ) : (
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '4px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', flexShrink: 0 }}>
+                                      <Package size={16} />
+                                    </div>
+                                  )}
+                                  <div style={{ minWidth: 0 }}>
+                                    <span style={{ fontWeight: '700', color: '#0f172a' }}>{it.name}</span>
+                                    <span style={{ color: '#64748b', fontSize: '0.76rem', marginLeft: '8px' }}>
+                                      Qty: <strong>{it.quantity || 1}</strong> &bull; {formatPrice(it.price)} each
+                                    </span>
+                                  </div>
+                                </div>
+                                <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)', fontSize: '0.86rem', flexShrink: 0, marginLeft: '8px' }}>
+                                  {formatPrice((it.price || 0) * (it.quantity || 1))}
+                                </strong>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                            No item breakdown available for this record.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Invoice & Actions Row */}
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px', paddingTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrderForInvoice(ord)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#1d4ed8',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                          title="View and print official GST tax invoice in A4 format"
+                        >
+                          <Printer size={14} />
+                          <span>View / Print GST Invoice (A4)</span>
+                        </button>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#16a34a' }}>{formatPrice(ord.totalAmount)}</div>
-                      <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: ord.status === 'Completed' ? '#dcfce7' : '#fef3c7', color: ord.status === 'Completed' ? '#15803d' : '#b45309', fontWeight: '700' }}>
-                        {ord.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -5200,7 +5390,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 2000,
+            zIndex: 10005,
             padding: '20px'
           }}
         >
@@ -5587,15 +5777,19 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       <style>{`
         @media print {
           @page {
-            size: auto;
-            margin: 0mm;
+            size: A4 portrait;
+            margin: 10mm;
           }
           html, body {
+            width: 100% !important;
             height: auto !important;
             min-height: 0 !important;
             background: #ffffff !important;
             margin: 0 !important;
             padding: 0 !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           body * {
             visibility: hidden !important;
@@ -5618,11 +5812,25 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             left: 0 !important;
             top: 0 !important;
             width: 100% !important;
-            margin: 0 !important;
-            padding: 20px !important;
+            max-width: 190mm !important;
+            box-sizing: border-box !important;
+            margin: 0 auto !important;
+            padding: 0 !important;
             background: #ffffff !important;
             box-shadow: none !important;
             border: none !important;
+            overflow: visible !important;
+          }
+          #printable-invoice-modal-content table {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            table-layout: fixed !important;
+            page-break-inside: auto;
+          }
+          #printable-invoice-modal-content tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
           }
           #printable-label-modal-content {
             position: fixed !important;

@@ -202,11 +202,13 @@ async function syncCustomerFromOrder(orderData) {
     const address = orderData.customer?.address || '';
     const district = orderData.customer?.district || 'Pathanamthitta';
     const pincode = orderData.customer?.pincode || '';
-    const orderAmount = Number(orderData.totalAmount) || 0;
+    const isCancelled = (orderData.status || '').toLowerCase().includes('cancel') || orderData.paymentStatus === 'REFUNDED';
+    const orderAmount = isCancelled ? 0 : (Number(orderData.totalAmount) || 0);
+    const orderIncrement = isCancelled ? 0 : 1;
 
     const existing = await CustomerModel.findOne({ phone });
     if (existing) {
-      existing.totalOrders = (existing.totalOrders || 0) + 1;
+      existing.totalOrders = (existing.totalOrders || 0) + orderIncrement;
       existing.totalSpent = (existing.totalSpent || 0) + orderAmount;
       existing.lastOrderAt = new Date();
       if (name && name !== 'Customer' && (!existing.name || existing.name === 'Customer')) {
@@ -229,7 +231,7 @@ async function syncCustomerFromOrder(orderData) {
         district,
         state: 'Kerala',
         pincode,
-        totalOrders: 1,
+        totalOrders: orderIncrement,
         totalSpent: orderAmount,
         lastOrderAt: new Date()
       });
@@ -238,6 +240,70 @@ async function syncCustomerFromOrder(orderData) {
   } catch (err) {
     console.warn("Could not sync customer from order:", err.message);
     return null;
+  }
+}
+
+async function recalculateCustomerMetrics(phone) {
+  try {
+    const cleanPhone = cleanCustomerPhone(phone);
+    if (!cleanPhone || cleanPhone.length < 7) return null;
+    const orders = await OrderModel.find({
+      $or: [
+        { "customer.phone": cleanPhone },
+        { "customer.phone": `+91${cleanPhone}` },
+        { "customer.phone": { $regex: cleanPhone } }
+      ]
+    }).lean();
+
+    const activeOrders = orders.filter(o => {
+      const st = (o.status || '').toLowerCase();
+      return !st.includes('cancel') && o.paymentStatus !== 'REFUNDED';
+    });
+
+    const totalSpent = activeOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+    const totalOrders = activeOrders.length;
+
+    return await CustomerModel.findOneAndUpdate(
+      { phone: cleanPhone },
+      { $set: { totalSpent, totalOrders } },
+      { new: true }
+    ).lean();
+  } catch (err) {
+    console.warn("Could not recalculate customer metrics:", err.message);
+    return null;
+  }
+}
+
+async function reconcileCustomerMetrics() {
+  try {
+    const allCustomers = await CustomerModel.find().lean();
+    for (const cust of allCustomers) {
+      if (!cust.phone) continue;
+      const orders = await OrderModel.find({
+        $or: [
+          { 'customer.phone': cust.phone },
+          { 'customer.phone': `+91${cust.phone}` },
+          { 'customer.phone': { $regex: cust.phone } }
+        ]
+      }).lean();
+
+      const activeOrders = orders.filter(o => {
+        const st = (o.status || '').toLowerCase();
+        return !st.includes('cancel') && o.paymentStatus !== 'REFUNDED';
+      });
+
+      const accurateSpent = activeOrders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
+      const accurateOrders = activeOrders.length;
+
+      if (cust.totalSpent !== accurateSpent || cust.totalOrders !== accurateOrders) {
+        await CustomerModel.updateOne(
+          { _id: cust._id },
+          { $set: { totalSpent: accurateSpent, totalOrders: accurateOrders } }
+        );
+      }
+    }
+  } catch (err) {
+    console.warn("[Customer Reconcile] Notice:", err.message);
   }
 }
 
@@ -348,6 +414,7 @@ async function tryConnectMongo() {
 
       // Auto-migrate & backfill customer CRM directory from past orders/repairs if empty
       await backfillCustomersFromOrdersAndRepairs();
+      await reconcileCustomerMetrics();
 
       if (reconnectTimer) {
         clearInterval(reconnectTimer);
@@ -737,6 +804,11 @@ const db = {
       { $set: cancellationUpdate },
       { new: true }
     ).lean();
+
+    // Auto-recalculate customer lifetime spend to exclude refunded order
+    if (order.customer?.phone) {
+      await recalculateCustomerMetrics(order.customer.phone);
+    }
 
     return {
       success: true,
@@ -1129,7 +1201,7 @@ const db = {
     ensureMongoConnected();
     const isObjectId = mongoose.isValidObjectId(id);
     const query = isObjectId ? { $or: [{ _id: id }, { phone: id }] } : { phone: id };
-    const customer = await CustomerModel.findOne(query).lean();
+    let customer = await CustomerModel.findOne(query).lean();
     if (!customer) return null;
 
     // Fetch related order history and repair jobs
@@ -1137,6 +1209,23 @@ const db = {
       OrderModel.find({ 'customer.phone': { $regex: customer.phone } }).sort({ createdAt: -1 }).lean(),
       RepairModel.find({ customerPhone: { $regex: customer.phone } }).sort({ createdAt: -1 }).lean()
     ]);
+
+    // Recalculate customer metrics for accuracy
+    const activeOrders = orders.filter(o => {
+      const st = (o.status || '').toLowerCase();
+      return !st.includes('cancel') && o.paymentStatus !== 'REFUNDED';
+    });
+    const accurateSpent = activeOrders.reduce((s, o) => s + (Number(o.totalAmount) || 0), 0);
+    const accurateOrders = activeOrders.length;
+
+    if (customer.totalSpent !== accurateSpent || customer.totalOrders !== accurateOrders) {
+      await CustomerModel.updateOne(
+        { _id: customer._id },
+        { $set: { totalSpent: accurateSpent, totalOrders: accurateOrders } }
+      );
+      customer.totalSpent = accurateSpent;
+      customer.totalOrders = accurateOrders;
+    }
 
     return {
       ...customer,
