@@ -1466,6 +1466,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
         <button
           type="button"
+          onClick={() => setActiveTab('customers')}
+          className={`store-nav-tab-btn ${activeTab === 'customers' ? 'active' : ''}`}
+          id="store-tab-customers"
+        >
+          <Users size={16} />
+          <span>Customer Directory ({customers.length})</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('inventory')}
           className={`store-nav-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
           id="store-tab-inventory"
@@ -1507,16 +1517,6 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         >
           <Layers size={16} />
           <span>Categories & Brands ({taxonomy.categories.length + taxonomy.brands.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('customers')}
-          className={`store-nav-tab-btn ${activeTab === 'customers' ? 'active' : ''}`}
-          id="store-tab-customers"
-        >
-          <Users size={16} />
-          <span>Customer Directory ({customers.length})</span>
         </button>
 
       </div>
@@ -4224,93 +4224,82 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
+            <div className="store-customer-list-wrap">
+              <div className="store-customer-list-header">
+                <span style={{ minWidth: '210px' }}>Customer Profile</span>
+                <span style={{ flex: '1 1 220px', minWidth: '180px' }}>Registered Address</span>
+                <span style={{ minWidth: '160px', textAlign: 'center' }}>Purchases & Revenue</span>
+                <span style={{ minWidth: '180px', textAlign: 'right', paddingRight: '10px' }}>Quick Actions</span>
+              </div>
+
               {filteredCustomers.map((cust) => {
                 const isVip = (cust.totalSpent || 0) >= 20000 || (cust.totalOrders || 0) >= 3;
                 return (
                   <div
                     key={cust._id || cust.phone}
-                    style={{
-                      background: '#ffffff',
-                      border: isVip ? '1.5px solid #fed7aa' : '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      transition: 'all 0.2s ease',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
+                    className={`store-customer-row ${isVip ? 'vip' : ''}`}
                   >
-                    {isVip && (
-                      <div style={{ position: 'absolute', top: 0, right: 0, background: '#ea580c', color: '#ffffff', fontSize: '0.64rem', fontWeight: '800', padding: '2px 10px', borderBottomLeftRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        ★ VIP Client
+                    <div className="store-customer-col-identity">
+                      <div className={`store-customer-avatar ${isVip ? 'vip' : ''}`}>
+                        {(cust.name || 'C').charAt(0).toUpperCase()}
                       </div>
-                    )}
-
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
-                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: isVip ? '#ffedd5' : '#f1f5f9', color: isVip ? '#ea580c' : '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1.05rem', flexShrink: 0 }}>
-                          {(cust.name || 'C').charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <h4 style={{ fontSize: '0.98rem', fontWeight: '800', color: '#0f172a', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <h4 style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {cust.name || 'Customer'}
                           </h4>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#0284c7', fontWeight: '700' }}>
-                            <Phone size={12} />
-                            <a href={`tel:${cust.phone}`} style={{ color: '#0284c7', textDecoration: 'none' }}>
-                              +91 {cust.phone}
-                            </a>
-                          </div>
+                          {isVip && (
+                            <span style={{ background: '#ffedd5', color: '#ea580c', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.04em', flexShrink: 0 }}>
+                              ★ VIP
+                            </span>
+                          )}
                         </div>
-                      </div>
-
-                      <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4, marginBottom: '12px', background: '#f8fafc', padding: '8px 10px', borderRadius: '6px' }}>
-                        📍 {cust.address ? `${cust.address}, ` : ''}{cust.district || 'Pathanamthitta'}, Kerala {cust.pincode ? `• PIN: ${cust.pincode}` : ''}
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px', background: '#ffffff', padding: '8px 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }}>
-                        <div>
-                          <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: '700' }}>
-                            Total Orders
-                          </span>
-                          <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>
-                            {cust.totalOrders || 0} orders
-                          </strong>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: '700' }}>
-                            Lifetime Spend
-                          </span>
-                          <strong style={{ fontSize: '0.92rem', color: '#16a34a' }}>
-                            {formatPrice(cust.totalSpent || 0)}
-                          </strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#0284c7', fontWeight: '700', marginTop: '2px' }}>
+                          <Phone size={12} />
+                          <a href={`tel:${cust.phone}`} style={{ color: '#0284c7', textDecoration: 'none' }}>
+                            +91 {cust.phone}
+                          </a>
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                    <div className="store-customer-col-address">
+                      <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>📍</span>
+                      <span style={{ wordBreak: 'break-word' }}>
+                        {cust.address ? `${cust.address}, ` : ''}{cust.district || 'Pathanamthitta'}, Kerala{cust.pincode ? ` • PIN: ${cust.pincode}` : ''}
+                      </span>
+                    </div>
+
+                    <div className="store-customer-col-stats">
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 10px', textAlign: 'center', minWidth: '70px' }}>
+                        <div style={{ fontSize: '0.64rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>Orders</div>
+                        <strong style={{ fontSize: '0.86rem', color: '#0f172a' }}>{cust.totalOrders || 0}</strong>
+                      </div>
+
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '4px 10px', textAlign: 'center', minWidth: '85px' }}>
+                        <div style={{ fontSize: '0.64rem', color: '#16a34a', textTransform: 'uppercase', fontWeight: '700', lineHeight: 1 }}>Lifetime</div>
+                        <strong style={{ fontSize: '0.88rem', color: '#16a34a' }}>{formatPrice(cust.totalSpent || 0)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="store-customer-col-actions">
                       <a
                         href={`https://wa.me/91${(cust.phone || '').replace(/[^0-9]/g, '').slice(-10)}?text=${encodeURIComponent(`Hello ${cust.name || ''}, this is Variathu Power Tools Kozhencherry. We are checking in to see if you require any equipment spares, blades, or servicing support.`)}`}
                         target="_blank"
                         rel="noreferrer"
                         style={{
-                          flex: 1,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
                           gap: '5px',
                           background: '#ecfdf5',
                           border: '1px solid #a7f3d0',
                           color: '#059669',
-                          padding: '7px 10px',
+                          padding: '6px 12px',
                           borderRadius: '6px',
-                          fontSize: '0.76rem',
+                          fontSize: '0.78rem',
                           fontWeight: '700',
-                          textDecoration: 'none'
+                          textDecoration: 'none',
+                          whiteSpace: 'nowrap'
                         }}
                       >
                         <MessageCircle size={13} />
@@ -4321,19 +4310,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         type="button"
                         onClick={() => handleOpenCustomerHistoryModal(cust)}
                         style={{
-                          flex: 1,
                           display: 'inline-flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
                           gap: '5px',
                           background: '#eff6ff',
                           border: '1px solid #bfdbfe',
                           color: '#1d4ed8',
-                          padding: '7px 10px',
+                          padding: '6px 12px',
                           borderRadius: '6px',
-                          fontSize: '0.76rem',
+                          fontSize: '0.78rem',
                           fontWeight: '700',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
                         }}
                       >
                         <Eye size={13} />
