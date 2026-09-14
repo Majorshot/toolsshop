@@ -8,11 +8,11 @@ router.post('/login', async (req, res) => {
     const { role, identifier, password, name } = req.body;
 
     if (role === 'store') {
-      // Store Owner / Admin Login
-      const validEmail = 'admin@variathupowertools.com';
-      const validPass = 'admin123';
+      // Store Owner / Admin Login (supports environment overrides for production)
+      const validEmail = process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com';
+      const validPass = process.env.STORE_ADMIN_PASSWORD || 'admin123';
 
-      if ((identifier === validEmail && password === validPass) || password === 'admin123') {
+      if ((identifier === validEmail && password === validPass) || password === validPass) {
         return res.json({
           success: true,
           user: {
@@ -26,7 +26,7 @@ router.post('/login', async (req, res) => {
       } else {
         return res.status(401).json({
           success: false,
-          message: 'Invalid store credentials. Use admin@variathupowertools.com / admin123'
+          message: 'Invalid store credentials. Please check your admin username and password.'
         });
       }
     } else {

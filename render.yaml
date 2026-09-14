@@ -17,3 +17,7 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
+      - key: STORE_ADMIN_EMAIL
+        sync: false
+      - key: STORE_ADMIN_PASSWORD
+        sync: false
