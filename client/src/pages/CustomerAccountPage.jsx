@@ -134,44 +134,17 @@ export const CustomerAccountPage = () => {
   if (!user) return null;
 
   return (
-    <div style={{ padding: '24px 0 60px' }}>
+    <div className="customer-page-wrapper">
       {/* Top Customer Banner */}
-      <div
-        style={{
-          background: '#ffffff',
-          border: '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '28px',
-          boxShadow: 'var(--shadow-xs)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '54px',
-              height: '54px',
-              borderRadius: '14px',
-              background: 'rgba(234, 88, 12, 0.1)',
-              color: '#ea580c',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.4rem',
-              fontWeight: '800'
-            }}
-          >
+      <div className="customer-profile-card">
+        <div className="customer-profile-top">
+          <div className="customer-profile-avatar">
             {user.name ? user.name[0].toUpperCase() : 'U'}
           </div>
 
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a' }}>
+          <div className="customer-profile-info">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                 {user.name}
               </h1>
               <span
@@ -188,13 +161,13 @@ export const CustomerAccountPage = () => {
                 Customer Account
               </span>
             </div>
-            <p style={{ fontSize: '0.84rem', color: '#64748b' }}>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '3px 0 0' }}>
               {user.phone || user.email} • Kozhencherry, Pathanamthitta
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="customer-profile-actions">
           <button
             onClick={loadCustomerOrders}
             style={{
@@ -206,7 +179,7 @@ export const CustomerAccountPage = () => {
               fontSize: '0.82rem',
               fontWeight: '600',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px'
             }}
@@ -226,7 +199,7 @@ export const CustomerAccountPage = () => {
               fontSize: '0.82rem',
               fontWeight: '700',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '6px'
             }}
@@ -239,30 +212,22 @@ export const CustomerAccountPage = () => {
       </div>
 
       {/* Orders Heading */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+      <div className="customer-orders-header">
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a' }}>
+          <h2 className="customer-orders-title">
             Your Placed Orders & Live Status
           </h2>
-          <p style={{ fontSize: '0.84rem', color: '#64748b' }}>
+          <p className="customer-orders-subtitle">
             Real-time tracking for store pickups at Poyanil Building and courier shipments
           </p>
         </div>
 
         <Link
           to="/shop"
-          style={{
-            color: '#ea580c',
-            fontWeight: '700',
-            fontSize: '0.86rem',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
+          className="customer-shop-more-link"
         >
           <span>Shop More Tools</span>
-          <ArrowRight size={15} />
+          <ArrowRight size={14} />
         </Link>
       </div>
 
@@ -343,67 +308,61 @@ export const CustomerAccountPage = () => {
             return (
               <div
                 key={order.id}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  boxShadow: 'var(--shadow-xs)'
-                }}
+                className="customer-order-card"
                 id={`customer-order-${order.id}`}
               >
-                {/* Order Top Line */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{order.id}</strong>
-                      <span
-                        style={{
-                          background: statusBadgeBg,
-                          color: statusBadgeColor,
-                          border: `1px solid ${statusBadgeBorder}`,
-                          padding: '3px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800'
-                        }}
-                      >
-                        ● {statusBadgeText}
-                      </span>
+                {/* Order Top Line: Order ID & Total Price */}
+                <div className="customer-order-header-row">
+                  <span className="customer-order-id">{order.id}</span>
+                  <span className="customer-order-price">
+                    {formatPrice(order.totalAmount)}
+                  </span>
+                </div>
 
-                      {/* Payment Status Badge */}
-                      <span
-                        style={{
-                          background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
-                          color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
-                          border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
-                          padding: '3px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800'
-                        }}
-                      >
-                        {order.paymentStatus === 'REFUNDED'
-                          ? `REFUNDED (${order.refundId || 'UPI'})`
-                          : order.paymentStatus === 'PAID'
-                          ? `PAID (${order.transactionId || 'UPI'})`
-                          : 'PAY AT STORE / COD'}
-                      </span>
-                    </div>
+                {/* Status Badges Row */}
+                <div className="customer-order-badges-row">
+                  <span
+                    style={{
+                      background: statusBadgeBg,
+                      color: statusBadgeColor,
+                      border: `1px solid ${statusBadgeBorder}`,
+                      padding: '3px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '0.74rem',
+                      fontWeight: '800'
+                    }}
+                  >
+                    ● {statusBadgeText}
+                  </span>
 
-                    <span style={{ fontSize: '0.78rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
-                      Placed on: {new Date(order.date).toLocaleDateString()} at {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
+                  {/* Payment Status Badge */}
+                  <span
+                    style={{
+                      background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
+                      color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
+                      border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
+                      padding: '3px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '0.74rem',
+                      fontWeight: '800'
+                    }}
+                  >
+                    {order.paymentStatus === 'REFUNDED'
+                      ? `REFUNDED (${order.refundId || 'UPI'})`
+                      : order.paymentStatus === 'PAID'
+                      ? `PAID (${order.transactionId || 'UPI'})`
+                      : 'PAY AT STORE / COD'}
+                  </span>
+                </div>
 
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                      {formatPrice(order.totalAmount)}
-                    </span>
-                    <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                      Method: <strong>{order.paymentMethod}</strong>
-                    </div>
-                  </div>
+                {/* Order Meta Bar */}
+                <div className="customer-order-meta-bar">
+                  <span>
+                    Placed on {new Date(order.date).toLocaleDateString()} at {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span>
+                    Method: <strong style={{ color: '#0f172a' }}>{order.paymentMethod}</strong>
+                  </span>
                 </div>
 
                 {/* Section A: Cancelled Order View */}
@@ -413,26 +372,26 @@ export const CustomerAccountPage = () => {
                       background: '#fef2f2',
                       border: '1.5px solid #fecaca',
                       borderRadius: '12px',
-                      padding: '18px 20px',
-                      marginBottom: '18px'
+                      padding: '14px 16px',
+                      marginBottom: '16px'
                     }}
                     id={`order-cancelled-box-${order.id}`}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <XCircle size={18} />
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.72rem', color: '#dc2626', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
                           Order Status • Cancelled
                         </span>
-                        <strong style={{ fontSize: '0.98rem', color: '#991b1b' }}>
+                        <strong style={{ fontSize: '0.94rem', color: '#991b1b', lineHeight: 1.3, display: 'block' }}>
                           {order.paymentStatus === 'REFUNDED' ? 'Order Cancelled & Full Refund Processed' : 'Order Cancelled'}
                         </strong>
                       </div>
                     </div>
 
-                    <p style={{ fontSize: '0.84rem', color: '#7f1d1d', margin: '0 0 10px', lineHeight: 1.5 }}>
+                    <p style={{ fontSize: '0.82rem', color: '#7f1d1d', margin: '0 0 10px', lineHeight: 1.5 }}>
                       {order.paymentStatus === 'REFUNDED' ? (
                         <>
                           Your order has been cancelled. An automatic full refund of <strong>{formatPrice(order.totalAmount)}</strong> was initiated to your original payment method. Depending on your bank/UPI app, it will reflect within 1-2 business days.
@@ -443,7 +402,7 @@ export const CustomerAccountPage = () => {
                     </p>
 
                     {order.refundId && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.76rem', color: '#047857', background: '#ecfdf5', padding: '5px 10px', borderRadius: '6px', border: '1px solid #a7f3d0', fontFamily: 'var(--font-mono)', fontWeight: '700', marginBottom: '6px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#047857', background: '#ecfdf5', padding: '5px 10px', borderRadius: '6px', border: '1px solid #a7f3d0', fontFamily: 'var(--font-mono)', fontWeight: '700', marginBottom: '6px', wordBreak: 'break-all', maxWidth: '100%' }}>
                         <span>⚡ Refund Reference ID: {order.refundId}</span>
                       </div>
                     )}
@@ -692,28 +651,34 @@ export const CustomerAccountPage = () => {
 
                 {/* Items in Order */}
                 <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', marginBottom: '16px' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.03em' }}>
                     Ordered Equipment ({order.items?.length})
                   </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {order.items?.map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div key={idx} className="customer-order-item-row">
+                        <a
+                          href={`/product/${item.product || item.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="customer-order-item-link"
+                          title="View product details"
+                        >
                           <img
                             src={item.image}
                             alt={item.name}
-                            style={{ width: '42px', height: '42px', borderRadius: '6px', objectFit: 'cover', background: '#f8fafc', border: '1px solid #e2e8f0' }}
+                            className="customer-order-item-img"
                             onError={(e) => {
                               e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
                             }}
                           />
-                          <div>
-                            <h4 style={{ fontSize: '0.86rem', fontWeight: '700', color: '#0f172a' }}>{item.name}</h4>
-                            <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Quantity: {item.quantity}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <h4 className="customer-order-item-name">{item.name}</h4>
+                            <span className="customer-order-item-sub">Quantity: {item.quantity}</span>
                           </div>
-                        </div>
+                        </a>
 
-                        <span style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)', flexShrink: 0, paddingLeft: '8px' }}>
                           {formatPrice(item.price * item.quantity)}
                         </span>
                       </div>
@@ -722,7 +687,7 @@ export const CustomerAccountPage = () => {
                 </div>
 
                 {/* Bottom Action Buttons: GST Invoice & WhatsApp & Cancel Order */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div className="customer-order-actions-bar">
                   {/* Cancel / Request Cancellation button */}
                   {!isCancelled && !hasPendingCancelRequest && (
                     <button
@@ -750,6 +715,7 @@ export const CustomerAccountPage = () => {
                   )}
 
                   <button
+                    type="button"
                     onClick={() => setInvoiceOrder(order)}
                     style={{
                       background: '#ffffff',
@@ -777,8 +743,8 @@ export const CustomerAccountPage = () => {
                     style={{
                       background: '#f0fdf4',
                       border: '1px solid #bbf7d0',
-                      color: '#16a34a',
-                      padding: '8px 16px',
+                      color: '#15803d',
+                      padding: '8px 14px',
                       borderRadius: '8px',
                       fontSize: '0.82rem',
                       fontWeight: '700',
@@ -804,24 +770,25 @@ export const CustomerAccountPage = () => {
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '700px', background: '#ffffff', color: '#0f172a', padding: '24px' }}
+            style={{ maxWidth: '780px', background: '#ffffff', color: '#0f172a', padding: '20px' }}
           >
-            {/* Top Toolbar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+            {/* Top Toolbar (hidden during actual print) */}
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Shield size={18} style={{ color: '#ea580c' }} />
-                <strong style={{ fontSize: '1rem', color: '#0f172a' }}>Original Tax Invoice & Warranty Certificate</strong>
+                <strong style={{ fontSize: '0.98rem', color: '#0f172a' }}>Original Tax Invoice & Warranty Certificate</strong>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
+                  type="button"
                   onClick={() => window.print()}
                   style={{
                     background: '#0f172a',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '6px',
-                    padding: '6px 12px',
-                    fontSize: '0.78rem',
+                    padding: '7px 14px',
+                    fontSize: '0.82rem',
                     fontWeight: '700',
                     cursor: 'pointer',
                     display: 'flex',
@@ -830,19 +797,20 @@ export const CustomerAccountPage = () => {
                   }}
                   id="btn-print-invoice"
                 >
-                  <Printer size={14} />
-                  <span>Print Invoice</span>
+                  <Printer size={15} />
+                  <span>Print Invoice (A4)</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setInvoiceOrder(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                  style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', color: '#64748b' }}
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
             </div>
 
-            {/* Invoice Body (Standard Indian GST Tax Invoice) */}
+            {/* Invoice Body (Standard Indian GST Tax Invoice in A4) */}
             <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '18px', background: '#ffffff' }} id="printable-gst-invoice">
               {/* Shop Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: '14px', marginBottom: '14px' }}>
@@ -872,13 +840,13 @@ export const CustomerAccountPage = () => {
               </div>
 
               {/* Billed To & Payment details */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px', fontSize: '0.8rem', background: '#f8fafc', padding: '12px', borderRadius: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '14px', fontSize: '0.8rem', background: '#f8fafc', padding: '12px', borderRadius: '6px' }}>
                 <div>
                   <strong style={{ color: '#0f172a', display: 'block', marginBottom: '2px' }}>Billed To (Customer):</strong>
                   <div>{invoiceOrder.customer?.name}</div>
                   <div>Phone: {invoiceOrder.customer?.phone}</div>
                   <div>{invoiceOrder.customer?.address || 'Kozhencherry Counter Pickup'}</div>
-                  <div>{invoiceOrder.customer?.district}, Kerala - {invoiceOrder.customer?.pincode || '689641'}</div>
+                  <div>{invoiceOrder.customer?.district || 'Pathanamthitta'}, Kerala - {invoiceOrder.customer?.pincode || '689641'}</div>
                 </div>
 
                 <div>
@@ -891,44 +859,46 @@ export const CustomerAccountPage = () => {
                 </div>
               </div>
 
-              {/* Items Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', marginBottom: '14px' }}>
-                <thead>
-                  <tr style={{ background: '#f1f5f9', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>
-                    <th style={{ padding: '8px' }}>#</th>
-                    <th style={{ padding: '8px' }}>Tool Description</th>
-                    <th style={{ padding: '8px' }}>HSN Code</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Taxable Val</th>
-                    <th style={{ padding: '8px', textAlign: 'right' }}>Total (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoiceOrder.items?.map((item, idx) => {
-                    const price = item.price * item.quantity;
-                    const taxable = Math.round(price / 1.18);
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '8px' }}>{idx + 1}</td>
-                        <td style={{ padding: '8px', fontWeight: '600' }}>{item.name}</td>
-                        <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>84672900</td>
-                        <td style={{ padding: '8px', textAlign: 'center' }}>{item.quantity}</td>
-                        <td style={{ padding: '8px', textAlign: 'right' }}>{formatPrice(taxable)}</td>
-                        <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700' }}>{formatPrice(price)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              {/* Items Table with horizontal scroll on mobile */}
+              <div style={{ overflowX: 'auto', width: '100%', marginBottom: '14px' }}>
+                <table style={{ width: '100%', minWidth: '480px', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', textAlign: 'left', borderBottom: '1px solid #cbd5e1' }}>
+                      <th style={{ padding: '8px', width: '35px' }}>#</th>
+                      <th style={{ padding: '8px' }}>Tool Description</th>
+                      <th style={{ padding: '8px', width: '85px' }}>HSN Code</th>
+                      <th style={{ padding: '8px', width: '50px', textAlign: 'center' }}>Qty</th>
+                      <th style={{ padding: '8px', width: '95px', textAlign: 'right' }}>Taxable Val</th>
+                      <th style={{ padding: '8px', width: '100px', textAlign: 'right' }}>Total (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceOrder.items?.map((item, idx) => {
+                      const price = item.price * item.quantity;
+                      const taxable = Math.round(price / 1.18);
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                          <td style={{ padding: '8px' }}>{idx + 1}</td>
+                          <td style={{ padding: '8px', fontWeight: '600' }}>{item.name}</td>
+                          <td style={{ padding: '8px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>84672900</td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>{item.quantity}</td>
+                          <td style={{ padding: '8px', textAlign: 'right' }}>{formatPrice(taxable)}</td>
+                          <td style={{ padding: '8px', textAlign: 'right', fontWeight: '700' }}>{formatPrice(price)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Tax & Total Summary */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '2px solid #cbd5e1', paddingTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '2px solid #cbd5e1', paddingTop: '10px', gap: '14px', flexWrap: 'wrap' }}>
                 <div style={{ fontSize: '0.74rem', color: '#64748b', maxWidth: '340px' }}>
                   <strong style={{ color: '#0f172a' }}>Warranty & Service Terms:</strong><br />
                   Valid for manufacturer warranty and in-house servicing at Variathu Power Tools workshop, Poyanil Building, Kozhencherry. Spares and carbon brushes available in-store.
                 </div>
 
-                <div style={{ textAlign: 'right', minWidth: '180px' }}>
+                <div style={{ textAlign: 'right', minWidth: '180px', marginLeft: 'auto' }}>
                   <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '4px' }}>
                     CGST (9%) + SGST (9%): Included
                   </div>

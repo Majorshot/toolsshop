@@ -4774,5 +4774,410 @@ header.main-site-header {
   }
 }
 
+/* ==========================================================================
+   Customer Account Dashboard - Mobile Responsive & Polished Styling
+   ========================================================================== */
+.customer-page-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 0 60px;
+}
 
+.customer-profile-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
 
+.customer-profile-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.customer-profile-avatar {
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  border-radius: 14px;
+  background: rgba(234, 88, 12, 0.1);
+  color: #ea580c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.customer-profile-info {
+  min-width: 0;
+}
+
+.customer-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.customer-orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.customer-orders-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.customer-orders-subtitle {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.customer-shop-more-link {
+  color: #ea580c;
+  font-weight: 700;
+  font-size: 0.86rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.customer-shop-more-link:hover {
+  background: rgba(234, 88, 12, 0.08);
+}
+
+.customer-order-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.customer-order-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: var(--shadow-sm);
+}
+
+.customer-order-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.customer-order-id {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.customer-order-price {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #0f172a;
+  font-family: var(--font-mono);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.customer-order-badges-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.customer-order-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.customer-order-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.customer-order-item-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  text-decoration: none;
+  color: inherit;
+}
+
+.customer-order-item-img {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: transform 0.15s ease;
+}
+
+.customer-order-item-link:hover .customer-order-item-img {
+  transform: scale(1.05);
+}
+
+.customer-order-item-name {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px;
+  line-height: 1.35;
+  transition: color 0.15s ease;
+}
+
+.customer-order-item-link:hover .customer-order-item-name {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
+.customer-order-item-sub {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.customer-order-actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Mobile Adjustments (<= 640px) */
+@media (max-width: 640px) {
+  .customer-page-wrapper {
+    padding: 12px 0 80px;
+  }
+
+  .customer-profile-card {
+    padding: 16px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+
+  .customer-profile-top {
+    width: 100%;
+  }
+
+  .customer-profile-avatar {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    font-size: 1.2rem;
+  }
+
+  .customer-profile-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .customer-profile-actions button {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 8px !important;
+  }
+
+  .customer-orders-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .customer-shop-more-link {
+    align-self: flex-start;
+    padding: 0;
+  }
+
+  .customer-order-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .customer-order-header-row {
+    align-items: flex-start;
+  }
+
+  .customer-order-id {
+    font-size: 1.02rem;
+  }
+
+  .customer-order-price {
+    font-size: 1.15rem;
+  }
+
+  .customer-order-actions-bar {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .customer-order-actions-bar button,
+  .customer-order-actions-bar a {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+    padding: 10px 14px !important;
+    font-size: 0.84rem !important;
+  }
+}
+
+/* ==========================================================================
+   Global A4 Print Stylesheet (Tax Invoices & Shipping Labels)
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  html, body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .no-print,
+  .no-print * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  #printable-invoice-modal-content,
+  #printable-invoice-modal-content *,
+  #printable-gst-invoice,
+  #printable-gst-invoice *,
+  #printable-label-modal-content,
+  #printable-label-modal-content * {
+    visibility: visible !important;
+  }
+
+  #printable-invoice-modal-content,
+  #printable-gst-invoice {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 190mm !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+    padding: 10mm !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: 1.5px solid #0f172a !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    font-size: 10pt !important;
+  }
+
+  #printable-invoice-modal-content table,
+  #printable-gst-invoice table {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto;
+  }
+
+  #printable-invoice-modal-content tr,
+  #printable-gst-invoice tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  #printable-invoice-modal-content th,
+  #printable-invoice-modal-content td,
+  #printable-gst-invoice th,
+  #printable-gst-invoice td {
+    padding: 6px 8px !important;
+    word-break: break-word !important;
+  }
+
+  #printable-label-modal-content {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 380px !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: 2.5px solid #000000 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #printable-label-modal-content img {
+    visibility: visible !important;
+    display: block !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: pixelated !important;
+    -ms-interpolation-mode: nearest-neighbor !important;
+  }
+}
