@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -110,6 +110,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
+  // Customer Directory (500+ CRM) State
+  const [customers, setCustomers] = useState([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customersSearch, setCustomersSearch] = useState('');
+  const [customersSort, setCustomersSort] = useState('spend');
+  const [selectedCustomerForModal, setSelectedCustomerForModal] = useState(null);
+  const [customerOrderHistory, setCustomerOrderHistory] = useState([]);
+  const [customerRepairHistory, setCustomerRepairHistory] = useState([]);
+  const [loadingCustomerHistory, setLoadingCustomerHistory] = useState(false);
+
+  // Inventory pagination for 1,000+ products
+  const [invPage, setInvPage] = useState(1);
+  const INV_PAGE_SIZE = 30;
+
   // Database Connection Status
   const [dbStatus, setDbStatus] = useState({ isMongoConnected: false, activeEngine: 'Checking...' });
   const [retryingDb, setRetryingDb] = useState(false);
@@ -133,6 +147,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         loadProducts();
         loadOrders();
         loadTaxonomy();
+        loadCustomers();
         if (onProductUpdated) onProductUpdated();
       } else {
         showNotification('⚠️ Atlas still rejected connection. Ensure 0.0.0.0/0 is saved in Atlas Network Access.');
@@ -382,6 +397,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     loadTaxonomy();
     loadCoupons();
     loadRepairs();
+    loadCustomers();
   }, [user]);
 
   const loadTaxonomy = async () => {
@@ -604,6 +620,55 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       console.error("Failed to load repairs:", err);
     } finally {
       setLoadingRepairs(false);
+    }
+  };
+
+  const loadCustomers = async () => {
+    setLoadingCustomers(true);
+    try {
+      const res = await api.getCustomers({ limit: 200 });
+      setCustomers(res.data || []);
+    } catch (err) {
+      console.error("Failed to load customers:", err);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  const handleOpenCustomerHistoryModal = async (cust) => {
+    setSelectedCustomerForModal(cust);
+    setLoadingCustomerHistory(true);
+    try {
+      const res = await api.getCustomer(cust._id || cust.phone);
+      if (res && res.data) {
+        setCustomerOrderHistory(res.data.orders || []);
+        setCustomerRepairHistory(res.data.repairs || []);
+      } else {
+        const ords = orders.filter(o => {
+          const ph = (o.customer?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+          return ph === (cust.phone || '').slice(-10);
+        });
+        const reps = repairs.filter(r => {
+          const ph = (r.customerPhone || '').replace(/[^0-9]/g, '').slice(-10);
+          return ph === (cust.phone || '').slice(-10);
+        });
+        setCustomerOrderHistory(ords);
+        setCustomerRepairHistory(reps);
+      }
+    } catch (err) {
+      console.warn("Could not load full customer profile from API, using cached:", err.message);
+      const ords = orders.filter(o => {
+        const ph = (o.customer?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+        return ph === (cust.phone || '').slice(-10);
+      });
+      const reps = repairs.filter(r => {
+        const ph = (r.customerPhone || '').replace(/[^0-9]/g, '').slice(-10);
+        return ph === (cust.phone || '').slice(-10);
+      });
+      setCustomerOrderHistory(ords);
+      setCustomerRepairHistory(reps);
+    } finally {
+      setLoadingCustomerHistory(false);
     }
   };
 
@@ -1079,6 +1144,26 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const lowStockItems = products.filter(p => (p.stock ?? 0) <= 3);
   const lowStockCount = lowStockItems.length;
 
+  // Filtered & Sorted Customers for Tab 7 (CRM)
+  const filteredCustomers = customers
+    .filter(c => {
+      if (!customersSearch.trim()) return true;
+      const q = customersSearch.toLowerCase().trim();
+      const phoneDigits = q.replace(/[^0-9]/g, '');
+      const matchName = (c.name || '').toLowerCase().includes(q);
+      const matchEmail = (c.email || '').toLowerCase().includes(q);
+      const matchDistrict = (c.district || '').toLowerCase().includes(q);
+      const matchPincode = (c.pincode || '').includes(q);
+      const matchPhone = phoneDigits.length >= 4 && (c.phone || '').includes(phoneDigits);
+      return matchName || matchEmail || matchDistrict || matchPincode || matchPhone;
+    })
+    .sort((a, b) => {
+      if (customersSort === 'spend') return (b.totalSpent || 0) - (a.totalSpent || 0);
+      if (customersSort === 'orders') return (b.totalOrders || 0) - (a.totalOrders || 0);
+      if (customersSort === 'name') return (a.name || '').localeCompare(b.name || '');
+      return new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0);
+    });
+
   // Collect unique brands & categories for filters
   const uniqueBrands = Array.from(new Set([
     ...(taxonomy.brands || []),
@@ -1422,6 +1507,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         >
           <Layers size={16} />
           <span>Categories & Brands ({taxonomy.categories.length + taxonomy.brands.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('customers')}
+          className={`store-nav-tab-btn ${activeTab === 'customers' ? 'active' : ''}`}
+          id="store-tab-customers"
+        >
+          <Users size={16} />
+          <span>Customer Directory ({customers.length})</span>
         </button>
 
       </div>
@@ -2155,8 +2250,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {filteredProducts.map((prod) => (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {filteredProducts.slice((invPage - 1) * INV_PAGE_SIZE, invPage * INV_PAGE_SIZE).map((prod) => (
                 <div
                   key={prod.id}
                   className="store-product-item-card"
@@ -2300,6 +2396,69 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
               ))}
             </div>
+
+            {/* Inventory Pagination Bar for 1,000+ Products */}
+            {Math.ceil(filteredProducts.length / INV_PAGE_SIZE) > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  marginTop: '20px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid #e2e8f0'
+                }}
+              >
+                <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
+                  Showing <strong style={{ color: '#0f172a' }}>{(invPage - 1) * INV_PAGE_SIZE + 1}</strong> – <strong style={{ color: '#0f172a' }}>{Math.min(invPage * INV_PAGE_SIZE, filteredProducts.length)}</strong> of <strong style={{ color: '#0f172a' }}>{filteredProducts.length}</strong> tools
+                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    disabled={invPage === 1}
+                    onClick={() => setInvPage(p => Math.max(1, p - 1))}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      fontSize: '0.82rem',
+                      fontWeight: '600',
+                      color: invPage === 1 ? '#94a3b8' : '#0f172a',
+                      cursor: invPage === 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Prev
+                  </button>
+
+                  <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#0f172a', padding: '0 8px' }}>
+                    Page {invPage} of {Math.ceil(filteredProducts.length / INV_PAGE_SIZE)}
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={invPage >= Math.ceil(filteredProducts.length / INV_PAGE_SIZE)}
+                    onClick={() => setInvPage(p => Math.min(Math.ceil(filteredProducts.length / INV_PAGE_SIZE), p + 1))}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      fontSize: '0.82rem',
+                      fontWeight: '600',
+                      color: invPage >= Math.ceil(filteredProducts.length / INV_PAGE_SIZE) ? '#94a3b8' : '#0f172a',
+                      cursor: invPage >= Math.ceil(filteredProducts.length / INV_PAGE_SIZE) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       )}
@@ -3920,6 +4079,416 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: CUSTOMER DIRECTORY & CRM (500+ CLIENTS) */}
+      {activeTab === 'customers' && (
+        <div className="store-tab-content-card">
+          <div className="store-section-header">
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={22} style={{ color: '#ea580c' }} />
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  Customer Directory & CRM ({filteredCustomers.length})
+                </h2>
+              </div>
+              <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '4px 0 0' }}>
+                Single source of truth for 500+ customer profiles, lifetime purchase histories, registered addresses, and direct WhatsApp / phone contact.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={loadCustomers}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                id="btn-refresh-customers"
+              >
+                <RefreshCw size={14} className={loadingCustomers ? 'spin' : ''} />
+                <span>Refresh Directory</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CRM KPI Metrics Strip */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px', margin: '16px 0 20px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+              <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                Total Registered Clients
+              </span>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a' }}>
+                {customers.length} <small style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '500' }}>profiles</small>
+              </div>
+            </div>
+
+            <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '14px' }}>
+              <span style={{ fontSize: '0.74rem', color: '#059669', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                Total Customer Revenue
+              </span>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#047857' }}>
+                {formatPrice(customers.reduce((s, c) => s + (c.totalSpent || 0), 0))}
+              </div>
+            </div>
+
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '14px' }}>
+              <span style={{ fontSize: '0.74rem', color: '#1d4ed8', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                Repeat Buyers (2+ Orders)
+              </span>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1e40af' }}>
+                {customers.filter(c => (c.totalOrders || 0) > 1).length} <small style={{ fontSize: '0.78rem', color: '#3b82f6', fontWeight: '600' }}>({customers.length > 0 ? Math.round((customers.filter(c => (c.totalOrders || 0) > 1).length / customers.length) * 100) : 0}%)</small>
+              </div>
+            </div>
+
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px' }}>
+              <span style={{ fontSize: '0.74rem', color: '#b45309', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                Average Spend / Customer
+              </span>
+              <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#b45309' }}>
+                {formatPrice(customers.length > 0 ? Math.round(customers.reduce((s, c) => s + (c.totalSpent || 0), 0) / customers.length) : 0)}
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Sort Toolbar */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '18px' }}>
+            <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search customers by name, phone (+91), district, or PIN..."
+                value={customersSearch}
+                onChange={(e) => setCustomersSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px 9px 36px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.86rem',
+                  outline: 'none',
+                  background: '#ffffff'
+                }}
+                id="input-customer-search"
+              />
+              {customersSearch && (
+                <button
+                  type="button"
+                  onClick={() => setCustomersSearch('')}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569' }}>Sort By:</label>
+              <select
+                value={customersSort}
+                onChange={(e) => setCustomersSort(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem', fontWeight: '600', color: '#0f172a', background: '#ffffff', outline: 'none' }}
+                id="select-customer-sort"
+              >
+                <option value="spend">Highest Lifetime Spend (₹)</option>
+                <option value="orders">Most Orders Placed</option>
+                <option value="recent">Recently Active</option>
+                <option value="name">Alphabetical (Name)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Customers List Cards */}
+          {loadingCustomers ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+              <div style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#ea580c', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+              <p>Loading customer database...</p>
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+              <Users size={36} style={{ color: '#94a3b8', margin: '0 auto 8px', display: 'block' }} />
+              <h4 style={{ color: '#0f172a', marginBottom: '4px' }}>No Customers Found</h4>
+              <p style={{ color: '#64748b', fontSize: '0.84rem' }}>
+                {customersSearch ? `No customers matched "${customersSearch}". Try searching by 10-digit mobile number.` : 'Customer profiles will automatically appear as orders and repairs are booked.'}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px' }}>
+              {filteredCustomers.map((cust) => {
+                const isVip = (cust.totalSpent || 0) >= 20000 || (cust.totalOrders || 0) >= 3;
+                return (
+                  <div
+                    key={cust._id || cust.phone}
+                    style={{
+                      background: '#ffffff',
+                      border: isVip ? '1.5px solid #fed7aa' : '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {isVip && (
+                      <div style={{ position: 'absolute', top: 0, right: 0, background: '#ea580c', color: '#ffffff', fontSize: '0.64rem', fontWeight: '800', padding: '2px 10px', borderBottomLeftRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        ★ VIP Client
+                      </div>
+                    )}
+
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: isVip ? '#ffedd5' : '#f1f5f9', color: isVip ? '#ea580c' : '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1.05rem', flexShrink: 0 }}>
+                          {(cust.name || 'C').charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h4 style={{ fontSize: '0.98rem', fontWeight: '800', color: '#0f172a', margin: '0 0 2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {cust.name || 'Customer'}
+                          </h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#0284c7', fontWeight: '700' }}>
+                            <Phone size={12} />
+                            <a href={`tel:${cust.phone}`} style={{ color: '#0284c7', textDecoration: 'none' }}>
+                              +91 {cust.phone}
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4, marginBottom: '12px', background: '#f8fafc', padding: '8px 10px', borderRadius: '6px' }}>
+                        📍 {cust.address ? `${cust.address}, ` : ''}{cust.district || 'Pathanamthitta'}, Kerala {cust.pincode ? `• PIN: ${cust.pincode}` : ''}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px', background: '#ffffff', padding: '8px 0', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9' }}>
+                        <div>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: '700' }}>
+                            Total Orders
+                          </span>
+                          <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>
+                            {cust.totalOrders || 0} orders
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: '700' }}>
+                            Lifetime Spend
+                          </span>
+                          <strong style={{ fontSize: '0.92rem', color: '#16a34a' }}>
+                            {formatPrice(cust.totalSpent || 0)}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <a
+                        href={`https://wa.me/91${(cust.phone || '').replace(/[^0-9]/g, '').slice(-10)}?text=${encodeURIComponent(`Hello ${cust.name || ''}, this is Variathu Power Tools Kozhencherry. We are checking in to see if you require any equipment spares, blades, or servicing support.`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          flex: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '5px',
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          color: '#059669',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.76rem',
+                          fontWeight: '700',
+                          textDecoration: 'none'
+                        }}
+                      >
+                        <MessageCircle size={13} />
+                        <span>WhatsApp</span>
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCustomerHistoryModal(cust)}
+                        style={{
+                          flex: 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '5px',
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          color: '#1d4ed8',
+                          padding: '7px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.76rem',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Eye size={13} />
+                        <span>View Profile</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: CUSTOMER PROFILE & PURCHASE HISTORY */}
+      {selectedCustomerForModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setSelectedCustomerForModal(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '680px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '24px',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setSelectedCustomerForModal(null)}
+              style={{ position: 'absolute', right: 18, top: 18, background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+              <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '1.3rem' }}>
+                {(selectedCustomerForModal.name || 'C').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                  {selectedCustomerForModal.name}
+                </h3>
+                <div style={{ fontSize: '0.84rem', color: '#64748b', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <span>📞 +91 {selectedCustomerForModal.phone}</span>
+                  {selectedCustomerForModal.email && <span>✉️ {selectedCustomerForModal.email}</span>}
+                  <span>📍 {selectedCustomerForModal.district || 'Kerala'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats Banner */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>LIFETIME SPEND</span>
+                <strong style={{ fontSize: '1.1rem', color: '#16a34a' }}>{formatPrice(selectedCustomerForModal.totalSpent || 0)}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>TOTAL ORDERS</span>
+                <strong style={{ fontSize: '1.1rem', color: '#0f172a' }}>{selectedCustomerForModal.totalOrders || 0}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', fontWeight: '700' }}>CUSTOMER STATUS</span>
+                <strong style={{ fontSize: '0.9rem', color: '#ea580c' }}>{(selectedCustomerForModal.totalSpent || 0) >= 20000 ? '⭐ VIP Client' : 'Active Customer'}</strong>
+              </div>
+            </div>
+
+            {/* Order History */}
+            <h4 style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ShoppingBag size={16} style={{ color: '#ea580c' }} />
+              <span>Purchase History ({customerOrderHistory.length} orders)</span>
+            </h4>
+
+            {loadingCustomerHistory ? (
+              <p style={{ color: '#64748b', fontSize: '0.84rem' }}>Loading purchase history...</p>
+            ) : customerOrderHistory.length === 0 ? (
+              <p style={{ color: '#94a3b8', fontSize: '0.84rem', fontStyle: 'italic', marginBottom: '20px' }}>No recorded online orders yet.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                {customerOrderHistory.map((ord) => (
+                  <div key={ord.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: '800', fontSize: '0.86rem', color: '#0f172a' }}>{ord.id}</div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                        {new Date(ord.date || ord.createdAt).toLocaleDateString()} • {(ord.items || []).length} items • {ord.deliveryType === 'store-pickup' ? 'Counter Pickup' : 'Courier'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#16a34a' }}>{formatPrice(ord.totalAmount)}</div>
+                      <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: ord.status === 'Completed' ? '#dcfce7' : '#fef3c7', color: ord.status === 'Completed' ? '#15803d' : '#b45309', fontWeight: '700' }}>
+                        {ord.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Repair Job History */}
+            <h4 style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Wrench size={16} style={{ color: '#ea580c' }} />
+              <span>Workshop Service & Repair Tickets ({customerRepairHistory.length})</span>
+            </h4>
+
+            {customerRepairHistory.length === 0 ? (
+              <p style={{ color: '#94a3b8', fontSize: '0.84rem', fontStyle: 'italic', marginBottom: '20px' }}>No repair jobs recorded for this phone number.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                {customerRepairHistory.map((rep) => (
+                  <div key={rep.id || rep.jobId} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: '800', fontSize: '0.86rem', color: '#0f172a' }}>
+                        #{rep.jobId} — {rep.toolBrand} {rep.toolModel}
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                        Issue: {rep.issueDescription}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a' }}>
+                        {formatPrice(rep.finalCost || rep.estimatedCost || 0)}
+                      </div>
+                      <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: rep.status === 'Handed Over' ? '#dcfce7' : '#e0f2fe', color: rep.status === 'Handed Over' ? '#15803d' : '#0284c7', fontWeight: '700' }}>
+                        {rep.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedCustomerForModal(null)}
+                style={{ padding: '8px 18px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -74,6 +74,14 @@ const MainApp = () => {
       .catch(err => console.error(err));
   }, []);
 
+  // 24/7 Render Keep-Alive: Client heartbeat pings backend every 10 minutes
+  useEffect(() => {
+    const heartbeatTimer = setInterval(() => {
+      api.pingKeepAlive().catch(() => {});
+    }, 10 * 60 * 1000);
+    return () => clearInterval(heartbeatTimer);
+  }, []);
+
   return (
     <div className="app-layout">
       <ScrollToTop />

@@ -13,6 +13,9 @@ const shippingRoutes = require('./routes/shippingRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const repairRoutes = require('./routes/repairRoutes');
 
+const customerRoutes = require('./routes/customerRoutes');
+const { startKeepAliveService, getKeepAliveStatus } = require('./utils/keepAlive');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -60,6 +63,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Render 24/7 Keep-Alive Endpoint
+app.get('/api/keep-alive', (req, res) => {
+  res.json({
+    status: 'alive',
+    message: 'Variathu Power Tools server is active and warm',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    keepAlive: getKeepAliveStatus(),
+    db: db.getStatus().isMongoConnected ? 'connected' : 'disconnected'
+  });
+});
+
 // Real-time Database Status check & reconnect trigger
 app.get('/api/db-status', (req, res) => {
   res.json(db.getStatus());
@@ -73,6 +88,7 @@ app.post('/api/db-reconnect', async (req, res) => {
 // Mount Routes
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/customers', customerRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -94,7 +110,11 @@ async function startServer() {
     console.log(`  VARIATHU POWER TOOLS - BACKEND SERVER RUNNING`);
     console.log(`  URL: http://localhost:${PORT}`);
     console.log(`  Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`  Keep-Alive: http://localhost:${PORT}/api/keep-alive`);
     console.log(`====================================================`);
+
+    // Start background keep-alive ping engine to prevent Render 15-min idle sleeps
+    startKeepAliveService(PORT);
   });
 }
 

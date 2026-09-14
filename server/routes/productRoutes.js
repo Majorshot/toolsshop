@@ -2,12 +2,24 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 
-// GET all products with filtering & search
+// GET all products with filtering, search, and optional pagination
 router.get('/', async (req, res) => {
   try {
-    const { category, brand, cordless, search, sortBy } = req.query;
-    const products = await db.getProducts({ category, brand, cordless, search, sortBy });
-    res.json({ success: true, count: products.length, data: products });
+    const { category, brand, cordless, search, sortBy, page, limit } = req.query;
+    const result = await db.getProducts({ category, brand, cordless, search, sortBy }, { page, limit });
+    if (Array.isArray(result)) {
+      res.json({ success: true, count: result.length, data: result });
+    } else {
+      res.json({
+        success: true,
+        count: result.products.length,
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+        limit: result.limit,
+        data: result.products
+      });
+    }
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

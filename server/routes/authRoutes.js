@@ -39,32 +39,46 @@ router.post('/login', async (req, res) => {
       let customerPhone = customerIdentifier;
       let customerLocation = 'Kozhencherry, Pathanamthitta';
 
-      // Auto-fetch real customer name and details from past orders in MongoDB Atlas
+      // Instant O(1) indexed lookup from dedicated CustomerModel (<5ms)
       if (cleanDigits.length >= 7 || customerIdentifier.includes('@')) {
         try {
-          const pastOrders = await db.getCustomerOrders(cleanDigits || customerIdentifier);
-          if (pastOrders && pastOrders.length > 0) {
-            const pastOrder = pastOrders.find(
-              o => o.customer?.name && o.customer.name.trim() !== '' && !o.customer.name.toLowerCase().includes('valued customer')
-            ) || pastOrders[0];
+          let cust = null;
+          if (db.CustomerModel && cleanDigits.length >= 7) {
+            cust = await db.CustomerModel.findOne({ phone: cleanDigits }).lean();
+          }
+          if (cust) {
+            customerName = cust.name || customerName;
+            customerEmail = cust.email || customerEmail;
+            customerPhone = cust.phone || customerPhone;
+            if (cust.district) {
+              customerLocation = `${cust.district}, Kerala`;
+            }
+          } else {
+            // Fallback to past orders lookup and sync if not yet in CustomerModel
+            const pastOrders = await db.getCustomerOrders(cleanDigits || customerIdentifier);
+            if (pastOrders && pastOrders.length > 0) {
+              const pastOrder = pastOrders.find(
+                o => o.customer?.name && o.customer.name.trim() !== '' && !o.customer.name.toLowerCase().includes('valued customer')
+              ) || pastOrders[0];
 
-            if (pastOrder && pastOrder.customer) {
-              if (!customerName && pastOrder.customer.name) {
-                customerName = pastOrder.customer.name.trim();
-              }
-              if (!customerEmail && pastOrder.customer.email && pastOrder.customer.email.includes('@')) {
-                customerEmail = pastOrder.customer.email.trim();
-              }
-              if (pastOrder.customer.phone && !customerPhone) {
-                customerPhone = pastOrder.customer.phone.trim();
-              }
-              if (pastOrder.customer.district) {
-                customerLocation = `${pastOrder.customer.district}, Kerala`;
+              if (pastOrder && pastOrder.customer) {
+                if (!customerName && pastOrder.customer.name) {
+                  customerName = pastOrder.customer.name.trim();
+                }
+                if (!customerEmail && pastOrder.customer.email && pastOrder.customer.email.includes('@')) {
+                  customerEmail = pastOrder.customer.email.trim();
+                }
+                if (pastOrder.customer.phone && !customerPhone) {
+                  customerPhone = pastOrder.customer.phone.trim();
+                }
+                if (pastOrder.customer.district) {
+                  customerLocation = `${pastOrder.customer.district}, Kerala`;
+                }
               }
             }
           }
         } catch (lookupErr) {
-          console.warn("Could not lookup past customer orders for login:", lookupErr.message);
+          console.warn("Could not lookup customer details for login:", lookupErr.message);
         }
       }
 

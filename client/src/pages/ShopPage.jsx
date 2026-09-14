@@ -14,7 +14,9 @@ import {
   Check,
   Zap,
   ShieldCheck,
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
 import { api } from '../services/api';
@@ -73,6 +75,15 @@ export const ShopPage = ({
   const [appliedMaxPrice, setAppliedMaxPrice] = useState('');
   const [powerFilter, setPowerFilter] = useState('all');
   const [inStockOnly, setInStockOnly] = useState(false);
+
+  // Pagination State for 1,000+ Products Performance
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 24;
+
+  // Auto-reset page when any filter criteria changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, activeBrand, priceFilter, appliedMinPrice, appliedMaxPrice, powerFilter, inStockOnly, searchQuery, sortBy]);
 
   // Lock body scroll and listen for ESC key when filter modal is open
   useEffect(() => {
@@ -503,15 +514,120 @@ export const ShopPage = ({
             </button>
           </div>
         ) : (
-          <div className="product-grid">
-            {displayedProducts.map(product => (
-              <ProductCard
-                key={product.id || product._id}
-                product={product}
-                onSelectProduct={onSelectProduct}
-              />
-            ))}
-          </div>
+          <>
+            <div className="product-grid">
+              {displayedProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map(product => (
+                <ProductCard
+                  key={product.id || product._id}
+                  product={product}
+                  onSelectProduct={onSelectProduct}
+                />
+              ))}
+            </div>
+
+            {/* Catalog Pagination Controls */}
+            {Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                  marginTop: '36px',
+                  paddingTop: '20px',
+                  borderTop: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ fontSize: '0.88rem', color: '#64748b' }}>
+                  Showing <strong style={{ color: '#0f172a' }}>{(currentPage - 1) * ITEMS_PER_PAGE + 1}</strong> – <strong style={{ color: '#0f172a' }}>{Math.min(currentPage * ITEMS_PER_PAGE, displayedProducts.length)}</strong> of <strong style={{ color: '#0f172a' }}>{displayedProducts.length}</strong> items
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    disabled={currentPage === 1}
+                    onClick={() => {
+                      setCurrentPage(p => Math.max(1, p - 1));
+                      window.scrollTo({ top: 120, behavior: 'smooth' });
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      color: currentPage === 1 ? '#94a3b8' : '#0f172a',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '0.86rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <ChevronLeft size={16} /> Prev
+                  </button>
+
+                  {Array.from({ length: Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) || Math.abs(p - currentPage) <= 2)
+                    .map((pageNum, idx, arr) => {
+                      const prevPage = arr[idx - 1];
+                      const showEllipsis = prevPage && pageNum - prevPage > 1;
+                      return (
+                        <React.Fragment key={pageNum}>
+                          {showEllipsis && <span style={{ padding: '0 4px', color: '#94a3b8' }}>...</span>}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentPage(pageNum);
+                              window.scrollTo({ top: 120, behavior: 'smooth' });
+                            }}
+                            style={{
+                              minWidth: '36px',
+                              height: '36px',
+                              padding: '0 8px',
+                              borderRadius: '8px',
+                              border: pageNum === currentPage ? '1px solid var(--brand-primary, #ea580c)' : '1px solid #cbd5e1',
+                              background: pageNum === currentPage ? 'var(--brand-primary, #ea580c)' : '#ffffff',
+                              color: pageNum === currentPage ? '#ffffff' : '#0f172a',
+                              fontWeight: pageNum === currentPage ? '700' : '500',
+                              cursor: 'pointer',
+                              fontSize: '0.86rem'
+                            }}
+                          >
+                            {pageNum}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+
+                  <button
+                    type="button"
+                    disabled={currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE)}
+                    onClick={() => {
+                      setCurrentPage(p => Math.min(Math.ceil(displayedProducts.length / ITEMS_PER_PAGE), p + 1));
+                      window.scrollTo({ top: 120, behavior: 'smooth' });
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      color: currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) ? '#94a3b8' : '#0f172a',
+                      cursor: currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer',
+                      fontSize: '0.86rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Next <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 

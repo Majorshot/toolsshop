@@ -11,7 +11,7 @@ export const api = {
     return await res.json();
   },
 
-  // Fetch products with search & filters
+  // Fetch products with search & filters (supports optional pagination)
   async getProducts(params = {}) {
     const query = new URLSearchParams();
     if (params.category && params.category !== 'all') query.append('category', params.category);
@@ -19,6 +19,8 @@ export const api = {
     if (params.cordless !== undefined && params.cordless !== null) query.append('cordless', params.cordless);
     if (params.search) query.append('search', params.search);
     if (params.sortBy) query.append('sortBy', params.sortBy);
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
 
     const res = await fetch(`${API_BASE}/products?${query.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch products');
@@ -381,5 +383,56 @@ export const api = {
     const result = await res.json();
     if (!res.ok) throw new Error(result.message || 'Failed to verify handover OTP');
     return result;
+  },
+
+  // Customer Directory & CRM (500+ Customers)
+  async getCustomers(params = {}) {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.sortBy) query.append('sortBy', params.sortBy);
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+
+    const res = await fetch(`${API_BASE}/customers?${query.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch customers');
+    return await res.json();
+  },
+
+  async getCustomer(id) {
+    const res = await fetch(`${API_BASE}/customers/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch customer profile');
+    return await res.json();
+  },
+
+  async updateCustomer(id, data) {
+    const res = await fetch(`${API_BASE}/customers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to update customer');
+    return result;
+  },
+
+  async createCustomer(data) {
+    const res = await fetch(`${API_BASE}/customers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to create customer');
+    return result;
+  },
+
+  // 24/7 Render Keep-Alive Ping
+  async pingKeepAlive() {
+    try {
+      const res = await fetch(`${API_BASE}/keep-alive`);
+      return await res.json();
+    } catch (e) {
+      return { status: 'error', error: e.message };
+    }
   }
 };
