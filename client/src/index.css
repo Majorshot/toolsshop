@@ -1057,6 +1057,7 @@ header.main-site-header {
   scroll-behavior: smooth;
   scroll-snap-type: x mandatory;
   padding: 6px 2px 20px 2px;
+  overflow-anchor: none; /* Prevents browser scroll anchoring to the last card */
 }
 
 /* Full Background Image Category Card */

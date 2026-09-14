@@ -34,13 +34,39 @@ const getCategoryIcon = (catId = '', catName = '') => {
   return Sparkles;
 };
 
+const DEFAULT_CATEGORIES = [
+  { id: 'cordless', name: 'Cordless Tools' },
+  { id: 'grinders-cutters', name: 'Grinders & Cutters' },
+  { id: 'hammers', name: 'Hammer Drills' },
+  { id: 'woodworking', name: 'Woodworking' },
+  { id: 'washers-blowers', name: 'Washers & Blowers' }
+];
+
 export const HomePage = ({ products = [], onSelectProduct }) => {
   const navigate = useNavigate();
   const featuredTools = products.slice(0, 8);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [brands, setBrands] = useState([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const categoryScrollRef = useRef(null);
+
+  // Always reset scroll position to first card on mount and when categories/products update
+  useEffect(() => {
+    const resetScrollToFirst = () => {
+      if (categoryScrollRef.current) {
+        categoryScrollRef.current.scrollTo({ left: 0, behavior: 'instant' });
+      }
+    };
+
+    resetScrollToFirst();
+    const t1 = setTimeout(resetScrollToFirst, 50);
+    const t2 = setTimeout(resetScrollToFirst, 200);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [categories, products.length]);
 
   // Fetch categories & brands that owner created/added in portal (dynamic backend taxonomy)
   useEffect(() => {
@@ -49,7 +75,9 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
         if (res && res.categories) {
           // Exclude 'all' if present, and show only 4-5 categories as requested
           const valid = res.categories.filter(c => c.id !== 'all');
-          setCategories(valid.slice(0, 5));
+          if (valid.length > 0) {
+            setCategories(valid.slice(0, 5));
+          }
         }
         if (res && res.brands && res.brands.length > 0) {
           setBrands(res.brands);
