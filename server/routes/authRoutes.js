@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
+const emailService = require('../services/emailService');
 
 // POST login endpoint for both Customer and Store Owner
 router.post('/login', async (req, res) => {
@@ -41,8 +42,17 @@ router.post('/login', async (req, res) => {
         pincode: req.body.pincode || '689641'
       });
 
+      // Send welcome email for newly created accounts (created within last 10 seconds)
+      const isNewAccount = customerDoc.createdAt && (Date.now() - new Date(customerDoc.createdAt).getTime()) < 10000;
+      if (isNewAccount && customerDoc.email) {
+        emailService.sendWelcomeEmail(customerDoc).catch(err => {
+          console.warn(`[Resend Email] Welcome email error:`, err.message);
+        });
+      }
+
       return res.json({
         success: true,
+        isNewAccount,
         user: {
           id: customerDoc._id,
           name: customerDoc.name,
@@ -65,3 +75,4 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+

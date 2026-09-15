@@ -34,6 +34,21 @@ router.put('/:id/status', async (req, res) => {
     if (!updated) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
+
+    // Trigger dispatched/courier email when status changes to dispatched or shipped
+    if (['dispatched', 'shipped', 'in-transit'].includes(status.toLowerCase())) {
+      emailService.sendOrderDispatchedEmail(updated, courierPartner, awb).catch(err => {
+        console.warn(`[Resend Email] Async dispatch email error for order #${updated.id}:`, err.message);
+      });
+    }
+
+    // Trigger cancelled email when store owner cancels directly via status update
+    if (status.toLowerCase() === 'cancelled') {
+      emailService.sendOrderCancelledEmail(updated, 'Cancelled by store', 'store').catch(err => {
+        console.warn(`[Resend Email] Async cancelled email error for order #${updated.id}:`, err.message);
+      });
+    }
+
     res.json({ success: true, message: "Order status updated successfully", data: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -149,6 +164,14 @@ router.post('/:id/cancel', async (req, res) => {
     if (!result.success) {
       return res.status(400).json(result);
     }
+
+    // Trigger order cancelled email
+    if (result.data) {
+      emailService.sendOrderCancelledEmail(result.data, reason, cancelledBy).catch(err => {
+        console.warn(`[Resend Email] Async cancelled email error:`, err.message);
+      });
+    }
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -163,6 +186,14 @@ router.post('/:id/request-cancel', async (req, res) => {
     if (!result.success) {
       return res.status(400).json(result);
     }
+
+    // Trigger cancellation request email
+    if (result.data) {
+      emailService.sendCancellationRequestEmail(result.data, reason).catch(err => {
+        console.warn(`[Resend Email] Async cancellation request email error:`, err.message);
+      });
+    }
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
