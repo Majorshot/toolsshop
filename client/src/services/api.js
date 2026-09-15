@@ -11,6 +11,17 @@ export const api = {
     return await res.json();
   },
 
+  // Auth: Register new customer account
+  async register(data) {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  },
+
+
   // Fetch products with search & filters (supports optional pagination)
   async getProducts(params = {}) {
     const query = new URLSearchParams();

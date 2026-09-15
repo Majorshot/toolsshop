@@ -32,6 +32,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (data) => {
+    const res = await api.register(data);
+    if (res.success && res.user) {
+      setUser(res.user);
+      return res.user;
+    } else {
+      throw new Error(res.message || 'Registration failed');
+    }
+  };
+
+
   const logout = () => {
     setUser(null);
   };
@@ -58,6 +69,7 @@ export const AuthProvider = ({ children }) => {
         isStoreOwner,
         isCustomer,
         login,
+        register,
         logout,
         updateUser
       }}
@@ -73,6 +85,7 @@ const defaultAuthContext = {
   isStoreOwner: false,
   isCustomer: false,
   login: async () => {},
+  register: async () => {},
   logout: () => {},
   updateUser: () => {}
 };

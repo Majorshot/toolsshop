@@ -368,6 +368,29 @@ async function findOrCreateCustomer(data = {}) {
   return await newCust.save();
 }
 
+// Lookup customer by phone only - returns null if not found (no creation)
+async function lookupCustomerByPhone(rawPhone) {
+  ensureMongoConnected();
+  const phone = cleanCustomerPhone(rawPhone);
+  if (!phone || phone.length < 7) return null;
+  return await CustomerModel.findOne({
+    $or: [
+      { phone },
+      { phone: `+91${phone}` },
+      { phone: { $regex: phone } }
+    ]
+  });
+}
+
+// Lookup customer by email only - returns null if not found (no creation)
+async function lookupCustomerByEmail(email) {
+  ensureMongoConnected();
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) return null;
+  return await CustomerModel.findOne({ email: cleanEmail });
+}
+
+
 async function recalculateCustomerMetrics(phone) {
   try {
     const cleanPhone = cleanCustomerPhone(phone);
@@ -1543,5 +1566,8 @@ db.OrderModel = OrderModel;
 db.ProductModel = ProductModel;
 db.CustomerModel = CustomerModel;
 db.findOrCreateCustomer = findOrCreateCustomer;
+db.lookupCustomerByPhone = lookupCustomerByPhone;
+db.lookupCustomerByEmail = lookupCustomerByEmail;
 
 module.exports = db;
+
