@@ -84,6 +84,11 @@ html {
   max-width: 100vw;
 }
 
+/* GSAP Animated Content utility */
+.invisible {
+  visibility: hidden;
+}
+
 body {
   min-height: 100vh;
   position: relative;
@@ -304,6 +309,21 @@ header.main-site-header {
   cursor: pointer;
 }
 
+.brand-logo-banner {
+  height: 38px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  display: block;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.brand-logo-wrap:hover .brand-logo-banner {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
 .brand-logo-img {
   width: 40px;
   height: 40px;
@@ -407,6 +427,10 @@ header.main-site-header {
   }
   .brand-text p {
     display: none;
+  }
+  .brand-logo-banner {
+    height: 30px;
+    max-width: 150px;
   }
   .brand-logo-img {
     width: 36px;
@@ -1793,7 +1817,7 @@ header.main-site-header {
 }
 
 /* ==========================================================================
-   AMAZON & FLIPKART STYLE FILTER MODAL DIALOG
+   INTERACTIVE MULTI-CRITERIA FILTER MODAL DIALOG
    ========================================================================== */
 
 @keyframes fadeIn {
@@ -2837,7 +2861,7 @@ header.main-site-header {
 }
 
 /* ==========================================================================
-   PRODUCT DETAIL GALLERY (AMAZON / FLIPKART STYLE) & FULL SCREEN VIEWER
+   PRODUCT DETAIL GALLERY & FULL SCREEN VIEWER
    ========================================================================== */
 
 .product-detail-card {
@@ -3001,7 +3025,7 @@ header.main-site-header {
   transform: scale(1.05);
 }
 
-/* Counter Pill (Amazon / Flipkart Style) */
+/* Counter Pill */
 .mobile-gallery-counter-pill {
   position: absolute;
   bottom: 12px;
@@ -5187,31 +5211,65 @@ header.main-site-header {
   #printable-invoice-modal-content *,
   #printable-gst-invoice,
   #printable-gst-invoice *,
+  #printable-gst-invoice-content,
+  #printable-gst-invoice-content *,
+  .unified-gst-invoice-sheet,
+  .unified-gst-invoice-sheet *,
   #printable-label-modal-content,
   #printable-label-modal-content * {
     visibility: visible !important;
   }
 
+  /* Reset modal containers so they do not clip or offset print layout */
+  .modal-overlay {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+    z-index: 99999 !important;
+  }
+
+  .modal-content {
+    position: static !important;
+    display: block !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 190mm !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
   #printable-invoice-modal-content,
-  #printable-gst-invoice {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+  #printable-gst-invoice,
+  #printable-gst-invoice-content,
+  .unified-gst-invoice-sheet {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
     width: 100% !important;
     max-width: 190mm !important;
     box-sizing: border-box !important;
     margin: 0 auto !important;
-    padding: 10mm !important;
+    padding: 6mm 8mm !important;
     background: #ffffff !important;
     box-shadow: none !important;
     border: 1.5px solid #0f172a !important;
     border-radius: 0 !important;
     overflow: visible !important;
-    font-size: 10pt !important;
+    font-size: 8.5pt !important;
+    page-break-inside: avoid !important;
   }
 
   #printable-invoice-modal-content table,
-  #printable-gst-invoice table {
+  #printable-gst-invoice table,
+  #printable-gst-invoice-content table,
+  .unified-gst-invoice-sheet table {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
@@ -5221,7 +5279,9 @@ header.main-site-header {
   }
 
   #printable-invoice-modal-content tr,
-  #printable-gst-invoice tr {
+  #printable-gst-invoice tr,
+  #printable-gst-invoice-content tr,
+  .unified-gst-invoice-sheet tr {
     page-break-inside: avoid;
     page-break-after: auto;
   }
@@ -5229,8 +5289,12 @@ header.main-site-header {
   #printable-invoice-modal-content th,
   #printable-invoice-modal-content td,
   #printable-gst-invoice th,
-  #printable-gst-invoice td {
-    padding: 6px 8px !important;
+  #printable-gst-invoice td,
+  #printable-gst-invoice-content th,
+  #printable-gst-invoice-content td,
+  .unified-gst-invoice-sheet th,
+  .unified-gst-invoice-sheet td {
+    padding: 4px 6px !important;
     word-break: break-word !important;
   }
 
@@ -5406,3 +5470,84 @@ header.main-site-header {
     grid-column: 1 / -1 !important;
   }
 }
+
+/* ========================================================================== */
+/* STATUTORY A4 GST INVOICE PRINT STYLES (Zero Cutoff, 4-Side Margins)         */
+/* ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-sizing: border-box !important;
+  }
+
+  html, body {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: hidden !important;
+  }
+
+  .no-print,
+  nav,
+  header,
+  footer,
+  .navbar-root,
+  .cart-drawer-overlay,
+  #btn-print-gst-invoice,
+  #btn-close-invoice-modal,
+  #invoice-copy-selector-group {
+    display: none !important;
+  }
+
+  .modal-overlay {
+    position: static !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .modal-content {
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  #printable-gst-invoice-content.unified-gst-invoice-sheet {
+    width: 100% !important;
+    max-width: 190mm !important;
+    height: 278mm !important;
+    max-height: 278mm !important;
+    margin: 0 auto !important;
+    padding: 7mm 9mm !important;
+    border: 1.5px solid #0f172a !important;
+    background: #ffffff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #printable-gst-invoice-content.unified-gst-invoice-sheet > * {
+    margin-bottom: 0 !important;
+  }
+}
+

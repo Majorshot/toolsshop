@@ -1,6 +1,8 @@
 const dns = require('dns');
 try {
-  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+  if (process.platform === 'win32' || (!process.env.RENDER && process.env.NODE_ENV !== 'production')) {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  }
 } catch (e) {
   console.warn("DNS server setup notice:", e.message);
 }
@@ -118,9 +120,21 @@ const customerSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, trim: true, lowercase: true, default: '' },
   address: { type: String, default: '' },
+  landmark: { type: String, default: '' },
   district: { type: String, default: 'Pathanamthitta' },
   state: { type: String, default: 'Kerala' },
   pincode: { type: String, default: '689641' },
+  savedAddresses: [{
+    id: String,
+    name: String,
+    phone: String,
+    address: String,
+    landmark: String,
+    district: String,
+    state: String,
+    pincode: String,
+    isDefault: Boolean
+  }],
   notes: { type: String, default: '' },
   totalOrders: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
@@ -129,6 +143,7 @@ const customerSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 customerSchema.index({ name: 'text', district: 'text' });
+customerSchema.index({ email: 1 });
 customerSchema.index({ totalSpent: -1 });
 customerSchema.index({ totalOrders: -1 });
 customerSchema.index({ createdAt: -1 });
@@ -148,7 +163,9 @@ const couponSchema = new mongoose.Schema({
   usageCount: { type: Number, default: 0 },
   usageLimitPerUser: { type: Number, default: 0 },
   maxTotalUses: { type: Number, default: 0 },
-  usedByPhones: [{ type: String }]
+  usedByPhones: [{ type: String }],
+  usedByCustomers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }],
+  usedByEmails: [{ type: String }]
 }, { timestamps: true });
 
 const repairSchema = new mongoose.Schema({
@@ -218,19 +235,54 @@ async function syncCustomerFromOrder(orderData) {
         existing.email = email;
       }
       if (address) existing.address = address;
+      if (orderData.customer?.landmark) existing.landmark = orderData.customer.landmark;
       if (district) existing.district = district;
       if (pincode) existing.pincode = pincode;
+
+      // Maintain saved addresses list for 1-click address selection
+      if (address && pincode) {
+        if (!existing.savedAddresses) existing.savedAddresses = [];
+        const exists = existing.savedAddresses.some(a => a.address === address && a.pincode === pincode);
+        if (!exists) {
+          existing.savedAddresses.push({
+            id: `addr-${Date.now()}`,
+            name: name || existing.name,
+            phone: phone || existing.phone,
+            address,
+            landmark: orderData.customer?.landmark || '',
+            district,
+            state: 'Kerala',
+            pincode,
+            isDefault: existing.savedAddresses.length === 0
+          });
+        }
+      }
+
       await existing.save();
       return existing;
     } else {
+      const initialAddresses = (address && pincode) ? [{
+        id: `addr-${Date.now()}`,
+        name: name || 'Customer',
+        phone,
+        address,
+        landmark: orderData.customer?.landmark || '',
+        district,
+        state: 'Kerala',
+        pincode,
+        isDefault: true
+      }] : [];
+
       const newCust = new CustomerModel({
         phone,
         name,
         email,
         address,
+        landmark: orderData.customer?.landmark || '',
         district,
         state: 'Kerala',
         pincode,
+        savedAddresses: initialAddresses,
         totalOrders: orderIncrement,
         totalSpent: orderAmount,
         lastOrderAt: new Date()
@@ -241,6 +293,79 @@ async function syncCustomerFromOrder(orderData) {
     console.warn("Could not sync customer from order:", err.message);
     return null;
   }
+}
+
+async function findOrCreateCustomer(data = {}) {
+  ensureMongoConnected();
+  const rawPhone = data.phone || data.identifier;
+  const phone = cleanCustomerPhone(rawPhone);
+  const email = (data.email || (data.identifier && data.identifier.includes('@') ? data.identifier : '')).trim().toLowerCase();
+  const name = (data.name || '').trim();
+
+  let customer = null;
+  if (phone && phone.length >= 7) {
+    customer = await CustomerModel.findOne({
+      $or: [
+        { phone },
+        { phone: `+91${phone}` },
+        { phone: { $regex: phone } }
+      ]
+    });
+  }
+  if (!customer && email && email.includes('@')) {
+    customer = await CustomerModel.findOne({ email });
+  }
+
+  if (customer) {
+    let changed = false;
+    if (name && name !== 'Customer' && (!customer.name || customer.name === 'Customer')) {
+      customer.name = name;
+      changed = true;
+    }
+    if (email && email.includes('@') && (!customer.email || !customer.email.includes('@'))) {
+      customer.email = email;
+      changed = true;
+    }
+    if (data.address && !customer.address) {
+      customer.address = data.address;
+      changed = true;
+    }
+    if (data.district && !customer.district) {
+      customer.district = data.district;
+      changed = true;
+    }
+    if (data.pincode && !customer.pincode) {
+      customer.pincode = data.pincode;
+      changed = true;
+    }
+    if (changed) await customer.save();
+    return customer;
+  }
+
+  const newCust = new CustomerModel({
+    phone: phone || `cust-${Date.now()}`,
+    name: name || 'Customer',
+    email,
+    address: data.address || '',
+    landmark: data.landmark || '',
+    district: data.district || 'Pathanamthitta',
+    state: 'Kerala',
+    pincode: data.pincode || '689641',
+    savedAddresses: (data.address && data.pincode) ? [{
+      id: `addr-${Date.now()}`,
+      name: name || 'Customer',
+      phone: phone || '',
+      address: data.address,
+      landmark: data.landmark || '',
+      district: data.district || 'Pathanamthitta',
+      state: 'Kerala',
+      pincode: data.pincode,
+      isDefault: true
+    }] : [],
+    totalOrders: 0,
+    totalSpent: 0
+  });
+  return await newCust.save();
 }
 
 async function recalculateCustomerMetrics(phone) {
@@ -705,7 +830,7 @@ const db = {
   async getCustomerOrders(query) {
     ensureMongoConnected();
     if (!query) return await OrderModel.find().sort({ createdAt: -1 }).lean();
-    const cleanQ = query.trim();
+    const cleanQ = String(query).trim();
     const digitsOnly = cleanQ.replace(/[^0-9]/g, '').slice(-10);
 
     const conditions = [
@@ -713,6 +838,26 @@ const db = {
       { 'customer.email': { $regex: cleanQ, $options: 'i' } },
       { 'customer.name': { $regex: cleanQ, $options: 'i' } }
     ];
+
+    if (mongoose.isValidObjectId(cleanQ)) {
+      conditions.push({ customerId: cleanQ });
+      try {
+        const custDoc = await CustomerModel.findById(cleanQ).lean();
+        if (custDoc) {
+          if (custDoc.phone) {
+            const custDigits = custDoc.phone.replace(/[^0-9]/g, '').slice(-10);
+            if (custDigits.length >= 7) {
+              conditions.push({ 'customer.phone': { $regex: custDigits, $options: 'i' } });
+            }
+          }
+          if (custDoc.email) {
+            conditions.push({ 'customer.email': { $regex: custDoc.email.trim(), $options: 'i' } });
+          }
+        }
+      } catch (e) {
+        // Silently proceed with customerId query
+      }
+    }
 
     if (digitsOnly.length >= 7) {
       conditions.push({ 'customer.phone': { $regex: digitsOnly, $options: 'i' } });
@@ -733,9 +878,19 @@ const db = {
     const transactionId = orderData.transactionId || (isPrepaid ? `TXN-VPT-${Date.now().toString().slice(-8)}` : null);
     const paymentStatus = orderData.paymentStatus || (isPrepaid ? 'PAID' : 'PENDING');
 
+    // Link customer account from CustomerModel
+    let customerDoc = null;
+    if (orderData.customerId && mongoose.isValidObjectId(orderData.customerId)) {
+      customerDoc = await CustomerModel.findById(orderData.customerId);
+    }
+    if (!customerDoc && (orderData.customer?.phone || orderData.customer?.email)) {
+      customerDoc = await findOrCreateCustomer(orderData.customer);
+    }
+
     const newOrder = {
       id,
       ...orderData,
+      customerId: customerDoc ? customerDoc._id : (orderData.customerId || null),
       status: "Order Placed",
       paymentStatus,
       transactionId,
@@ -1052,22 +1207,59 @@ const db = {
       };
     }
 
-    // 3. Single-Use Per Customer Phone Check
+    // 3. Single-Use Per Customer Account / Email / Phone Check
     const isSingleUse = Number(coupon.usageLimitPerUser) === 1;
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '').slice(-10);
+    let customerId = null;
+    let rawPhone = '';
+    let email = '';
 
-    if (isSingleUse && cleanPhone.length === 10) {
-      const alreadyUsedInCoupon = Array.isArray(coupon.usedByPhones) && coupon.usedByPhones.includes(cleanPhone);
-      const alreadyUsedInOrders = await OrderModel.findOne({
-        'customer.phone': { $regex: cleanPhone },
-        couponCode: cleanCode
-      }).lean();
+    if (typeof phone === 'string') {
+      rawPhone = phone;
+    } else if (phone && typeof phone === 'object') {
+      customerId = phone.customerId || phone.id || phone._id;
+      rawPhone = phone.phone || phone.customerPhone;
+      email = (phone.email || '').trim().toLowerCase();
+    }
 
-      if (alreadyUsedInCoupon || alreadyUsedInOrders) {
-        return {
-          valid: false,
-          message: `⚠️ Coupon "${cleanCode}" has already been redeemed by mobile number +91 ${cleanPhone}. This promotion is strictly limited to 1 order per customer.`
-        };
+    const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '').slice(-10);
+
+    if (isSingleUse) {
+      // Check customer account ID
+      if (customerId) {
+        const usedByCustomer = Array.isArray(coupon.usedByCustomers) && coupon.usedByCustomers.some(id => String(id) === String(customerId));
+        if (usedByCustomer) {
+          return {
+            valid: false,
+            message: `⚠️ Coupon "${cleanCode}" has already been redeemed by your account. This promotion is strictly limited to 1 order per customer.`
+          };
+        }
+      }
+
+      // Check customer email
+      if (email && email.includes('@')) {
+        const usedByEmail = Array.isArray(coupon.usedByEmails) && coupon.usedByEmails.includes(email);
+        if (usedByEmail) {
+          return {
+            valid: false,
+            message: `⚠️ Coupon "${cleanCode}" has already been redeemed by email ${email}. This promotion is strictly limited to 1 order per customer.`
+          };
+        }
+      }
+
+      // Check customer mobile phone
+      if (cleanPhone.length === 10) {
+        const alreadyUsedInCoupon = Array.isArray(coupon.usedByPhones) && coupon.usedByPhones.includes(cleanPhone);
+        const alreadyUsedInOrders = await OrderModel.findOne({
+          'customer.phone': { $regex: cleanPhone },
+          couponCode: cleanCode
+        }).lean();
+
+        if (alreadyUsedInCoupon || alreadyUsedInOrders) {
+          return {
+            valid: false,
+            message: `⚠️ Coupon "${cleanCode}" has already been redeemed by mobile number +91 ${cleanPhone}. This promotion is strictly limited to 1 order per customer.`
+          };
+        }
       }
     }
 
@@ -1080,7 +1272,7 @@ const db = {
 
     return {
       valid: true,
-      requiresPhone: isSingleUse && cleanPhone.length !== 10,
+      requiresPhone: isSingleUse && cleanPhone.length !== 10 && !customerId,
       coupon: {
         code: coupon.code,
         discountType: coupon.discountType,
@@ -1098,16 +1290,42 @@ const db = {
     };
   },
 
-  async recordCouponUsage(code, phone = '') {
+  async recordCouponUsage(code, userIdent = {}) {
     ensureMongoConnected();
     const cleanCode = (code || '').trim().toUpperCase();
     if (!cleanCode) return null;
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '').slice(-10);
+
+    let customerId = null;
+    let rawPhone = '';
+    let email = '';
+
+    if (typeof userIdent === 'string') {
+      rawPhone = userIdent;
+    } else if (userIdent && typeof userIdent === 'object') {
+      customerId = userIdent.customerId || userIdent.id || userIdent._id;
+      rawPhone = userIdent.phone || userIdent.customerPhone;
+      email = (userIdent.email || '').trim().toLowerCase();
+    }
+
+    const cleanPhone = (rawPhone || '').replace(/[^0-9]/g, '').slice(-10);
 
     const updateObj = { $inc: { usageCount: 1 } };
+    const addToSet = {};
+
     if (cleanPhone.length === 10) {
-      updateObj.$addToSet = { usedByPhones: cleanPhone };
+      addToSet.usedByPhones = cleanPhone;
     }
+    if (customerId && mongoose.isValidObjectId(customerId)) {
+      addToSet.usedByCustomers = customerId;
+    }
+    if (email && email.includes('@')) {
+      addToSet.usedByEmails = email;
+    }
+
+    if (Object.keys(addToSet).length > 0) {
+      updateObj.$addToSet = addToSet;
+    }
+
     return await CouponModel.updateOne({ code: cleanCode }, updateObj);
   },
 
@@ -1324,5 +1542,6 @@ const db = {
 db.OrderModel = OrderModel;
 db.ProductModel = ProductModel;
 db.CustomerModel = CustomerModel;
+db.findOrCreateCustomer = findOrCreateCustomer;
 
 module.exports = db;

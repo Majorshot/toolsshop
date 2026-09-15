@@ -20,6 +20,7 @@ import {
   Tag
 } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
+import AnimatedContent from '../components/AnimatedContent';
 import { api } from '../services/api';
 
 // Helper to assign a relevant icon to any dynamic category
@@ -159,36 +160,42 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
 
             {/* Left 50% Content on Solid Black Side */}
             <div className="hero-widescreen-left-content">
-              <h1 className="hero-widescreen-title" title={currentProduct.name}>
-                {formatHeroProductName(currentProduct.name)}
-              </h1>
+              <AnimatedContent distance={40} direction="vertical" duration={0.8} delay={0.1}>
+                <h1 className="hero-widescreen-title" title={currentProduct.name}>
+                  {formatHeroProductName(currentProduct.name)}
+                </h1>
+              </AnimatedContent>
 
-              <p className="hero-widescreen-subtext">
-                {currentProduct.description
-                  ? (currentProduct.description.length > 155 ? currentProduct.description.slice(0, 155) + '...' : currentProduct.description)
-                  : 'Certified heavy-duty machinery with official factory warranty & dedicated in-house clinic repair support.'}
-              </p>
+              <AnimatedContent distance={30} direction="vertical" duration={0.8} delay={0.25}>
+                <p className="hero-widescreen-subtext">
+                  {currentProduct.description
+                    ? (currentProduct.description.length > 155 ? currentProduct.description.slice(0, 155) + '...' : currentProduct.description)
+                    : 'Certified heavy-duty machinery with official factory warranty & dedicated in-house clinic repair support.'}
+                </p>
+              </AnimatedContent>
 
-              <div className="hero-widescreen-actions">
-                <Link to="/shop" className="hero-widescreen-cta-btn" id="home-widescreen-open-shop-btn">
-                  <span>Open Shop Page</span>
-                  <ArrowRight size={18} />
-                </Link>
+              <AnimatedContent distance={25} direction="vertical" duration={0.7} delay={0.4}>
+                <div className="hero-widescreen-actions">
+                  <Link
+                    to={`/product/${currentProduct.id || currentProduct._id}`}
+                    className="hero-widescreen-cta-btn"
+                    id="home-inspect-current-tool-btn"
+                  >
+                    <span>View • ₹{currentProduct.price?.toLocaleString('en-IN')}</span>
+                    <ArrowRight size={18} />
+                  </Link>
 
-                <Link
-                  to={`/product/${currentProduct.id || currentProduct._id}`}
-                  className="hero-inspect-product-btn"
-                  id="home-inspect-current-tool-btn"
-                >
-                  <span>View • ₹{currentProduct.price?.toLocaleString('en-IN')}</span>
-                  <ArrowRight size={15} />
-                </Link>
-              </div>
+                  <Link to="/shop" className="hero-inspect-product-btn" id="home-widescreen-open-shop-btn">
+                    <span>Open Shop Page</span>
+                    <ArrowRight size={15} />
+                  </Link>
+                </div>
+              </AnimatedContent>
             </div>
 
             {/* Bottom-Right / Slide Controls & Live Product Preview */}
             {heroProducts.length > 1 && (
-              <div className="hero-widescreen-controls">
+              <AnimatedContent distance={30} direction="vertical" duration={0.8} delay={0.45} className="hero-widescreen-controls">
                 <div className="hero-widescreen-dots">
                   {heroProducts.map((p, idx) => (
                     <button
@@ -209,7 +216,7 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
                     {currentProduct.name}
                   </span>
                 </div>
-              </div>
+              </AnimatedContent>
             )}
           </div>
         </section>
@@ -219,281 +226,312 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
       <div className="container">
         {/* SECTION 2: Horizontal Category Cards (Full Image Background + Bottom Name & Button) */}
         <section className="categories-horizontal-section">
-          <div className="categories-header-row">
-            <div>
-              <div className="categories-section-badge">
-                <Sparkles size={13} />
-                <span>AUTHORIZED CATEGORIES</span>
+          <AnimatedContent distance={40} delay={0.08}>
+            <div className="categories-header-row">
+              <div>
+                <div className="categories-section-badge">
+                  <Sparkles size={13} />
+                  <span>AUTHORIZED CATEGORIES</span>
+                </div>
+                <h2 className="categories-section-title">
+                  Shop by Category
+                </h2>
+                <p className="categories-section-sub">
+                  Explore specialized power tool lines configured directly from our store catalog
+                </p>
               </div>
-              <h2 className="categories-section-title">
-                Shop by Category
-              </h2>
-              <p className="categories-section-sub">
-                Explore specialized power tool lines configured directly from our store catalog
-              </p>
-            </div>
 
-            <div className="categories-scroll-buttons">
-              <button
-                type="button"
-                className="btn-category-arrow"
-                onClick={() => handleScrollCategories('left')}
-                aria-label="Scroll Categories Left"
-                title="Previous Categories"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                type="button"
-                className="btn-category-arrow"
-                onClick={() => handleScrollCategories('right')}
-                aria-label="Scroll Categories Right"
-                title="Next Categories"
-              >
-                <ChevronRight size={18} />
-              </button>
+              <div className="categories-scroll-buttons">
+                <button
+                  type="button"
+                  className="btn-category-arrow"
+                  onClick={() => handleScrollCategories('left')}
+                  aria-label="Scroll Categories Left"
+                  title="Previous Categories"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  className="btn-category-arrow"
+                  onClick={() => handleScrollCategories('right')}
+                  aria-label="Scroll Categories Right"
+                  title="Next Categories"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
-          </div>
+          </AnimatedContent>
 
           {/* Horizontal Track with Full-Background Category Cards */}
-          <div className="categories-horizontal-track no-scrollbar" ref={categoryScrollRef}>
-            {categoryCardsData.map(cat => (
+          <AnimatedContent distance={50} delay={0.2}>
+            <div className="categories-horizontal-track no-scrollbar" ref={categoryScrollRef}>
+              {categoryCardsData.map(cat => (
+                <Link
+                  key={cat.id}
+                  to={`/shop?category=${cat.id}`}
+                  className="category-full-card"
+                  id={`cat-card-${cat.id}`}
+                >
+                  {/* Product Image as Full Background */}
+                  <img src={cat.image} alt={cat.name} className="cat-card-full-bg" />
+                  <div className="cat-card-full-scrim" />
+
+                  {/* Top Category Icon Badge */}
+                  <div className="cat-card-top-badge">
+                    <cat.icon size={16} />
+                  </div>
+
+                  {/* Bottom Overlay: Category Name & Button */}
+                  <div className="cat-card-bottom-overlay">
+                    <span className="cat-card-overlay-count">
+                      {cat.count > 0 ? `${cat.count} Tools in Catalog` : 'Authorized Category'}
+                    </span>
+                    <h3 className="cat-card-overlay-name">{cat.name}</h3>
+                    <div className="cat-card-overlay-btn">
+                      <span>Shop Now</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+
+              {/* Final Card: View All Categories */}
               <Link
-                key={cat.id}
-                to={`/shop?category=${cat.id}`}
-                className="category-full-card"
-                id={`cat-card-${cat.id}`}
+                to="/shop"
+                className="category-full-card category-full-card-all"
+                id="cat-card-view-all"
               >
-                {/* Product Image as Full Background */}
-                <img src={cat.image} alt={cat.name} className="cat-card-full-bg" />
-                <div className="cat-card-full-scrim" />
-
-                {/* Top Category Icon Badge */}
-                <div className="cat-card-top-badge">
-                  <cat.icon size={16} />
-                </div>
-
-                {/* Bottom Overlay: Category Name & Button */}
-                <div className="cat-card-bottom-overlay">
-                  <span className="cat-card-overlay-count">
-                    {cat.count > 0 ? `${cat.count} Tools in Catalog` : 'Authorized Category'}
+                <div className="cat-card-all-bg-glow" />
+                <div className="cat-card-all-inner">
+                  <div className="cat-card-all-icon">
+                    <Grid size={26} />
+                  </div>
+                  <span className="cat-card-overlay-count" style={{ color: '#facc15' }}>
+                    FULL SHOWROOM
                   </span>
-                  <h3 className="cat-card-overlay-name">{cat.name}</h3>
-                  <div className="cat-card-overlay-btn">
-                    <span>Shop Now</span>
+                  <h3 className="cat-card-overlay-name" style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
+                    View All Categories
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0', lineHeight: 1.45 }}>
+                    Browse our complete catalog of {products.length}+ power tools & genuine spares
+                  </p>
+                  <div className="cat-card-overlay-btn cat-card-all-btn">
+                    <span>Open Full Shop</span>
                     <ArrowRight size={14} />
                   </div>
                 </div>
               </Link>
-            ))}
-
-            {/* Final Card: View All Categories */}
-            <Link
-              to="/shop"
-              className="category-full-card category-full-card-all"
-              id="cat-card-view-all"
-            >
-              <div className="cat-card-all-bg-glow" />
-              <div className="cat-card-all-inner">
-                <div className="cat-card-all-icon">
-                  <Grid size={26} />
-                </div>
-                <span className="cat-card-overlay-count" style={{ color: '#facc15' }}>
-                  FULL SHOWROOM
-                </span>
-                <h3 className="cat-card-overlay-name" style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
-                  View All Categories
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0', lineHeight: 1.45 }}>
-                  Browse our complete catalog of {products.length}+ power tools & genuine spares
-                </p>
-                <div className="cat-card-overlay-btn cat-card-all-btn">
-                  <span>Open Full Shop</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
-            </Link>
-          </div>
+            </div>
+          </AnimatedContent>
         </section>
 
         {/* Dynamic Brand Partners from Backend (Curated subset + View All button) */}
         {displayBrands.length > 0 && (
-          <section className="brand-strip-clean">
-            <span className="brand-strip-title">Authorized Brand Partners</span>
-            <div className="brand-names-row">
-              {displayBrands.slice(0, 6).map((brand) => (
-                <Link
-                  key={brand}
-                  to={`/shop?brand=${encodeURIComponent(brand.toLowerCase())}`}
-                  className="brand-name-item"
-                >
-                  {brand.toUpperCase()}
+          <AnimatedContent distance={30} delay={0.1}>
+            <section className="brand-strip-clean">
+              <span className="brand-strip-title">Authorized Brand Partners</span>
+              <div className="brand-names-row">
+                {displayBrands.slice(0, 6).map((brand) => (
+                  <Link
+                    key={brand}
+                    to={`/shop?brand=${encodeURIComponent(brand.toLowerCase())}`}
+                    className="brand-name-item"
+                  >
+                    {brand.toUpperCase()}
+                  </Link>
+                ))}
+                <Link to="/shop" className="brand-name-item brand-view-all-pill" id="home-brands-view-all-btn">
+                  <span>VIEW ALL</span>
+                  <ArrowRight size={13} />
                 </Link>
-              ))}
-              <Link to="/shop" className="brand-name-item brand-view-all-pill" id="home-brands-view-all-btn">
-                <span>VIEW ALL</span>
-                <ArrowRight size={13} />
-              </Link>
-            </div>
-          </section>
+              </div>
+            </section>
+          </AnimatedContent>
         )}
 
         {/* Featured Bestsellers Section */}
         <section style={{ marginBottom: '48px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                Featured & Trending Equipment
-              </h2>
-              <p style={{ fontSize: '0.86rem', color: '#64748b' }}>
-                Handpicked professional tools favored by Kerala contractors and workshops
-              </p>
-            </div>
+          <AnimatedContent distance={30} delay={0.08}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                  Featured & Trending Equipment
+                </h2>
+                <p style={{ fontSize: '0.86rem', color: '#64748b' }}>
+                  Handpicked professional tools favored by Kerala contractors and workshops
+                </p>
+              </div>
 
-            <Link
-              to="/shop"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '0.88rem',
-                fontWeight: '700',
-                color: 'var(--brand-primary)',
-                textDecoration: 'none'
-              }}
-            >
-              <span>View Full Catalog</span>
-              <ArrowRight size={16} />
-            </Link>
-          </div>
+              <Link
+                to="/shop"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '0.88rem',
+                  fontWeight: '700',
+                  color: 'var(--brand-primary)',
+                  textDecoration: 'none'
+                }}
+              >
+                <span>View Full Catalog</span>
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          </AnimatedContent>
 
           <div className="product-grid">
-            {featuredTools.map(product => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onSelectProduct={onSelectProduct}
-              />
+            {featuredTools.map((product, idx) => (
+              <AnimatedContent
+                key={product.id || product._id || idx}
+                distance={40}
+                delay={idx * 0.06}
+                duration={0.7}
+                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+              >
+                <ProductCard
+                  product={product}
+                  onSelectProduct={onSelectProduct}
+                />
+              </AnimatedContent>
             ))}
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '32px' }}>
-            <Link to="/shop" className="btn-hero-secondary" style={{ padding: '12px 32px' }}>
-              <span>Explore All {products.length}+ Tools in Shop</span>
-              <ArrowRight size={16} />
-            </Link>
-          </div>
+          <AnimatedContent distance={20} delay={0.15}>
+            <div style={{ textAlign: 'center', marginTop: '32px' }}>
+              <Link to="/shop" className="btn-hero-secondary" style={{ padding: '12px 32px' }}>
+                <span>Explore All {products.length}+ Tools in Shop</span>
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          </AnimatedContent>
         </section>
 
         {/* Why Choose Variathu */}
         <section style={{ marginBottom: '48px' }}>
-          <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 28px' }}>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
-              The Variathu Advantage
-            </h3>
-            <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
-              Serving tradesmen, contractors, and DIY woodworkers across Pathanamthitta district
-            </p>
-          </div>
+          <AnimatedContent distance={30} delay={0.08}>
+            <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 28px' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
+                The Variathu Advantage
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
+                Serving tradesmen, contractors, and DIY woodworkers across Pathanamthitta district
+              </p>
+            </div>
+          </AnimatedContent>
 
           <div className="about-features-grid">
-            <div className="about-feature-card">
-              <div className="about-feature-icon">
-                <ShieldCheck size={22} />
+            <AnimatedContent distance={40} delay={0.1}>
+              <div className="about-feature-card">
+                <div className="about-feature-icon">
+                  <ShieldCheck size={22} />
+                </div>
+                <h4 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                  100% Genuine Guarantee
+                </h4>
+                <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5 }}>
+                  Direct factory sourcing from Bosch India, Makita, and DeWalt. Every unit carries authentic serial numbers and official warranties.
+                </p>
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
-                100% Genuine Guarantee
-              </h4>
-              <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5 }}>
-                Direct factory sourcing from Bosch India, Makita, and DeWalt. Every unit carries authentic serial numbers and official warranties.
-              </p>
-            </div>
+            </AnimatedContent>
 
-            <div className="about-feature-card">
-              <div className="about-feature-icon" style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7' }}>
-                <Wrench size={22} />
+            <AnimatedContent distance={40} delay={0.2}>
+              <div className="about-feature-card">
+                <div className="about-feature-icon" style={{ background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7' }}>
+                  <Wrench size={22} />
+                </div>
+                <h4 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                  In-House Service Clinic
+                </h4>
+                <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5 }}>
+                  We do not outsource repairs. Our Poyanil Junction shop houses expert armature rewinding, switch replacements, and genuine carbon brushes.
+                </p>
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
-                In-House Service Clinic
-              </h4>
-              <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5 }}>
-                We do not outsource repairs. Our Poyanil Junction shop houses expert armature rewinding, switch replacements, and genuine carbon brushes.
-              </p>
-            </div>
+            </AnimatedContent>
 
-            <div className="about-feature-card">
-              <div className="about-feature-icon" style={{ background: 'rgba(22, 163, 74, 0.1)', color: '#16a34a' }}>
-                <Package size={22} />
+            <AnimatedContent distance={40} delay={0.3}>
+              <div className="about-feature-card">
+                <div className="about-feature-icon" style={{ background: 'rgba(22, 163, 74, 0.1)', color: '#16a34a' }}>
+                  <Package size={22} />
+                </div>
+                <h4 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                  Store Pickup & Delivery
+                </h4>
+                <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5 }}>
+                  Pick up ready orders within 1 hour at Poyanil Building, Kozhencherry, or opt for speed courier delivery across all 14 Kerala districts.
+                </p>
               </div>
-              <h4 style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
-                Store Pickup & Delivery
-              </h4>
-              <p style={{ fontSize: '0.84rem', color: '#64748b', lineHeight: 1.5 }}>
-                Pick up ready orders within 1 hour at Poyanil Building, Kozhencherry, or opt for speed courier delivery across all 14 Kerala districts.
-              </p>
-            </div>
+            </AnimatedContent>
           </div>
         </section>
 
         {/* Kozhencherry Store Location Section */}
-        <section
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '16px',
-            padding: '32px 24px',
-            marginBottom: '40px',
-            boxShadow: 'var(--shadow-xs)'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-            <div>
-              <span style={{ fontSize: '0.76rem', color: 'var(--brand-primary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Visit Our Shop in Kozhencherry
-              </span>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', marginTop: '4px', marginBottom: '8px' }}>
-                Variathu Power Tools
-              </h3>
-              <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.6, maxWidth: '520px' }}>
-                Poyanil Building, Near St Thomas Higher Secondary School Ground,<br />
-                Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala.
-              </p>
+        <AnimatedContent distance={40} delay={0.1}>
+          <section
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              padding: '32px 24px',
+              marginBottom: '40px',
+              boxShadow: 'var(--shadow-xs)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+              <div>
+                <span style={{ fontSize: '0.76rem', color: 'var(--brand-primary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Visit Our Shop in Kozhencherry
+                </span>
+                <div style={{ margin: '8px 0 10px' }}>
+                  <img
+                    src="/Logo.jpeg"
+                    alt="Variathu Power Tools"
+                    style={{ height: '36px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
+                  />
+                </div>
+                <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.6, maxWidth: '520px' }}>
+                  Poyanil Building, Near St Thomas Higher Secondary School Ground,<br />
+                  Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                <a
+                  href="tel:+919447123456"
+                  className="btn-hero-secondary"
+                  style={{ fontSize: '0.86rem', padding: '10px 18px' }}
+                >
+                  <Phone size={15} style={{ color: 'var(--brand-primary)' }} />
+                  <span>Call +91 94471 23456</span>
+                </a>
+
+                <a
+                  href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20am%20heading%20to%20your%20shop%20at%20Poyanil%20Junction."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-hero-secondary"
+                  style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a', fontSize: '0.86rem', padding: '10px 18px' }}
+                >
+                  <MessageCircle size={15} />
+                  <span>WhatsApp Us</span>
+                </a>
+
+                <a
+                  href="https://maps.google.com/?q=Poyanil+Junction+Kozhencherry+Pathanamthitta"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-hero-clean"
+                  style={{ fontSize: '0.86rem', padding: '10px 18px' }}
+                >
+                  <Navigation size={15} />
+                  <span>Get Directions</span>
+                </a>
+              </div>
             </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              <a
-                href="tel:+919447123456"
-                className="btn-hero-secondary"
-                style={{ fontSize: '0.86rem', padding: '10px 18px' }}
-              >
-                <Phone size={15} style={{ color: 'var(--brand-primary)' }} />
-                <span>Call +91 94471 23456</span>
-              </a>
-
-              <a
-                href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20am%20heading%20to%20your%20shop%20at%20Poyanil%20Junction."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-hero-secondary"
-                style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a', fontSize: '0.86rem', padding: '10px 18px' }}
-              >
-                <MessageCircle size={15} />
-                <span>WhatsApp Us</span>
-              </a>
-
-              <a
-                href="https://maps.google.com/?q=Poyanil+Junction+Kozhencherry+Pathanamthitta"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-hero-clean"
-                style={{ fontSize: '0.86rem', padding: '10px 18px' }}
-              >
-                <Navigation size={15} />
-                <span>Get Directions</span>
-              </a>
-            </div>
-          </div>
-        </section>
+          </section>
+        </AnimatedContent>
       </div>
     </div>
   );

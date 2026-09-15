@@ -108,7 +108,7 @@ export const CartProvider = ({ children }) => {
     setActiveCoupon(null);
   };
 
-  const applyCoupon = async (code, phone = '') => {
+  const applyCoupon = async (code, userIdent = '') => {
     const cleanCode = (code || '').trim().toUpperCase();
     if (!cleanCode) {
       showToast("Please enter a coupon code");
@@ -117,21 +117,24 @@ export const CartProvider = ({ children }) => {
 
     try {
       const currentSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const cleanPhone = (phone || '').replace(/[^0-9]/g, '').slice(-10);
-      const res = await api.validateCoupon(cleanCode, currentSubtotal, cleanPhone);
+      const userPayload = typeof userIdent === 'object'
+        ? userIdent
+        : { phone: (userIdent || '').replace(/[^0-9]/g, '').slice(-10) };
+
+      const res = await api.validateCoupon(cleanCode, currentSubtotal, userPayload);
 
       if (res && res.valid) {
         setActiveCoupon({
           ...res.coupon,
           requiresPhone: Boolean(res.requiresPhone),
-          verifiedPhone: res.requiresPhone ? '' : cleanPhone
+          verifiedPhone: res.requiresPhone ? '' : (userPayload.phone || '')
         });
         setAppliedDiscount(res.coupon.discountType === 'flat' ? res.coupon.discountValue : res.coupon.discountValue);
         setCouponCode(cleanCode);
 
         if (res.requiresPhone) {
-          showToast(`📱 Please enter your mobile number to verify this single-use coupon.`);
-          return { success: true, requiresPhone: true, message: "Please enter your 10-digit mobile number to verify this single-use offer." };
+          showToast(`📱 Please sign in or enter your mobile number to verify this single-use coupon.`);
+          return { success: true, requiresPhone: true, message: "Please sign in to verify this single-use offer for your account." };
         } else {
           showToast(res.message || `🎉 Coupon "${cleanCode}" applied!`);
           return { success: true, message: res.message };
@@ -151,21 +154,25 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const verifyCouponWithPhone = async (phone, { silent = false } = {}) => {
+  const verifyCouponWithPhone = async (userIdent, { silent = false } = {}) => {
     if (!activeCoupon) return { valid: true };
-    const cleanPhone = (phone || '').replace(/[^0-9]/g, '').slice(-10);
-    if (cleanPhone.length !== 10) {
-      if (!silent) showToast("Enter valid 10-digit mobile number");
+    const userPayload = typeof userIdent === 'object'
+      ? userIdent
+      : { phone: (userIdent || '').replace(/[^0-9]/g, '').slice(-10) };
+
+    const cleanPhone = userPayload.phone || '';
+    if (!userPayload.customerId && cleanPhone.length !== 10) {
+      if (!silent) showToast("Sign in or enter valid 10-digit mobile number");
       return { valid: false, message: "Enter valid 10-digit mobile number" };
     }
 
-    // If already verified for this exact phone number, prevent duplicate calls and toast spam
+    // If already verified for this exact phone number or account, prevent duplicate calls
     if (activeCoupon.verifiedPhone === cleanPhone && !activeCoupon.requiresPhone) {
       return { valid: true };
     }
 
     try {
-      const res = await api.validateCoupon(activeCoupon.code, subtotal, cleanPhone);
+      const res = await api.validateCoupon(activeCoupon.code, subtotal, userPayload);
       if (res && res.valid) {
         setActiveCoupon(prev => ({
           ...prev,
@@ -173,7 +180,7 @@ export const CartProvider = ({ children }) => {
           verifiedPhone: cleanPhone
         }));
         if (!silent) {
-          showToast(`✅ Verified! Coupon "${activeCoupon.code}" applied for +91 ${cleanPhone}`);
+          showToast(`✅ Verified! Coupon "${activeCoupon.code}" applied for your account`);
         }
         return { valid: true };
       } else {

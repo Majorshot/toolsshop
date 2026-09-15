@@ -7,7 +7,7 @@ import { ShopPage } from './pages/ShopPage';
 import { AboutPage } from './pages/AboutPage';
 import { CartPage } from './pages/CartPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
-import { CheckoutModal } from './components/CheckoutModal';
+import { CheckoutPage } from './pages/CheckoutPage';
 import { StoreInfoModal } from './components/StoreInfoModal';
 import { AdminModal } from './components/AdminModal';
 import { CartProvider, useCart } from './context/CartContext';
@@ -17,6 +17,7 @@ import { CustomerAccountPage } from './pages/CustomerAccountPage';
 import { StoreDashboardPage } from './pages/StoreDashboardPage';
 import { api } from './services/api';
 import { CheckCircle, MessageCircle } from 'lucide-react';
+import AnimatedContent from './components/AnimatedContent';
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -42,23 +43,33 @@ const MainApp = () => {
   const [sortBy, setSortBy] = useState('featured');
 
   // Modals
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
   // Store information
   const [storeInfo, setStoreInfo] = useState(null);
 
-  // Load all products for the store (unfiltered base)
-  const loadProducts = async () => {
+  // Load all products for the store (unfiltered base) with auto-retry
+  const loadProducts = async (retryCount = 0) => {
     setLoading(true);
-    setError(null);
     try {
       const res = await api.getProducts();
       setAllProducts(res.data || []);
+      setError(null);
+      // Also refresh store info if needed
+      api.getStoreInfo()
+        .then(sRes => { if (sRes?.data) setStoreInfo(sRes.data); })
+        .catch(() => {});
     } catch (err) {
-      console.error(err);
-      setError('Could not load power tools. Please verify backend connection.');
+      console.error('Failed to load products from backend:', err);
+      if (retryCount < 3) {
+        setError(`Connecting to database... (retrying ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          loadProducts(retryCount + 1);
+        }, 2500);
+      } else {
+        setError('Could not connect to equipment server. Please ensure backend is running on port 5000.');
+      }
     } finally {
       setLoading(false);
     }
@@ -120,6 +131,45 @@ const MainApp = () => {
         storeInfo={storeInfo}
       />
 
+      {/* Backend Disconnection Banner */}
+      {error && !loading && (
+        <div
+          style={{
+            background: '#fef2f2',
+            borderBottom: '1px solid #fecaca',
+            color: '#b91c1c',
+            padding: '10px 16px',
+            textAlign: 'center',
+            fontSize: '0.86rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            position: 'sticky',
+            top: '72px',
+            zIndex: 90
+          }}
+        >
+          <span>⚠️ {error}</span>
+          <button
+            type="button"
+            onClick={() => loadProducts(0)}
+            style={{
+              background: '#b91c1c',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '4px 12px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Retry Connection
+          </button>
+        </div>
+      )}
+
       {/* Routes Content */}
       <main className="app-main-content">
         <Routes>
@@ -140,6 +190,7 @@ const MainApp = () => {
                   products={allProducts}
                   loading={loading}
                   error={error}
+                  onRetry={() => loadProducts(0)}
                   activeCategory={activeCategory}
                   setActiveCategory={setActiveCategory}
                   activeBrand={activeBrand}
@@ -163,7 +214,11 @@ const MainApp = () => {
           />
           <Route
             path="/cart"
-            element={<div className="container"><CartPage onOpenCheckout={() => setIsCheckoutOpen(true)} /></div>}
+            element={<div className="container"><CartPage /></div>}
+          />
+          <Route
+            path="/checkout"
+            element={<CheckoutPage />}
           />
           <Route
             path="/login"
@@ -209,65 +264,60 @@ const MainApp = () => {
       </a>
 
       {/* Minimal Clean Footer */}
-      <footer className="main-footer-clean">
-        <div className="container">
-          <div className="footer-clean-grid">
-            <div className="footer-clean-col">
-              <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <img
-                  src="/logo.jpg"
-                  alt="Logo"
-                  style={{ width: '28px', height: '28px', borderRadius: '6px', objectFit: 'cover' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-                VARIATHU POWER TOOLS
-              </h4>
-              <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '12px', maxWidth: '420px', fontSize: '0.86rem' }}>
-                Authorized dealership and repair center for professional power tools, high pressure washers, and genuine accessories in Kozhencherry, Pathanamthitta district, Kerala.
-              </p>
-              <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
-              </p>
+      <AnimatedContent distance={30} delay={0.1}>
+        <footer className="main-footer-clean">
+          <div className="container">
+            <div className="footer-clean-grid">
+              <div className="footer-clean-col">
+                <div style={{ marginBottom: '14px' }}>
+                  <img
+                    src="/Logo.jpeg"
+                    alt="Variathu Power Tools"
+                    style={{ height: '36px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
+                  />
+                </div>
+                <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '12px', maxWidth: '420px', fontSize: '0.86rem' }}>
+                  Authorized dealership and repair center for professional power tools, high pressure washers, and genuine accessories in Kozhencherry, Pathanamthitta district, Kerala.
+                </p>
+                <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                  📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
+                </p>
+              </div>
+
+              <div className="footer-clean-col">
+                <h4>Quick Navigation</h4>
+                <ul>
+                  <li><Link to="/">Home Page</Link></li>
+                  <li><Link to="/shop">Shop Power Tools</Link></li>
+                  <li><Link to="/about">About & Workshop Clinic</Link></li>
+                  <li><a href="#shop" onClick={() => setIsStoreModalOpen(true)}>Store Hours & Location</a></li>
+                </ul>
+              </div>
+
+              <div className="footer-clean-col">
+                <h4>Direct Contact</h4>
+                <ul>
+                  <li><a href="tel:+919447123456">📞 +91 94471 23456</a></li>
+                  <li><a href="https://wa.me/919447123456" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
+                  <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
+                  <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
+                </ul>
+              </div>
             </div>
 
-            <div className="footer-clean-col">
-              <h4>Quick Navigation</h4>
-              <ul>
-                <li><Link to="/">Home Page</Link></li>
-                <li><Link to="/shop">Shop Power Tools</Link></li>
-                <li><Link to="/about">About & Workshop Clinic</Link></li>
-                <li><a href="#shop" onClick={() => setIsStoreModalOpen(true)}>Store Hours & Location</a></li>
-              </ul>
-            </div>
-
-            <div className="footer-clean-col">
-              <h4>Direct Contact</h4>
-              <ul>
-                <li><a href="tel:+919447123456">📞 +91 94471 23456</a></li>
-                <li><a href="https://wa.me/919447123456" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
-                <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
-                <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
-              </ul>
+            <div className="footer-clean-bottom">
+              © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
             </div>
           </div>
-
-          <div className="footer-clean-bottom">
-            © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </AnimatedContent>
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
 
 
 
-      {/* Checkout Modal */}
-      {isCheckoutOpen && (
-        <CheckoutModal
-          onClose={() => setIsCheckoutOpen(false)}
-        />
-      )}
+
 
       {/* Store Info & Location Modal */}
       {isStoreModalOpen && (

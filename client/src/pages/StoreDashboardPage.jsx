@@ -4,6 +4,7 @@ import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, Ref
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
+import GstInvoiceModal from '../components/GstInvoiceModal';
 
 const STATUS_OPTIONS = [
   'Order Placed',
@@ -1356,9 +1357,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <h1>Store Owner Portal</h1>
               <span className="store-admin-badge">ADMIN ACCESS</span>
             </div>
-            <p className="store-portal-subtitle">
-              Variathu Power Tools • Poyanil Building, Kozhencherry, Kerala
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+              <img
+                src="/Logo.jpeg"
+                alt="Variathu Power Tools"
+                style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
+              />
+              <span className="store-portal-subtitle" style={{ margin: 0 }}>
+                • Poyanil Building, Kozhencherry, Kerala
+              </span>
+            </div>
           </div>
         </div>
 
@@ -5240,7 +5248,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Thomas Mathew"
+                    placeholder="Customer full name"
                     value={repairForm.customerName}
                     onChange={(e) => setRepairForm({ ...repairForm, customerName: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
@@ -5390,237 +5398,15 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 3: PRINTABLE GST TAX INVOICE (Feature 1)                             */}
+      {/* MODAL 3: PRINTABLE GST TAX INVOICE (Unified Indian/Kerala Compliance)     */}
       {/* ========================================================================= */}
       {selectedOrderForInvoice && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10005,
-            padding: '20px'
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '820px',
-              width: '100%',
-              maxHeight: '92vh',
-              overflowY: 'auto',
-              boxShadow: 'var(--shadow-2xl)'
-            }}
-          >
-            {/* Modal Actions Bar (hidden during actual print) */}
-            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', background: '#0f172a', color: '#ffffff', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={20} style={{ color: '#ea580c' }} />
-                <span style={{ fontWeight: '800', fontSize: '0.95rem' }}>
-                  GST Tax Invoice • {selectedOrderForInvoice.id}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    background: '#ea580c',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: '800',
-                    fontSize: '0.84rem',
-                    cursor: 'pointer'
-                  }}
-                  id="btn-print-trigger"
-                >
-                  <Printer size={15} />
-                  <span>Print Invoice (A4)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedOrderForInvoice(null)}
-                  style={{ background: '#334155', border: 'none', color: '#ffffff', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer' }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-
-            {/* Printable A4 Content */}
-            <div id="printable-invoice-modal-content" style={{ padding: '32px', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>
-              {/* Invoice Header */}
-              <div style={{ borderBottom: '2px solid #0f172a', paddingBottom: '16px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h1 style={{ fontSize: '1.5rem', fontWeight: '900', color: '#dc2626', margin: 0, textTransform: 'uppercase', letterSpacing: '-0.02em' }}>
-                    VARIATHU POWER TOOLS
-                  </h1>
-                  <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', marginTop: '2px' }}>
-                    Heavy Duty Equipment, Sales, Servicing & Genuine Spares
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: '4px', maxWidth: '420px', lineHeight: 1.4 }}>
-                    Poyanil Building, Near St Thomas Higher Secondary School Ground, Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: '#334155', marginTop: '3px' }}>
-                    <strong>GSTIN:</strong> 32AABCV4921E1Z8 &bull; <strong>State Code:</strong> 32 (Kerala) &bull; <strong>Ph:</strong> +91 94471 23456
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ background: '#0f172a', color: '#ffffff', padding: '4px 12px', borderRadius: '4px', fontWeight: '900', fontSize: '0.85rem', display: 'inline-block', letterSpacing: '0.05em' }}>
-                    TAX INVOICE
-                  </div>
-                  <div style={{ fontSize: '0.82rem', marginTop: '8px' }}>
-                    <strong>Invoice No:</strong> INV-{selectedOrderForInvoice.id.replace(/[^0-9]/g, '') || '1001'}
-                  </div>
-                  <div style={{ fontSize: '0.82rem', marginTop: '2px' }}>
-                    <strong>Invoice Date:</strong> {new Date(selectedOrderForInvoice.date).toLocaleDateString('en-IN')}
-                  </div>
-                  <div style={{ fontSize: '0.82rem', marginTop: '2px' }}>
-                    <strong>Payment Mode:</strong> {selectedOrderForInvoice.paymentMethod || 'UPI'} ({selectedOrderForInvoice.paymentStatus || 'PAID'})
-                  </div>
-                </div>
-              </div>
-
-              {/* Customer / Consignee Details */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '20px', fontSize: '0.82rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                    Billed To (Customer Details):
-                  </span>
-                  <div style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>{selectedOrderForInvoice.customer?.name}</div>
-                  <div>Phone: {selectedOrderForInvoice.customer?.phone}</div>
-                  <div>{selectedOrderForInvoice.customer?.address || 'Poyanil Junction, Kozhencherry'}</div>
-                  <div>District: {selectedOrderForInvoice.customer?.district || 'Pathanamthitta'}, Kerala - {selectedOrderForInvoice.customer?.pincode || '689641'}</div>
-                  <div>State Code: 32 (Kerala)</div>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                    Shipping / Delivery Mode:
-                  </span>
-                  <div style={{ fontWeight: '800', color: '#0f172a' }}>
-                    {selectedOrderForInvoice.deliveryType === 'store-pickup' 
-                      ? '🏢 Counter Handover at Poyanil Building, Kozhencherry' 
-                      : `🚚 ${selectedOrderForInvoice.courierPartner || 'Courier'} Doorstep Delivery`}
-                  </div>
-                  {selectedOrderForInvoice.pickupOtp && (
-                    <div style={{ marginTop: '4px', color: '#ea580c' }}>
-                      Counter Collection Code: <strong>{selectedOrderForInvoice.pickupOtp}</strong>
-                    </div>
-                  )}
-                  {selectedOrderForInvoice.awb && (
-                    <div style={{ marginTop: '4px', color: '#0284c7' }}>
-                      Courier AWB Tracking: <strong>{selectedOrderForInvoice.awb}</strong>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Itemized Goods Table */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: '#0f172a', color: '#ffffff', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 10px', width: '36px' }}>#</th>
-                    <th style={{ padding: '8px 10px' }}>Item Description</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'center' }}>HSN</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Taxable Val</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>CGST 9%</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>SGST 9%</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Total (INR)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedOrderForInvoice.items?.map((it, idx) => {
-                    const lineTotal = it.price * it.quantity;
-                    const lineTaxable = Math.round(lineTotal / 1.18);
-                    const lineCgst = Math.round((lineTotal - lineTaxable) / 2);
-                    const lineSgst = lineTotal - lineTaxable - lineCgst;
-
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '10px' }}>{idx + 1}</td>
-                        <td style={{ padding: '10px' }}>
-                          <strong>{it.name}</strong>
-                        </td>
-                        <td style={{ padding: '10px', textAlign: 'center', fontFamily: 'var(--font-mono)' }}>8467</td>
-                        <td style={{ padding: '10px', textAlign: 'center', fontWeight: '700' }}>{it.quantity}</td>
-                        <td style={{ padding: '10px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>₹{lineTaxable.toLocaleString('en-IN')}</td>
-                        <td style={{ padding: '10px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>₹{lineCgst.toLocaleString('en-IN')}</td>
-                        <td style={{ padding: '10px', textAlign: 'right', fontFamily: 'var(--font-mono)' }}>₹{lineSgst.toLocaleString('en-IN')}</td>
-                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>₹{lineTotal.toLocaleString('en-IN')}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              {/* Totals Summary */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderTop: '2px solid #0f172a', paddingTop: '16px' }}>
-                <div style={{ maxWidth: '420px', fontSize: '0.78rem', color: '#475569' }}>
-                  <div style={{ fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>Terms & Warranty:</div>
-                  <div>1. All machinery carries official manufacturer warranty serviced at our Kozhencherry workshop.</div>
-                  <div>2. Certified genuine spares used for all warranty & repairs.</div>
-                  <div>3. Subject to Pathanamthitta jurisdiction.</div>
-                </div>
-
-                <div style={{ width: '260px', fontSize: '0.84rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                    <span>Taxable Subtotal:</span>
-                    <strong style={{ fontFamily: 'var(--font-mono)' }}>
-                      ₹{Math.round(selectedOrderForInvoice.totalAmount / 1.18).toLocaleString('en-IN')}
-                    </strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                    <span>Total CGST (9%):</span>
-                    <span style={{ fontFamily: 'var(--font-mono)' }}>
-                      ₹{Math.round((selectedOrderForInvoice.totalAmount - Math.round(selectedOrderForInvoice.totalAmount / 1.18)) / 2).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                    <span>Total SGST (9%):</span>
-                    <span style={{ fontFamily: 'var(--font-mono)' }}>
-                      ₹{Math.round((selectedOrderForInvoice.totalAmount - Math.round(selectedOrderForInvoice.totalAmount / 1.18)) / 2).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #0f172a', marginTop: '6px', paddingTop: '6px', fontSize: '1.1rem' }}>
-                    <strong>Grand Total:</strong>
-                    <strong style={{ color: '#dc2626', fontFamily: 'var(--font-mono)' }}>
-                      ₹{Number(selectedOrderForInvoice.totalAmount || 0).toLocaleString('en-IN')}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Authorized Signatory Stamp */}
-              <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: '20px', borderTop: '1px dashed #cbd5e1' }}>
-                <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                  This is a computer generated commercial invoice. Original copy for buyer.
-                </div>
-                <div style={{ textAlign: 'center', width: '220px' }}>
-                  <div style={{ borderBottom: '1px solid #0f172a', paddingBottom: '30px', fontWeight: '800', fontSize: '0.82rem' }}>
-                    For VARIATHU POWER TOOLS
-                  </div>
-                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
-                    Authorized Signatory / Seal
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <GstInvoiceModal
+          order={selectedOrderForInvoice}
+          onClose={() => setSelectedOrderForInvoice(null)}
+          defaultCopy="Original for Recipient"
+          showCopySelector={true}
+        />
       )}
 
       {/* ========================================================================= */}
@@ -5763,8 +5549,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   <div style={{ fontWeight: '800', textTransform: 'uppercase', color: '#333333' }}>
                     SHIPPED BY / ORIGIN HUB:
                   </div>
-                  <div style={{ fontWeight: '900', fontSize: '0.82rem', marginTop: '2px' }}>
-                    VARIATHU POWER TOOLS
+                  <div style={{ margin: '4px 0' }}>
+                    <img
+                      src="/Logo.jpeg"
+                      alt="Variathu Power Tools"
+                      style={{ height: '24px', width: 'auto', objectFit: 'contain' }}
+                    />
                   </div>
                   <div>Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala</div>
                   <div>Helpline: +91 94471 23456</div>
@@ -5785,65 +5575,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
       )}
 
-      {/* Global CSS for Clean A4 / 4x6 Label Printing */}
+      {/* 4x6 Courier Shipping Label Print Style */}
       <style>{`
         @media print {
-          @page {
-            size: A4 portrait;
-            margin: 10mm;
-          }
-          html, body {
-            width: 100% !important;
-            height: auto !important;
-            min-height: 0 !important;
-            background: #ffffff !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body * {
-            visibility: hidden !important;
-          }
-          #printable-invoice-modal-content, #printable-invoice-modal-content * {
-            visibility: visible !important;
-          }
-          #printable-label-modal-content, #printable-label-modal-content * {
-            visibility: visible !important;
-          }
-          #printable-label-modal-content img {
-            visibility: visible !important;
-            display: block !important;
-            image-rendering: -webkit-optimize-contrast !important;
-            image-rendering: pixelated !important;
-            -ms-interpolation-mode: nearest-neighbor !important;
-          }
-          #printable-invoice-modal-content {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            max-width: 190mm !important;
-            box-sizing: border-box !important;
-            margin: 0 auto !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            box-shadow: none !important;
-            border: none !important;
-            overflow: visible !important;
-          }
-          #printable-invoice-modal-content table {
-            width: 100% !important;
-            max-width: 100% !important;
-            box-sizing: border-box !important;
-            table-layout: fixed !important;
-            page-break-inside: auto;
-          }
-          #printable-invoice-modal-content tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
           #printable-label-modal-content {
             position: fixed !important;
             left: 0 !important;
@@ -5856,6 +5590,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             border: 2.5px solid #000000 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            visibility: visible !important;
+          }
+          #printable-label-modal-content * {
+            visibility: visible !important;
+          }
+          #printable-label-modal-content img {
+            visibility: visible !important;
+            display: block !important;
+            image-rendering: -webkit-optimize-contrast !important;
+            image-rendering: pixelated !important;
           }
           .no-print {
             display: none !important;

@@ -19,6 +19,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
+import AnimatedContent from '../components/AnimatedContent';
 import { api } from '../services/api';
 
 const DEFAULT_CATEGORIES = [
@@ -51,7 +52,8 @@ export const ShopPage = ({
   setSearchQuery,
   sortBy,
   setSortBy,
-  onSelectProduct
+  onSelectProduct,
+  onRetry
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -63,7 +65,7 @@ export const ShopPage = ({
   const [dynamicCategories, setDynamicCategories] = useState(DEFAULT_CATEGORIES);
   const [dynamicBrands, setDynamicBrands] = useState([]);
 
-  // Search queries inside filter modal (Amazon / Flipkart inline filter search)
+  // Search queries inside filter modal (inline filter search)
   const [brandSearch, setBrandSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
 
@@ -132,7 +134,7 @@ export const ShopPage = ({
     if (catParam) setActiveCategory(catParam);
   }, [searchParams]);
 
-  // Dynamic Item Counts (Amazon / Flipkart style counts)
+  // Dynamic Item Counts
   const categoryCounts = useMemo(() => {
     const counts = {};
     products.forEach(p => {
@@ -296,74 +298,78 @@ export const ShopPage = ({
   return (
     <div style={{ padding: '16px 0 48px' }}>
       {/* Top Shop Banner / Header */}
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '4px' }}>
-          Equipment Catalog
-        </h1>
-        <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
-          Explore genuine power tools, cordless machinery, and industrial accessories backed by direct repair support in Kozhencherry.
-        </p>
-      </div>
+      <AnimatedContent distance={30} delay={0.05}>
+        <div style={{ marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+            Equipment Catalog
+          </h1>
+          <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
+            Explore genuine power tools, cordless machinery, and industrial accessories backed by direct repair support in Kozhencherry.
+          </p>
+        </div>
+      </AnimatedContent>
 
       {/* Top Controls Bar with Filter Button (Saves screen space & opens filter modal) */}
-      <div className="shop-top-controls">
-        {/* Search Input */}
-        <div className="search-input-clean">
-          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-          <input
-            type="text"
-            placeholder="Search Bosch, Makita, grinder, drill..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            id="shop-search-input"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-            >
-              <X size={15} />
-            </button>
-          )}
-        </div>
-
-        {/* Action Controls: Filter Button, Tool Counter, Sort Dropdown */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          {/* Prominent Filter Button that opens modal */}
-          <button
-            type="button"
-            className={`shop-filter-trigger-btn ${hasActiveFilters ? 'active' : ''}`}
-            onClick={() => setShowFilterModal(true)}
-            id="btn-open-filter-modal"
-            title="Open Filter Dialog"
-          >
-            <SlidersHorizontal size={16} />
-            <span>Filters</span>
-            {activeFiltersCount > 0 && (
-              <span className="shop-filter-badge" id="filter-badge-counter">
-                {activeFiltersCount}
-              </span>
+      <AnimatedContent distance={25} delay={0.1}>
+        <div className="shop-top-controls">
+          {/* Search Input */}
+          <div className="search-input-clean">
+            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Search Bosch, Makita, grinder, drill..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              id="shop-search-input"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={15} />
+              </button>
             )}
-          </button>
+          </div>
 
-          <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
-            Showing <strong style={{ color: '#0f172a' }}>{displayedProducts.length}</strong> Tools
-          </span>
+          {/* Action Controls: Filter Button, Tool Counter, Sort Dropdown */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* Prominent Filter Button that opens modal */}
+            <button
+              type="button"
+              className={`shop-filter-trigger-btn ${hasActiveFilters ? 'active' : ''}`}
+              onClick={() => setShowFilterModal(true)}
+              id="btn-open-filter-modal"
+              title="Open Filter Dialog"
+            >
+              <SlidersHorizontal size={16} />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="shop-filter-badge" id="filter-badge-counter">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
 
-          <select
-            className="sort-select-clean"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            id="shop-sort-select"
-          >
-            <option value="featured">Featured / Recommended</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-          </select>
+            <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
+              Showing <strong style={{ color: '#0f172a' }}>{displayedProducts.length}</strong> Tools
+            </span>
+
+            <select
+              className="sort-select-clean"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              id="shop-sort-select"
+            >
+              <option value="featured">Featured / Recommended</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+            </select>
+          </div>
         </div>
-      </div>
+      </AnimatedContent>
 
-      {/* ACTIVE FILTERS CHIPS BAR (Flipkart / Amazon style chips under top controls) */}
+      {/* ACTIVE FILTERS CHIPS BAR (Active filter chips under top controls) */}
       {hasActiveFilters && (
         <div className="active-filters-chips-bar" id="active-filters-bar">
           <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -486,8 +492,18 @@ export const ShopPage = ({
             <p style={{ fontWeight: '600' }}>Loading equipment catalog...</p>
           </div>
         ) : error ? (
-          <div style={{ textAlign: 'center', padding: '50px 0', color: '#dc2626' }}>
-            <p>{error}</p>
+          <div style={{ textAlign: 'center', padding: '50px 20px', color: '#dc2626' }}>
+            <p style={{ fontWeight: 600, marginBottom: '12px' }}>{error}</p>
+            {onRetry && (
+              <button
+                type="button"
+                className="btn-hero-clean"
+                onClick={onRetry}
+                style={{ fontSize: '0.85rem', padding: '8px 18px' }}
+              >
+                Retry Connection
+              </button>
+            )}
           </div>
         ) : displayedProducts.length === 0 ? (
           <div
@@ -516,122 +532,131 @@ export const ShopPage = ({
         ) : (
           <>
             <div className="product-grid">
-              {displayedProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map(product => (
-                <ProductCard
+              {displayedProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((product, idx) => (
+                <AnimatedContent
                   key={product.id || product._id}
-                  product={product}
-                  onSelectProduct={onSelectProduct}
-                />
+                  distance={35}
+                  delay={(idx % 8) * 0.05}
+                  duration={0.6}
+                  style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                >
+                  <ProductCard
+                    product={product}
+                    onSelectProduct={onSelectProduct}
+                  />
+                </AnimatedContent>
               ))}
             </div>
 
             {/* Catalog Pagination Controls */}
             {Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) > 1 && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '16px',
-                  marginTop: '36px',
-                  paddingTop: '20px',
-                  borderTop: '1px solid #e2e8f0'
-                }}
-              >
-                <div style={{ fontSize: '0.88rem', color: '#64748b' }}>
-                  Showing <strong style={{ color: '#0f172a' }}>{(currentPage - 1) * ITEMS_PER_PAGE + 1}</strong> – <strong style={{ color: '#0f172a' }}>{Math.min(currentPage * ITEMS_PER_PAGE, displayedProducts.length)}</strong> of <strong style={{ color: '#0f172a' }}>{displayedProducts.length}</strong> items
+              <AnimatedContent distance={25} delay={0.1}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '16px',
+                    marginTop: '36px',
+                    paddingTop: '20px',
+                    borderTop: '1px solid #e2e8f0'
+                  }}
+                >
+                  <div style={{ fontSize: '0.88rem', color: '#64748b' }}>
+                    Showing <strong style={{ color: '#0f172a' }}>{(currentPage - 1) * ITEMS_PER_PAGE + 1}</strong> – <strong style={{ color: '#0f172a' }}>{Math.min(currentPage * ITEMS_PER_PAGE, displayedProducts.length)}</strong> of <strong style={{ color: '#0f172a' }}>{displayedProducts.length}</strong> items
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      disabled={currentPage === 1}
+                      onClick={() => {
+                        setCurrentPage(p => Math.max(1, p - 1));
+                        window.scrollTo({ top: 120, behavior: 'smooth' });
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: currentPage === 1 ? '#94a3b8' : '#0f172a',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.86rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      <ChevronLeft size={16} /> Prev
+                    </button>
+
+                    {Array.from({ length: Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) || Math.abs(p - currentPage) <= 2)
+                      .map((pageNum, idx, arr) => {
+                        const prevPage = arr[idx - 1];
+                        const showEllipsis = prevPage && pageNum - prevPage > 1;
+                        return (
+                          <React.Fragment key={pageNum}>
+                            {showEllipsis && <span style={{ padding: '0 4px', color: '#94a3b8' }}>...</span>}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCurrentPage(pageNum);
+                                window.scrollTo({ top: 120, behavior: 'smooth' });
+                              }}
+                              style={{
+                                minWidth: '36px',
+                                height: '36px',
+                                padding: '0 8px',
+                                borderRadius: '8px',
+                                border: pageNum === currentPage ? '1px solid var(--brand-primary, #ea580c)' : '1px solid #cbd5e1',
+                                background: pageNum === currentPage ? 'var(--brand-primary, #ea580c)' : '#ffffff',
+                                color: pageNum === currentPage ? '#ffffff' : '#0f172a',
+                                fontWeight: pageNum === currentPage ? '700' : '500',
+                                cursor: 'pointer',
+                                fontSize: '0.86rem'
+                              }}
+                            >
+                              {pageNum}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+
+                    <button
+                      type="button"
+                      disabled={currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE)}
+                      onClick={() => {
+                        setCurrentPage(p => Math.min(Math.ceil(displayedProducts.length / ITEMS_PER_PAGE), p + 1));
+                        window.scrollTo({ top: 120, behavior: 'smooth' });
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: '#ffffff',
+                        color: currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) ? '#94a3b8' : '#0f172a',
+                        cursor: currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer',
+                        fontSize: '0.86rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      Next <ChevronRight size={16} />
+                    </button>
+                  </div>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button
-                    type="button"
-                    disabled={currentPage === 1}
-                    onClick={() => {
-                      setCurrentPage(p => Math.max(1, p - 1));
-                      window.scrollTo({ top: 120, behavior: 'smooth' });
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: currentPage === 1 ? '#94a3b8' : '#0f172a',
-                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                      fontSize: '0.86rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    <ChevronLeft size={16} /> Prev
-                  </button>
-
-                  {Array.from({ length: Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) }, (_, i) => i + 1)
-                    .filter(p => p === 1 || p === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) || Math.abs(p - currentPage) <= 2)
-                    .map((pageNum, idx, arr) => {
-                      const prevPage = arr[idx - 1];
-                      const showEllipsis = prevPage && pageNum - prevPage > 1;
-                      return (
-                        <React.Fragment key={pageNum}>
-                          {showEllipsis && <span style={{ padding: '0 4px', color: '#94a3b8' }}>...</span>}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCurrentPage(pageNum);
-                              window.scrollTo({ top: 120, behavior: 'smooth' });
-                            }}
-                            style={{
-                              minWidth: '36px',
-                              height: '36px',
-                              padding: '0 8px',
-                              borderRadius: '8px',
-                              border: pageNum === currentPage ? '1px solid var(--brand-primary, #ea580c)' : '1px solid #cbd5e1',
-                              background: pageNum === currentPage ? 'var(--brand-primary, #ea580c)' : '#ffffff',
-                              color: pageNum === currentPage ? '#ffffff' : '#0f172a',
-                              fontWeight: pageNum === currentPage ? '700' : '500',
-                              cursor: 'pointer',
-                              fontSize: '0.86rem'
-                            }}
-                          >
-                            {pageNum}
-                          </button>
-                        </React.Fragment>
-                      );
-                    })}
-
-                  <button
-                    type="button"
-                    disabled={currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE)}
-                    onClick={() => {
-                      setCurrentPage(p => Math.min(Math.ceil(displayedProducts.length / ITEMS_PER_PAGE), p + 1));
-                      window.scrollTo({ top: 120, behavior: 'smooth' });
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) ? '#94a3b8' : '#0f172a',
-                      cursor: currentPage === Math.ceil(displayedProducts.length / ITEMS_PER_PAGE) ? 'not-allowed' : 'pointer',
-                      fontSize: '0.86rem',
-                      fontWeight: '600'
-                    }}
-                  >
-                    Next <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
+              </AnimatedContent>
             )}
           </>
         )}
       </main>
 
-      {/* AMAZON & FLIPKART STYLE FILTER MODAL DIALOG */}
+      {/* INTERACTIVE MULTI-CRITERIA FILTER MODAL DIALOG */}
       {showFilterModal && (
         <div className="filter-modal-overlay" onClick={() => setShowFilterModal(false)}>
           <div
@@ -682,7 +707,7 @@ export const ShopPage = ({
 
             {/* Modal Body: Left Tabs + Right Options Panel */}
             <div className="filter-modal-body">
-              {/* Left Vertical Tabs (Flipkart / Amazon Style) */}
+              {/* Left Vertical Tabs */}
               <div className="filter-modal-tabs" role="tablist">
                 {/* Category Tab */}
                 <button

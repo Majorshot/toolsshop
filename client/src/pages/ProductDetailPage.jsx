@@ -8,6 +8,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { api } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
+import AnimatedContent from '../components/AnimatedContent';
 
 export const ProductDetailPage = () => {
   const { id } = useParams();
@@ -142,7 +143,7 @@ export const ProductDetailPage = () => {
       const safeQty = Math.max(1, Math.min(quantity, maxStock));
       addToCart(product, safeQty);
     }
-    navigate('/cart');
+    navigate('/checkout');
   };
 
   const handleShare = () => {
@@ -297,40 +298,43 @@ export const ProductDetailPage = () => {
 
   return (
     <div style={{ padding: '16px 0 70px' }}>
-      {/* Amazon / Flipkart Style Breadcrumbs Bar */}
-      <nav 
-        style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '6px', 
-          fontSize: '0.82rem', 
-          color: '#64748b', 
-          marginBottom: '20px', 
-          flexWrap: 'wrap' 
-        }}
-        aria-label="Breadcrumb"
-      >
-        <Link to="/" style={{ color: '#64748b', textDecoration: 'none', fontWeight: '500' }}>Home</Link>
-        <ChevronRight size={13} style={{ color: '#94a3b8' }} />
-        <Link to="/shop" style={{ color: '#64748b', textDecoration: 'none', fontWeight: '500' }}>Catalog</Link>
-        <ChevronRight size={13} style={{ color: '#94a3b8' }} />
-        <Link 
-          to={`/shop?category=${encodeURIComponent(product.category || '')}`} 
-          style={{ color: '#64748b', textDecoration: 'none', textTransform: 'capitalize', fontWeight: '500' }}
+      {/* Product Navigation Breadcrumbs */}
+      <AnimatedContent distance={20} delay={0.05}>
+        <nav 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            fontSize: '0.82rem', 
+            color: '#64748b', 
+            marginBottom: '20px', 
+            flexWrap: 'wrap' 
+          }}
+          aria-label="Breadcrumb"
         >
-          {categoryLabel}
-        </Link>
-        <ChevronRight size={13} style={{ color: '#94a3b8' }} />
-        <span style={{ color: '#0f172a', fontWeight: '700', maxWidth: '380px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {product.name}
-        </span>
-      </nav>
+          <Link to="/" style={{ color: '#64748b', textDecoration: 'none', fontWeight: '500' }}>Home</Link>
+          <ChevronRight size={13} style={{ color: '#94a3b8' }} />
+          <Link to="/shop" style={{ color: '#64748b', textDecoration: 'none', fontWeight: '500' }}>Catalog</Link>
+          <ChevronRight size={13} style={{ color: '#94a3b8' }} />
+          <Link 
+            to={`/shop?category=${encodeURIComponent(product.category || '')}`} 
+            style={{ color: '#64748b', textDecoration: 'none', textTransform: 'capitalize', fontWeight: '500' }}
+          >
+            {categoryLabel}
+          </Link>
+          <ChevronRight size={13} style={{ color: '#94a3b8' }} />
+          <span style={{ color: '#0f172a', fontWeight: '700', maxWidth: '380px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {product.name}
+          </span>
+        </nav>
+      </AnimatedContent>
 
-      {/* Main E-Commerce Product Layout: Two Columns (Amazon / Flipkart Style) */}
-      <div className="product-detail-card">
-        {/* ================= LEFT COLUMN: PRODUCT GALLERY ================= */}
-        <div className="product-gallery-col">
-          {/* 1. MOBILE SWIPEABLE CAROUSEL (Amazon & Flipkart Style on Mobile) */}
+      {/* Main E-Commerce Product Layout: Two Columns */}
+      <AnimatedContent distance={35} delay={0.1}>
+        <div className="product-detail-card">
+          {/* ================= LEFT COLUMN: PRODUCT GALLERY ================= */}
+          <div className="product-gallery-col">
+          {/* 1. MOBILE SWIPEABLE CAROUSEL */}
           <div className="mobile-product-gallery">
             <div className="mobile-slider-wrapper">
               <div
@@ -380,14 +384,14 @@ export const ProductDetailPage = () => {
                 </button>
               </div>
 
-              {/* Image counter pill (Amazon/Flipkart style) */}
+              {/* Image counter pill */}
               <div className="mobile-gallery-counter-pill">
                 <Camera size={11} />
                 <span>{activeImgIdx + 1} / {galleryImages.length}</span>
               </div>
             </div>
 
-            {/* Pagination dots (Flipkart style) */}
+            {/* Pagination dots */}
             {galleryImages.length > 1 && (
               <div className="mobile-gallery-dots">
                 {galleryImages.map((_, idx) => (
@@ -412,7 +416,7 @@ export const ProductDetailPage = () => {
             </div>
           </div>
 
-          {/* 2. DESKTOP GALLERY (Flipkart Vertical Strip + Stage Preview on >= 768px) */}
+          {/* 2. DESKTOP GALLERY (Vertical Strip + Stage Preview on >= 768px) */}
           <div className="desktop-product-gallery">
             <div style={{ display: 'flex', gap: '16px', flexDirection: 'row-reverse' }}>
               {/* Main Stage Image */}
@@ -459,7 +463,7 @@ export const ProductDetailPage = () => {
                 </div>
               </div>
 
-              {/* Thumbnail Strip (Flipkart style on left) */}
+              {/* Thumbnail Strip (on left) */}
               {galleryImages.length > 1 && (
                 <div className="desktop-thumbnails-strip">
                   {galleryImages.map((imgUrl, idx) => (
@@ -536,7 +540,7 @@ export const ProductDetailPage = () => {
             {product.name}
           </h1>
 
-          {/* Price Box (Amazon / Flipkart Style) */}
+          {/* Price Box */}
           <div 
             style={{ 
               borderTop: '1px solid #f1f5f9', 
@@ -639,7 +643,7 @@ export const ProductDetailPage = () => {
             </div>
           </div>
 
-          {/* Action Box (Amazon / Flipkart Style Buy Buttons) */}
+          {/* Action Box (Buy Buttons) */}
           <div 
             style={{ 
               background: '#f8fafc', 
@@ -856,61 +860,73 @@ export const ProductDetailPage = () => {
           {/* Technical Specifications Removed for Clean Layout */}
         </div>
       </div>
+      </AnimatedContent>
 
       {/* ================= BOTTOM SECTION: RELATED PRODUCTS IN CATEGORY ================= */}
       <section style={{ marginTop: '54px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontWeight: '800', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              <Sparkles size={14} /> Similar Equipment in this Category
+        <AnimatedContent distance={30} delay={0.1}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontWeight: '800', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <Sparkles size={14} /> Similar Equipment in this Category
+              </div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', marginTop: '2px' }}>
+                Related {categoryLabel} Tools
+              </h2>
             </div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', marginTop: '2px' }}>
-              Related {categoryLabel} Tools
-            </h2>
-          </div>
 
-          <Link
-            to={`/shop?category=${encodeURIComponent(product.category || '')}`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.86rem',
-              fontWeight: '700',
-              color: '#ea580c',
-              textDecoration: 'none'
-            }}
-          >
-            <span>View All in {categoryLabel}</span>
-            <ChevronRight size={16} />
-          </Link>
-        </div>
-
-        {relatedProducts.length === 0 ? (
-          <div 
-            style={{ 
-              background: '#f8fafc', 
-              border: '1px dashed #cbd5e1', 
-              borderRadius: '14px', 
-              padding: '36px 20px', 
-              textAlign: 'center',
-              color: '#64748b' 
-            }}
-          >
-            <Package size={32} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
-            <p style={{ margin: 0, fontWeight: '600' }}>This is the premier model in this category.</p>
-            <Link to="/shop" style={{ color: '#ea580c', fontSize: '0.86rem', fontWeight: '700', textDecoration: 'none', display: 'inline-block', marginTop: '8px' }}>
-              Explore full equipment catalog →
+            <Link
+              to={`/shop?category=${encodeURIComponent(product.category || '')}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.86rem',
+                fontWeight: '700',
+                color: '#ea580c',
+                textDecoration: 'none'
+              }}
+            >
+              <span>View All in {categoryLabel}</span>
+              <ChevronRight size={16} />
             </Link>
           </div>
+        </AnimatedContent>
+
+        {relatedProducts.length === 0 ? (
+          <AnimatedContent distance={25} delay={0.15}>
+            <div 
+              style={{ 
+                background: '#f8fafc', 
+                border: '1px dashed #cbd5e1', 
+                borderRadius: '14px', 
+                padding: '36px 20px', 
+                textAlign: 'center',
+                color: '#64748b' 
+              }}
+            >
+              <Package size={32} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+              <p style={{ margin: 0, fontWeight: '600' }}>This is the premier model in this category.</p>
+              <Link to="/shop" style={{ color: '#ea580c', fontSize: '0.86rem', fontWeight: '700', textDecoration: 'none', display: 'inline-block', marginTop: '8px' }}>
+                Explore full equipment catalog →
+              </Link>
+            </div>
+          </AnimatedContent>
         ) : (
           <div className="product-grid">
-            {relatedProducts.slice(0, 4).map((relProd) => (
-              <ProductCard
+            {relatedProducts.slice(0, 4).map((relProd, idx) => (
+              <AnimatedContent
                 key={relProd.id || relProd._id}
-                product={relProd}
-                onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
-              />
+                distance={35}
+                delay={idx * 0.08}
+                duration={0.6}
+                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+              >
+                <ProductCard
+                  product={relProd}
+                  onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
+                />
+              </AnimatedContent>
             ))}
           </div>
         )}

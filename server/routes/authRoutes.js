@@ -30,72 +30,32 @@ router.post('/login', async (req, res) => {
         });
       }
     } else {
-      // Customer Login
-      const customerIdentifier = identifier ? identifier.trim() : '';
-      const cleanDigits = customerIdentifier.replace(/[^0-9]/g, '').slice(-10);
-
-      let customerName = name ? name.trim() : '';
-      let customerEmail = customerIdentifier.includes('@') ? customerIdentifier : '';
-      let customerPhone = customerIdentifier;
-      let customerLocation = 'Kozhencherry, Pathanamthitta';
-
-      // Instant O(1) indexed lookup from dedicated CustomerModel (<5ms)
-      if (cleanDigits.length >= 7 || customerIdentifier.includes('@')) {
-        try {
-          let cust = null;
-          if (db.CustomerModel && cleanDigits.length >= 7) {
-            cust = await db.CustomerModel.findOne({ phone: cleanDigits }).lean();
-          }
-          if (cust) {
-            customerName = cust.name || customerName;
-            customerEmail = cust.email || customerEmail;
-            customerPhone = cust.phone || customerPhone;
-            if (cust.district) {
-              customerLocation = `${cust.district}, Kerala`;
-            }
-          } else {
-            // Fallback to past orders lookup and sync if not yet in CustomerModel
-            const pastOrders = await db.getCustomerOrders(cleanDigits || customerIdentifier);
-            if (pastOrders && pastOrders.length > 0) {
-              const pastOrder = pastOrders.find(
-                o => o.customer?.name && o.customer.name.trim() !== '' && !o.customer.name.toLowerCase().includes('valued customer')
-              ) || pastOrders[0];
-
-              if (pastOrder && pastOrder.customer) {
-                if (!customerName && pastOrder.customer.name) {
-                  customerName = pastOrder.customer.name.trim();
-                }
-                if (!customerEmail && pastOrder.customer.email && pastOrder.customer.email.includes('@')) {
-                  customerEmail = pastOrder.customer.email.trim();
-                }
-                if (pastOrder.customer.phone && !customerPhone) {
-                  customerPhone = pastOrder.customer.phone.trim();
-                }
-                if (pastOrder.customer.district) {
-                  customerLocation = `${pastOrder.customer.district}, Kerala`;
-                }
-              }
-            }
-          }
-        } catch (lookupErr) {
-          console.warn("Could not lookup customer details for login:", lookupErr.message);
-        }
-      }
-
-      // If still no name found, use clean fallback (never generic 'Valued Customer')
-      if (!customerName) {
-        customerName = customerIdentifier.includes('98471') ? 'Raju Thomas' : (cleanDigits ? `Customer (${cleanDigits.slice(-4)})` : 'Customer');
-      }
+      // Customer Login & Account Persistence (MongoDB Atlas)
+      const customerDoc = await db.findOrCreateCustomer({
+        identifier,
+        phone: identifier,
+        email: identifier.includes('@') ? identifier : (req.body.email || ''),
+        name,
+        address: req.body.address || '',
+        district: req.body.district || 'Pathanamthitta',
+        pincode: req.body.pincode || '689641'
+      });
 
       return res.json({
         success: true,
         user: {
-          id: `cust-${Date.now().toString().slice(-4)}`,
-          name: customerName,
-          phone: customerPhone,
-          email: customerEmail, // Real email or empty string - NO fake email!
+          id: customerDoc._id,
+          name: customerDoc.name,
+          phone: customerDoc.phone,
+          email: customerDoc.email || '',
+          address: customerDoc.address || '',
+          landmark: customerDoc.landmark || '',
+          district: customerDoc.district || 'Pathanamthitta',
+          state: customerDoc.state || 'Kerala',
+          pincode: customerDoc.pincode || '689641',
+          savedAddresses: customerDoc.savedAddresses || [],
           role: 'customer',
-          location: customerLocation
+          location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
         }
       });
     }

@@ -323,11 +323,14 @@ export const api = {
     return result;
   },
 
-  async validateCoupon(code, subtotal, phone = '') {
+  async validateCoupon(code, subtotal, userIdent = '') {
+    const payload = typeof userIdent === 'object'
+      ? { code, subtotal, ...userIdent }
+      : { code, subtotal, phone: userIdent };
     const res = await fetch(`${API_BASE}/coupons/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, subtotal, phone })
+      body: JSON.stringify(payload)
     });
     return await res.json();
   },

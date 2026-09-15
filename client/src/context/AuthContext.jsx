@@ -21,8 +21,9 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = async (role, identifier, password, name) => {
-    const res = await api.login({ role, identifier, password, name });
+  const login = async (role, identifier, password, name, extra = {}) => {
+    const payload = typeof role === 'object' ? role : { role, identifier, password, name, ...extra };
+    const res = await api.login(payload);
     if (res.success && res.user) {
       setUser(res.user);
       return res.user;

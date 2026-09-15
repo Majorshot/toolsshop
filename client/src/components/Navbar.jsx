@@ -76,20 +76,12 @@ export const Navbar = ({
                 <Menu size={22} />
               </button>
 
-              <Link to="/" className="brand-logo-wrap" onClick={closeMenu}>
+              <Link to="/" className="brand-logo-wrap" onClick={closeMenu} title="Variathu Power Tools">
                 <img
-                  src="/logo.jpg"
-                  alt="Variathu Power Tools Logo"
-                  className="brand-logo-img"
-                  onError={(e) => { e.target.style.display = 'none'; }}
+                  src="/Logo.jpeg"
+                  alt="Variathu Power Tools"
+                  className="brand-logo-banner"
                 />
-                <div className="brand-text">
-                  <h1>VARIATHU <span>POWER TOOLS</span></h1>
-                  <p>
-                    <MapPin size={11} style={{ color: 'var(--brand-primary)' }} />
-                    Kozhencherry, Pathanamthitta
-                  </p>
-                </div>
               </Link>
             </div>
 
@@ -191,17 +183,13 @@ export const Navbar = ({
           <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
             {/* Drawer Header */}
             <div className="mobile-drawer-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link to="/" onClick={closeMenu} style={{ display: 'flex', alignItems: 'center' }}>
                 <img
-                  src="/logo.jpg"
-                  alt="Logo"
-                  style={{ width: '32px', height: '32px', borderRadius: '6px', objectFit: 'cover' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
+                  src="/Logo.jpeg"
+                  alt="Variathu Power Tools"
+                  style={{ height: '32px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
                 />
-                <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.98rem' }}>
-                  VARIATHU <span style={{ color: 'var(--brand-primary)' }}>POWER TOOLS</span>
-                </span>
-              </div>
+              </Link>
               <button
                 onClick={closeMenu}
                 style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, MapPin, Phone, MessageCircle, Clock, Wrench, ShieldCheck, Navigation, CheckCircle2 } from 'lucide-react';
+import AnimatedContent from './AnimatedContent';
 
 export const StoreInfoModal = ({ onClose, storeInfo }) => {
   const [serviceRequested, setServiceRequested] = useState(false);
@@ -17,11 +18,12 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal-content"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '640px' }}
-      >
+      <AnimatedContent distance={20} duration={0.35} scale={0.97} style={{ maxWidth: '640px', width: '100%', margin: 'auto' }}>
+        <div
+          className="modal-content"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: '640px', width: '100%' }}
+        >
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -40,8 +42,12 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
               <MapPin size={20} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.15rem', color: '#0f172a' }}>Variathu Power Tools</h3>
-              <p style={{ fontSize: '0.74rem', color: '#64748b' }}>Poyanil Junction, Kozhencherry, Kerala</p>
+              <img
+                src="/Logo.jpeg"
+                alt="Variathu Power Tools"
+                style={{ height: '28px', width: 'auto', objectFit: 'contain', display: 'block' }}
+              />
+              <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Poyanil Junction, Kozhencherry, Kerala</p>
             </div>
           </div>
           <button className="btn-close-modal" onClick={onClose} title="Close">
@@ -203,6 +209,7 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
           </div>
         </div>
       </div>
+      </AnimatedContent>
     </div>
   );
 };

@@ -35,13 +35,17 @@ router.post('/', async (req, res) => {
   }
 });
 
-// POST /api/coupons/validate - Validate coupon against cart total & phone eligibility
+// POST /api/coupons/validate - Validate coupon against cart total & account/phone/email eligibility
 router.post('/validate', async (req, res) => {
   try {
     const code = req.body.code;
     const subtotal = req.body.subtotal ?? req.body.cartSubtotal ?? 0;
-    const phone = req.body.phone || '';
-    const result = await db.validateCoupon(code, Number(subtotal) || 0, phone);
+    const userIdent = {
+      customerId: req.body.customerId,
+      phone: req.body.phone || '',
+      email: req.body.email || ''
+    };
+    const result = await db.validateCoupon(code, Number(subtotal) || 0, userIdent);
     if (!result.valid) {
       return res.status(400).json(result);
     }

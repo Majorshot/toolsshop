@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ArrowRight, MessageCircle, Tag, ShoppingBag, MapPin, Truck, CheckCircle2, ChevronRight, X, Phone } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import AnimatedContent from '../components/AnimatedContent';
 
 export const CartPage = ({ onOpenCheckout }) => {
   const {
@@ -61,68 +62,78 @@ export const CartPage = ({ onOpenCheckout }) => {
   if (cart.length === 0) {
     return (
       <div style={{ padding: '48px 0', textAlign: 'center' }}>
-        <div
-          style={{
-            maxWidth: '480px',
-            margin: '0 auto',
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '16px',
-            padding: '48px 24px',
-            boxShadow: 'var(--shadow-sm)'
-          }}
-        >
+        <AnimatedContent distance={30} delay={0.05}>
           <div
             style={{
-              width: '72px',
-              height: '72px',
-              borderRadius: '50%',
-              background: 'rgba(234, 88, 12, 0.08)',
-              color: '#ea580c',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px'
+              maxWidth: '480px',
+              margin: '0 auto',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '16px',
+              padding: '48px 24px',
+              boxShadow: 'var(--shadow-sm)'
             }}
           >
-            <ShoppingBag size={36} />
+            <div
+              style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '50%',
+                background: 'rgba(234, 88, 12, 0.08)',
+                color: '#ea580c',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px'
+              }}
+            >
+              <ShoppingBag size={36} />
+            </div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
+              Your Cart is Empty
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '24px' }}>
+              Looks like you haven't added any heavy-duty power tools to your cart yet.
+            </p>
+            <Link to="/shop" className="btn-hero-clean">
+              <span>Browse Equipment Catalog</span>
+              <ArrowRight size={17} />
+            </Link>
           </div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
-            Your Cart is Empty
-          </h2>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '24px' }}>
-            Looks like you haven't added any heavy-duty power tools to your cart yet.
-          </p>
-          <Link to="/shop" className="btn-hero-clean">
-            <span>Browse Equipment Catalog</span>
-            <ArrowRight size={17} />
-          </Link>
-        </div>
+        </AnimatedContent>
       </div>
     );
   }
 
   return (
     <div className="cart-page-wrapper">
-      {/* Breadcrumb */}
-      <div className="cart-breadcrumb">
-        <Link to="/">Home</Link>
-        <ChevronRight size={14} />
-        <Link to="/shop">Shop</Link>
-        <ChevronRight size={14} />
-        <span style={{ color: '#0f172a', fontWeight: '700' }}>Shopping Cart</span>
-      </div>
+      {/* Breadcrumb & Title */}
+      <AnimatedContent distance={20} delay={0.05}>
+        <div className="cart-breadcrumb">
+          <Link to="/">Home</Link>
+          <ChevronRight size={14} />
+          <Link to="/shop">Shop</Link>
+          <ChevronRight size={14} />
+          <span style={{ color: '#0f172a', fontWeight: '700' }}>Shopping Cart</span>
+        </div>
 
-      <h1 className="cart-page-title">
-        Equipment Shopping Cart ({cart.length} item{cart.length > 1 ? 's' : ''})
-      </h1>
+        <h1 className="cart-page-title">
+          Equipment Shopping Cart ({cart.length} item{cart.length > 1 ? 's' : ''})
+        </h1>
+      </AnimatedContent>
 
       <div className="cart-page-grid">
         {/* Left: Cart Items List */}
         <div className="cart-items-container">
           <div className="cart-items-list">
-            {cart.map((item) => (
-              <div key={item.id} className="cart-item-card" id={`cart-item-${item.id}`}>
+            {cart.map((item, idx) => (
+              <AnimatedContent
+                key={item.id}
+                distance={25}
+                delay={idx * 0.06}
+                duration={0.6}
+              >
+                <div className="cart-item-card" id={`cart-item-${item.id}`}>
                 {/* Top Section: Image & Product Details */}
                 <div className="cart-item-top-row">
                   <img
@@ -208,6 +219,7 @@ export const CartPage = ({ onOpenCheckout }) => {
                   </div>
                 </div>
               </div>
+              </AnimatedContent>
             ))}
           </div>
 
@@ -227,10 +239,11 @@ export const CartPage = ({ onOpenCheckout }) => {
         </div>
 
         {/* Right: Summary Card */}
-        <div className="cart-summary-card">
-          <h2 className="cart-summary-heading">
-            Order Summary
-          </h2>
+        <AnimatedContent distance={30} delay={0.15}>
+          <div className="cart-summary-card">
+            <h2 className="cart-summary-heading">
+              Order Summary
+            </h2>
 
           {/* Delivery Options */}
           <div style={{ marginBottom: '20px' }}>
@@ -498,7 +511,7 @@ export const CartPage = ({ onOpenCheckout }) => {
             )}
             <button
               className="btn-hero-clean"
-              onClick={onOpenCheckout}
+              onClick={() => navigate('/checkout')}
               disabled={hasOutOfStockItems}
               style={{
                 justifyContent: 'center',
@@ -527,6 +540,7 @@ export const CartPage = ({ onOpenCheckout }) => {
             </a>
           </div>
         </div>
+        </AnimatedContent>
       </div>
     </div>
   );

@@ -1,5 +1,11 @@
 const dns = require('dns');
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+try {
+  if (process.platform === 'win32' || (!process.env.RENDER && process.env.NODE_ENV !== 'production')) {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  }
+} catch (e) {
+  console.warn("DNS setup notice:", e.message);
+}
 require('dotenv').config();
 const express = require('express');
 const compression = require('compression');

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
+const emailService = require('../services/emailService');
 
 // GET all orders (Admin / Store Owner)
 router.get('/', async (req, res) => {
@@ -12,7 +13,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET customer orders by phone/email/name
+// GET customer orders by phone/email/name/customerId
 router.get('/customer/:identifier', async (req, res) => {
   try {
     const orders = await db.getCustomerOrders(req.params.identifier);
@@ -39,17 +40,23 @@ router.put('/:id/status', async (req, res) => {
   }
 });
 
-// POST place new order
+// POST place new order (Account-Based Checkout Flow)
 router.post('/', async (req, res) => {
   try {
-    const { customer, items, totalAmount, deliveryType, paymentMethod, couponCode, discountAmount } = req.body;
+    const { customer, customerId, items, totalAmount, deliveryType, paymentMethod, couponCode, discountAmount } = req.body;
     if (!customer || !items || !items.length) {
       return res.status(400).json({ success: false, message: "Invalid order data" });
     }
 
-    // Anti-Abuse Check: If coupon is used, validate against customer phone & global caps
+    const userIdent = {
+      customerId: customerId || customer?.id || customer?._id,
+      phone: customer?.phone,
+      email: customer?.email
+    };
+
+    // Anti-Abuse Check: If coupon is used, validate against account ID, email, phone & global caps
     if (couponCode) {
-      const couponCheck = await db.validateCoupon(couponCode, totalAmount, customer?.phone);
+      const couponCheck = await db.validateCoupon(couponCode, totalAmount, userIdent);
       if (!couponCheck.valid) {
         return res.status(400).json({ success: false, message: couponCheck.message });
       }
@@ -57,6 +64,7 @@ router.post('/', async (req, res) => {
 
     const order = await db.createOrder({
       customer,
+      customerId: userIdent.customerId || null,
       items,
       totalAmount,
       deliveryType: deliveryType || 'store-pickup',
@@ -65,10 +73,15 @@ router.post('/', async (req, res) => {
       discountAmount: Number(discountAmount) || 0
     });
 
-    // Record coupon usage in DB and update customer phone usage history
+    // Record coupon usage in DB with account ID, email, and phone
     if (couponCode) {
-      await db.recordCouponUsage(couponCode, customer?.phone);
+      await db.recordCouponUsage(couponCode, userIdent);
     }
+
+    // Trigger automated Resend Order Confirmation Email asynchronously
+    emailService.sendOrderConfirmationEmail(order).catch(err => {
+      console.warn(`[Resend Email] Async dispatch notice for order #${order.id}:`, err.message);
+    });
 
     res.status(201).json({
       success: true,
