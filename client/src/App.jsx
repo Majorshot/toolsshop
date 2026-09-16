@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomePage } from './pages/HomePage';
@@ -227,6 +227,10 @@ const MainApp = () => {
           <Route
             path="/account"
             element={<div className="container"><CustomerAccountPage /></div>}
+          />
+          <Route
+            path="/customer"
+            element={<Navigate to="/account" replace />}
           />
           <Route
             path="/admin"

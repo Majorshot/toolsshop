@@ -506,7 +506,7 @@ export const CheckoutPage = () => {
           {/* Action CTAs */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px', margin: '0 auto' }}>
             <Link
-              to="/customer"
+              to="/account"
               className="btn-hero-clean"
               style={{ justifyContent: 'center', width: '100%', padding: '14px', fontSize: '0.95rem' }}
             >
