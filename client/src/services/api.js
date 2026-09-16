@@ -21,6 +21,14 @@ export const api = {
     return await res.json();
   },
 
+  // Auth: Quick Phone Existence Check (Blinkit/Zepto-style)
+  async checkPhone(phone) {
+    const clean = String(phone).replace(/[^0-9]/g, '').slice(-10);
+    const res = await fetch(`${API_BASE}/auth/check-phone/${clean}`);
+    if (!res.ok) return { success: false, exists: false };
+    return await res.json();
+  },
+
 
   // Fetch products with search & filters (supports optional pagination)
   async getProducts(params = {}) {

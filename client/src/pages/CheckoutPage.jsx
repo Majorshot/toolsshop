@@ -29,7 +29,7 @@ const KERALA_DISTRICTS = [
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { user, isLoggedIn, login, logout, updateUser } = useAuth();
+  const { user, isLoggedIn, login, register, logout, updateUser } = useAuth();
   const {
     cart,
     clearCart,
@@ -67,6 +67,16 @@ export const CheckoutPage = () => {
     email: ''
   });
   const [loginLoading, setLoginLoading] = useState(false);
+
+  // Blinkit / Zepto Style Phone Lookup & Auto-Registration state
+  const [phoneLookup, setPhoneLookup] = useState({
+    checking: false,
+    checkedPhone: '',
+    exists: null,
+    customerName: null,
+    hasAddress: false
+  });
+  const [accountNotice, setAccountNotice] = useState(null);
 
   // Coupon inline input
   const [couponInput, setCouponInput] = useState('');
@@ -125,19 +135,53 @@ export const CheckoutPage = () => {
     }
   }, [formData.pincode, deliveryType]);
 
+  // Live Blinkit/Zepto Phone Existence Check
+  useEffect(() => {
+    const clean = (loginForm.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (clean.length === 10) {
+      let active = true;
+      setPhoneLookup(prev => ({ ...prev, checking: true, checkedPhone: clean }));
+      api.checkPhone(clean)
+        .then(res => {
+          if (active) {
+            setPhoneLookup({
+              checking: false,
+              checkedPhone: clean,
+              exists: !!res.exists,
+              customerName: res.name || null,
+              hasAddress: !!res.hasAddress
+            });
+            // If existing customer and name was empty, auto-populate name
+            if (res.exists && res.name && !loginForm.name.trim()) {
+              setLoginForm(prev => ({ ...prev, name: res.name }));
+            }
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setPhoneLookup({ checking: false, checkedPhone: clean, exists: null, customerName: null, hasAddress: false });
+          }
+        });
+      return () => { active = false; };
+    } else {
+      setPhoneLookup({ checking: false, checkedPhone: '', exists: null, customerName: null, hasAddress: false });
+    }
+  }, [loginForm.phone]);
+
   const formatPrice = (num) => '₹' + Number(num || 0).toLocaleString('en-IN');
 
   const handleChange = (e) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Step 1: Customer Account Sign-In / Register
+  // Step 1: Customer Account Sign-In / Register (Blinkit & Zepto Auto-Flow)
   const handleAccountLogin = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
+    setAccountNotice(null);
 
     if (!loginForm.name.trim()) {
-      setErrorMsg('Please enter your full name.');
+      setErrorMsg('Please enter your full customer name.');
       return;
     }
 
@@ -149,19 +193,47 @@ export const CheckoutPage = () => {
 
     setLoginLoading(true);
     try {
-      const loggedUser = await login(
-        'customer',
-        cleanPhone,
-        null,
-        loginForm.name.trim(),
-        { email: loginForm.email.trim() }
-      );
+      let loggedUser;
+      try {
+        // Attempt login first for existing customers
+        loggedUser = await login(
+          'customer',
+          cleanPhone,
+          null,
+          loginForm.name.trim(),
+          { email: loginForm.email.trim() }
+        );
+        setAccountNotice({
+          type: 'existing',
+          message: `Welcome back, ${loggedUser.name || loginForm.name.trim()}!`
+        });
+      } catch (loginErr) {
+        // Blinkit / Zepto Flow: If no account found, register automatically on the spot!
+        const errMsg = (loginErr.message || '').toLowerCase();
+        const isNotFound = errMsg.includes('no account') || errMsg.includes('register first') || errMsg.includes('not found') || errMsg.includes('404');
+
+        if (isNotFound) {
+          const fallbackEmail = loginForm.email.trim() || `${cleanPhone}@customer.variathupowertools.com`;
+          loggedUser = await register({
+            name: loginForm.name.trim(),
+            phone: cleanPhone,
+            email: fallbackEmail
+          });
+
+          setAccountNotice({
+            type: 'created',
+            message: `🎉 Welcome to Variathu Power Tools! Your verified account has been created for +91 ${cleanPhone}.`
+          });
+        } else {
+          throw loginErr;
+        }
+      }
 
       setFormData(prev => ({
         ...prev,
         name: loggedUser.name || loginForm.name.trim(),
         phone: loggedUser.phone || cleanPhone,
-        email: loggedUser.email || loginForm.email.trim(),
+        email: loggedUser.email && !loggedUser.email.includes('@customer.variathupowertools.com') ? loggedUser.email : loginForm.email.trim(),
         address: loggedUser.address || prev.address,
         landmark: loggedUser.landmark || prev.landmark,
         district: loggedUser.district || prev.district,
@@ -685,18 +757,26 @@ export const CheckoutPage = () => {
 
               {/* Verified Account Summary (When Logged In) */}
               {isCustomerLoggedIn ? (
-                <div style={{ marginTop: '14px', background: '#f8fafc', borderRadius: '10px', padding: '14px 16px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                  <div>
-                    <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>
-                      {user.name}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+                  {accountNotice && (
+                    <div style={{ background: accountNotice.type === 'created' ? '#ecfdf5' : '#f0f9ff', border: accountNotice.type === 'created' ? '1px solid #a7f3d0' : '1px solid #bae6fd', borderRadius: '8px', padding: '10px 14px', color: accountNotice.type === 'created' ? '#047857' : '#0369a1', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
+                      <CheckCircle2 size={16} />
+                      <span>{accountNotice.message}</span>
                     </div>
-                    <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
-                      Phone: <strong style={{ color: '#334155' }}>+91 {user.phone}</strong> {user.email ? `• ${user.email}` : ''}
+                  )}
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px 16px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>
+                        {user.name}
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
+                        Phone: <strong style={{ color: '#334155' }}>+91 {user.phone}</strong> {user.email && !user.email.includes('@customer.variathupowertools.com') ? `• ${user.email}` : ''}
+                      </div>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontSize: '0.8rem', fontWeight: '700' }}>
-                    <CheckCircle2 size={16} />
-                    <span>Verified Account</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontSize: '0.8rem', fontWeight: '700' }}>
+                      <CheckCircle2 size={16} />
+                      <span>Verified Account</span>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -731,7 +811,7 @@ export const CheckoutPage = () => {
                         placeholder="e.g. 9847123456"
                         value={loginForm.phone}
                         onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
-                        style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: phoneLookup.exists === false ? '1px solid #f59e0b' : phoneLookup.exists === true ? '1px solid #22c55e' : '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: phoneLookup.exists === true ? '#f0fdf4' : '#ffffff' }}
                       />
                     </div>
 
@@ -749,6 +829,37 @@ export const CheckoutPage = () => {
                     </div>
                   </div>
 
+                  {/* Blinkit / Zepto Live Account Status Indicator */}
+                  {phoneLookup.checking && (
+                    <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 4px' }}>
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ea580c', animation: 'pulse 1s infinite' }} />
+                      <span>Checking customer account for +91 {phoneLookup.checkedPhone}...</span>
+                    </div>
+                  )}
+
+                  {phoneLookup.exists === true && !phoneLookup.checking && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', color: '#15803d', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <span>
+                        Welcome back<strong>{phoneLookup.customerName ? `, ${phoneLookup.customerName}` : ''}</strong>! Your account and saved address will be loaded.
+                      </span>
+                    </div>
+                  )}
+
+                  {phoneLookup.exists === false && !phoneLookup.checking && (
+                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', color: '#92400e', fontSize: '0.82rem', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <AlertCircle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+                      <div>
+                        <strong style={{ color: '#78350f', display: 'block', marginBottom: '2px' }}>
+                          No account found for +91 {phoneLookup.checkedPhone}
+                        </strong>
+                        <span style={{ fontSize: '0.78rem', color: '#92400e', lineHeight: '1.4' }}>
+                          First time here? No problem! When you click <strong>Register & Continue</strong>, we'll instantly create your verified customer account so your warranty and order tracking are linked.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
                     disabled={loginLoading}
@@ -756,8 +867,16 @@ export const CheckoutPage = () => {
                     style={{ justifyContent: 'center', width: '100%', padding: '12px', marginTop: '6px' }}
                     id="btn-checkout-login-continue"
                   >
-                    <span>{loginLoading ? 'Verifying Account...' : 'Continue to Delivery Details'}</span>
-                    <ArrowRight size={16} />
+                    <span>
+                      {loginLoading
+                        ? (phoneLookup.exists === false ? 'Registering Account...' : 'Verifying Account...')
+                        : (phoneLookup.exists === false
+                            ? 'Register & Continue to Delivery'
+                            : phoneLookup.exists === true
+                              ? 'Sign In & Continue to Delivery'
+                              : 'Continue to Delivery Details')}
+                    </span>
+                    {!loginLoading && <ArrowRight size={16} />}
                   </button>
                 </form>
               )}

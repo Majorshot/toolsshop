@@ -68,7 +68,30 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST register endpoint - Create new customer account (requires name, phone, email)
+// GET check customer phone existence (Instant Blinkit/Zepto-style account check)
+router.get('/check-phone/:phone', async (req, res) => {
+  try {
+    const rawPhone = req.params.phone;
+    const customerDoc = await db.lookupCustomerByPhone(rawPhone);
+    if (customerDoc) {
+      return res.json({
+        success: true,
+        exists: true,
+        name: customerDoc.name,
+        hasAddress: !!(customerDoc.address && customerDoc.pincode),
+        district: customerDoc.district || 'Pathanamthitta'
+      });
+    }
+    return res.json({
+      success: true,
+      exists: false
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, exists: false, message: err.message });
+  }
+});
+
+// POST register endpoint - Create new customer account
 router.post('/register', async (req, res) => {
   try {
     const { name, phone, email } = req.body;
@@ -79,12 +102,14 @@ router.post('/register', async (req, res) => {
     if (!phone || phone.trim().length < 7) {
       return res.status(400).json({ success: false, message: 'Valid mobile number is required.' });
     }
-    if (!email || !email.trim().includes('@')) {
-      return res.status(400).json({ success: false, message: 'Valid email address is required.' });
-    }
+
+    const cleanPhone = phone.trim();
+    const cleanEmail = (email && email.trim().includes('@'))
+      ? email.trim().toLowerCase()
+      : `${cleanPhone.replace(/[^0-9]/g, '').slice(-10)}@customer.variathupowertools.com`;
 
     // Check if phone already registered
-    const existingByPhone = await db.lookupCustomerByPhone(phone.trim());
+    const existingByPhone = await db.lookupCustomerByPhone(cleanPhone);
     if (existingByPhone) {
       return res.status(409).json({
         success: false,
@@ -92,29 +117,33 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Check if email already registered
-    const existingByEmail = await db.lookupCustomerByEmail(email.trim());
-    if (existingByEmail) {
-      return res.status(409).json({
-        success: false,
-        message: 'An account with this email already exists. Please login with your mobile number.'
-      });
+    // Check if email already registered (only for user-provided real emails)
+    if (email && email.trim().includes('@')) {
+      const existingByEmail = await db.lookupCustomerByEmail(email.trim());
+      if (existingByEmail) {
+        return res.status(409).json({
+          success: false,
+          message: 'An account with this email already exists. Please login with your mobile number.'
+        });
+      }
     }
 
     // Create new customer
     const customerDoc = await db.findOrCreateCustomer({
-      phone: phone.trim(),
+      phone: cleanPhone,
       name: name.trim(),
-      email: email.trim(),
+      email: cleanEmail,
       address: req.body.address || '',
       district: req.body.district || 'Pathanamthitta',
       pincode: req.body.pincode || '689641'
     });
 
-    // Send welcome email
-    emailService.sendWelcomeEmail(customerDoc).catch(err => {
-      console.warn(`[Resend Email] Welcome email error:`, err.message);
-    });
+    // Send welcome email if valid customer email provided
+    if (email && email.trim().includes('@')) {
+      emailService.sendWelcomeEmail(customerDoc).catch(err => {
+        console.warn(`[Resend Email] Welcome email error:`, err.message);
+      });
+    }
 
     return res.status(201).json({
       success: true,
