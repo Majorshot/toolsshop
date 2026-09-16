@@ -104,6 +104,30 @@ app.use('/api/shipping', shippingRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/repairs', repairRoutes);
 
+// Meta WhatsApp Cloud API Webhook verification & handler
+app.get('/api/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  const VERIFY_TOKEN = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'variathu_whatsapp_token_2026';
+
+  if (mode && token) {
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      console.log('[WhatsApp Webhook] ✅ Verified successfully by Meta!');
+      return res.status(200).send(challenge);
+    } else {
+      console.warn('[WhatsApp Webhook] ❌ Verify token mismatch');
+      return res.sendStatus(403);
+    }
+  }
+  res.sendStatus(400);
+});
+
+app.post('/api/webhook', (req, res) => {
+  // Acknowledge Meta webhook message receipts or incoming text events immediately
+  res.status(200).send('EVENT_RECEIVED');
+});
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error("Internal Server Error:", err);
