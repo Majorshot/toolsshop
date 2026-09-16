@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -618,6 +618,71 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   // Revenue Analytics Period Filter
   const [analyticsPeriod, setAnalyticsPeriod] = useState('all'); // 'all' | 'month' | 'week' | 'today'
 
+  // Space Optimizer: Collapsible Analytics Mode
+  const [analyticsCollapsed, setAnalyticsCollapsed] = useState(() => {
+    const saved = localStorage.getItem('vpt_analytics_collapsed');
+    return saved !== null ? saved === 'true' : false;
+  });
+
+  // Orders Display Mode: 'cards' or 'table'
+  const [ordersViewMode, setOrdersViewMode] = useState(() => {
+    return localStorage.getItem('vpt_orders_view_mode') || 'cards';
+  });
+
+  // Live Auto-Refresh & Audio Notification
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const prevOrdersCountRef = useRef(null);
+
+  // Quick Counter Pickup OTP Lookup
+  const [quickOtpInput, setQuickOtpInput] = useState('');
+  const [quickOtpMatchedOrder, setQuickOtpMatchedOrder] = useState(null);
+
+  const playOrderChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, now); // E5
+      osc.frequency.setValueAtTime(880, now + 0.12); // A5
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.55);
+    } catch (e) {
+      console.warn('Audio chime notice:', e);
+    }
+  }, []);
+
+  const handleQuickOtpChange = (val) => {
+    setQuickOtpInput(val);
+    const clean = val.trim();
+    if (clean.length >= 3) {
+      const matched = orders.find(o => 
+        o.deliveryType === 'store-pickup' && 
+        (o.status || '').toLowerCase() !== 'cancelled' &&
+        String(o.pickupOtp || '').trim() === clean
+      );
+      setQuickOtpMatchedOrder(matched || null);
+    } else {
+      setQuickOtpMatchedOrder(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      loadOrders({ silent: true });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, soundEnabled]);
+
   useEffect(() => {
     if (!user) {
       navigate('/login');
@@ -870,15 +935,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setTimeout(() => setNotification(''), 3000);
   };
 
-  const loadOrders = async () => {
-    setLoadingOrders(true);
+  const loadOrders = async (options = {}) => {
+    const isSilent = Boolean(options && options.silent);
+    if (!isSilent) setLoadingOrders(true);
     try {
       const res = await api.getOrders();
-      setOrders(Array.isArray(res) ? res : (res.data || []));
+      const list = Array.isArray(res) ? res : (res.data || []);
+      if (prevOrdersCountRef.current !== null && list.length > prevOrdersCountRef.current && soundEnabled) {
+        playOrderChime();
+        showNotification('🔔 New customer order received!');
+      }
+      prevOrdersCountRef.current = list.length;
+      setOrders(list);
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingOrders(false);
+      if (!isSilent) setLoadingOrders(false);
     }
   };
 
@@ -1720,89 +1792,279 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <Download size={14} />
               <span>Export Orders (CSV)</span>
             </button>
+
+            {/* Collapse/Expand Space Optimizer Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !analyticsCollapsed;
+                setAnalyticsCollapsed(next);
+                localStorage.setItem('vpt_analytics_collapsed', String(next));
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#334155',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              id="btn-toggle-analytics-collapse"
+              title={analyticsCollapsed ? "Expand financial reports & charts" : "Collapse metrics to view orders above the fold"}
+            >
+              {analyticsCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+              <span>{analyticsCollapsed ? 'Expand Reports' : 'Collapse'}</span>
+            </button>
           </div>
         </div>
 
-        {/* 4 Analytics Metric Cards */}
-        <div className="store-analytics-grid">
-          <div className="store-analytics-metric-card">
-            <span className="store-metric-label">
-              Revenue ({analyticsPeriod === 'all' ? 'All Time' : analyticsPeriod === 'today' ? 'Today' : analyticsPeriod === 'week' ? 'Past 7 Days' : 'This Month'})
-            </span>
-            <div className="store-metric-value-huge">
-              {formatPrice(periodRevenue)}
+        {analyticsCollapsed ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 14px',
+            background: '#f8fafc',
+            borderRadius: '10px',
+            marginTop: '12px',
+            fontSize: '0.82rem',
+            color: '#475569',
+            flexWrap: 'wrap',
+            gap: '12px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <span>💰 Revenue: <strong style={{ color: '#0f172a' }}>{formatPrice(periodRevenue)}</strong> <small style={{ color: '#64748b' }}>({analyticsPeriod === 'all' ? 'All Time' : analyticsPeriod === 'today' ? 'Today' : analyticsPeriod === 'week' ? 'Past 7 Days' : 'This Month'})</small></span>
+              <span>📦 Active: <strong style={{ color: '#0f172a' }}>{orderCounts.all}</strong></span>
+              <span>🚚 Undispatched: <strong style={{ color: orderCounts.undispatched > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.undispatched}</strong></span>
+              <span>🏬 Pickup Pending: <strong style={{ color: '#0f172a' }}>{orderCounts.pickupPending}</strong></span>
+              <span>🔧 Workshop: <strong style={{ color: '#0f172a' }}>{repairs.filter(r => r.status !== 'Handed Over').length}</strong> jobs</span>
             </div>
-            <span className="store-metric-subtext">
-              {activePeriodOrders.length} active order{activePeriodOrders.length === 1 ? '' : 's'} in selected period
-              {cancelledPeriodOrders.length > 0 && (
-                <span style={{ color: '#dc2626', display: 'block', fontSize: '0.72rem', marginTop: '2px', fontWeight: '700' }}>
-                  ({cancelledPeriodOrders.length} cancelled/refunded order excluded)
+            <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+              Orders brought above the fold • Click 'Expand Reports' for full details
+            </span>
+          </div>
+        ) : (
+          /* 4 Analytics Metric Cards */
+          <div className="store-analytics-grid">
+            <div className="store-analytics-metric-card">
+              <span className="store-metric-label">
+                Revenue ({analyticsPeriod === 'all' ? 'All Time' : analyticsPeriod === 'today' ? 'Today' : analyticsPeriod === 'week' ? 'Past 7 Days' : 'This Month'})
+              </span>
+              <div className="store-metric-value-huge">
+                {formatPrice(periodRevenue)}
+              </div>
+              <span className="store-metric-subtext">
+                {activePeriodOrders.length} active order{activePeriodOrders.length === 1 ? '' : 's'} in selected period
+                {cancelledPeriodOrders.length > 0 && (
+                  <span style={{ color: '#dc2626', display: 'block', fontSize: '0.72rem', marginTop: '2px', fontWeight: '700' }}>
+                    ({cancelledPeriodOrders.length} cancelled/refunded order excluded)
+                  </span>
+                )}
+              </span>
+            </div>
+
+            <div className="store-analytics-metric-card">
+              <span className="store-metric-label">
+                Payment Method Breakdown
+              </span>
+              <div className="store-metric-split-list">
+                <div className="store-metric-split-item">
+                  <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● UPI / Digital</span>
+                  <span className="store-metric-item-value">{formatPrice(upiRevenue)} <small>({upiOrders.length})</small></span>
+                </div>
+                <div className="store-metric-split-item">
+                  <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● Cash at Counter</span>
+                  <span className="store-metric-item-value">{formatPrice(cashRevenue)} <small>({cashOrders.length})</small></span>
+                </div>
+                {periodRefundedAmount > 0 && (
+                  <div className="store-metric-split-item" style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '4px' }}>
+                    <span className="store-metric-item-label" style={{ color: '#64748b' }}>↩ Refunded Online</span>
+                    <span className="store-metric-item-value" style={{ color: '#dc2626' }}>{formatPrice(periodRefundedAmount)} <small>({cancelledPeriodOrders.length})</small></span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="store-analytics-metric-card">
+              <span className="store-metric-label">
+                Order Fulfillment Split
+              </span>
+              <div className="store-metric-split-list">
+                <div className="store-metric-split-item">
+                  <span className="store-metric-item-label" style={{ color: '#0284c7' }}>● Store Pickup</span>
+                  <span className="store-metric-item-value">{pickupOrdersCount} <small>orders</small></span>
+                </div>
+                <div className="store-metric-split-item">
+                  <span className="store-metric-item-label" style={{ color: '#7c3aed' }}>● Courier Express</span>
+                  <span className="store-metric-item-value">{courierOrdersCount} <small>parcels</small></span>
+                </div>
+                {cancelledPeriodOrders.length > 0 && (
+                  <div className="store-metric-split-item" style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '4px' }}>
+                    <span className="store-metric-item-label" style={{ color: '#64748b' }}>● Cancelled</span>
+                    <span className="store-metric-item-value" style={{ color: '#64748b' }}>{cancelledPeriodOrders.length} <small>cancelled</small></span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="store-analytics-metric-card">
+              <span className="store-metric-label">
+                Workshop & Repairs Active
+              </span>
+              <div className="store-metric-split-list">
+                <div className="store-metric-split-item">
+                  <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● In Workshop</span>
+                  <span className="store-metric-item-value">{repairs.filter(r => r.status !== 'Handed Over').length} <small>jobs</small></span>
+                </div>
+                <div className="store-metric-split-item">
+                  <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● Ready for Pickup</span>
+                  <span className="store-metric-item-value" style={{ color: '#16a34a' }}>{repairs.filter(r => r.status === 'Repaired & Ready').length} <small>ready</small></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Daily Action Center Banner */}
+      {(() => {
+        const readyRepairsCount = repairs.filter(r => r.status === 'Repaired & Ready').length;
+        const lowStockCount = products.filter(p => (Number(p.stock) || 0) <= 3).length;
+        const hasUrgentActions = orderCounts.undispatched > 0 || orderCounts.pickupPending > 0 || orderCounts.cancelPending > 0 || readyRepairsCount > 0 || lowStockCount > 0;
+
+        return (
+          <div
+            style={{
+              marginBottom: '18px',
+              padding: '12px 16px',
+              background: hasUrgentActions ? 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' : '#f0fdf4',
+              border: hasUrgentActions ? '1.5px solid #fed7aa' : '1.5px solid #bbf7d0',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+            }}
+            id="store-daily-action-banner"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ⚡ Daily Action Center:
+              </span>
+
+              {orderCounts.undispatched > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('orders'); setOrderStatusFilter('undispatched'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#ea580c', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(234,88,12,0.3)' }}
+                >
+                  📦 {orderCounts.undispatched} to Dispatch
+                </button>
+              )}
+
+              {orderCounts.pickupPending > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('orders'); setOrderStatusFilter('pickup-pending'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#0284c7', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(2,132,199,0.3)' }}
+                >
+                  🏬 {orderCounts.pickupPending} Waiting Pickup
+                </button>
+              )}
+
+              {orderCounts.cancelPending > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('cancellations'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#dc2626', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(220,38,38,0.3)' }}
+                >
+                  ⚠️ {orderCounts.cancelPending} Cancel Request{orderCounts.cancelPending > 1 ? 's' : ''}
+                </button>
+              )}
+
+              {readyRepairsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('repairs'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#16a34a', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(22,163,74,0.3)' }}
+                >
+                  🔧 {readyRepairsCount} Tool{readyRepairsCount > 1 ? 's' : ''} Repaired & Ready
+                </button>
+              )}
+
+              {lowStockCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('inventory'); setShowLowStockOnly(true); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#b45309', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' }}
+                >
+                  📉 {lowStockCount} Items Low Stock
+                </button>
+              )}
+
+              {!hasUrgentActions && (
+                <span style={{ fontSize: '0.8rem', color: '#166534', fontWeight: '700' }}>
+                  ✅ All caught up! No urgent store dispatches or handovers pending.
                 </span>
               )}
-            </span>
-          </div>
+            </div>
 
-          <div className="store-analytics-metric-card">
-            <span className="store-metric-label">
-              Payment Method Breakdown
-            </span>
-            <div className="store-metric-split-list">
-              <div className="store-metric-split-item">
-                <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● UPI / Digital</span>
-                <span className="store-metric-item-value">{formatPrice(upiRevenue)} <small>({upiOrders.length})</small></span>
-              </div>
-              <div className="store-metric-split-item">
-                <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● Cash at Counter</span>
-                <span className="store-metric-item-value">{formatPrice(cashRevenue)} <small>({cashOrders.length})</small></span>
-              </div>
-              {periodRefundedAmount > 0 && (
-                <div className="store-metric-split-item" style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '4px' }}>
-                  <span className="store-metric-item-label" style={{ color: '#64748b' }}>↩ Refunded Online</span>
-                  <span className="store-metric-item-value" style={{ color: '#dc2626' }}>{formatPrice(periodRefundedAmount)} <small>({cancelledPeriodOrders.length})</small></span>
-                </div>
-              )}
+            {/* Sound Mute/Unmute & Auto-Refresh State */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setSoundEnabled(prev => !prev)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.74rem',
+                  color: soundEnabled ? '#15803d' : '#94a3b8',
+                  fontWeight: '700'
+                }}
+                title={soundEnabled ? 'Order sound alert enabled' : 'Order sound alert muted'}
+                id="btn-toggle-sound"
+              >
+                {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+                <span>{soundEnabled ? 'Chime: ON' : 'Chime: Muted'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAutoRefresh(prev => !prev)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.74rem',
+                  color: autoRefresh ? '#0284c7' : '#94a3b8',
+                  fontWeight: '700'
+                }}
+                title={autoRefresh ? 'Auto-refreshing every 30s' : 'Auto-refresh paused'}
+                id="btn-toggle-auto-refresh"
+              >
+                <RefreshCw size={13} className={autoRefresh ? 'spin-slow' : ''} />
+                <span>{autoRefresh ? 'Live Sync (30s)' : 'Sync Paused'}</span>
+              </button>
             </div>
           </div>
-
-          <div className="store-analytics-metric-card">
-            <span className="store-metric-label">
-              Order Fulfillment Split
-            </span>
-            <div className="store-metric-split-list">
-              <div className="store-metric-split-item">
-                <span className="store-metric-item-label" style={{ color: '#0284c7' }}>● Store Pickup</span>
-                <span className="store-metric-item-value">{pickupOrdersCount} <small>orders</small></span>
-              </div>
-              <div className="store-metric-split-item">
-                <span className="store-metric-item-label" style={{ color: '#7c3aed' }}>● Courier Express</span>
-                <span className="store-metric-item-value">{courierOrdersCount} <small>parcels</small></span>
-              </div>
-              {cancelledPeriodOrders.length > 0 && (
-                <div className="store-metric-split-item" style={{ borderTop: '1px dashed #e2e8f0', paddingTop: '4px', marginTop: '4px' }}>
-                  <span className="store-metric-item-label" style={{ color: '#64748b' }}>● Cancelled</span>
-                  <span className="store-metric-item-value" style={{ color: '#64748b' }}>{cancelledPeriodOrders.length} <small>cancelled</small></span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="store-analytics-metric-card">
-            <span className="store-metric-label">
-              Workshop & Repairs Active
-            </span>
-            <div className="store-metric-split-list">
-              <div className="store-metric-split-item">
-                <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● In Workshop</span>
-                <span className="store-metric-item-value">{repairs.filter(r => r.status !== 'Handed Over').length} <small>jobs</small></span>
-              </div>
-              <div className="store-metric-split-item">
-                <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● Ready for Pickup</span>
-                <span className="store-metric-item-value" style={{ color: '#16a34a' }}>{repairs.filter(r => r.status === 'Repaired & Ready').length} <small>ready</small></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Navigation Tabs (6 Tabs) - Horizontal Scroll Strip with Drag-to-Scroll */}
       <div
@@ -2169,10 +2431,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </button>
               </div>
 
-              {/* Filter Toolbar (Search + Date + Delivery + Payment + Sort) */}
+              {/* Filter Toolbar (Search + Fast OTP + Date + Delivery + Payment + Sort) */}
               <div className="store-inventory-toolbar" style={{ marginBottom: '16px', background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
                 {/* Search Box */}
-                <div className="store-inv-search-wrap" style={{ flex: '1 1 260px', minWidth: '220px', position: 'relative' }}>
+                <div className="store-inv-search-wrap" style={{ flex: '1 1 240px', minWidth: '200px', position: 'relative' }}>
                   <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                   <input
                     type="text"
@@ -2203,6 +2465,41 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       title="Clear search text"
                     >
                       <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Fast Pickup OTP Verification Input */}
+                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fff7ed', border: '1.5px solid #fdba74', borderRadius: '8px', padding: '0 10px', height: '38px' }}>
+                  <ShieldCheck size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
+                  <label style={{ fontSize: '0.76rem', color: '#9a3412', fontWeight: '800', whiteSpace: 'nowrap' }}>Fast OTP:</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="4-digit..."
+                    value={quickOtpInput}
+                    onChange={(e) => handleQuickOtpChange(e.target.value)}
+                    style={{
+                      width: '75px',
+                      border: 'none',
+                      background: 'transparent',
+                      outline: 'none',
+                      fontSize: '0.86rem',
+                      fontWeight: '800',
+                      letterSpacing: '0.08em',
+                      fontFamily: 'var(--font-mono)',
+                      color: '#0f172a'
+                    }}
+                    title="Enter 4-digit OTP to instantly locate and verify customer pickup"
+                    id="input-fast-otp-lookup"
+                  />
+                  {quickOtpInput && (
+                    <button
+                      type="button"
+                      onClick={() => { setQuickOtpInput(''); setQuickOtpMatchedOrder(null); }}
+                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                    >
+                      <X size={13} />
                     </button>
                   )}
                 </div>
@@ -2336,8 +2633,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 )}
               </div>
 
-              {/* Active Filter Counter Bar */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              {/* Active Filter Counter Bar with View Switcher (Cards vs Compact Table) */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
                   Showing <strong style={{ color: '#0f172a' }}>{filteredOrders.length}</strong> of <strong style={{ color: '#0f172a' }}>{orders.length}</strong> customer orders
                   {hasActiveOrderFilters && (
@@ -2346,7 +2643,137 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </span>
                   )}
                 </div>
+
+                {/* View Switcher: Cards vs Compact Table */}
+                <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '3px', border: '1px solid #cbd5e1' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setOrdersViewMode('cards'); localStorage.setItem('vpt_orders_view_mode', 'cards'); }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: ordersViewMode === 'cards' ? '#ffffff' : 'transparent',
+                      color: ordersViewMode === 'cards' ? '#0f172a' : '#64748b',
+                      fontSize: '0.76rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: ordersViewMode === 'cards' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                    id="btn-view-cards"
+                  >
+                    <Layers size={13} />
+                    <span>Cards</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => { setOrdersViewMode('table'); localStorage.setItem('vpt_orders_view_mode', 'table'); }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: ordersViewMode === 'table' ? '#ffffff' : 'transparent',
+                      color: ordersViewMode === 'table' ? '#0f172a' : '#64748b',
+                      fontSize: '0.76rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: ordersViewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                    id="btn-view-table"
+                  >
+                    <FileText size={13} />
+                    <span>Compact Table</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Fast OTP Quick Verification Popup if Matched */}
+              {quickOtpMatchedOrder && (
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '2px solid #16a34a',
+                  borderRadius: '12px',
+                  padding: '14px 18px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  boxShadow: '0 4px 16px rgba(22, 163, 74, 0.16)'
+                }}
+                id="box-matched-otp-order"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: '#16a34a', color: '#ffffff', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <CheckCircle2 size={22} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: '800', fontSize: '0.96rem', color: '#166534' }}>
+                        Pickup Order Match Found: {quickOtpMatchedOrder.id} • {quickOtpMatchedOrder.customer?.name}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#374151', marginTop: '2px' }}>
+                        Customer Phone: <strong>{quickOtpMatchedOrder.customer?.phone}</strong> • Total: <strong>{formatPrice(quickOtpMatchedOrder.totalAmount)}</strong> ({quickOtpMatchedOrder.paymentStatus === 'PAID' ? 'PAID ONLINE' : 'COLLECT CASH AT COUNTER'}) • OTP: <strong style={{ color: '#ea580c', fontFamily: 'var(--font-mono)' }}>{quickOtpMatchedOrder.pickupOtp}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      disabled={verifyingOrderId === quickOtpMatchedOrder.id}
+                      onClick={async () => {
+                        setVerifyingOrderId(quickOtpMatchedOrder.id);
+                        try {
+                          await api.verifyPickupOtp(quickOtpMatchedOrder.id, quickOtpMatchedOrder.pickupOtp);
+                          showNotification(`✅ Counter handover verified for ${quickOtpMatchedOrder.id}!`);
+                          setQuickOtpInput('');
+                          setQuickOtpMatchedOrder(null);
+                          loadOrders();
+                          if (onProductUpdated) onProductUpdated();
+                        } catch (err) {
+                          showNotification(`❌ ${err.message}`);
+                        } finally {
+                          setVerifyingOrderId(null);
+                        }
+                      }}
+                      style={{
+                        padding: '9px 18px',
+                        background: '#16a34a',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontWeight: '800',
+                        fontSize: '0.84rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 6px rgba(22,163,74,0.3)'
+                      }}
+                    >
+                      <ShieldCheck size={16} />
+                      <span>{verifyingOrderId === quickOtpMatchedOrder.id ? 'Verifying...' : 'Verify & Complete Handover'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setQuickOtpInput(''); setQuickOtpMatchedOrder(null); }}
+                      style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px' }}
+                      title="Dismiss"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Empty Results When Filter Matches Zero Orders */}
               {filteredOrders.length === 0 ? (
@@ -2370,6 +2797,178 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   >
                     Clear All Filters
                   </button>
+                </div>
+              ) : ordersViewMode === 'table' ? (
+                /* Compact Table Mode */
+                <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', overflowX: 'auto', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #e2e8f0', color: '#475569', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', fontWeight: '800' }}>
+                        <th style={{ padding: '12px 14px' }}>Order ID & Date</th>
+                        <th style={{ padding: '12px 14px' }}>Customer</th>
+                        <th style={{ padding: '12px 14px' }}>Fulfillment</th>
+                        <th style={{ padding: '12px 14px' }}>Items</th>
+                        <th style={{ padding: '12px 14px' }}>Total Amount</th>
+                        <th style={{ padding: '12px 14px' }}>Status</th>
+                        <th style={{ padding: '12px 14px', textAlign: 'right' }}>Quick Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((order, idx) => {
+                        const isCancelled = (order.status || '').toLowerCase() === 'cancelled';
+                        const isStorePickup = order.deliveryType === 'store-pickup';
+                        const isPaid = order.paymentStatus === 'PAID';
+                        const isRefunded = order.paymentStatus === 'REFUNDED';
+                        return (
+                          <tr
+                            key={order.id}
+                            style={{
+                              borderBottom: '1px solid #f1f5f9',
+                              background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
+                              transition: 'background 0.1s ease'
+                            }}
+                            className="store-table-order-row"
+                          >
+                            <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                              <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)', fontSize: '0.86rem', display: 'block' }}>
+                                {order.id}
+                              </strong>
+                              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                {order.createdAt ? new Date(order.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : (order.date || 'Today')}
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                              <div style={{ fontWeight: '700', color: '#0f172a' }}>{order.customer?.name || 'Customer'}</div>
+                              <div style={{ fontSize: '0.74rem', color: '#64748b' }}>{order.customer?.phone || 'No phone'}</div>
+                              <div style={{ fontSize: '0.72rem', color: '#94a3b8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>
+                                {order.customer?.city || order.customer?.district || 'Kerala'}
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                              {isStorePickup ? (
+                                <div>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: '800', color: order.handoverVerified ? '#166534' : '#0284c7', background: order.handoverVerified ? '#ecfdf5' : '#eff6ff', padding: '2px 8px', borderRadius: '6px' }}>
+                                    {order.handoverVerified ? '✅ Collected' : '🏬 Counter Pickup'}
+                                  </span>
+                                  {!order.handoverVerified && !isCancelled && (
+                                    <div style={{ fontSize: '0.72rem', color: '#ea580c', fontWeight: '800', marginTop: '3px' }}>
+                                      OTP: <span style={{ fontFamily: 'var(--font-mono)' }}>{order.pickupOtp || '4819'}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: '800', color: (order.awb && order.awb.trim()) ? '#166534' : '#ea580c', background: (order.awb && order.awb.trim()) ? '#ecfdf5' : '#fff7ed', padding: '2px 8px', borderRadius: '6px' }}>
+                                    <Truck size={12} />
+                                    {(order.awb && order.awb.trim()) ? (order.courierPartner || 'Dispatched') : 'Needs Dispatch'}
+                                  </span>
+                                  {order.awb && (
+                                    <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
+                                      AWB: {order.awb}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+
+                            <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                              <span style={{ fontWeight: '700', color: '#0f172a' }}>
+                                {order.items?.length || 1} Item{order.items?.length === 1 ? '' : 's'}
+                              </span>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {order.items?.map(i => `${i.quantity || 1}x ${i.name || i.title}`).join(', ') || 'Tools & Accessories'}
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                              <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>
+                                {formatPrice(order.totalAmount)}
+                              </strong>
+                              <div>
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: '800',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: isRefunded ? '#fef2f2' : isPaid ? '#ecfdf5' : '#fffbeb',
+                                  color: isRefunded ? '#dc2626' : isPaid ? '#15803d' : '#b45309'
+                                }}>
+                                  {isRefunded ? 'REFUNDED' : isPaid ? 'PAID ONLINE' : 'COD'}
+                                </span>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                              {isCancelled ? (
+                                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#dc2626', background: '#fef2f2', padding: '3px 8px', borderRadius: '6px' }}>
+                                  ❌ Cancelled
+                                </span>
+                              ) : (
+                                <select
+                                  value={order.status}
+                                  onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                                  style={{
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #cbd5e1',
+                                    fontSize: '0.74rem',
+                                    fontWeight: '700',
+                                    background: '#ffffff',
+                                    color: '#0f172a',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  {STATUS_OPTIONS.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </td>
+
+                            <td style={{ padding: '12px 14px', verticalAlign: 'top', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedOrderForInvoice(order)}
+                                  style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', fontWeight: '700', color: '#334155', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Print GST Invoice"
+                                >
+                                  <Printer size={12} />
+                                  <span>Invoice</span>
+                                </button>
+
+                                {!isStorePickup && !isCancelled && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedOrderForLabel(order)}
+                                    style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', fontWeight: '700', color: '#1d4ed8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    title="Print 4x6 Thermal Shipping Label"
+                                  >
+                                    <Truck size={12} />
+                                    <span>Label</span>
+                                  </button>
+                                )}
+
+                                {isStorePickup && !order.handoverVerified && !isCancelled && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleVerifySingleOrderOtp(null, order.id)}
+                                    style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', fontWeight: '800', color: '#166534', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    title="Verify Handover"
+                                  >
+                                    <CheckCircle2 size={12} />
+                                    <span>Handover</span>
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

@@ -3732,23 +3732,15 @@ header.main-site-header {
   overflow-x: auto;
   flex-wrap: nowrap;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
 .store-nav-tabs-bar::-webkit-scrollbar {
-  height: 4px;
-}
-
-.store-nav-tabs-bar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.store-nav-tabs-bar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  display: none;
+  height: 0px;
 }
 
 .store-order-status-chips::-webkit-scrollbar {
