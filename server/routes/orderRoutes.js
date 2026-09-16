@@ -35,15 +35,24 @@ router.put('/:id/status', async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
+    const sLower = (status || '').toLowerCase();
+
     // Trigger dispatched/courier email when status changes to dispatched or shipped
-    if (['dispatched', 'shipped', 'in-transit'].includes(status.toLowerCase())) {
+    if (sLower.includes('dispatch') || sLower.includes('shipp') || sLower.includes('in-transit')) {
       emailService.sendOrderDispatchedEmail(updated, courierPartner, awb).catch(err => {
         console.warn(`[Resend Email] Async dispatch email error for order #${updated.id}:`, err.message);
       });
     }
 
+    // Trigger completed / delivered email when status changes to delivered or completed
+    if (sLower.includes('deliver') || sLower.includes('complet')) {
+      emailService.sendOrderCompletedEmail(updated).catch(err => {
+        console.warn(`[Resend Email] Async completed/delivered email error for order #${updated.id}:`, err.message);
+      });
+    }
+
     // Trigger cancelled email when store owner cancels directly via status update
-    if (status.toLowerCase() === 'cancelled') {
+    if (sLower.includes('cancel')) {
       emailService.sendOrderCancelledEmail(updated, 'Cancelled by store', 'store').catch(err => {
         console.warn(`[Resend Email] Async cancelled email error for order #${updated.id}:`, err.message);
       });
@@ -165,9 +174,10 @@ router.post('/:id/cancel', async (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Trigger order cancelled email
-    if (result.data) {
-      emailService.sendOrderCancelledEmail(result.data, reason, cancelledBy).catch(err => {
+    // Trigger order cancelled email (result.order or result.data)
+    const orderData = result.order || result.data;
+    if (orderData) {
+      emailService.sendOrderCancelledEmail(orderData, reason, cancelledBy).catch(err => {
         console.warn(`[Resend Email] Async cancelled email error:`, err.message);
       });
     }
@@ -187,9 +197,10 @@ router.post('/:id/request-cancel', async (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Trigger cancellation request email
-    if (result.data) {
-      emailService.sendCancellationRequestEmail(result.data, reason).catch(err => {
+    // Trigger cancellation request email (result.order or result.data)
+    const orderData = result.order || result.data;
+    if (orderData) {
+      emailService.sendCancellationRequestEmail(orderData, reason).catch(err => {
         console.warn(`[Resend Email] Async cancellation request email error:`, err.message);
       });
     }

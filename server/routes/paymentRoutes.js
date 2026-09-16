@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const db = require('../utils/db');
+const emailService = require('../services/emailService');
 
 // Initialize Razorpay Instance with user's keys
 const razorpay = new Razorpay({
@@ -94,6 +95,11 @@ router.post('/verify', async (req, res) => {
       paymentStatus: "PAID",
       transactionId: razorpay_payment_id,
       razorpayOrderId: razorpay_order_id
+    });
+
+    // Trigger automated Resend Order Confirmation Email asynchronously
+    emailService.sendOrderConfirmationEmail(confirmedOrder).catch(err => {
+      console.warn(`[Resend Email] Async payment order confirmation error for #${confirmedOrder.id}:`, err.message);
     });
 
     res.json({

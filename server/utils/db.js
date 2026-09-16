@@ -910,9 +910,21 @@ const db = {
       customerDoc = await findOrCreateCustomer(orderData.customer);
     }
 
+    // Enrich customer profile data with linked customerDoc
+    const enrichedCustomer = {
+      ...(orderData.customer || {}),
+      name: orderData.customer?.name || customerDoc?.name || 'Valued Customer',
+      phone: orderData.customer?.phone || customerDoc?.phone || '',
+      email: (orderData.customer?.email || customerDoc?.email || '').trim(),
+      address: orderData.customer?.address || customerDoc?.address || '',
+      district: orderData.customer?.district || customerDoc?.district || 'Pathanamthitta',
+      pincode: orderData.customer?.pincode || customerDoc?.pincode || '689641'
+    };
+
     const newOrder = {
       id,
       ...orderData,
+      customer: enrichedCustomer,
       customerId: customerDoc ? customerDoc._id : (orderData.customerId || null),
       status: "Order Placed",
       paymentStatus,
