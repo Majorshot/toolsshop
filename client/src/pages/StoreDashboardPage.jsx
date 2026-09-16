@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -229,6 +229,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const isOrderDispatched = (order) => {
+    if (!order) return false;
     if (order.deliveryType === 'store-pickup') return false;
     if ((order.status || '').toLowerCase() === 'cancelled') return false;
     const hasAwb = Boolean(order.awb && order.awb.trim());
@@ -237,6 +238,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const isOrderUndispatched = (order) => {
+    if (!order) return false;
     if (order.deliveryType === 'store-pickup') return false;
     if ((order.status || '').toLowerCase() === 'cancelled') return false;
     if (['delivered', 'completed'].includes((order.status || '').toLowerCase())) return false;
@@ -244,10 +246,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const isOrderPickupPending = (order) => {
+    if (!order) return false;
     return order.deliveryType === 'store-pickup' && !order.handoverVerified && (order.status || '').toLowerCase() !== 'cancelled';
   };
 
   const isOrderCompleted = (order) => {
+    if (!order) return false;
     if ((order.status || '').toLowerCase() === 'cancelled') return false;
     if (['delivered', 'completed'].includes((order.status || '').toLowerCase())) return true;
     if (order.deliveryType === 'store-pickup' && order.handoverVerified) return true;
@@ -255,20 +259,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const orderCounts = useMemo(() => {
+    const list = Array.isArray(orders) ? orders.filter(Boolean) : [];
     return {
-      all: orders.length,
-      today: orders.filter(o => isOrderDateToday(o.createdAt || o.date)).length,
-      undispatched: orders.filter(isOrderUndispatched).length,
-      dispatched: orders.filter(isOrderDispatched).length,
-      pickupPending: orders.filter(isOrderPickupPending).length,
-      completed: orders.filter(isOrderCompleted).length,
-      cancelPending: orders.filter(o => o.cancellationRequested && (o.status || '').toLowerCase() !== 'cancelled').length,
-      cancelled: orders.filter(o => (o.status || '').toLowerCase() === 'cancelled').length,
+      all: list.length,
+      today: list.filter(o => isOrderDateToday(o.createdAt || o.date)).length,
+      undispatched: list.filter(isOrderUndispatched).length,
+      dispatched: list.filter(isOrderDispatched).length,
+      pickupPending: list.filter(isOrderPickupPending).length,
+      completed: list.filter(isOrderCompleted).length,
+      cancelPending: list.filter(o => o.cancellationRequested && (o.status || '').toLowerCase() !== 'cancelled').length,
+      cancelled: list.filter(o => (o.status || '').toLowerCase() === 'cancelled').length,
     };
   }, [orders]);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
+    const list = Array.isArray(orders) ? orders.filter(Boolean) : [];
+    return list.filter(order => {
       // 1. Status Filter Chip
       if (orderStatusFilter === 'today') {
         if (!isOrderDateToday(order.createdAt || order.date)) return false;
