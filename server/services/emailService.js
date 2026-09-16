@@ -204,8 +204,14 @@ function buildTotalsBlock(order) {
   const discountAmount = Math.max(0, rawDiscount);
   const couponCode = order.couponCode || (order.coupon && typeof order.coupon === 'string' ? order.coupon : order.coupon?.code);
 
-  const taxableTotal = Math.round(grandTotal / 1.18);
-  const gstTotal = grandTotal - taxableTotal;
+  // Delivery fee is an additional charge and MUST NOT be included in product GST calculations
+  const rawDeliveryFee = Number(order.deliveryFee !== undefined ? order.deliveryFee : (order.deliveryType && !order.deliveryType.toLowerCase().includes('pickup') && grandTotal > (itemsSubtotal - discountAmount) ? grandTotal - (itemsSubtotal - discountAmount) : 0));
+  const deliveryFee = Math.max(0, rawDeliveryFee);
+
+  // The actual product price after discount (GST applies ONLY to products)
+  const productNetTotal = Math.max(0, itemsSubtotal - discountAmount);
+  const taxableTotal = Math.round(productNetTotal / 1.18);
+  const gstTotal = productNetTotal - taxableTotal;
 
   return `
     <div style="background: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
@@ -227,15 +233,21 @@ function buildTotalsBlock(order) {
           </tr>
         ` : ''}
         <tr>
-          <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Taxable Base Value (Excl. GST):</td>
+          <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Product Taxable Base Value (Excl. GST):</td>
           <td style="font-size: 12px; font-weight: 600; color: #0f172a; text-align: right; padding-bottom: 6px;">₹${taxableTotal.toLocaleString('en-IN')}</td>
         </tr>
         <tr>
-          <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Kerala GST (CGST 9% + SGST 9%):</td>
+          <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Kerala GST on Tools (CGST 9% + SGST 9%):</td>
           <td style="font-size: 12px; font-weight: 600; color: #0f172a; text-align: right; padding-bottom: 6px;">₹${gstTotal.toLocaleString('en-IN')}</td>
         </tr>
+        ${deliveryFee > 0 ? `
+          <tr>
+            <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Courier Delivery Charge (Additional):</td>
+            <td style="font-size: 12px; font-weight: 600; color: #0f172a; text-align: right; padding-bottom: 6px;">₹${deliveryFee.toLocaleString('en-IN')}</td>
+          </tr>
+        ` : ''}
         <tr style="border-top: 1.5px solid #cbd5e1;">
-          <td style="font-size: 15px; font-weight: 800; color: #0f172a; padding-top: 10px;">Grand Total (Incl. GST):</td>
+          <td style="font-size: 15px; font-weight: 800; color: #0f172a; padding-top: 10px;">Grand Total:</td>
           <td style="font-size: 17px; font-weight: 800; color: #dc2626; text-align: right; padding-top: 10px;">₹${grandTotal.toLocaleString('en-IN')}</td>
         </tr>
       </table>

@@ -298,6 +298,7 @@ export const CheckoutModal = ({ onClose }) => {
         })),
         totalAmount: finalTotal,
         deliveryType,
+        deliveryFee: deliveryFee || 0,
         courierPartner: null,
         couponCode: activeCoupon?.code || null,
         discountAmount: discountAmount || 0

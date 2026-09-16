@@ -68,9 +68,17 @@ export const GstInvoiceModal = ({
   const discountAmount = Math.max(0, rawDiscount);
   const couponCode = order.couponCode || (order.coupon && typeof order.coupon === 'string' ? order.coupon : order.coupon?.code) || (discountAmount > 0 ? 'PROMO' : null);
 
-  const taxableTotal = Math.round(grandTotal / 1.18);
-  const totalCgst = Math.round((grandTotal - taxableTotal) / 2);
-  const totalSgst = grandTotal - taxableTotal - totalCgst;
+  // Delivery fee is an additional charge and MUST NOT be included in product GST calculations
+  const rawDeliveryFee = Number(order.deliveryFee !== undefined ? order.deliveryFee : (order.deliveryType && !order.deliveryType.toLowerCase().includes('pickup') && grandTotal > (itemsSubtotal - discountAmount) ? grandTotal - (itemsSubtotal - discountAmount) : 0));
+  const deliveryFee = Math.max(0, rawDeliveryFee);
+
+  // The actual product price after discount (GST applies ONLY to products, NOT delivery charges)
+  const productNetTotal = Math.max(0, itemsSubtotal - discountAmount);
+
+  // Product taxable value and 18% GST (CGST 9% + SGST 9%)
+  const taxableTotal = Math.round(productNetTotal / 1.18);
+  const totalCgst = Math.round((productNetTotal - taxableTotal) / 2);
+  const totalSgst = productNetTotal - taxableTotal - totalCgst;
 
   // Print Handler: uses an isolated iframe for flawless, clean A4 print preview with zero clipping
   const handlePrint = () => {
@@ -705,21 +713,21 @@ export const GstInvoiceModal = ({
                 marginTop: discountAmount > 0 ? '3px' : '0',
                 paddingTop: discountAmount > 0 ? '3px' : '0'
               }}>
-                <span style={{ color: '#475569' }}>Total Taxable Value:</span>
+                <span style={{ color: '#475569' }}>Product Taxable Value:</span>
                 <strong style={{ fontFamily: 'monospace' }}>₹{taxableTotal.toLocaleString('en-IN')}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-                <span style={{ color: '#475569' }}>Central GST (9%):</span>
+                <span style={{ color: '#475569' }}>Central GST (9% on Tools):</span>
                 <span style={{ fontFamily: 'monospace' }}>₹{totalCgst.toLocaleString('en-IN')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-                <span style={{ color: '#475569' }}>Kerala State GST (9%):</span>
+                <span style={{ color: '#475569' }}>Kerala State GST (9% on Tools):</span>
                 <span style={{ fontFamily: 'monospace' }}>₹{totalSgst.toLocaleString('en-IN')}</span>
               </div>
-              {order.deliveryFee > 0 && (
+              {deliveryFee > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-                  <span style={{ color: '#475569' }}>Courier Freight:</span>
-                  <span style={{ fontFamily: 'monospace' }}>₹{Number(order.deliveryFee).toLocaleString('en-IN')}</span>
+                  <span style={{ color: '#475569' }}>Courier Delivery Charge (Addl):</span>
+                  <span style={{ fontFamily: 'monospace' }}>₹{deliveryFee.toLocaleString('en-IN')}</span>
                 </div>
               )}
               <div

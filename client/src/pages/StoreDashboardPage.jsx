@@ -963,9 +963,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
     const rows = orders.map(o => {
       const total = Number(o.totalAmount || 0);
-      const taxable = Math.round(total / 1.18);
-      const cgst = Math.round((total - taxable) / 2);
-      const sgst = total - taxable - cgst;
+      const delivery = Number(o.deliveryFee !== undefined ? o.deliveryFee : (o.deliveryType && o.deliveryType !== 'store-pickup' ? 120 : 0));
+      const productTotal = Math.max(0, total - delivery);
+      const taxable = Math.round(productTotal / 1.18);
+      const cgst = Math.round((productTotal - taxable) / 2);
+      const sgst = productTotal - taxable - cgst;
       const itemsStr = (o.items || []).map(i => `${i.name} (x${i.quantity})`).join('; ');
       const itemCount = (o.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
 

@@ -921,9 +921,14 @@ const db = {
       pincode: orderData.customer?.pincode || customerDoc?.pincode || '689641'
     };
 
+    const deliveryFee = orderData.deliveryFee !== undefined
+      ? Number(orderData.deliveryFee)
+      : (isStorePickup ? 0 : 120);
+
     const newOrder = {
       id,
       ...orderData,
+      deliveryFee,
       customer: enrichedCustomer,
       customerId: customerDoc ? customerDoc._id : (orderData.customerId || null),
       status: "Order Placed",
