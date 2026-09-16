@@ -442,6 +442,18 @@ export const api = {
     return result;
   },
 
+  // Trigger WhatsApp notification for order
+  async sendOrderWhatsApp(orderId, messageType = 'confirmed') {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/send-whatsapp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageType })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to send WhatsApp message');
+    return data;
+  },
+
   // 24/7 Render Keep-Alive Ping
   async pingKeepAlive() {
     try {

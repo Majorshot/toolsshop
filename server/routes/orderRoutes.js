@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
 
 // GET all orders (Admin / Store Owner)
 router.get('/', async (req, res) => {
@@ -37,10 +38,20 @@ router.put('/:id/status', async (req, res) => {
 
     const sLower = (status || '').toLowerCase();
 
-    // Trigger dispatched/courier email when status changes to dispatched or shipped
+    // Trigger dispatched/courier email & WhatsApp when status changes to dispatched or shipped
     if (sLower.includes('dispatch') || sLower.includes('shipp') || sLower.includes('in-transit')) {
       emailService.sendOrderDispatchedEmail(updated, courierPartner, awb).catch(err => {
         console.warn(`[Resend Email] Async dispatch email error for order #${updated.id}:`, err.message);
+      });
+      whatsappService.sendOrderDispatchedWhatsApp(updated, courierPartner, awb).catch(err => {
+        console.warn(`[WhatsApp API] Async dispatch WhatsApp error for order #${updated.id}:`, err.message);
+      });
+    }
+
+    // Trigger ready for pickup WhatsApp when status changes to ready for pickup
+    if (sLower.includes('ready') || sLower.includes('pickup')) {
+      whatsappService.sendPickupReadyWhatsApp(updated).catch(err => {
+        console.warn(`[WhatsApp API] Async pickup ready WhatsApp error for order #${updated.id}:`, err.message);
       });
     }
 
@@ -51,10 +62,13 @@ router.put('/:id/status', async (req, res) => {
       });
     }
 
-    // Trigger cancelled email when store owner cancels directly via status update
+    // Trigger cancelled email & WhatsApp when store owner cancels directly via status update
     if (sLower.includes('cancel')) {
       emailService.sendOrderCancelledEmail(updated, 'Cancelled by store', 'store').catch(err => {
         console.warn(`[Resend Email] Async cancelled email error for order #${updated.id}:`, err.message);
+      });
+      whatsappService.sendOrderCancelledWhatsApp(updated, 'Cancelled by store').catch(err => {
+        console.warn(`[WhatsApp API] Async cancelled WhatsApp error for order #${updated.id}:`, err.message);
       });
     }
 
@@ -105,6 +119,11 @@ router.post('/', async (req, res) => {
     // Trigger automated Resend Order Confirmation Email asynchronously
     emailService.sendOrderConfirmationEmail(order).catch(err => {
       console.warn(`[Resend Email] Async dispatch notice for order #${order.id}:`, err.message);
+    });
+
+    // Trigger automated WhatsApp Order Confirmation asynchronously
+    whatsappService.sendOrderConfirmationWhatsApp(order).catch(err => {
+      console.warn(`[WhatsApp API] Async order confirmation notice for order #${order.id}:`, err.message);
     });
 
     res.status(201).json({
@@ -174,11 +193,14 @@ router.post('/:id/cancel', async (req, res) => {
       return res.status(400).json(result);
     }
 
-    // Trigger order cancelled email (result.order or result.data)
+    // Trigger order cancelled email & WhatsApp (result.order or result.data)
     const orderData = result.order || result.data;
     if (orderData) {
       emailService.sendOrderCancelledEmail(orderData, reason, cancelledBy).catch(err => {
         console.warn(`[Resend Email] Async cancelled email error:`, err.message);
+      });
+      whatsappService.sendOrderCancelledWhatsApp(orderData, reason).catch(err => {
+        console.warn(`[WhatsApp API] Async cancelled WhatsApp error:`, err.message);
       });
     }
 
@@ -219,6 +241,30 @@ router.post('/:id/reject-cancel', async (req, res) => {
       return res.status(400).json(result);
     }
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST on-demand WhatsApp notification trigger (Store Owner)
+router.post('/:id/send-whatsapp', async (req, res) => {
+  try {
+    const order = await db.getOrderById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+    const { messageType } = req.body || {};
+    let result;
+    if (messageType === 'dispatched') {
+      result = await whatsappService.sendOrderDispatchedWhatsApp(order, order.courierPartner, order.awb);
+    } else if (messageType === 'pickup') {
+      result = await whatsappService.sendPickupReadyWhatsApp(order);
+    } else if (messageType === 'cancelled') {
+      result = await whatsappService.sendOrderCancelledWhatsApp(order, order.cancellationReason || 'Customer requested');
+    } else {
+      result = await whatsappService.sendOrderConfirmationWhatsApp(order);
+    }
+    res.json({ success: true, message: "WhatsApp message dispatched successfully", result });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

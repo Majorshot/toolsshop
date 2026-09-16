@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const db = require('../utils/db');
 const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
 
 // Initialize Razorpay Instance with user's keys
 const razorpay = new Razorpay({
@@ -100,6 +101,11 @@ router.post('/verify', async (req, res) => {
     // Trigger automated Resend Order Confirmation Email asynchronously
     emailService.sendOrderConfirmationEmail(confirmedOrder).catch(err => {
       console.warn(`[Resend Email] Async payment order confirmation error for #${confirmedOrder.id}:`, err.message);
+    });
+
+    // Trigger automated WhatsApp Order Confirmation asynchronously
+    whatsappService.sendOrderConfirmationWhatsApp(confirmedOrder).catch(err => {
+      console.warn(`[WhatsApp API] Async payment WhatsApp notice error for #${confirmedOrder.id}:`, err.message);
     });
 
     res.json({
