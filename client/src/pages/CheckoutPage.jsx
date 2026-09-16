@@ -4,7 +4,7 @@ import {
   CheckCircle, MapPin, Truck, ShieldCheck, AlertCircle, ArrowRight,
   User, Lock, Mail, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, Edit3,
   ShoppingBag, Shield, Check, Clock, Package, Building, Plus, Navigation, Home, Briefcase, Trash2,
-  Minus, Star
+  Minus, Star, X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -102,6 +102,29 @@ export const CheckoutPage = () => {
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+
+  // Address Selection & Management Modal State (Matches Flipkart "Deliver to -> Change" Modal)
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [addressModalView, setAddressModalView] = useState('list'); // 'list' | 'form'
+  const [editingAddressId, setEditingAddressId] = useState(null);
+  const [modalAddressForm, setModalAddressForm] = useState({
+    name: '',
+    phone: '',
+    pincode: '689641',
+    locality: '',
+    address: '',
+    city: 'Pathanamthitta',
+    district: 'Pathanamthitta',
+    state: 'Kerala',
+    landmark: '',
+    alternatePhone: '',
+    addressType: 'HOME', // 'HOME' or 'WORK'
+    isDefault: false
+  });
+  const [modalPincodeCheck, setModalPincodeCheck] = useState(null);
+  const [modalIsLocating, setModalIsLocating] = useState(false);
+  const [modalIsSaving, setModalIsSaving] = useState(false);
+  const [modalError, setModalError] = useState('');
 
   // Coupon inline input
   const [couponInput, setCouponInput] = useState('');
@@ -212,6 +235,42 @@ export const CheckoutPage = () => {
       setPincodeCheck(null);
     }
   }, [deliveryAddress.pincode, deliveryType]);
+
+  // Live Pincode Serviceability & Auto-Fill inside Address Modal
+  useEffect(() => {
+    const pin = (modalAddressForm.pincode || '').trim().replace(/[^0-9]/g, '');
+    if (showAddressModal && addressModalView === 'form' && pin.length === 6) {
+      let active = true;
+      setModalPincodeCheck({ checking: true });
+      api.checkShippingPincode(pin)
+        .then(res => {
+          if (active) {
+            setModalPincodeCheck({
+              checking: false,
+              serviceable: res.serviceable,
+              city: res.city || res.district,
+              district: res.district,
+              state: res.state || 'Kerala'
+            });
+            if (res.serviceable) {
+              setModalAddressForm(prev => ({
+                ...prev,
+                city: res.city || res.district || prev.city,
+                district: res.district || prev.district,
+                state: res.state || 'Kerala',
+                locality: (!prev.locality && res.localityHint) ? res.localityHint : prev.locality
+              }));
+            }
+          }
+        })
+        .catch(() => {
+          if (active) setModalPincodeCheck(null);
+        });
+      return () => { active = false; };
+    } else {
+      setModalPincodeCheck(null);
+    }
+  }, [modalAddressForm.pincode, addressModalView, showAddressModal]);
 
   // Live Phone Existence Check (Account Lookup)
   useEffect(() => {
@@ -345,6 +404,238 @@ export const CheckoutPage = () => {
       }
     } catch (err) {
       console.warn("Delete address notice:", err.message);
+    }
+  };
+
+  // ============================================================
+  // ADDRESS SELECTION & MANAGEMENT MODAL HANDLERS (FLIPKART STYLE)
+  // ============================================================
+
+  // Open Address Selection & Management Modal
+  const handleOpenAddressModal = () => {
+    setAddressModalView('list');
+    setEditingAddressId(null);
+    setModalError('');
+    setShowAddressModal(true);
+  };
+
+  // Start Adding New Address inside Modal
+  const handleStartAddAddressInModal = () => {
+    setEditingAddressId(null);
+    setModalAddressForm({
+      name: user?.name || '',
+      phone: user?.phone || '',
+      pincode: '689641',
+      locality: '',
+      address: '',
+      city: 'Pathanamthitta',
+      district: 'Pathanamthitta',
+      state: 'Kerala',
+      landmark: '',
+      alternatePhone: '',
+      addressType: 'HOME',
+      isDefault: !user?.savedAddresses || user.savedAddresses.length === 0
+    });
+    setModalError('');
+    setAddressModalView('form');
+  };
+
+  // Start Editing Address inside Modal
+  const handleStartEditAddressInModal = (addr) => {
+    setEditingAddressId(addr.id || addr._id);
+    setModalAddressForm({
+      name: addr.name || user?.name || '',
+      phone: addr.phone || user?.phone || '',
+      pincode: addr.pincode || '689641',
+      locality: addr.locality || '',
+      address: addr.address || '',
+      city: addr.city || addr.district || 'Pathanamthitta',
+      district: addr.district || 'Pathanamthitta',
+      state: addr.state || 'Kerala',
+      landmark: addr.landmark || '',
+      alternatePhone: addr.alternatePhone || '',
+      addressType: addr.addressType || 'HOME',
+      isDefault: Boolean(addr.isDefault)
+    });
+    setModalError('');
+    setAddressModalView('form');
+  };
+
+  // Select Address and Deliver Here from Modal
+  const handleSelectAndDeliverFromModal = (addr) => {
+    const addrId = addr.id || addr._id;
+    setSelectedAddressId(addrId);
+    setDeliveryAddress({
+      name: addr.name || user?.name || '',
+      phone: addr.phone || user?.phone || '',
+      pincode: addr.pincode || '689641',
+      locality: addr.locality || '',
+      address: addr.address || '',
+      city: addr.city || addr.district || 'Pathanamthitta',
+      district: addr.district || 'Pathanamthitta',
+      state: addr.state || 'Kerala',
+      landmark: addr.landmark || '',
+      alternatePhone: addr.alternatePhone || '',
+      addressType: addr.addressType || 'HOME'
+    });
+    setShowAddressModal(false);
+  };
+
+  // Modal Geolocation Reverse Lookup
+  const handleModalUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setModalIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+          const data = await res.json();
+          if (data && data.address) {
+            const rawPin = data.address.postcode ? String(data.address.postcode).replace(/[^0-9]/g, '').slice(0, 6) : '';
+            const locality = data.address.suburb || data.address.neighbourhood || data.address.village || data.address.road || '';
+            const district = (data.address.state_district || data.address.county || data.address.city || 'Pathanamthitta').replace(' District', '');
+            const state = data.address.state || 'Kerala';
+
+            setModalAddressForm(prev => ({
+              ...prev,
+              pincode: rawPin || prev.pincode,
+              locality: locality || prev.locality,
+              district: district || prev.district,
+              city: district || prev.city,
+              state: state || prev.state
+            }));
+          }
+        } catch (err) {
+          console.warn("Modal location error:", err);
+        } finally {
+          setModalIsLocating(false);
+        }
+      },
+      (err) => {
+        console.warn("Geolocation error:", err.message);
+        setModalIsLocating(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
+
+  // Save (Create / Update) Address inside Modal and Deliver Here
+  const handleModalSaveAddress = async (e) => {
+    if (e) e.preventDefault();
+    setModalError('');
+
+    if (!modalAddressForm.name?.trim()) {
+      setModalError('Please enter recipient name.');
+      return;
+    }
+    const cleanPhone = (modalAddressForm.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (cleanPhone.length !== 10) {
+      setModalError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    const cleanPin = (modalAddressForm.pincode || '').replace(/[^0-9]/g, '').slice(0, 6);
+    if (cleanPin.length !== 6) {
+      setModalError('Please enter a valid 6-digit postal pincode.');
+      return;
+    }
+    if (!modalAddressForm.address?.trim()) {
+      setModalError('Please enter street / house / building address.');
+      return;
+    }
+
+    setModalIsSaving(true);
+    try {
+      const customerId = user?.id || user?._id;
+      const payload = {
+        ...modalAddressForm,
+        name: modalAddressForm.name.trim(),
+        phone: cleanPhone,
+        pincode: cleanPin,
+        address: modalAddressForm.address.trim(),
+        locality: modalAddressForm.locality?.trim() || '',
+        city: modalAddressForm.city || modalAddressForm.district || 'Pathanamthitta',
+        district: modalAddressForm.district || 'Pathanamthitta',
+        state: modalAddressForm.state || 'Kerala',
+        landmark: modalAddressForm.landmark?.trim() || '',
+        alternatePhone: (modalAddressForm.alternatePhone || '').replace(/[^0-9]/g, '').slice(-10),
+        addressType: modalAddressForm.addressType || 'HOME',
+        isDefault: Boolean(modalAddressForm.isDefault)
+      };
+
+      let targetAddressId = editingAddressId;
+
+      if (editingAddressId) {
+        const res = await api.updateCustomerAddress(customerId, editingAddressId, payload);
+        if (res.success && res.data) {
+          updateUser(res.data);
+        }
+      } else {
+        const res = await api.addCustomerAddress(customerId, payload);
+        if (res.success && res.data) {
+          updateUser(res.data);
+          if (res.address && res.address.id) {
+            targetAddressId = res.address.id;
+          }
+        }
+      }
+
+      // Automatically apply this saved address to the current checkout order!
+      setSelectedAddressId(targetAddressId || 'saved-addr');
+      setDeliveryAddress({
+        name: payload.name,
+        phone: payload.phone,
+        pincode: payload.pincode,
+        locality: payload.locality,
+        address: payload.address,
+        city: payload.city,
+        district: payload.district,
+        state: payload.state,
+        landmark: payload.landmark,
+        alternatePhone: payload.alternatePhone,
+        addressType: payload.addressType
+      });
+
+      setShowAddressModal(false);
+    } catch (err) {
+      setModalError(err.message || 'Failed to save address.');
+    } finally {
+      setModalIsSaving(false);
+    }
+  };
+
+  // Set Address as Default from inside Modal
+  const handleModalSetDefault = async (addressId) => {
+    try {
+      const customerId = user?.id || user?._id;
+      const res = await api.setDefaultCustomerAddress(customerId, addressId);
+      if (res.success && res.data) {
+        updateUser(res.data);
+      }
+    } catch (err) {
+      console.warn("Set default failed:", err.message);
+    }
+  };
+
+  // Delete Address from inside Modal
+  const handleModalDeleteAddress = async (e, addressId) => {
+    e.stopPropagation();
+    if (!window.confirm("Remove this saved address from your account?")) return;
+    try {
+      const customerId = user?.id || user?._id;
+      const res = await api.deleteCustomerAddress(customerId, addressId);
+      if (res.success && res.data) {
+        updateUser(res.data);
+        const remaining = res.data.savedAddresses || [];
+        if (remaining.length > 0) {
+          handleSelectAndDeliverFromModal(remaining[0]);
+        }
+      }
+    } catch (err) {
+      console.warn("Delete address failed:", err.message);
     }
   };
 
@@ -1714,7 +2005,8 @@ export const CheckoutPage = () => {
 
                   <button
                     type="button"
-                    onClick={() => setStep('address')}
+                    onClick={handleOpenAddressModal}
+                    id="btn-checkout-change-address"
                     style={{
                       background: '#ffffff',
                       border: '1px solid #e0e0e0',
@@ -2013,7 +2305,7 @@ export const CheckoutPage = () => {
 
                   <button
                     type="button"
-                    onClick={() => setStep('address')}
+                    onClick={handleOpenAddressModal}
                     style={{ background: '#ffffff', border: '1px solid #e0e0e0', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '4px', cursor: 'pointer' }}
                   >
                     Change
@@ -2354,6 +2646,582 @@ export const CheckoutPage = () => {
 
         </div>
       </div>
+
+      {/* ADDRESS SELECTION & MANAGEMENT MODAL (Matches screenshot 2 and user requirements) */}
+      {showAddressModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+          onClick={() => setShowAddressModal(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              maxWidth: '640px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: '18px 24px',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#ffffff',
+              position: 'sticky',
+              top: 0,
+              zIndex: 10
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>
+                  {addressModalView === 'form'
+                    ? (editingAddressId ? 'Edit Delivery Address' : 'Add New Delivery Address')
+                    : 'Select Delivery Address'}
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                  {addressModalView === 'form'
+                    ? 'Synced to your customer account for rapid express checkout.'
+                    : `Saved addresses on your verified account (+91 ${user?.phone || loginForm.phone || ''})`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddressModal(false)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748b'
+                }}
+                title="Close modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Error Banner */}
+            {modalError && (
+              <div style={{ margin: '16px 24px 0', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '10px 14px', color: '#991b1b', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            {/* Modal Body: LIST VIEW */}
+            {addressModalView === 'list' && (
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Saved Addresses ({user?.savedAddresses?.length || (user?.address ? 1 : 0)})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleStartAddAddressInModal}
+                    style={{
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      color: '#1d4ed8',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      padding: '6px 14px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    id="btn-modal-add-new-address"
+                  >
+                    <Plus size={14} />
+                    <span>+ Add New Address</span>
+                  </button>
+                </div>
+
+                {/* List of Saved Addresses */}
+                {(() => {
+                  const addresses = (user?.savedAddresses && user.savedAddresses.length > 0)
+                    ? user.savedAddresses
+                    : (user?.address ? [{
+                        id: 'default-acc-addr',
+                        name: user.name || 'Customer',
+                        phone: user.phone,
+                        address: user.address,
+                        district: user.district || 'Pathanamthitta',
+                        state: user.state || 'Kerala',
+                        pincode: user.pincode || '689641',
+                        locality: user.locality || '',
+                        landmark: user.landmark || '',
+                        addressType: 'HOME',
+                        isDefault: true
+                      }] : []);
+
+                  if (addresses.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                        <MapPin size={36} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
+                        <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0 0 14px' }}>
+                          No delivery addresses saved on this account yet.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleStartAddAddressInModal}
+                          style={{
+                            background: '#fb641b',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '10px 20px',
+                            borderRadius: '4px',
+                            fontSize: '0.86rem',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          + Add First Address
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {addresses.map((addr) => {
+                        const addrId = addr.id || addr._id;
+                        const isSelected = selectedAddressId === addrId;
+                        const isDefault = Boolean(addr.isDefault);
+
+                        return (
+                          <div
+                            key={addrId}
+                            onClick={() => setSelectedAddressId(addrId)}
+                            style={{
+                              border: isSelected ? '2px solid #2874f0' : '1px solid #e2e8f0',
+                              background: isSelected ? '#f8faff' : '#ffffff',
+                              borderRadius: '8px',
+                              padding: '16px',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '10px',
+                              boxShadow: isSelected ? '0 2px 8px rgba(40, 116, 240, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
+                            }}
+                          >
+                            {/* Card Header */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <input
+                                  type="radio"
+                                  name="modalSelectedAddress"
+                                  checked={isSelected}
+                                  onChange={() => setSelectedAddressId(addrId)}
+                                  style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px' }}
+                                />
+                                <span style={{
+                                  background: '#f1f5f9',
+                                  color: '#334155',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '800',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.04em'
+                                }}>
+                                  {addr.addressType || 'HOME'}
+                                </span>
+                                <strong style={{ fontSize: '0.94rem', color: '#1e293b' }}>
+                                  {addr.name}
+                                </strong>
+                                <span style={{ fontSize: '0.86rem', color: '#475569', fontWeight: '700' }}>
+                                  +91 {addr.phone}
+                                </span>
+                                {isDefault && (
+                                  <span style={{
+                                    background: '#ecfdf5',
+                                    color: '#047857',
+                                    border: '1px solid #a7f3d0',
+                                    fontSize: '0.68rem',
+                                    fontWeight: '800',
+                                    padding: '2px 8px',
+                                    borderRadius: '4px'
+                                  }}>
+                                    ✓ DEFAULT
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Card Action Buttons (Edit / Delete) */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEditAddressInModal(addr)}
+                                  style={{
+                                    background: '#eff6ff',
+                                    border: '1px solid #bfdbfe',
+                                    color: '#1d4ed8',
+                                    fontSize: '0.76rem',
+                                    fontWeight: '700',
+                                    padding: '4px 10px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                  }}
+                                  title="Edit address"
+                                >
+                                  <Edit3 size={13} />
+                                  <span>Edit</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleModalDeleteAddress(e, addrId)}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#94a3b8',
+                                    cursor: 'pointer',
+                                    padding: '4px'
+                                  }}
+                                  title="Delete address"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Address Details */}
+                            <div style={{ fontSize: '0.86rem', color: '#334155', paddingLeft: '26px', lineHeight: '1.5' }}>
+                              {addr.address}{addr.locality ? `, ${addr.locality}` : ''}{addr.landmark ? `, Near ${addr.landmark}` : ''}, {addr.city || addr.district}, {addr.state || 'Kerala'} - <strong>{addr.pincode}</strong>
+                            </div>
+
+                            {/* Card Footer: Set Default & Deliver Button */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '26px', marginTop: '4px' }}>
+                              <div>
+                                {!isDefault && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleModalSetDefault(addrId);
+                                    }}
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      color: '#ea580c',
+                                      fontSize: '0.78rem',
+                                      fontWeight: '700',
+                                      cursor: 'pointer',
+                                      padding: 0
+                                    }}
+                                  >
+                                    Mark as Default
+                                  </button>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectAndDeliverFromModal(addr);
+                                }}
+                                style={{
+                                  background: isSelected ? '#fb641b' : '#2874f0',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  padding: '8px 20px',
+                                  fontSize: '0.84rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  boxShadow: isSelected ? '0 2px 8px rgba(251, 100, 27, 0.3)' : 'none'
+                                }}
+                              >
+                                {isSelected ? 'DELIVER HERE ➔' : 'Select & Deliver'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Modal Body: FORM VIEW (ADD / EDIT ADDRESS) */}
+            {addressModalView === 'form' && (
+              <form onSubmit={handleModalSaveAddress} style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAddressModalView('list')}
+                    style={{ background: 'transparent', border: 'none', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    ← Back to Saved Addresses
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleModalUseCurrentLocation}
+                    disabled={modalIsLocating}
+                    style={{
+                      background: '#2874f0',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '6px 14px',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <Navigation size={13} />
+                    <span>{modalIsLocating ? 'Locating...' : 'Use my current location'}</span>
+                  </button>
+                </div>
+
+                {/* Name & 10-Digit Mobile */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Recipient Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={modalAddressForm.name}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, name: e.target.value })}
+                      placeholder="Recipient Full Name"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>10-Digit Mobile Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      value={modalAddressForm.phone}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
+                      placeholder="Delivery Mobile"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Pincode & Locality */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Pincode (6 Digits) *</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={modalAddressForm.pincode}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, pincode: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) })}
+                      placeholder="e.g. 689641"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    {modalPincodeCheck?.serviceable === true && (
+                      <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700', marginTop: '2px', display: 'block' }}>
+                        ✓ Kerala Courier Serviceable ({modalPincodeCheck.district})
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Locality / Area *</label>
+                    <input
+                      type="text"
+                      required
+                      value={modalAddressForm.locality}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, locality: e.target.value })}
+                      placeholder="e.g. Nirannukala Road"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Address (Area and Street) */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Address (House / Building / Street) *</label>
+                  <textarea
+                    rows={2}
+                    required
+                    value={modalAddressForm.address}
+                    onChange={(e) => setModalAddressForm({ ...modalAddressForm, address: e.target.value })}
+                    placeholder="House name, Building, Street address"
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+
+                {/* City / District & State */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>City / District *</label>
+                    <input
+                      type="text"
+                      required
+                      value={modalAddressForm.city || modalAddressForm.district}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, city: e.target.value, district: e.target.value })}
+                      placeholder="Pathanamthitta"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>State *</label>
+                    <input
+                      type="text"
+                      required
+                      value={modalAddressForm.state || 'Kerala'}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, state: e.target.value })}
+                      placeholder="Kerala"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Landmark & Alternate Phone */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Landmark (Optional)</label>
+                    <input
+                      type="text"
+                      value={modalAddressForm.landmark}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, landmark: e.target.value })}
+                      placeholder="e.g. Near Temple / Waiting shed"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Alternate Phone (Optional)</label>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      value={modalAddressForm.alternatePhone}
+                      onChange={(e) => setModalAddressForm({ ...modalAddressForm, alternatePhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
+                      placeholder="Alternate Mobile"
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Address Type: Radio buttons for HOME or WORK */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Address Type</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="modalAddressType"
+                        value="HOME"
+                        checked={modalAddressForm.addressType === 'HOME'}
+                        onChange={() => setModalAddressForm({ ...modalAddressForm, addressType: 'HOME' })}
+                        style={{ accentColor: '#2874f0', cursor: 'pointer' }}
+                      />
+                      <span>Home (All day delivery)</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="modalAddressType"
+                        value="WORK"
+                        checked={modalAddressForm.addressType === 'WORK'}
+                        onChange={() => setModalAddressForm({ ...modalAddressForm, addressType: 'WORK' })}
+                        style={{ accentColor: '#2874f0', cursor: 'pointer' }}
+                      />
+                      <span>Work (Delivery between 10 AM - 5 PM)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Set as Default Address Checkbox */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                  <input
+                    type="checkbox"
+                    id="modal-check-default-address"
+                    checked={modalAddressForm.isDefault}
+                    onChange={(e) => setModalAddressForm({ ...modalAddressForm, isDefault: e.target.checked })}
+                    style={{ accentColor: '#2874f0', width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="modal-check-default-address" style={{ fontSize: '0.82rem', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>
+                    Set as my default delivery address
+                  </label>
+                </div>
+
+                {/* Modal Form Action Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAddressModalView('list')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid #cbd5e1',
+                      color: '#475569',
+                      fontSize: '0.86rem',
+                      fontWeight: '700',
+                      padding: '10px 18px',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={modalIsSaving}
+                    style={{
+                      background: '#fb641b',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '11px 28px',
+                      fontSize: '0.88rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                    }}
+                  >
+                    {modalIsSaving ? 'SAVING...' : 'SAVE & DELIVER HERE ➔'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

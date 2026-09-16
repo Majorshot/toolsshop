@@ -462,6 +462,28 @@ export const api = {
     return result;
   },
 
+  // Customer: Update a saved address
+  async updateCustomerAddress(customerId, addressId, addressData) {
+    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(addressData)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to update address');
+    return result;
+  },
+
+  // Customer: Set default address
+  async setDefaultCustomerAddress(customerId, addressId) {
+    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}/default`, {
+      method: 'PUT'
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to set default address');
+    return result;
+  },
+
   // Customer: Delete a saved address
   async deleteCustomerAddress(customerId, addressId) {
     const res = await fetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}`, {

@@ -113,6 +113,120 @@ router.post('/:id/addresses', async (req, res) => {
   }
 });
 
+// PUT update an existing saved address
+router.put('/:id/addresses/:addressId', async (req, res) => {
+  try {
+    const { name, phone, pincode, locality, address, city, district, state, landmark, alternatePhone, addressType, isDefault } = req.body;
+    const mongoose = require('mongoose');
+    const customer = await db.CustomerModel.findOne(
+      mongoose.isValidObjectId(req.params.id) ? { _id: req.params.id } : { phone: req.params.id.replace(/[^0-9]/g, '').slice(-10) }
+    );
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+
+    if (!customer.savedAddresses) customer.savedAddresses = [];
+    const addrIdx = customer.savedAddresses.findIndex(
+      a => (a.id === req.params.addressId || a._id?.toString() === req.params.addressId)
+    );
+
+    if (addrIdx === -1) {
+      return res.status(404).json({ success: false, message: "Address not found" });
+    }
+
+    if (isDefault) {
+      customer.savedAddresses.forEach(a => { a.isDefault = false; });
+    }
+
+    const current = customer.savedAddresses[addrIdx];
+    const updated = {
+      id: current.id || req.params.addressId,
+      name: name !== undefined ? name : current.name,
+      phone: phone !== undefined ? phone : current.phone,
+      pincode: pincode !== undefined ? pincode : current.pincode,
+      locality: locality !== undefined ? locality : current.locality,
+      address: address !== undefined ? address : current.address,
+      city: city !== undefined ? city : current.city,
+      district: district !== undefined ? district : current.district,
+      state: state !== undefined ? state : current.state,
+      landmark: landmark !== undefined ? landmark : current.landmark,
+      alternatePhone: alternatePhone !== undefined ? alternatePhone : current.alternatePhone,
+      addressType: addressType || current.addressType || 'HOME',
+      isDefault: isDefault !== undefined ? Boolean(isDefault) : Boolean(current.isDefault)
+    };
+
+    customer.savedAddresses[addrIdx] = updated;
+    customer.markModified('savedAddresses');
+
+    if (updated.isDefault || customer.savedAddresses.length === 1) {
+      customer.address = updated.address;
+      customer.district = updated.district;
+      customer.state = updated.state;
+      customer.pincode = updated.pincode;
+      customer.landmark = updated.landmark;
+    }
+
+    await customer.save();
+
+    res.json({
+      success: true,
+      message: "Address updated successfully",
+      data: customer.toObject(),
+      address: updated
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT mark address as default
+router.put('/:id/addresses/:addressId/default', async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const customer = await db.CustomerModel.findOne(
+      mongoose.isValidObjectId(req.params.id) ? { _id: req.params.id } : { phone: req.params.id.replace(/[^0-9]/g, '').slice(-10) }
+    );
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+
+    if (!customer.savedAddresses || customer.savedAddresses.length === 0) {
+      return res.status(404).json({ success: false, message: "No saved addresses found" });
+    }
+
+    let selected = null;
+    customer.savedAddresses.forEach(a => {
+      if (a.id === req.params.addressId || a._id?.toString() === req.params.addressId) {
+        a.isDefault = true;
+        selected = a;
+      } else {
+        a.isDefault = false;
+      }
+    });
+
+    if (!selected) {
+      return res.status(404).json({ success: false, message: "Address not found" });
+    }
+
+    customer.address = selected.address;
+    customer.district = selected.district;
+    customer.state = selected.state;
+    customer.pincode = selected.pincode;
+    customer.landmark = selected.landmark;
+
+    customer.markModified('savedAddresses');
+    await customer.save();
+
+    res.json({
+      success: true,
+      message: "Default address updated successfully",
+      data: customer.toObject()
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // DELETE remove a saved address
 router.delete('/:id/addresses/:addressId', async (req, res) => {
   try {
