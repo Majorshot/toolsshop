@@ -3751,6 +3751,16 @@ header.main-site-header {
   border-radius: 4px;
 }
 
+.store-order-status-chips::-webkit-scrollbar {
+  display: none;
+  height: 0px;
+}
+
+.store-order-status-chips {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 .store-nav-tab-btn {
   flex-shrink: 0;
   white-space: nowrap;

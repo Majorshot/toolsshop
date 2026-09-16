@@ -105,6 +105,43 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setIsDraggingTabs(false);
   }, []);
 
+  const statusChipsBarRef = useRef(null);
+  const [isDraggingChips, setIsDraggingChips] = useState(false);
+  const chipsDragStartRef = useRef({ x: 0, scrollLeft: 0 });
+  const chipsDragMovedRef = useRef(false);
+
+  const handleChipsDragStart = useCallback((e) => {
+    if (!statusChipsBarRef.current) return;
+    setIsDraggingChips(true);
+    chipsDragMovedRef.current = false;
+    chipsDragStartRef.current = {
+      x: e.pageX - statusChipsBarRef.current.offsetLeft,
+      scrollLeft: statusChipsBarRef.current.scrollLeft
+    };
+  }, []);
+
+  const handleChipsDragMove = useCallback((e) => {
+    if (!isDraggingChips || !statusChipsBarRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - statusChipsBarRef.current.offsetLeft;
+    const walk = (x - chipsDragStartRef.current.x) * 1.5;
+    if (Math.abs(walk) > 3) chipsDragMovedRef.current = true;
+    statusChipsBarRef.current.scrollLeft = chipsDragStartRef.current.scrollLeft - walk;
+  }, [isDraggingChips]);
+
+  const handleChipsDragEnd = useCallback(() => {
+    setIsDraggingChips(false);
+  }, []);
+
+  const scrollStatusChips = useCallback((direction) => {
+    if (statusChipsBarRef.current) {
+      statusChipsBarRef.current.scrollBy({
+        left: direction === 'left' ? -240 : 240,
+        behavior: 'smooth'
+      });
+    }
+  }, []);
+
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'inventory'
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
@@ -260,9 +297,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   const orderCounts = useMemo(() => {
     const list = Array.isArray(orders) ? orders.filter(Boolean) : [];
+    const activeList = list.filter(o => (o.status || '').toLowerCase() !== 'cancelled');
     return {
-      all: list.length,
-      today: list.filter(o => isOrderDateToday(o.createdAt || o.date)).length,
+      all: activeList.length,
+      today: activeList.filter(o => isOrderDateToday(o.createdAt || o.date)).length,
       undispatched: list.filter(isOrderUndispatched).length,
       dispatched: list.filter(isOrderDispatched).length,
       pickupPending: list.filter(isOrderPickupPending).length,
@@ -278,6 +316,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       // 1. Status Filter Chip
       if (orderStatusFilter === 'today') {
         if (!isOrderDateToday(order.createdAt || order.date)) return false;
+        if ((order.status || '').toLowerCase() === 'cancelled') return false;
       } else if (orderStatusFilter === 'undispatched') {
         if (!isOrderUndispatched(order)) return false;
       } else if (orderStatusFilter === 'dispatched') {
@@ -1774,6 +1813,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         onMouseMove={handleTabsDragMove}
         onMouseUp={handleTabsDragEnd}
         onMouseLeave={handleTabsDragEnd}
+        onWheel={(e) => {
+          if (e.deltaY !== 0) {
+            e.currentTarget.scrollLeft += e.deltaY;
+          }
+        }}
         style={{ cursor: isDraggingTabs ? 'grabbing' : 'grab' }}
       >
         <button
@@ -1783,7 +1827,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           id="store-tab-orders"
         >
           <ShoppingBag size={16} />
-          <span>Customer Orders ({orders.length})</span>
+          <span>Customer Orders{orderCounts.all > 0 ? ` (${orderCounts.all})` : ''}</span>
           {orderCounts.undispatched > 0 && (
             <span className="store-nav-badge-alert" style={{ background: '#ea580c', color: '#fff' }}>
               {orderCounts.undispatched} undispatched
@@ -1984,74 +2028,145 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
               )}
 
-              {/* Status Filter Chips (Horizontal Scroll/Wrap) */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  marginBottom: '14px',
-                  overflowX: 'auto',
-                  paddingBottom: '4px',
-                  scrollbarWidth: 'thin'
-                }}
-                className="store-order-status-chips"
-              >
-                {[
-                  { id: 'all', label: 'All Orders', count: orderCounts.all, icon: ShoppingBag, color: '#0f172a' },
-                  { id: 'today', label: "⚡ Today's Orders", count: orderCounts.today, icon: Clock, color: '#ea580c' },
-                  { id: 'undispatched', label: '📦 Undispatched', count: orderCounts.undispatched, icon: AlertCircle, color: '#d97706' },
-                  { id: 'dispatched', label: '🚚 Dispatched', count: orderCounts.dispatched, icon: Truck, color: '#16a34a' },
-                  { id: 'pickup-pending', label: '🏬 Counter Pickup', count: orderCounts.pickupPending, icon: ShieldCheck, color: '#0284c7' },
-                  { id: 'completed', label: '✅ Completed', count: orderCounts.completed, icon: CheckCircle2, color: '#059669' },
-                  ...(orderCounts.cancelPending > 0 ? [
-                    { id: 'cancel-pending', label: '⚠️ Cancel Requests', count: orderCounts.cancelPending, icon: AlertTriangle, color: '#dc2626' }
-                  ] : []),
-                  { id: 'cancelled', label: '❌ Cancelled', count: orderCounts.cancelled, icon: XCircle, color: '#64748b' }
-                ].map(chip => {
-                  const isSelected = orderStatusFilter === chip.id;
-                  const IconComp = chip.icon;
-                  return (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => setOrderStatusFilter(chip.id)}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '8px 14px',
-                        borderRadius: '9999px',
-                        fontSize: '0.8rem',
-                        fontWeight: isSelected ? '800' : '600',
-                        cursor: 'pointer',
-                        border: isSelected ? `1.5px solid ${chip.color}` : '1px solid #cbd5e1',
-                        background: isSelected ? chip.color : '#ffffff',
-                        color: isSelected ? '#ffffff' : '#334155',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.12)' : 'none',
-                        whiteSpace: 'nowrap'
-                      }}
-                      id={`btn-filter-order-status-${chip.id}`}
-                    >
-                      <IconComp size={14} style={{ color: isSelected ? '#ffffff' : chip.color }} />
-                      <span>{chip.label}</span>
-                      <span
-                        style={{
-                          background: isSelected ? 'rgba(255, 255, 255, 0.28)' : '#f1f5f9',
-                          color: isSelected ? '#ffffff' : '#0f172a',
-                          fontSize: '0.72rem',
-                          fontWeight: '800',
-                          padding: '2px 7px',
-                          borderRadius: '9999px',
-                          marginLeft: '2px'
+              {/* Status Filter Chips (Horizontal Scrollable Strip with Arrows & Mouse Drag) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', width: '100%' }}>
+                <button
+                  type="button"
+                  onClick={() => scrollStatusChips('left')}
+                  style={{
+                    flexShrink: 0,
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Scroll left"
+                  aria-label="Scroll status filters left"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <div
+                  ref={statusChipsBarRef}
+                  onMouseDown={handleChipsDragStart}
+                  onMouseMove={handleChipsDragMove}
+                  onMouseUp={handleChipsDragEnd}
+                  onMouseLeave={handleChipsDragEnd}
+                  onWheel={(e) => {
+                    if (e.deltaY !== 0) {
+                      e.currentTarget.scrollLeft += e.deltaY;
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    overflowX: 'auto',
+                    padding: '4px 2px',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                    cursor: isDraggingChips ? 'grabbing' : 'grab',
+                    flex: 1,
+                    userSelect: 'none'
+                  }}
+                  className="store-order-status-chips"
+                >
+                  {[
+                    { id: 'all', label: 'All Orders', count: orderCounts.all, icon: ShoppingBag, color: '#0f172a' },
+                    { id: 'today', label: "⚡ Today's Orders", count: orderCounts.today, icon: Clock, color: '#ea580c' },
+                    { id: 'undispatched', label: '📦 Undispatched', count: orderCounts.undispatched, icon: AlertCircle, color: '#d97706' },
+                    { id: 'dispatched', label: '🚚 Dispatched', count: orderCounts.dispatched, icon: Truck, color: '#16a34a' },
+                    { id: 'pickup-pending', label: '🏬 Counter Pickup', count: orderCounts.pickupPending, icon: ShieldCheck, color: '#0284c7' },
+                    { id: 'completed', label: '✅ Completed', count: orderCounts.completed, icon: CheckCircle2, color: '#059669' },
+                    ...(orderCounts.cancelPending > 0 ? [
+                      { id: 'cancel-pending', label: '⚠️ Cancel Requests', count: orderCounts.cancelPending, icon: AlertTriangle, color: '#dc2626' }
+                    ] : []),
+                    { id: 'cancelled', label: '❌ Cancelled', count: orderCounts.cancelled, icon: XCircle, color: '#64748b' }
+                  ].map(chip => {
+                    const isSelected = orderStatusFilter === chip.id;
+                    const IconComp = chip.icon;
+                    return (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        onClick={() => {
+                          if (!chipsDragMovedRef.current) {
+                            setOrderStatusFilter(chip.id);
+                          }
                         }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          borderRadius: '9999px',
+                          fontSize: '0.8rem',
+                          fontWeight: isSelected ? '800' : '600',
+                          cursor: 'pointer',
+                          border: isSelected ? `1.5px solid ${chip.color}` : '1px solid #cbd5e1',
+                          background: isSelected ? chip.color : '#ffffff',
+                          color: isSelected ? '#ffffff' : '#334155',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.12)' : 'none',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
+                        }}
+                        id={`btn-filter-order-status-${chip.id}`}
                       >
-                        {chip.count}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <IconComp size={14} style={{ color: isSelected ? '#ffffff' : chip.color }} />
+                        <span>{chip.label}</span>
+                        {chip.id !== 'cancelled' && chip.count > 0 && (
+                          <span
+                            style={{
+                              background: isSelected ? 'rgba(255, 255, 255, 0.28)' : '#f1f5f9',
+                              color: isSelected ? '#ffffff' : '#0f172a',
+                              fontSize: '0.72rem',
+                              fontWeight: '800',
+                              padding: '2px 7px',
+                              borderRadius: '9999px',
+                              marginLeft: '2px'
+                            }}
+                          >
+                            {chip.count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => scrollStatusChips('right')}
+                  style={{
+                    flexShrink: 0,
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Scroll right"
+                  aria-label="Scroll status filters right"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
 
               {/* Filter Toolbar (Search + Date + Delivery + Payment + Sort) */}
