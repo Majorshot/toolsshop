@@ -199,12 +199,33 @@ function buildItemsTable(items) {
 // ─── Helper: Build totals breakdown ────────────────────────────────────────────
 function buildTotalsBlock(order) {
   const grandTotal = Number(order.totalAmount || 0);
+  const itemsSubtotal = (order.items || []).reduce((sum, it) => sum + (Number(it.price || 0) * Number(it.quantity || 1)), 0);
+  const rawDiscount = Number(order.discountAmount || order.discount || (itemsSubtotal > grandTotal ? itemsSubtotal - grandTotal : 0));
+  const discountAmount = Math.max(0, rawDiscount);
+  const couponCode = order.couponCode || (order.coupon && typeof order.coupon === 'string' ? order.coupon : order.coupon?.code);
+
   const taxableTotal = Math.round(grandTotal / 1.18);
   const gstTotal = grandTotal - taxableTotal;
 
   return `
     <div style="background: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
       <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        ${itemsSubtotal > 0 && discountAmount > 0 ? `
+          <tr>
+            <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Total Equipment Value:</td>
+            <td style="font-size: 12px; font-weight: 600; color: #0f172a; text-align: right; padding-bottom: 6px;">₹${itemsSubtotal.toLocaleString('en-IN')}</td>
+          </tr>
+        ` : ''}
+        ${discountAmount > 0 ? `
+          <tr>
+            <td style="font-size: 12px; color: #16a34a; font-weight: 700; padding-bottom: 6px;">
+              Coupon Discount ${couponCode ? `(${couponCode.toUpperCase()})` : ''}:
+            </td>
+            <td style="font-size: 12px; font-weight: 700; color: #16a34a; text-align: right; padding-bottom: 6px;">
+              -₹${discountAmount.toLocaleString('en-IN')}
+            </td>
+          </tr>
+        ` : ''}
         <tr>
           <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Taxable Base Value (Excl. GST):</td>
           <td style="font-size: 12px; font-weight: 600; color: #0f172a; text-align: right; padding-bottom: 6px;">₹${taxableTotal.toLocaleString('en-IN')}</td>
@@ -213,12 +234,6 @@ function buildTotalsBlock(order) {
           <td style="font-size: 12px; color: #64748b; padding-bottom: 6px;">Kerala GST (CGST 9% + SGST 9%):</td>
           <td style="font-size: 12px; font-weight: 600; color: #0f172a; text-align: right; padding-bottom: 6px;">₹${gstTotal.toLocaleString('en-IN')}</td>
         </tr>
-        ${order.discountAmount > 0 ? `
-          <tr>
-            <td style="font-size: 12px; color: #16a34a; font-weight: 600; padding-bottom: 6px;">Special Coupon Discount:</td>
-            <td style="font-size: 12px; font-weight: 700; color: #16a34a; text-align: right; padding-bottom: 6px;">-₹${Number(order.discountAmount).toLocaleString('en-IN')}</td>
-          </tr>
-        ` : ''}
         <tr style="border-top: 1.5px solid #cbd5e1;">
           <td style="font-size: 15px; font-weight: 800; color: #0f172a; padding-top: 10px;">Grand Total (Incl. GST):</td>
           <td style="font-size: 17px; font-weight: 800; color: #dc2626; text-align: right; padding-top: 10px;">₹${grandTotal.toLocaleString('en-IN')}</td>

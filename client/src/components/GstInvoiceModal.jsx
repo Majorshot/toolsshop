@@ -63,6 +63,11 @@ export const GstInvoiceModal = ({
   }) : new Date().toLocaleDateString('en-IN');
 
   const grandTotal = Number(order.totalAmount || 0);
+  const itemsSubtotal = (order.items || []).reduce((sum, it) => sum + (Number(it.price || 0) * Number(it.quantity || 1)), 0);
+  const rawDiscount = Number(order.discountAmount || order.discount || (itemsSubtotal > grandTotal ? itemsSubtotal - grandTotal : 0));
+  const discountAmount = Math.max(0, rawDiscount);
+  const couponCode = order.couponCode || (order.coupon && typeof order.coupon === 'string' ? order.coupon : order.coupon?.code) || (discountAmount > 0 ? 'PROMO' : null);
+
   const taxableTotal = Math.round(grandTotal / 1.18);
   const totalCgst = Math.round((grandTotal - taxableTotal) / 2);
   const totalSgst = grandTotal - taxableTotal - totalCgst;
@@ -665,8 +670,41 @@ export const GstInvoiceModal = ({
             </div>
 
             {/* Totals Summary */}
-            <div style={{ width: '280px', fontSize: '0.78rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+            <div style={{ width: '310px', fontSize: '0.78rem' }}>
+              {itemsSubtotal > 0 && discountAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+                  <span style={{ color: '#475569' }}>Total Equipment Price:</span>
+                  <strong style={{ fontFamily: 'monospace' }}>₹{itemsSubtotal.toLocaleString('en-IN')}</strong>
+                </div>
+              )}
+
+              {discountAmount > 0 && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '3px 6px',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '4px',
+                  color: '#15803d',
+                  fontWeight: '700',
+                  margin: '3px 0'
+                }}>
+                  <span>
+                    Coupon Discount {couponCode ? `(${couponCode.toUpperCase()})` : ''}:
+                  </span>
+                  <span style={{ fontFamily: 'monospace' }}>-₹{discountAmount.toLocaleString('en-IN')}</span>
+                </div>
+              )}
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '2px 0',
+                borderTop: discountAmount > 0 ? '1px dashed #cbd5e1' : 'none',
+                marginTop: discountAmount > 0 ? '3px' : '0',
+                paddingTop: discountAmount > 0 ? '3px' : '0'
+              }}>
                 <span style={{ color: '#475569' }}>Total Taxable Value:</span>
                 <strong style={{ fontFamily: 'monospace' }}>₹{taxableTotal.toLocaleString('en-IN')}</strong>
               </div>
@@ -682,12 +720,6 @@ export const GstInvoiceModal = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
                   <span style={{ color: '#475569' }}>Courier Freight:</span>
                   <span style={{ fontFamily: 'monospace' }}>₹{Number(order.deliveryFee).toLocaleString('en-IN')}</span>
-                </div>
-              )}
-              {order.discount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', color: '#16a34a' }}>
-                  <span>Promotional Discount:</span>
-                  <span style={{ fontFamily: 'monospace' }}>-₹{Number(order.discount).toLocaleString('en-IN')}</span>
                 </div>
               )}
               <div
