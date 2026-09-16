@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   CheckCircle, MapPin, Truck, ShieldCheck, AlertCircle, ArrowRight,
   User, Lock, Mail, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, Edit3,
-  ShoppingBag, Shield, Check, Clock, Package, Building, Plus, Navigation, Home, Briefcase, Trash2
+  ShoppingBag, Shield, Check, Clock, Package, Building, Plus, Navigation, Home, Briefcase, Trash2,
+  Minus, Star
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -42,11 +43,23 @@ export const CheckoutPage = () => {
     deliveryFee,
     deliveryType,
     setDeliveryType,
-    finalTotal
+    finalTotal,
+    updateQuantity,
+    removeFromCart
   } = useCart();
 
   const isCustomerLoggedIn = isLoggedIn && user && user.role === 'customer';
-  const [step, setStep] = useState(isCustomerLoggedIn ? 2 : 1);
+
+  // Step state: 'login' | 'address' | 'summary' | 'payment'
+  // When already logged in and has an address, default straight to 'summary' (Order Summary)!
+  const getInitialStep = () => {
+    if (!isCustomerLoggedIn) return 'login';
+    if ((user?.savedAddresses && user.savedAddresses.length > 0) || user?.address) {
+      return 'summary';
+    }
+    return 'address';
+  };
+  const [step, setStep] = useState(getInitialStep);
 
   // Payment method selection ('razorpay' or 'cash')
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
@@ -122,8 +135,25 @@ export const CheckoutPage = () => {
           addressType: defaultAddr.addressType || 'HOME'
         });
         setIsAddingNewAddress(false);
+        // Automatically land on 'summary' if previously on login
+        setStep(prev => (prev === 'login' ? 'summary' : prev));
+      } else if (user.address) {
+        setDeliveryAddress({
+          name: user.name || '',
+          phone: user.phone || '',
+          pincode: user.pincode || '689641',
+          locality: user.locality || '',
+          address: user.address || '',
+          city: user.district || 'Pathanamthitta',
+          district: user.district || 'Pathanamthitta',
+          state: user.state || 'Kerala',
+          landmark: user.landmark || '',
+          alternatePhone: user.alternatePhone || '',
+          addressType: 'HOME'
+        });
+        setIsAddingNewAddress(false);
+        setStep(prev => (prev === 'login' ? 'summary' : prev));
       } else {
-        // Initialize with account info as baseline
         setDeliveryAddress({
           name: user.name || '',
           phone: user.phone || '',
@@ -138,10 +168,10 @@ export const CheckoutPage = () => {
           addressType: 'HOME'
         });
         setIsAddingNewAddress(true);
+        setStep(prev => (prev === 'login' ? 'address' : prev));
       }
-      setStep(prev => (prev === 1 ? 2 : prev));
     } else {
-      setStep(1);
+      setStep('login');
     }
   }, [user, isCustomerLoggedIn]);
 
@@ -163,14 +193,12 @@ export const CheckoutPage = () => {
               codAvailable: res.codAvailable,
               message: res.message
             });
-            // Auto-complete City/District & State!
             if (res.serviceable) {
               setDeliveryAddress(prev => ({
                 ...prev,
                 city: res.city || res.district || prev.city,
                 district: res.district || prev.district,
                 state: res.state || 'Kerala',
-                // If locality hint exists and locality is blank, auto-fill locality hint!
                 locality: (!prev.locality && res.localityHint) ? res.localityHint : prev.locality
               }));
             }
@@ -219,6 +247,18 @@ export const CheckoutPage = () => {
   }, [loginForm.phone]);
 
   const formatPrice = (num) => '₹' + Number(num || 0).toLocaleString('en-IN');
+
+  const getEstimatedDelivery = () => {
+    if (deliveryType === 'store-pickup') {
+      return 'Ready for Pickup Today';
+    }
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    const dayName = d.toLocaleDateString('en-IN', { weekday: 'short' });
+    const monthName = d.toLocaleDateString('en-IN', { month: 'short' });
+    const dayNum = d.getDate();
+    return `${monthName} ${dayNum}, ${dayName}`;
+  };
 
   const handleDeliveryAddressChange = (e) => {
     const { name, value } = e.target;
@@ -308,7 +348,7 @@ export const CheckoutPage = () => {
     }
   };
 
-  // Step 1: Customer Account Sign-In / Register (Main Account Identifier)
+  // Customer Account Sign-In / Register (Main Account Identifier)
   const handleAccountLogin = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
@@ -361,7 +401,13 @@ export const CheckoutPage = () => {
         }
       }
 
-      setStep(2);
+      // If user has saved addresses, skip directly to Step 2 Order Summary!
+      const saved = loggedUser?.savedAddresses || [];
+      if (saved.length > 0 || loggedUser?.address) {
+        setStep('summary');
+      } else {
+        setStep('address');
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Failed to authenticate customer account.');
     } finally {
@@ -369,13 +415,13 @@ export const CheckoutPage = () => {
     }
   };
 
-  // Step 2: Save Delivery Address & Proceed to Payment
+  // Save Delivery Address & Return to Order Summary
   const handleSaveAndDeliver = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
     if (deliveryType === 'store-pickup') {
-      setStep(3);
+      setStep('summary');
       return;
     }
 
@@ -410,36 +456,35 @@ export const CheckoutPage = () => {
         }
       }
       setIsAddingNewAddress(false);
-      setStep(3);
+      setStep('summary');
     } catch (err) {
       console.warn("Save address notice:", err.message);
       setIsAddingNewAddress(false);
-      setStep(3);
+      setStep('summary');
     } finally {
       setIsSavingAddress(false);
     }
   };
 
-  // Step 2: Confirm Address and Proceed to Payment
-  const handleProceedToPayment = (e) => {
-    if (e) e.preventDefault();
+  // Step 2 Continue to Payment
+  const handleContinueFromSummary = () => {
     setErrorMsg('');
-
     if (deliveryType === 'kerala-courier') {
       if (!deliveryAddress.address?.trim()) {
-        setErrorMsg('Please enter your delivery street / shop address.');
+        setErrorMsg('Please provide a delivery address before continuing.');
+        setStep('address');
         return;
       }
       if (!deliveryAddress.pincode || deliveryAddress.pincode.trim().length !== 6) {
-        setErrorMsg('Please enter a valid 6-digit Kerala postal pincode.');
+        setErrorMsg('Please provide a valid 6-digit postal pincode.');
+        setStep('address');
         return;
       }
     }
-
-    setStep(3);
+    setStep('payment');
   };
 
-  // Inline Coupon Apply in Step 3
+  // Inline Coupon Apply
   const handleApplyCoupon = async (e) => {
     if (e) e.preventDefault();
     if (!couponInput.trim()) return;
@@ -465,21 +510,27 @@ export const CheckoutPage = () => {
     }
   };
 
-  // Step 3: Place Order & Payment Handling
+  // Submit Order & Payment Handling
   const handleSubmitOrder = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
 
     if (!isCustomerLoggedIn) {
-      setStep(1);
+      setStep('login');
       setErrorMsg('Please sign in with your mobile number to complete your order.');
       return;
     }
 
     const cleanAccountPhone = (user?.phone || '').replace(/[^0-9]/g, '').slice(-10);
     if (cleanAccountPhone.length !== 10) {
-      setStep(1);
+      setStep('login');
       setErrorMsg('Valid 10-digit mobile number is required on customer account.');
+      return;
+    }
+
+    if (deliveryType === 'kerala-courier' && !deliveryAddress.address?.trim()) {
+      setStep('address');
+      setErrorMsg('Please specify a delivery street address.');
       return;
     }
 
@@ -517,7 +568,7 @@ export const CheckoutPage = () => {
         customerId: user?.id || user?._id,
         customer: {
           name: user?.name?.trim() || recipientName,
-          phone: cleanAccountPhone, // Main account phone (all notifications & receipts go here!)
+          phone: cleanAccountPhone,
           email: (user?.email || '').trim(),
           recipientName,
           recipientPhone,
@@ -591,7 +642,7 @@ export const CheckoutPage = () => {
             district: deliveryAddress.district || 'Pathanamthitta',
             pincode: deliveryAddress.pincode || '689641'
           },
-          theme: { color: '#ea580c' },
+          theme: { color: '#fb641b' },
           handler: async function (response) {
             try {
               setIsProcessingPayment(true);
@@ -649,158 +700,114 @@ export const CheckoutPage = () => {
       setCompletedOrder(result.data);
       clearCart();
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to place order. Please try again.');
+      setErrorMsg(err.message || 'Failed to place order. Please check your details and try again.');
     } finally {
       setIsSubmitting(false);
       setIsProcessingPayment(false);
     }
   };
 
-  const getWhatsAppInvoiceUrl = (order) => {
-    let text = `*VARIATHU POWER TOOLS - ORDER CONFIRMATION*\n`;
-    text += `Order ID: *${order.id}*\n`;
-    text += `Account: ${order.customer?.name} (+91 ${order.customer?.phone})\n`;
-    if (order.customer?.recipientName && order.customer.recipientName !== order.customer.name) {
-      text += `Consignee: ${order.customer.recipientName} (+91 ${order.customer?.recipientPhone})\n`;
-    }
-    text += `Delivery: ${order.deliveryType === 'store-pickup' ? 'Store Pickup (Poyanil Building)' : 'Courier (' + (order.customer?.district || 'Kerala') + ')'}\n`;
-    text += `Payment: ${order.paymentMethod} (${order.paymentStatus || 'CONFIRMED'})\n`;
-    if (order.pickupOtp) text += `Pickup OTP: *${order.pickupOtp}*\n`;
-    text += `\n*TOTAL: ${formatPrice(order.totalAmount)}*\n`;
-    text += `Please confirm processing for Variathu Power Tools, Kozhencherry.`;
-    return `https://wa.me/919447123456?text=${encodeURIComponent(text)}`;
-  };
+  // Calculations for Price Details Sidebar (Matches Flipkart exactly)
+  const totalMrp = cart.reduce((sum, item) => {
+    const itemMrp = item.mrp || Math.round(item.price * 1.35);
+    return sum + (itemMrp * item.quantity);
+  }, 0);
+  const mrpDiscount = Math.max(0, totalMrp - subtotal);
+  const totalSavings = mrpDiscount + (discountAmount || 0);
 
-  // IF ORDER COMPLETED: RENDER CELEBRATION CONFIRMATION PAGE
+  // SUCCESS VIEW
   if (completedOrder) {
     return (
-      <div style={{ minHeight: '80vh', padding: '40px 16px', background: '#f8fafc' }}>
-        <div style={{ maxWidth: '720px', margin: '0 auto', background: '#ffffff', borderRadius: '20px', padding: '40px 28px', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px -15px rgba(0,0,0,0.07)', textAlign: 'center' }}>
-          <div
-            style={{
-              width: '72px',
-              height: '72px',
-              background: '#dcfce7',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#16a34a',
-              margin: '0 auto 20px'
-            }}
-          >
-            <CheckCircle size={44} />
-          </div>
-
-          <span style={{ background: '#f0fdf4', color: '#16a34a', fontSize: '0.78rem', fontWeight: '800', padding: '4px 12px', borderRadius: '9999px', border: '1px solid #bbf7d0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Payment & Order Confirmed
-          </span>
-
-          <h1 style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', margin: '12px 0 6px' }}>
-            Thank You For Your Order!
-          </h1>
-          <p style={{ color: '#64748b', fontSize: '0.95rem', margin: '0 0 24px' }}>
-            Order ID: <strong style={{ color: '#0f172a', fontFamily: 'monospace', fontSize: '1.05rem' }}>#{completedOrder.id}</strong>
-          </p>
-
-          {/* Resend Automated Email Banner */}
-          <div
-            style={{
-              background: '#eff6ff',
-              border: '1px solid #bfdbfe',
-              borderRadius: '12px',
-              padding: '16px',
-              color: '#1e40af',
-              fontSize: '0.88rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              maxWidth: '560px',
-              margin: '0 auto 24px'
-            }}
-          >
-            <Mail size={22} style={{ flexShrink: 0 }} />
-            <span style={{ textAlign: 'left' }}>
-              An official order receipt, warranty copy, and GST breakdown has been sent to <strong>{completedOrder.customer?.email || user?.email || 'your registered email'}</strong> via Resend.
+      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', background: '#f1f3f6' }}>
+        <div style={{ maxWidth: '640px', width: '100%', background: '#ffffff', borderRadius: '16px', padding: '36px 28px', border: '1px solid #e2e8f0', boxShadow: '0 10px 35px rgba(0,0,0,0.06)' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <CheckCircle size={36} />
+            </div>
+            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Order Placed Successfully
             </span>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', margin: '4px 0 8px' }}>
+              Thank You for Your Order!
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0 }}>
+              Order ID: <strong style={{ color: '#0f172a' }}>{completedOrder.orderId || completedOrder.id || 'VPT-' + Date.now().toString().slice(-6)}</strong>
+            </p>
           </div>
 
-          {/* Key Order Details */}
-          <div style={{ background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '20px', textAlign: 'left', marginBottom: '28px', maxWidth: '560px', margin: '0 auto 28px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-              <div>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>Customer</span>
-                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>{completedOrder.customer?.name}</div>
-                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>+91 {completedOrder.customer?.phone}</div>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>Fulfillment</span>
-                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a' }}>
-                  {completedOrder.deliveryType === 'store-pickup' ? 'Store Counter Pickup' : 'Courier Delivery'}
-                </div>
-                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                  {completedOrder.deliveryType === 'store-pickup' ? 'Poyanil Building, Kozhencherry' : (completedOrder.customer?.district || 'Kerala')}
-                </div>
-              </div>
-              <div>
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#94a3b8', fontWeight: '700' }}>Total Paid / Payable</span>
-                <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#ea580c', fontFamily: 'monospace' }}>
-                  {formatPrice(completedOrder.totalAmount)}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: '600' }}>
-                  {completedOrder.paymentMethod} • {completedOrder.paymentStatus || 'CONFIRMED'}
-                </div>
-              </div>
-              {completedOrder.pickupOtp && (
-                <div style={{ background: '#fef3c7', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                  <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#92400e', fontWeight: '700' }}>Store Pickup OTP</span>
-                  <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#b45309', letterSpacing: '2px', fontFamily: 'monospace' }}>
-                    {completedOrder.pickupOtp}
-                  </div>
-                </div>
-              )}
+          <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '18px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
+              <span style={{ color: '#64748b' }}>Customer Name:</span>
+              <strong style={{ color: '#0f172a' }}>{completedOrder.customer?.recipientName || completedOrder.customer?.name}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
+              <span style={{ color: '#64748b' }}>Account Phone:</span>
+              <strong style={{ color: '#0f172a' }}>+91 {completedOrder.customer?.phone}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
+              <span style={{ color: '#64748b' }}>Fulfillment:</span>
+              <strong style={{ color: '#0f172a' }}>
+                {completedOrder.deliveryType === 'store-pickup' ? 'Counter Pickup (Kozhencherry)' : 'Express Courier Delivery'}
+              </strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
+              <span style={{ color: '#64748b' }}>Total Paid / Due:</span>
+              <strong style={{ color: '#fb641b', fontSize: '1.05rem', fontFamily: 'monospace' }}>
+                {formatPrice(completedOrder.totalAmount)}
+              </strong>
             </div>
           </div>
 
-          {/* Action CTAs */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#047857', fontSize: '0.82rem', background: '#ecfdf5', padding: '10px 14px', borderRadius: '8px', border: '1px solid #a7f3d0' }}>
+              <MessageCircle size={18} style={{ flexShrink: 0 }} />
+              <span>
+                WhatsApp order confirmation and PDF invoice sent to <strong>+91 {completedOrder.customer?.phone}</strong>
+              </span>
+            </div>
+            {completedOrder.customer?.email && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#0369a1', fontSize: '0.82rem', background: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                <Mail size={18} style={{ flexShrink: 0 }} />
+                <span>Tax invoice and warranty certificate emailed to <strong>{completedOrder.customer.email}</strong></span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <Link
               to="/account"
-              className="btn-hero-clean"
-              style={{ justifyContent: 'center', width: '100%', padding: '14px', fontSize: '0.95rem' }}
+              style={{
+                flex: 1,
+                minWidth: '140px',
+                textAlign: 'center',
+                padding: '12px 18px',
+                borderRadius: '8px',
+                background: '#2874f0',
+                color: '#ffffff',
+                fontWeight: '700',
+                fontSize: '0.88rem',
+                textDecoration: 'none'
+              }}
             >
-              <Package size={18} />
-              <span>Track Live Order & View GST Invoice</span>
+              Track in My Account
             </Link>
-
-            <a
-              href={getWhatsAppInvoiceUrl(completedOrder)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-hero-clean"
-              style={{ justifyContent: 'center', width: '100%', background: '#16a34a', textDecoration: 'none', padding: '14px', fontSize: '0.95rem' }}
-            >
-              <MessageCircle size={18} />
-              <span>Share Order with Shop on WhatsApp</span>
-            </a>
-
             <Link
               to="/shop"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                color: '#64748b',
-                fontSize: '0.86rem',
-                fontWeight: '600',
+                flex: 1,
+                minWidth: '140px',
+                textAlign: 'center',
+                padding: '12px 18px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                color: '#0f172a',
+                fontWeight: '700',
+                fontSize: '0.88rem',
                 textDecoration: 'none',
-                marginTop: '8px'
+                border: '1px solid #cbd5e1'
               }}
             >
-              <span>Back to Equipment Catalog</span>
-              <ArrowRight size={14} />
+              Continue Shopping
             </Link>
           </div>
         </div>
@@ -808,11 +815,11 @@ export const CheckoutPage = () => {
     );
   }
 
-  // IF CART IS EMPTY: REDIRECT / PROMPT
+  // CART EMPTY VIEW
   if (!cart || cart.length === 0) {
     return (
-      <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px 16px' }}>
-        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', background: '#ffffff', borderRadius: '18px', padding: '40px 24px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
+      <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px 16px', background: '#f1f3f6' }}>
+        <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', background: '#ffffff', borderRadius: '12px', padding: '40px 24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
           <ShoppingBag size={48} style={{ color: '#94a3b8', margin: '0 auto 16px' }} />
           <h2 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
             Your Cart is Empty
@@ -829,31 +836,193 @@ export const CheckoutPage = () => {
     );
   }
 
-  // MAIN CHECKOUT 2-COLUMN VIEW
+  // MAIN CHECKOUT 2-COLUMN VIEW WITH TOP FLIPKART STEPPER
   return (
-    <div style={{ minHeight: '85vh', background: '#f8fafc', padding: '32px 16px 64px' }}>
+    <div style={{ minHeight: '85vh', background: '#f1f3f6', padding: '24px 16px 64px' }}>
       <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
-        {/* Top Header Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '28px', borderBottom: '1px solid #e2e8f0', paddingBottom: '20px' }}>
+
+        {/* Top Branding Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <img
               src="/Logo.jpeg"
               alt="Variathu Power Tools"
-              style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '34px', width: 'auto', objectFit: 'contain' }}
             />
             <div>
-              <h1 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                Express Checkout
+              <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+                Variathu Checkout
               </h1>
-              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '500' }}>
-                Official Variathu Power Tools Account-Based Buying Portal
+              <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '500' }}>
+                Official Power Tools Buying Portal
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontSize: '0.82rem', fontWeight: '700', background: '#ecfdf5', padding: '6px 14px', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontSize: '0.8rem', fontWeight: '700', background: '#ecfdf5', padding: '5px 12px', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
             <ShieldCheck size={16} />
-            <span>256-Bit SSL Encrypted • GST Compliant</span>
+            <span>100% Safe & Secure Payments</span>
+          </div>
+        </div>
+
+        {/* FLIPKART HORIZONTAL STEPPER BAR (MATCHES SCREENSHOT) */}
+        <div style={{
+          background: '#ffffff',
+          borderRadius: '4px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          border: '1px solid #e2e8f0',
+          padding: '14px 20px',
+          marginBottom: '20px'
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            maxWidth: '680px',
+            margin: '0 auto'
+          }}>
+            {/* STEP 1: ADDRESS (OR LOGIN IF NOT LOGGED IN) */}
+            <div
+              onClick={() => {
+                if (isCustomerLoggedIn) setStep('address');
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: isCustomerLoggedIn ? 'pointer' : 'default',
+                background: '#ffffff',
+                padding: '0 6px'
+              }}
+            >
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: (step === 'summary' || step === 'payment')
+                  ? '#2874f0'
+                  : (step === 'address' || step === 'login' ? '#2874f0' : '#e0e0e0'),
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.78rem',
+                fontWeight: '800'
+              }}>
+                {(step === 'summary' || step === 'payment') ? (
+                  <Check size={14} strokeWidth={3} />
+                ) : (
+                  '1'
+                )}
+              </div>
+              <span style={{
+                fontSize: '0.88rem',
+                fontWeight: (step === 'address' || step === 'login') ? '800' : '600',
+                color: (step === 'summary' || step === 'payment')
+                  ? '#212121'
+                  : (step === 'address' || step === 'login' ? '#2874f0' : '#878787')
+              }}>
+                {!isCustomerLoggedIn ? 'Login' : 'Address'}
+              </span>
+            </div>
+
+            {/* CONNECTING LINE 1 */}
+            <div style={{
+              flex: 1,
+              height: '2px',
+              background: (step === 'summary' || step === 'payment') ? '#2874f0' : '#e0e0e0',
+              margin: '0 10px',
+              transition: 'background 0.2s ease'
+            }} />
+
+            {/* STEP 2: ORDER SUMMARY */}
+            <div
+              onClick={() => {
+                if (isCustomerLoggedIn && (step === 'payment' || step === 'address')) {
+                  setStep('summary');
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: (isCustomerLoggedIn && step === 'payment') ? 'pointer' : 'default',
+                background: '#ffffff',
+                padding: '0 6px'
+              }}
+            >
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: step === 'payment'
+                  ? '#2874f0'
+                  : (step === 'summary' ? '#2874f0' : '#f1f5f9'),
+                color: (step === 'summary' || step === 'payment') ? '#ffffff' : '#878787',
+                border: (step === 'summary' || step === 'payment') ? 'none' : '1px solid #cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.78rem',
+                fontWeight: '800'
+              }}>
+                {step === 'payment' ? (
+                  <Check size={14} strokeWidth={3} />
+                ) : (
+                  '2'
+                )}
+              </div>
+              <span style={{
+                fontSize: '0.88rem',
+                fontWeight: step === 'summary' ? '800' : '600',
+                color: step === 'summary'
+                  ? '#2874f0'
+                  : (step === 'payment' ? '#212121' : '#878787')
+              }}>
+                Order Summary
+              </span>
+            </div>
+
+            {/* CONNECTING LINE 2 */}
+            <div style={{
+              flex: 1,
+              height: '2px',
+              background: step === 'payment' ? '#2874f0' : '#e0e0e0',
+              margin: '0 10px',
+              transition: 'background 0.2s ease'
+            }} />
+
+            {/* STEP 3: PAYMENT */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#ffffff',
+              padding: '0 6px'
+            }}>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: step === 'payment' ? '#2874f0' : '#f1f5f9',
+                color: step === 'payment' ? '#ffffff' : '#878787',
+                border: step === 'payment' ? 'none' : '1px solid #cbd5e1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.78rem',
+                fontWeight: '800'
+              }}>
+                3
+              </div>
+              <span style={{
+                fontSize: '0.88rem',
+                fontWeight: step === 'payment' ? '800' : '600',
+                color: step === 'payment' ? '#2874f0' : '#878787'
+              }}>
+                Payment
+              </span>
+            </div>
           </div>
         </div>
 
@@ -863,7 +1032,7 @@ export const CheckoutPage = () => {
             style={{
               background: '#fef2f2',
               border: '1px solid #fecaca',
-              borderRadius: '10px',
+              borderRadius: '8px',
               padding: '12px 18px',
               color: '#991b1b',
               fontSize: '0.86rem',
@@ -880,118 +1049,41 @@ export const CheckoutPage = () => {
         )}
 
         {/* 2-COLUMN MAIN GRID */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '28px', alignItems: 'flex-start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', alignItems: 'flex-start' }}>
 
-          {/* LEFT COLUMN: INTERACTIVE 3-STEP FLOW */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* LEFT COLUMN: ACTIVE STEP VIEWS */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-            {/* STEP 1 CARD: CUSTOMER ACCOUNT */}
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: step === 1 ? '2px solid #ea580c' : '1px solid #e2e8f0',
-                padding: '24px',
-                boxShadow: step === 1 ? '0 10px 25px -5px rgba(234, 88, 12, 0.1)' : '0 4px 12px rgba(0,0,0,0.03)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: isCustomerLoggedIn ? '0' : '18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: isCustomerLoggedIn ? '#16a34a' : '#ea580c',
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: '800',
-                      fontSize: '0.88rem'
-                    }}
-                  >
-                    {isCustomerLoggedIn ? <Check size={18} /> : '1'}
+            {/* ============================================================ */}
+            {/* VIEW A: STEP === 'login' (UNAUTHENTICATED)                     */}
+            {/* ============================================================ */}
+            {step === 'login' && (
+              <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
+                    1
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      1. Customer Account
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#212121', margin: 0 }}>
+                      1. LOGIN OR SIGNUP
                     </h3>
-                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
-                      {isCustomerLoggedIn ? 'Verified customer profile' : 'Sign in with your mobile number to proceed'}
+                    <p style={{ fontSize: '0.78rem', color: '#878787', margin: '2px 0 0' }}>
+                      Enter your mobile number to view saved addresses and order history
                     </p>
                   </div>
                 </div>
 
-                {isCustomerLoggedIn && (
-                  <button
-                    type="button"
-                    onClick={() => logout()}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#ea580c',
-                      fontSize: '0.8rem',
-                      fontWeight: '700',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Switch Account
-                  </button>
-                )}
-              </div>
-
-              {/* Verified Account Summary (When Logged In) */}
-              {isCustomerLoggedIn ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px' }}>
-                  {accountNotice && (
-                    <div style={{ background: accountNotice.type === 'created' ? '#ecfdf5' : '#f0f9ff', border: accountNotice.type === 'created' ? '1px solid #a7f3d0' : '1px solid #bae6fd', borderRadius: '8px', padding: '10px 14px', color: accountNotice.type === 'created' ? '#047857' : '#0369a1', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
-                      <CheckCircle2 size={16} />
-                      <span>{accountNotice.message}</span>
-                    </div>
-                  )}
-                  <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 18px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a' }}>
-                        {user.name}
-                      </div>
-                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '3px' }}>
-                        Primary Mobile: <strong style={{ color: '#0f172a' }}>+91 {user.phone}</strong> {user.email && !user.email.includes('@customer.variathupowertools.com') ? `• ${user.email}` : ''}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontSize: '0.82rem', fontWeight: '700', background: '#ecfdf5', padding: '4px 10px', borderRadius: '9999px', border: '1px solid #bbf7d0' }}>
-                      <CheckCircle2 size={15} />
-                      <span>Verified Account</span>
-                    </div>
-                  </div>
-
-                  {step === 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setStep(2)}
-                      className="btn-hero-clean"
-                      style={{ justifyContent: 'center', width: '100%', padding: '12px', marginTop: '4px' }}
-                    >
-                      <span>Continue to Delivery Address</span>
-                      <ArrowRight size={16} />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                /* Inline Login Form (When Not Logged In) */
                 <form onSubmit={handleAccountLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#fff7ed', borderRadius: '8px', padding: '10px 14px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                  <div style={{ background: '#fff7ed', borderRadius: '6px', padding: '10px 14px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.8rem', lineHeight: '1.4' }}>
                     Orders, payment receipts, and delivery tracking are tied to your primary mobile account.
                   </div>
 
-                  {/* Primary Mobile Number Input */}
                   <div>
                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
-                      10-Digit Mobile Number (Account ID) *
+                      10-Digit Mobile Number *
                     </label>
-                    <div style={{ display: 'flex', alignItems: 'center', border: phoneLookup.exists === true ? '2px solid #22c55e' : phoneLookup.exists === false ? '2px solid #f59e0b' : '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden', background: '#ffffff', transition: 'all 0.2s ease' }}>
-                      <span style={{ padding: '12px 14px', background: '#f8fafc', color: '#475569', fontWeight: '800', fontSize: '0.9rem', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', border: phoneLookup.exists === true ? '2px solid #22c55e' : phoneLookup.exists === false ? '2px solid #f59e0b' : '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden', background: '#ffffff' }}>
+                      <span style={{ padding: '10px 14px', background: '#f8fafc', color: '#475569', fontWeight: '800', fontSize: '0.9rem', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         🇮🇳 +91
                       </span>
                       <input
@@ -1001,56 +1093,42 @@ export const CheckoutPage = () => {
                         placeholder="Enter 10-digit mobile number"
                         value={loginForm.phone}
                         onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
-                        style={{ flex: 1, padding: '12px 14px', border: 'none', fontSize: '0.95rem', fontWeight: '700', outline: 'none', color: '#0f172a' }}
+                        style={{ flex: 1, padding: '10px 14px', border: 'none', fontSize: '0.95rem', fontWeight: '700', outline: 'none', color: '#0f172a' }}
                         id="input-account-phone"
                       />
                     </div>
                   </div>
 
-                  {/* Checking indicator */}
                   {phoneLookup.checking && (
                     <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 4px' }}>
-                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ea580c', animation: 'pulse 1s infinite' }} />
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#fb641b', animation: 'pulse 1s infinite' }} />
                       <span>Checking customer profile for +91 {phoneLookup.checkedPhone}...</span>
                     </div>
                   )}
 
-                  {/* Existing Customer: Show Details Card Right Below & 1-Click Continue */}
                   {phoneLookup.exists === true && !phoneLookup.checking && (
-                    <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', fontWeight: '800', fontSize: '0.86rem' }}>
-                        <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
+                        <CheckCircle2 size={16} />
                         <span>Existing Customer Account Found</span>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
-                        <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Customer Name</span>
-                          <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>{phoneLookup.customerName || 'Valued Customer'}</div>
-                        </div>
-                        <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Account Mobile</span>
-                          <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>+91 {phoneLookup.checkedPhone}</div>
-                        </div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>
+                        {phoneLookup.customerName || 'Customer'} (+91 {phoneLookup.checkedPhone})
                       </div>
-                      <p style={{ fontSize: '0.78rem', color: '#166534', margin: '2px 0 0' }}>
-                        Welcome back! Your verified customer profile and saved delivery addresses will be loaded.
+                      <p style={{ fontSize: '0.78rem', color: '#166534', margin: 0 }}>
+                        Welcome back! Your verified profile and saved addresses will load automatically.
                       </p>
                     </div>
                   )}
 
-                  {/* New Customer: Show Name & Email Inputs */}
                   {phoneLookup.exists === false && !phoneLookup.checking && (
-                    <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: '800', fontSize: '0.86rem' }}>
-                        <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                        <AlertCircle size={16} />
                         <span>New Customer Account for +91 {phoneLookup.checkedPhone}</span>
                       </div>
-                      <p style={{ fontSize: '0.78rem', color: '#92400e', margin: 0, lineHeight: '1.4' }}>
-                        Enter your name below. All delivery addresses, invoices, and tracking will be saved to this mobile number account.
-                      </p>
-
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
                           Your Full Name *
                         </label>
                         <input
@@ -1059,695 +1137,971 @@ export const CheckoutPage = () => {
                           placeholder="e.g. Midhun Mohan"
                           value={loginForm.name}
                           onChange={(e) => setLoginForm({ ...loginForm, name: e.target.value })}
-                          style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
-
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                          Email Address (Optional, for Resend Receipts)
+                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                          Email Address (Optional)
                         </label>
                         <input
                           type="email"
                           placeholder="e.g. midhun@gmail.com"
                           value={loginForm.email}
                           onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                          style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
                     </div>
                   )}
 
-                  {/* Action Button */}
                   <button
                     type="submit"
                     disabled={loginLoading || (phoneLookup.exists === false && !loginForm.name.trim()) || loginForm.phone.length !== 10}
-                    className="btn-hero-clean"
-                    style={{ justifyContent: 'center', width: '100%', padding: '13px', marginTop: '4px', opacity: (loginForm.phone.length === 10) ? 1 : 0.6 }}
+                    style={{
+                      background: '#fb641b',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '13px',
+                      fontSize: '0.92rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      opacity: (loginForm.phone.length === 10) ? 1 : 0.6
+                    }}
                     id="btn-checkout-login-continue"
                   >
                     <span>
                       {loginLoading
                         ? (phoneLookup.exists === false ? 'Creating Account...' : 'Signing In...')
                         : (phoneLookup.exists === false
-                            ? 'Register & Continue to Delivery'
-                            : phoneLookup.exists === true
-                              ? 'Sign In & Continue to Delivery'
-                              : 'Enter 10-Digit Mobile to Continue')}
+                            ? 'REGISTER & CONTINUE'
+                            : 'CONTINUE')}
                     </span>
                     {!loginLoading && <ArrowRight size={16} />}
                   </button>
                 </form>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* STEP 2 CARD: DELIVERY FULFILLMENT & ADDRESS (FLIPKART ARCHITECTURE) */}
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: step === 2 ? '2px solid #ea580c' : '1px solid #e2e8f0',
-                padding: '24px',
-                boxShadow: step === 2 ? '0 10px 25px -5px rgba(234, 88, 12, 0.1)' : '0 4px 12px rgba(0,0,0,0.03)',
-                opacity: isCustomerLoggedIn ? 1 : 0.6,
-                pointerEvents: isCustomerLoggedIn ? 'auto' : 'none',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* ============================================================ */}
+            {/* VIEW B: STEP === 'address' (MANAGE / ADD DELIVERY ADDRESS)    */}
+            {/* ============================================================ */}
+            {step === 'address' && (
+              <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
+                      1
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#212121', margin: 0 }}>
+                        DELIVERY ADDRESS
+                      </h3>
+                      <p style={{ fontSize: '0.78rem', color: '#878787', margin: '2px 0 0' }}>
+                        Select existing saved address or add a new one
+                      </p>
+                    </div>
+                  </div>
+
+                  {(user?.savedAddresses?.length > 0 || user?.address) && (
+                    <button
+                      type="button"
+                      onClick={() => setStep('summary')}
+                      style={{ background: 'transparent', border: 'none', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Back to Order Summary
+                    </button>
+                  )}
+                </div>
+
+                {/* Delivery Mode: Store Pickup vs Courier */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div
+                    onClick={() => setDeliveryType('store-pickup')}
                     style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: step > 2 ? '#16a34a' : (step === 2 ? '#ea580c' : '#94a3b8'),
-                      color: '#ffffff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontWeight: '800',
-                      fontSize: '0.88rem'
+                      border: deliveryType === 'store-pickup' ? '2px solid #2874f0' : '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '14px',
+                      cursor: 'pointer',
+                      background: deliveryType === 'store-pickup' ? '#f0f6ff' : '#ffffff',
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    {step > 2 ? <Check size={18} /> : '2'}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Building size={16} style={{ color: '#2874f0' }} />
+                        Store Pickup
+                      </span>
+                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
+                        FREE
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
+                      Collect at Poyanil Building, Kozhencherry.
+                    </p>
                   </div>
-                  <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                      2. Delivery Mode & Address
-                    </h3>
-                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
-                      Choose between Store Counter Pickup or Express Courier across Kerala
+
+                  <div
+                    onClick={() => setDeliveryType('kerala-courier')}
+                    style={{
+                      border: deliveryType === 'kerala-courier' ? '2px solid #2874f0' : '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '14px',
+                      cursor: 'pointer',
+                      background: deliveryType === 'kerala-courier' ? '#f0f6ff' : '#ffffff',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Truck size={16} style={{ color: '#2874f0' }} />
+                        Express Courier
+                      </span>
+                      <span style={{ color: '#2874f0', fontSize: '0.82rem', fontWeight: '800' }}>
+                        ₹120
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
+                      Fast delivery to your home or site across Kerala.
                     </p>
                   </div>
                 </div>
 
-                {step > 2 && (
+                {/* If Store Pickup is Selected */}
+                {deliveryType === 'store-pickup' && (
+                  <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
+                      <MapPin size={18} style={{ color: '#2874f0' }} />
+                      <span>Pickup Counter Location</span>
+                    </div>
+                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: '1.5' }}>
+                      Variathu Power Tools Showroom & Service Clinic<br />
+                      Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641<br />
+                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Store Hours: 9:00 AM - 7:30 PM (Mon - Sat) • Phone: +91 94473 05613</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setStep('summary')}
+                      style={{
+                        background: '#fb641b',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '12px 24px',
+                        fontSize: '0.88rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)',
+                        width: 'fit-content'
+                      }}
+                    >
+                      PICKUP FROM HERE ➔
+                    </button>
+                  </div>
+                )}
+
+                {/* If Courier is Selected: Saved Addresses List */}
+                {deliveryType === 'kerala-courier' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {user?.savedAddresses && user.savedAddresses.length > 0 && !isAddingNewAddress && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                            Saved Addresses ({user.savedAddresses.length})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddingNewAddress(true);
+                              setDeliveryAddress({
+                                name: user.name || '',
+                                phone: user.phone || '',
+                                pincode: '689641',
+                                locality: '',
+                                address: '',
+                                city: 'Pathanamthitta',
+                                district: 'Pathanamthitta',
+                                state: 'Kerala',
+                                landmark: '',
+                                alternatePhone: '',
+                                addressType: 'HOME'
+                              });
+                            }}
+                            style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '0.78rem', fontWeight: '700', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Plus size={14} />
+                            <span>+ Add New Address</span>
+                          </button>
+                        </div>
+
+                        {user.savedAddresses.map((addr) => {
+                          const isSelected = selectedAddressId === (addr.id || addr._id);
+                          return (
+                            <div
+                              key={addr.id || addr._id}
+                              onClick={() => handleSelectSavedAddress(addr)}
+                              style={{
+                                border: isSelected ? '2px solid #2874f0' : '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                padding: '16px',
+                                background: isSelected ? '#f8faff' : '#ffffff',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <input
+                                    type="radio"
+                                    name="selectedSavedAddress"
+                                    checked={isSelected}
+                                    onChange={() => handleSelectSavedAddress(addr)}
+                                    style={{ accentColor: '#2874f0', cursor: 'pointer' }}
+                                  />
+                                  <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                    {addr.addressType || 'HOME'}
+                                  </span>
+                                  <strong style={{ fontSize: '0.92rem', color: '#212121' }}>
+                                    {addr.name}
+                                  </strong>
+                                  <span style={{ fontSize: '0.86rem', color: '#475569', fontWeight: '700' }}>
+                                    {addr.phone}
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteSavedAddress(e, addr.id || addr._id)}
+                                  title="Delete address"
+                                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+
+                              <div style={{ fontSize: '0.84rem', color: '#475569', paddingLeft: '24px', lineHeight: '1.5' }}>
+                                {addr.address}{addr.locality ? `, ${addr.locality}` : ''}{addr.landmark ? `, Near ${addr.landmark}` : ''}, {addr.city || addr.district}, {addr.state || 'Kerala'} - <strong>{addr.pincode}</strong>
+                              </div>
+
+                              {isSelected && (
+                                <div style={{ paddingLeft: '24px', marginTop: '6px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setStep('summary')}
+                                    style={{
+                                      background: '#fb641b',
+                                      color: '#ffffff',
+                                      border: 'none',
+                                      borderRadius: '4px',
+                                      padding: '10px 24px',
+                                      fontSize: '0.88rem',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                                    }}
+                                  >
+                                    DELIVER HERE ➔
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Flipkart Address Entry Form */}
+                    {(!user?.savedAddresses || user.savedAddresses.length === 0 || isAddingNewAddress) && (
+                      <form onSubmit={handleSaveAndDeliver} style={{ background: '#f8fafc', borderRadius: '8px', padding: '18px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a' }}>
+                            ADD A NEW ADDRESS
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleUseCurrentLocation}
+                            disabled={isLocating}
+                            style={{
+                              background: '#2874f0',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '6px 14px',
+                              fontSize: '0.78rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Navigation size={13} />
+                            <span>{isLocating ? 'Locating...' : 'Use my current location'}</span>
+                          </button>
+                        </div>
+
+                        {/* Name & 10-Digit Mobile */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Name *</label>
+                            <input
+                              type="text"
+                              required
+                              name="name"
+                              value={deliveryAddress.name}
+                              onChange={handleDeliveryAddressChange}
+                              placeholder="Recipient Name"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>10-digit mobile number *</label>
+                            <input
+                              type="tel"
+                              required
+                              maxLength={10}
+                              name="phone"
+                              value={deliveryAddress.phone}
+                              onChange={(e) => setDeliveryAddress(prev => ({ ...prev, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
+                              placeholder="Delivery Mobile"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Pincode & Locality */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Pincode (6 Digits) *</label>
+                            <input
+                              type="text"
+                              required
+                              maxLength={6}
+                              name="pincode"
+                              value={deliveryAddress.pincode}
+                              onChange={handleDeliveryAddressChange}
+                              placeholder="e.g. 689641"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                            {pincodeCheck?.serviceable === true && (
+                              <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700', marginTop: '2px', display: 'block' }}>
+                                ✓ Kerala Courier Serviceable ({pincodeCheck.district})
+                              </span>
+                            )}
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Locality *</label>
+                            <input
+                              type="text"
+                              required
+                              name="locality"
+                              value={deliveryAddress.locality}
+                              onChange={handleDeliveryAddressChange}
+                              placeholder="e.g. Nirannukala Road"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Address (Area and Street) */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Address (Area and Street) *</label>
+                          <textarea
+                            rows={2}
+                            required
+                            name="address"
+                            value={deliveryAddress.address}
+                            onChange={handleDeliveryAddressChange}
+                            placeholder="House No., Building Name, Street"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                          />
+                        </div>
+
+                        {/* City/District & State */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>City / District / Town *</label>
+                            <input
+                              type="text"
+                              required
+                              name="city"
+                              value={deliveryAddress.city || deliveryAddress.district}
+                              onChange={handleDeliveryAddressChange}
+                              placeholder="e.g. Pathanamthitta"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>State *</label>
+                            <input
+                              type="text"
+                              required
+                              name="state"
+                              value={deliveryAddress.state || 'Kerala'}
+                              onChange={handleDeliveryAddressChange}
+                              placeholder="Kerala"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Landmark & Alternate Phone */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Landmark (Optional)</label>
+                            <input
+                              type="text"
+                              name="landmark"
+                              value={deliveryAddress.landmark}
+                              onChange={handleDeliveryAddressChange}
+                              placeholder="e.g. Near Temple"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>Alternate Phone (Optional)</label>
+                            <input
+                              type="tel"
+                              name="alternatePhone"
+                              maxLength={10}
+                              value={deliveryAddress.alternatePhone}
+                              onChange={(e) => setDeliveryAddress(prev => ({ ...prev, alternatePhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
+                              placeholder="e.g. 9995855774"
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Address Type: HOME vs WORK */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Address Type</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name="addressType"
+                                value="HOME"
+                                checked={deliveryAddress.addressType === 'HOME'}
+                                onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'HOME' }))}
+                                style={{ accentColor: '#2874f0' }}
+                              />
+                              <span>Home (All day delivery)</span>
+                            </label>
+
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                              <input
+                                type="radio"
+                                name="addressType"
+                                value="WORK"
+                                checked={deliveryAddress.addressType === 'WORK'}
+                                onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'WORK' }))}
+                                style={{ accentColor: '#2874f0' }}
+                              />
+                              <span>Work (Delivery between 10 AM - 5 PM)</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Save Buttons */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
+                          <button
+                            type="submit"
+                            disabled={isSavingAddress}
+                            style={{
+                              background: '#fb641b',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '12px 28px',
+                              fontSize: '0.88rem',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                            }}
+                          >
+                            {isSavingAddress ? 'SAVING...' : 'SAVE AND DELIVER HERE ➔'}
+                          </button>
+
+                          {user?.savedAddresses && user.savedAddresses.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddingNewAddress(false);
+                                setStep('summary');
+                              }}
+                              style={{ background: 'transparent', border: 'none', color: '#2874f0', fontSize: '0.86rem', fontWeight: '700', cursor: 'pointer', padding: '10px 16px' }}
+                            >
+                              CANCEL
+                            </button>
+                          )}
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW C: STEP === 'summary' (EXACT FLIPKART ORDER SUMMARY)    */}
+            {/* ============================================================ */}
+            {step === 'summary' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                {/* 1. DELIVER TO CARD (FLIPKART STYLE FROM SCREENSHOT) */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0',
+                  padding: '16px 20px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '16px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '0.82rem', color: '#717478', fontWeight: '500' }}>
+                      Deliver to:
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '0.98rem', color: '#212121', fontWeight: '800' }}>
+                        {deliveryType === 'store-pickup' ? (user?.name || 'Customer') : (deliveryAddress.name || user?.name || 'Customer')}
+                      </strong>
+                      <span style={{
+                        background: '#f0f0f0',
+                        color: '#717478',
+                        fontSize: '0.7rem',
+                        fontWeight: '800',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em'
+                      }}>
+                        {deliveryType === 'store-pickup' ? 'STORE PICKUP' : (deliveryAddress.addressType || 'HOME')}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: '0.88rem', color: '#212121', lineHeight: '1.5', maxWidth: '640px' }}>
+                      {deliveryType === 'store-pickup' ? (
+                        'Variathu Power Tools Showroom, Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641'
+                      ) : (
+                        <>
+                          {deliveryAddress.address}
+                          {deliveryAddress.locality ? `, ${deliveryAddress.locality}` : ''}
+                          {deliveryAddress.landmark ? `, Near ${deliveryAddress.landmark}` : ''}, {deliveryAddress.city || deliveryAddress.district || 'Pathanamthitta'}, {deliveryAddress.state || 'Kerala'} - <strong>{deliveryAddress.pincode}</strong>
+                        </>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: '0.88rem', color: '#212121', fontWeight: '700' }}>
+                      {deliveryType === 'store-pickup' ? '+91 94473 05613' : (deliveryAddress.phone || user?.phone)}
+                    </div>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep('address')}
                     style={{
-                      background: '#fff7ed',
-                      border: '1px solid #fed7aa',
-                      color: '#ea580c',
-                      fontSize: '0.8rem',
+                      background: '#ffffff',
+                      border: '1px solid #e0e0e0',
+                      color: '#2874f0',
+                      fontSize: '0.86rem',
                       fontWeight: '700',
-                      padding: '4px 12px',
-                      borderRadius: '6px',
-                      cursor: 'pointer'
+                      padding: '8px 20px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     Change
                   </button>
-                )}
-              </div>
-
-              {/* Step 2 Summary when on Step 3 */}
-              {step > 2 ? (
-                <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', color: '#0f172a', fontSize: '0.9rem' }}>
-                    {deliveryType === 'store-pickup' ? <Building size={16} style={{ color: '#ea580c' }} /> : <Truck size={16} style={{ color: '#ea580c' }} />}
-                    <span>{deliveryType === 'store-pickup' ? 'Store Counter Pickup (FREE)' : 'Express Courier Delivery (₹120)'}</span>
-                    {deliveryType === 'kerala-courier' && (
-                      <span style={{ background: '#e2e8f0', color: '#334155', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                        {deliveryAddress.addressType || 'HOME'}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.84rem', color: '#334155', lineHeight: '1.5' }}>
-                    {deliveryType === 'store-pickup' ? (
-                      'Poyanil Building, Poyanil Junction, Kozhencherry, Kerala - 689641'
-                    ) : (
-                      <>
-                        <strong>{deliveryAddress.name}</strong> • 📞 +91 {deliveryAddress.phone}<br />
-                        {deliveryAddress.address}{deliveryAddress.locality ? `, ${deliveryAddress.locality}` : ''}{deliveryAddress.landmark ? `, near ${deliveryAddress.landmark}` : ''}, {deliveryAddress.city || deliveryAddress.district}, {deliveryAddress.state || 'Kerala'} - <strong>{deliveryAddress.pincode}</strong>
-                      </>
-                    )}
-                  </div>
                 </div>
-              ) : (
-                /* Step 2 Active Mode Selector & Address Manager */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                  {/* Delivery Mode Tabs */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div
-                      onClick={() => setDeliveryType('store-pickup')}
-                      style={{
-                        border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                        borderRadius: '12px',
-                        padding: '14px',
-                        cursor: 'pointer',
-                        background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Building size={16} style={{ color: '#ea580c' }} />
-                          Store Pickup
-                        </span>
-                        <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
-                          FREE
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0, lineHeight: '1.4' }}>
-                        Collect at Poyanil Building, Kozhencherry. Instant handover with SMS OTP.
-                      </p>
-                    </div>
 
-                    <div
-                      onClick={() => setDeliveryType('kerala-courier')}
-                      style={{
-                        border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                        borderRadius: '12px',
-                        padding: '14px',
-                        cursor: 'pointer',
-                        background: deliveryType === 'kerala-courier' ? '#fff7ed' : '#ffffff',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Truck size={16} style={{ color: '#ea580c' }} />
-                          Express Courier
-                        </span>
-                        <span style={{ color: '#ea580c', fontSize: '0.82rem', fontWeight: '800' }}>
-                          ₹120
-                        </span>
-                      </div>
-                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0, lineHeight: '1.4' }}>
-                        Dispatched via DTDC / Professional Courier / APS Cargo across Kerala.
-                      </p>
-                    </div>
-                  </div>
+                {/* 2. ORDER ITEMS LIST (FLIPKART STYLE MATCHING SCREENSHOT) */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {cart.map((item) => {
+                    const itemMrp = item.mrp || Math.round(item.price * 1.35);
+                    const discountPct = Math.round(((itemMrp - item.price) / itemMrp) * 100);
 
-                  {/* If Store Pickup is Selected */}
-                  {deliveryType === 'store-pickup' && (
-                    <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
-                        <MapPin size={18} style={{ color: '#ea580c' }} />
-                        <span>Pickup Counter Address</span>
-                      </div>
-                      <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: '1.5' }}>
-                        Variathu Power Tools Showroom & Service Clinic<br />
-                        Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641<br />
-                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Store Hours: 9:00 AM - 7:30 PM (Mon - Sat) • Phone: +91 94473 05613</span>
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setStep(3)}
-                        className="btn-hero-clean"
-                        style={{ justifyContent: 'center', width: '100%', padding: '12px', marginTop: '6px' }}
+                    return (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '4px',
+                          border: '1px solid #e0e0e0',
+                          padding: '18px 20px',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px'
+                        }}
                       >
-                        <span>Continue to Payment</span>
-                        <ArrowRight size={16} />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* If Express Courier is Selected: Flipkart Architecture */}
-                  {deliveryType === 'kerala-courier' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-                      {/* Saved Addresses List (Flipkart Style) */}
-                      {user?.savedAddresses && user.savedAddresses.length > 0 && !isAddingNewAddress && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                              Saved Delivery Addresses ({user.savedAddresses.length})
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsAddingNewAddress(true);
-                                setDeliveryAddress({
-                                  name: user.name || '',
-                                  phone: user.phone || '',
-                                  pincode: '689641',
-                                  locality: '',
-                                  address: '',
-                                  city: 'Pathanamthitta',
-                                  district: 'Pathanamthitta',
-                                  state: 'Kerala',
-                                  landmark: '',
-                                  alternatePhone: '',
-                                  addressType: 'HOME'
-                                });
-                              }}
-                              style={{
-                                background: '#eff6ff',
-                                border: '1px solid #bfdbfe',
-                                color: '#1d4ed8',
-                                fontSize: '0.78rem',
-                                fontWeight: '700',
-                                padding: '5px 12px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <Plus size={14} />
-                              <span>+ Add New Address</span>
-                            </button>
-                          </div>
-
-                          {user.savedAddresses.map((addr) => {
-                            const isSelected = selectedAddressId === (addr.id || addr._id);
-                            return (
-                              <div
-                                key={addr.id || addr._id}
-                                onClick={() => handleSelectSavedAddress(addr)}
-                                style={{
-                                  border: isSelected ? '2px solid #2874f0' : '1px solid #e2e8f0',
-                                  borderRadius: '12px',
-                                  padding: '16px',
-                                  background: isSelected ? '#f8faff' : '#ffffff',
-                                  cursor: 'pointer',
-                                  transition: 'all 0.2s ease',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '8px'
-                                }}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <input
-                                      type="radio"
-                                      name="selectedSavedAddress"
-                                      checked={isSelected}
-                                      onChange={() => handleSelectSavedAddress(addr)}
-                                      style={{ accentColor: '#2874f0', cursor: 'pointer' }}
-                                    />
-                                    <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
-                                      {addr.addressType || 'HOME'}
-                                    </span>
-                                    <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>
-                                      {addr.name}
-                                    </strong>
-                                    <span style={{ fontSize: '0.86rem', color: '#334155', fontWeight: '700' }}>
-                                      {addr.phone}
-                                    </span>
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleDeleteSavedAddress(e, addr.id || addr._id)}
-                                    title="Delete address"
-                                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-
-                                <div style={{ fontSize: '0.84rem', color: '#475569', paddingLeft: '24px', lineHeight: '1.5' }}>
-                                  {addr.address}{addr.locality ? `, ${addr.locality}` : ''}{addr.landmark ? `, Near ${addr.landmark}` : ''}, {addr.city || addr.district}, {addr.state || 'Kerala'} - <strong>{addr.pincode}</strong>
-                                  {addr.alternatePhone && (
-                                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-                                      Alternate Phone: {addr.alternatePhone}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {isSelected && (
-                                  <div style={{ paddingLeft: '24px', marginTop: '6px' }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setStep(3)}
-                                      style={{
-                                        background: '#fb641b',
-                                        color: '#ffffff',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        padding: '10px 24px',
-                                        fontSize: '0.88rem',
-                                        fontWeight: '800',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 4px 10px rgba(251, 100, 27, 0.3)'
-                                      }}
-                                    >
-                                      DELIVER HERE ➔
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                        {/* Hot Deal / In Stock Badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            fontSize: '0.74rem',
+                            fontWeight: '800',
+                            color: '#388e3c',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em'
+                          }}>
+                            Hot Deal
+                          </span>
                         </div>
-                      )}
 
-                      {/* Add / Edit Address Form (Flipkart Style Screenshot Match) */}
-                      {(isAddingNewAddress || !user?.savedAddresses || user.savedAddresses.length === 0) && (
-                        <form onSubmit={handleSaveAndDeliver} style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '14px', border: '1.5px solid #cbd5e1' }}>
-
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                            <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                              Add / Edit Delivery Address
-                            </span>
-
-                            {/* Flipkart 'Use my current location' Button */}
-                            <button
-                              type="button"
-                              onClick={handleUseCurrentLocation}
-                              disabled={isLocating}
-                              style={{
-                                background: '#2874f0',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '8px 16px',
-                                fontSize: '0.82rem',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 2px 6px rgba(40, 116, 240, 0.25)'
-                              }}
-                            >
-                              <Navigation size={14} />
-                              <span>{isLocating ? 'Locating via GPS...' : 'Use my current location'}</span>
-                            </button>
-                          </div>
-
-                          {/* Row 1: Recipient Name & 10-digit mobile number */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                Recipient Name *
-                              </label>
-                              <input
-                                type="text"
-                                required
-                                name="name"
-                                value={deliveryAddress.name}
-                                onChange={handleDeliveryAddressChange}
-                                placeholder="e.g. Midhun Mohan"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                            </div>
-
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                10-digit mobile number *
-                              </label>
-                              <input
-                                type="tel"
-                                required
-                                name="phone"
-                                maxLength={10}
-                                value={deliveryAddress.phone}
-                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
-                                placeholder="e.g. 6238270613"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Row 2: Pincode & Locality */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                Pincode (Auto-completes District & State) *
-                              </label>
-                              <input
-                                type="text"
-                                required
-                                name="pincode"
-                                maxLength={6}
-                                value={deliveryAddress.pincode}
-                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, pincode: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) }))}
-                                placeholder="e.g. 689642"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: pincodeCheck?.serviceable ? '2px solid #22c55e' : '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                              {pincodeCheck && (
-                                <div style={{ fontSize: '0.75rem', color: pincodeCheck.serviceable ? '#16a34a' : '#b45309', fontWeight: '700', marginTop: '3px' }}>
-                                  {pincodeCheck.checking ? 'Checking postal code serviceability...' : (
-                                    pincodeCheck.serviceable
-                                      ? `✓ Express Delivery Available to ${pincodeCheck.city || deliveryAddress.district}`
-                                      : (pincodeCheck.message || 'Custom courier routing enabled.')
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                Locality *
-                              </label>
-                              <input
-                                type="text"
-                                required
-                                name="locality"
-                                value={deliveryAddress.locality}
-                                onChange={handleDeliveryAddressChange}
-                                placeholder="e.g. Nirannukala-Adiyani Road, Naranganam"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Row 3: Address (Area and Street) */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                              Address (Area and Street) *
-                            </label>
-                            <textarea
-                              rows={2}
-                              required
-                              name="address"
-                              value={deliveryAddress.address}
-                              onChange={handleDeliveryAddressChange}
-                              placeholder="e.g. Poovanunniikkunnathil, Nerunnukala padi"
-                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                        {/* Product Details Row */}
+                        <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
+                          {/* Thumbnail */}
+                          <div style={{
+                            width: '88px',
+                            height: '88px',
+                            borderRadius: '6px',
+                            background: '#ffffff',
+                            border: '1px solid #f1f5f9',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <img
+                              src={item.image || '/Logo.jpeg'}
+                              alt={item.name}
+                              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                              onError={(e) => { e.target.src = '/Logo.jpeg'; }}
                             />
                           </div>
 
-                          {/* Row 4: City/District/Town & State */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                City / District / Town *
-                              </label>
-                              <input
-                                type="text"
-                                required
-                                name="city"
-                                value={deliveryAddress.city || deliveryAddress.district}
-                                onChange={handleDeliveryAddressChange}
-                                placeholder="e.g. Pathanamthitta"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                            </div>
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <h4 style={{
+                              fontSize: '0.98rem',
+                              fontWeight: '700',
+                              color: '#212121',
+                              margin: 0,
+                              lineHeight: '1.4'
+                            }}>
+                              {item.name}
+                            </h4>
 
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                State *
-                              </label>
-                              <input
-                                type="text"
-                                required
-                                name="state"
-                                value={deliveryAddress.state || 'Kerala'}
-                                onChange={handleDeliveryAddressChange}
-                                placeholder="Kerala"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                            </div>
-                          </div>
+                            {item.brand && (
+                              <span style={{ fontSize: '0.8rem', color: '#878787', fontWeight: '500' }}>
+                                {item.brand} • Professional Tools
+                              </span>
+                            )}
 
-                          {/* Row 5: Landmark (Optional) & Alternate Phone (Optional) */}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                Landmark (Optional)
-                              </label>
-                              <input
-                                type="text"
-                                name="landmark"
-                                value={deliveryAddress.landmark}
-                                onChange={handleDeliveryAddressChange}
-                                placeholder="e.g. Near NSS Karayogam / Temple"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                            </div>
-
-                            <div>
-                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                                Alternate Phone (Optional)
-                              </label>
-                              <input
-                                type="tel"
-                                name="alternatePhone"
-                                maxLength={10}
-                                value={deliveryAddress.alternatePhone}
-                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, alternatePhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
-                                placeholder="e.g. 9995855774"
-                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Row 6: Address Type Radio Buttons */}
-                          <div>
-                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>
-                              Address Type
-                            </label>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer' }}>
-                                <input
-                                  type="radio"
-                                  name="addressType"
-                                  value="HOME"
-                                  checked={deliveryAddress.addressType === 'HOME'}
-                                  onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'HOME' }))}
-                                  style={{ accentColor: '#2874f0' }}
-                                />
-                                <span>Home (All day delivery)</span>
-                              </label>
-
-                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer' }}>
-                                <input
-                                  type="radio"
-                                  name="addressType"
-                                  value="WORK"
-                                  checked={deliveryAddress.addressType === 'WORK'}
-                                  onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'WORK' }))}
-                                  style={{ accentColor: '#2874f0' }}
-                                />
-                                <span>Work (Delivery between 10 AM - 5 PM)</span>
-                              </label>
-                            </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
-                            <button
-                              type="submit"
-                              disabled={isSavingAddress}
-                              style={{
-                                background: '#fb641b',
+                            {/* Rating badge & Assured */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                              <span style={{
+                                background: '#388e3c',
                                 color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '12px 28px',
-                                fontSize: '0.9rem',
+                                fontSize: '0.74rem',
                                 fontWeight: '800',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 12px rgba(251, 100, 27, 0.3)'
-                              }}
-                            >
-                              {isSavingAddress ? 'SAVING...' : 'SAVE AND DELIVER HERE ➔'}
-                            </button>
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px'
+                              }}>
+                                <Star size={11} fill="#ffffff" stroke="none" />
+                                <span>4.8</span>
+                              </span>
+                              <span style={{ fontSize: '0.78rem', color: '#878787' }}>
+                                (115)
+                              </span>
+                              <span style={{
+                                fontSize: '0.76rem',
+                                color: '#2874f0',
+                                fontWeight: '800',
+                                fontStyle: 'italic',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px'
+                              }}>
+                                ✓ Assured
+                              </span>
+                            </div>
 
-                            {user?.savedAddresses && user.savedAddresses.length > 0 && (
+                            {/* Quantity Stepper */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+                              <span style={{ fontSize: '0.84rem', color: '#878787', fontWeight: '600' }}>
+                                Qty:
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e0e0e0', borderRadius: '4px', background: '#ffffff' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  style={{
+                                    border: 'none',
+                                    background: 'transparent',
+                                    padding: '4px 8px',
+                                    cursor: 'pointer',
+                                    color: '#212121',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  title="Decrease"
+                                >
+                                  <Minus size={12} />
+                                </button>
+                                <span style={{ padding: '0 8px', fontSize: '0.86rem', fontWeight: '800', color: '#212121' }}>
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  style={{
+                                    border: 'none',
+                                    background: 'transparent',
+                                    padding: '4px 8px',
+                                    cursor: 'pointer',
+                                    color: '#212121',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                  title="Increase"
+                                >
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+
                               <button
                                 type="button"
-                                onClick={() => setIsAddingNewAddress(false)}
+                                onClick={() => removeFromCart(item.id)}
                                 style={{
                                   background: 'transparent',
                                   border: 'none',
-                                  color: '#2874f0',
-                                  fontSize: '0.88rem',
+                                  color: '#878787',
+                                  fontSize: '0.8rem',
                                   fontWeight: '700',
                                   cursor: 'pointer',
-                                  padding: '12px 16px'
+                                  marginLeft: '8px'
                                 }}
                               >
-                                CANCEL
+                                REMOVE
                               </button>
-                            )}
+                            </div>
+
+                            {/* Pricing Line: ↓ 81%  ₹1,999  ₹366 */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
+                              {discountPct > 0 && (
+                                <span style={{ fontSize: '0.92rem', fontWeight: '800', color: '#388e3c' }}>
+                                  ↓ {discountPct}%
+                                </span>
+                              )}
+                              {itemMrp > item.price && (
+                                <span style={{ fontSize: '0.88rem', color: '#878787', textDecoration: 'line-through' }}>
+                                  {formatPrice(itemMrp)}
+                                </span>
+                              )}
+                              <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#212121' }}>
+                                {formatPrice(item.price)}
+                              </span>
+                            </div>
+
+                            {/* Delivery Promise */}
+                            <div style={{ fontSize: '0.82rem', color: '#212121', marginTop: '4px' }}>
+                              Delivery by <strong>{getEstimatedDelivery()}</strong>
+                            </div>
                           </div>
-                        </form>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* STEP 3 CARD: PAYMENT METHOD SELECTION */}
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: step === 3 ? '2px solid #ea580c' : '1px solid #e2e8f0',
-                padding: '24px',
-                boxShadow: step === 3 ? '0 10px 25px -5px rgba(234, 88, 12, 0.1)' : '0 4px 12px rgba(0,0,0,0.03)',
-                opacity: step === 3 ? 1 : 0.6,
-                pointerEvents: step === 3 ? 'auto' : 'none',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: step === 3 ? '#ea580c' : '#94a3b8',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '800',
-                    fontSize: '0.88rem'
-                  }}
-                >
-                  3
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                    3. Payment & Final Confirmation
-                  </h3>
-                  <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
-                    Select your preferred payment mode
-                  </p>
-                </div>
-              </div>
-
-              {step === 3 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-
-                  {/* Delivery & Account Notification Summary */}
-                  <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ fontSize: '0.84rem', color: '#0f172a' }}>
-                      📦 <strong>Deliver To:</strong> {deliveryType === 'store-pickup' ? 'Poyanil Building Store Pickup' : `${deliveryAddress.name} (+91 ${deliveryAddress.phone})`}
-                    </div>
-                    {deliveryType === 'kerala-courier' && (
-                      <div style={{ fontSize: '0.8rem', color: '#475569', paddingLeft: '22px' }}>
-                        {deliveryAddress.address}, {deliveryAddress.locality ? `${deliveryAddress.locality}, ` : ''}{deliveryAddress.city || deliveryAddress.district}, {deliveryAddress.state || 'Kerala'} - {deliveryAddress.pincode}
+                        </div>
                       </div>
-                    )}
-                    <div style={{ fontSize: '0.78rem', color: '#0369a1', background: '#f0f9ff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bae6fd', marginTop: '4px' }}>
-                      📱 <strong>Primary Account (+91 {user?.phone}):</strong> Payment confirmation, WhatsApp invoice, and courier tracking will be sent directly to your registered number.
+                    );
+                  })}
+                </div>
+
+                {/* 3. BOTTOM BAR: TERMS & ORANGE CONTINUE BUTTON */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0',
+                  padding: '16px 20px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '14px'
+                }}>
+                  <p style={{
+                    fontSize: '0.78rem',
+                    color: '#878787',
+                    margin: 0,
+                    lineHeight: '1.5',
+                    maxWidth: '480px'
+                  }}>
+                    By continuing with the order, you confirm that you are above 18 years of age, and you agree to the Variathu Power Tools Terms of Use and Privacy Policy.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleContinueFromSummary}
+                    style={{
+                      background: '#fb641b',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '14px 44px',
+                      fontSize: '0.96rem',
+                      fontWeight: '800',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                    id="btn-flipkart-continue-to-payment"
+                  >
+                    <span>CONTINUE</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW D: STEP === 'payment' (PAYMENT METHOD & CONFIRMATION)   */}
+            {/* ============================================================ */}
+            {step === 'payment' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                {/* Collapsed Step 1 Address Bar */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0',
+                  padding: '14px 20px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
+                      ✓
+                    </span>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#878787', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        1. DELIVERY ADDRESS
+                      </span>
+                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#212121', marginTop: '2px' }}>
+                        {deliveryType === 'store-pickup' ? 'Poyanil Building Store Pickup' : `${deliveryAddress.name}, ${deliveryAddress.city || deliveryAddress.district} - ${deliveryAddress.pincode}`}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Payment Options Grid */}
+                  <button
+                    type="button"
+                    onClick={() => setStep('address')}
+                    style={{ background: '#ffffff', border: '1px solid #e0e0e0', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    Change
+                  </button>
+                </div>
+
+                {/* Collapsed Step 2 Order Summary Bar */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0',
+                  padding: '14px 20px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
+                      ✓
+                    </span>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#878787', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        2. ORDER SUMMARY
+                      </span>
+                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#212121', marginTop: '2px' }}>
+                        {cart.reduce((s, i) => s + i.quantity, 0)} Item(s) • Total {formatPrice(finalTotal)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setStep('summary')}
+                    style={{ background: '#ffffff', border: '1px solid #e0e0e0', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '4px', cursor: 'pointer' }}
+                  >
+                    Change
+                  </button>
+                </div>
+
+                {/* Expanded Step 3 Payment Options */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0',
+                  padding: '24px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '18px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
+                      3
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#212121', margin: 0 }}>
+                        PAYMENT OPTIONS
+                      </h3>
+                      <p style={{ fontSize: '0.78rem', color: '#878787', margin: '2px 0 0' }}>
+                        Select your preferred payment mode
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Options Radio Cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
                     {/* Razorpay Online */}
                     <div
                       onClick={() => setPaymentMethod('razorpay')}
                       style={{
-                        border: paymentMethod === 'razorpay' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                        borderRadius: '12px',
+                        border: paymentMethod === 'razorpay' ? '2px solid #2874f0' : '1px solid #e0e0e0',
+                        borderRadius: '8px',
                         padding: '16px',
                         cursor: 'pointer',
-                        background: paymentMethod === 'razorpay' ? '#fff7ed' : '#ffffff',
-                        transition: 'all 0.2s ease'
+                        background: paymentMethod === 'razorpay' ? '#f0f6ff' : '#ffffff',
+                        transition: 'all 0.15s ease'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                         <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
                           ⚡ Razorpay Online
                         </span>
-                        <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
+                        <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
                           Recommended
                         </span>
                       </div>
-                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
+                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
                         UPI (GPay, PhonePe, Paytm), Debit / Credit Cards, NetBanking. Instant digital receipt.
                       </p>
                     </div>
@@ -1756,12 +2110,12 @@ export const CheckoutPage = () => {
                     <div
                       onClick={() => setPaymentMethod('cash')}
                       style={{
-                        border: paymentMethod === 'cash' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                        borderRadius: '12px',
+                        border: paymentMethod === 'cash' ? '2px solid #2874f0' : '1px solid #e0e0e0',
+                        borderRadius: '8px',
                         padding: '16px',
                         cursor: 'pointer',
-                        background: paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
-                        transition: 'all 0.2s ease'
+                        background: paymentMethod === 'cash' ? '#f0f6ff' : '#ffffff',
+                        transition: 'all 0.15s ease'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -1769,26 +2123,80 @@ export const CheckoutPage = () => {
                           💵 {deliveryType === 'store-pickup' ? 'Pay at Counter' : 'Cash on Delivery (COD)'}
                         </span>
                       </div>
-                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0 }}>
+                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
                         {deliveryType === 'store-pickup' ? 'Pay at Poyanil Building during equipment pickup.' : 'Pay cash to courier partner upon delivery.'}
                       </p>
                     </div>
                   </div>
 
-                  {/* Submit Order Button */}
+                  {/* Promo Coupon Box */}
+                  <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px' }}>
+                      Have a Promo Coupon?
+                    </span>
+
+                    {activeCoupon ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '8px 12px' }}>
+                        <div>
+                          <span style={{ fontSize: '0.86rem', fontWeight: '800', color: '#065f46', letterSpacing: '0.05em' }}>
+                            {activeCoupon.code}
+                          </span>
+                          <span style={{ display: 'block', fontSize: '0.74rem', color: '#047857' }}>
+                            {activeCoupon.description || `${activeCoupon.discountValue}% discount applied`}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeCoupon()}
+                          style={{ background: 'transparent', border: 'none', color: '#dc2626', fontSize: '0.76rem', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <form onSubmit={handleApplyCoupon} style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder="ENTER COUPON CODE"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          style={{ flex: 1, padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={couponLoading || !couponInput.trim()}
+                          style={{ background: '#2874f0', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          {couponLoading ? '...' : 'Apply'}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+
+                  {/* Primary Account Notification Reminder */}
+                  <div style={{ fontSize: '0.78rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '6px', border: '1px solid #bae6fd' }}>
+                    📱 <strong>Account Notice:</strong> WhatsApp order receipt and live dispatch updates will be sent to primary number <strong>+91 {user?.phone}</strong>.
+                  </div>
+
+                  {/* Confirm & Place Order Button */}
                   <button
                     type="button"
                     onClick={handleSubmitOrder}
                     disabled={isSubmitting || isProcessingPayment}
-                    className="btn-hero-clean"
                     style={{
-                      justifyContent: 'center',
-                      width: '100%',
+                      background: '#fb641b',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
                       padding: '16px',
                       fontSize: '1rem',
                       fontWeight: '800',
-                      marginTop: '8px',
-                      boxShadow: '0 10px 25px rgba(234, 88, 12, 0.3)'
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 2px 10px rgba(251, 100, 27, 0.4)'
                     }}
                     id="btn-checkout-place-order"
                   >
@@ -1798,141 +2206,152 @@ export const CheckoutPage = () => {
                         ? 'Processing Payment...'
                         : isSubmitting
                           ? 'Placing Order...'
-                          : `Confirm & Place Order (${formatPrice(finalTotal)})`}
+                          : `CONFIRM & PLACE ORDER (${formatPrice(finalTotal)})`}
                     </span>
                   </button>
                 </div>
-              )}
-            </div>
+
+              </div>
+            )}
+
           </div>
 
-          {/* RIGHT COLUMN: STICKY ORDER REVIEW & PROMO COUPON */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'sticky', top: '90px' }}>
+          {/* RIGHT COLUMN: FLIPKART PRICE DETAILS SIDEBAR (MATCHING SCREENSHOT) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '80px' }}>
 
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Order Summary ({cart.reduce((s, i) => s + i.quantity, 0)} Items)
-                </h3>
-                <Link to="/cart" style={{ color: '#ea580c', fontSize: '0.8rem', fontWeight: '700', textDecoration: 'none' }}>
-                  Edit Cart
-                </Link>
+            <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontSize: '1rem', fontWeight: '800', color: '#878787', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
+                Price Details
               </div>
 
-              {/* Itemized Tools List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '240px', overflowY: 'auto', marginBottom: '18px', paddingRight: '4px' }}>
-                {cart.map((item) => (
-                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '10px', borderBottom: '1px solid #f8fafc' }}>
-                    <div style={{ width: '44px', height: '44px', borderRadius: '8px', background: '#f1f5f9', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src={item.image || '/Logo.jpeg'} alt={item.name} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.84rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {item.name}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                        Qty: {item.quantity} × {formatPrice(item.price)}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>
-                      {formatPrice(item.price * item.quantity)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Promo Coupon Box */}
-              <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px', border: '1px solid #e2e8f0', marginBottom: '18px' }}>
-                <span style={{ display: 'block', fontSize: '0.76rem', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px' }}>
-                  Promo Coupon (Account-Bound)
-                </span>
-
-                {activeCoupon ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px 12px' }}>
-                    <div>
-                      <span style={{ fontSize: '0.86rem', fontWeight: '800', color: '#065f46', letterSpacing: '0.05em' }}>
-                        {activeCoupon.code}
-                      </span>
-                      <span style={{ display: 'block', fontSize: '0.74rem', color: '#047857' }}>
-                        {activeCoupon.description || `${activeCoupon.discountValue}% discount applied`}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeCoupon()}
-                      style={{ background: 'transparent', border: 'none', color: '#dc2626', fontSize: '0.76rem', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleApplyCoupon} style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="ENTER COUPON CODE"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                      style={{ flex: 1, padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.82rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
-                    />
-                    <button
-                      type="submit"
-                      disabled={couponLoading || !couponInput.trim()}
-                      style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '9px 14px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      {couponLoading ? '...' : 'Apply'}
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* Price Calculation Breakdown */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.86rem', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
+              {/* Breakdown Rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.9rem', color: '#212121' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Equipment Subtotal:</span>
-                  <span style={{ color: '#0f172a', fontWeight: '600' }}>{formatPrice(subtotal)}</span>
+                  <span>MRP (incl. of all taxes)</span>
+                  <span style={{ fontWeight: '600' }}>{formatPrice(totalMrp)}</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Delivery Fulfillment:</span>
-                  <span style={{ color: deliveryType === 'store-pickup' ? '#16a34a' : '#0f172a', fontWeight: '600' }}>
-                    {deliveryType === 'store-pickup' ? 'FREE (Pickup)' : formatPrice(deliveryFee)}
+                  <span>Fees</span>
+                  <span style={{ color: deliveryType === 'store-pickup' ? '#388e3c' : '#212121', fontWeight: '600' }}>
+                    {deliveryType === 'store-pickup' ? 'FREE' : formatPrice(deliveryFee || 120)}
                   </span>
                 </div>
 
-                {discountAmount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontWeight: '700' }}>
-                    <span>Coupon Discount:</span>
-                    <span>-{formatPrice(discountAmount)}</span>
+                {mrpDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#388e3c' }}>
+                    <span>Discount on MRP</span>
+                    <span style={{ fontWeight: '700' }}>- {formatPrice(mrpDiscount)}</span>
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', borderTop: '2px dashed #e2e8f0', paddingTop: '12px', marginTop: '4px' }}>
-                  <span>Total Payable:</span>
-                  <span style={{ color: '#ea580c', fontFamily: 'monospace' }}>{formatPrice(finalTotal)}</span>
+                {discountAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#388e3c' }}>
+                    <span>Coupons Applied ({activeCoupon?.code})</span>
+                    <span style={{ fontWeight: '700' }}>- {formatPrice(discountAmount)}</span>
+                  </div>
+                )}
+
+                {/* Total Amount */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.12rem', fontWeight: '800', color: '#212121', borderTop: '1px dashed #e0e0e0', paddingTop: '14px', marginTop: '4px' }}>
+                  <span>Total Amount</span>
+                  <span style={{ color: '#212121', fontFamily: 'monospace' }}>{formatPrice(finalTotal)}</span>
                 </div>
-                <span style={{ fontSize: '0.72rem', color: '#94a3b8', textAlign: 'right' }}>
-                  Includes 18% GST (SGST 9% + CGST 9%)
-                </span>
+
+                {/* Green Savings Highlight */}
+                {totalSavings > 0 && (
+                  <div style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '4px',
+                    padding: '10px 12px',
+                    color: '#16a34a',
+                    fontWeight: '700',
+                    fontSize: '0.86rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span>🌱</span>
+                    <span>You'll save {formatPrice(totalSavings)} on this order!</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sidebar Action Button */}
+              <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '18px', paddingTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  {totalMrp > finalTotal && (
+                    <span style={{ fontSize: '0.78rem', color: '#878787', textDecoration: 'line-through', display: 'block' }}>
+                      {formatPrice(totalMrp)}
+                    </span>
+                  )}
+                  <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#212121', fontFamily: 'monospace' }}>
+                    {formatPrice(finalTotal)}
+                  </span>
+                </div>
+
+                {step === 'summary' && (
+                  <button
+                    type="button"
+                    onClick={handleContinueFromSummary}
+                    style={{
+                      background: '#fb641b',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '10px 24px',
+                      fontSize: '0.88rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                    }}
+                  >
+                    Continue
+                  </button>
+                )}
+
+                {step === 'payment' && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitOrder}
+                    disabled={isSubmitting || isProcessingPayment}
+                    style={{
+                      background: '#fb641b',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '10px 20px',
+                      fontSize: '0.88rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                    }}
+                  >
+                    {isProcessingPayment ? 'Processing...' : isSubmitting ? 'Placing...' : 'Place Order'}
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Store Guarantees */}
-            <div style={{ background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: '#475569' }}>
-                <ShieldCheck size={18} style={{ color: '#ea580c', flexShrink: 0 }} />
+            <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
+                <ShieldCheck size={16} style={{ color: '#2874f0', flexShrink: 0 }} />
                 <span>100% Genuine Tools from Authorized Dealers</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: '#475569' }}>
-                <FileText size={18} style={{ color: '#ea580c', flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
+                <FileText size={16} style={{ color: '#2874f0', flexShrink: 0 }} />
                 <span>Official GST Tax Invoice & Warranty Card</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.8rem', color: '#475569' }}>
-                <Mail size={18} style={{ color: '#ea580c', flexShrink: 0 }} />
-                <span>Automated Resend Email Order Receipts</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
+                <Mail size={16} style={{ color: '#2874f0', flexShrink: 0 }} />
+                <span>Instant WhatsApp & Email Order Receipts</span>
               </div>
             </div>
 
           </div>
+
         </div>
       </div>
     </div>
