@@ -424,12 +424,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (!clean) return;
     setIsAddingBrand(true);
     try {
-      await api.addBrand(clean);
-      showNotification(`Brand "${clean}" added successfully!`);
+      const res = await api.addBrand(clean);
+      const brandName = res.brand || clean;
+
+      // Immediately update taxonomy in state so it shows in the dropdown right away!
+      setTaxonomy(prev => {
+        const existing = prev.brands || [];
+        if (existing.some(b => b.toLowerCase() === brandName.toLowerCase())) {
+          return res.brands ? { ...prev, brands: res.brands } : prev;
+        }
+        return {
+          ...prev,
+          brands: res.brands || [...existing, brandName]
+        };
+      });
+
+      // Instantly select the newly added brand in the form
+      setProductForm(prev => ({ ...prev, brand: brandName }));
       setNewBrandInput('');
       setShowAddBrandInline(false);
-      setProductForm(prev => ({ ...prev, brand: clean }));
+      showNotification(`Brand "${brandName}" added successfully!`);
+
+      // Refresh taxonomy from server with cache-busting
       await loadTaxonomy();
+      if (onProductUpdated) onProductUpdated();
     } catch (err) {
       showNotification(`Error: ${err.message}`);
     } finally {
@@ -444,12 +462,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setIsAddingCat(true);
     try {
       const res = await api.addCategory({ name: clean });
-      showNotification(`Category "${clean}" added successfully!`);
-      const createdId = res.category?.id || clean.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const createdCat = res.category || { id: clean.toLowerCase().replace(/[^a-z0-9]+/g, '-'), name: clean };
+      const createdId = createdCat.id;
+
+      // Immediately update taxonomy in state so it shows in the dropdown right away!
+      setTaxonomy(prev => {
+        const existing = prev.categories || [];
+        if (existing.some(c => c.id === createdId || c.name.toLowerCase() === clean.toLowerCase())) {
+          return res.categories ? { ...prev, categories: res.categories } : prev;
+        }
+        return {
+          ...prev,
+          categories: res.categories || [...existing, createdCat]
+        };
+      });
+
+      // Instantly select the newly added category in the form
+      setProductForm(prev => ({ ...prev, category: createdId }));
       setNewCatNameInput('');
       setShowAddCatInline(false);
-      setProductForm(prev => ({ ...prev, category: createdId }));
+      showNotification(`Category "${clean}" added successfully!`);
+
+      // Refresh taxonomy from server with cache-busting
       await loadTaxonomy();
+      if (onProductUpdated) onProductUpdated();
     } catch (err) {
       showNotification(`Error: ${err.message}`);
     } finally {
@@ -462,10 +498,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     const clean = managerNewBrand.trim();
     if (!clean) return;
     try {
-      await api.addBrand(clean);
-      showNotification(`Brand "${clean}" added to catalog!`);
+      const res = await api.addBrand(clean);
+      const brandName = res.brand || clean;
+      setTaxonomy(prev => ({
+        ...prev,
+        brands: res.brands || [...(prev.brands || []).filter(b => b.toLowerCase() !== brandName.toLowerCase()), brandName]
+      }));
+      showNotification(`Brand "${brandName}" added to catalog!`);
       setManagerNewBrand('');
       await loadTaxonomy();
+      if (onProductUpdated) onProductUpdated();
     } catch (err) {
       showNotification(`Error: ${err.message}`);
     }
@@ -476,10 +518,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     const clean = managerNewCatName.trim();
     if (!clean) return;
     try {
-      await api.addCategory({ name: clean });
+      const res = await api.addCategory({ name: clean });
+      const createdCat = res.category || { id: clean.toLowerCase().replace(/[^a-z0-9]+/g, '-'), name: clean };
+      setTaxonomy(prev => ({
+        ...prev,
+        categories: res.categories || [...(prev.categories || []).filter(c => c.id !== createdCat.id), createdCat]
+      }));
       showNotification(`Category "${clean}" added to catalog!`);
       setManagerNewCatName('');
       await loadTaxonomy();
+      if (onProductUpdated) onProductUpdated();
     } catch (err) {
       showNotification(`Error: ${err.message}`);
     }
@@ -500,7 +548,15 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setIsDeletingTaxonomy(true);
     try {
       const deleteProducts = brandToDelete.count > 0;
-      await api.deleteBrand(brandToDelete.name, deleteProducts);
+      const res = await api.deleteBrand(brandToDelete.name, deleteProducts);
+      if (res && res.brands) {
+        setTaxonomy(prev => ({ ...prev, brands: res.brands }));
+      } else {
+        setTaxonomy(prev => ({
+          ...prev,
+          brands: (prev.brands || []).filter(b => b.toLowerCase() !== brandToDelete.name.toLowerCase())
+        }));
+      }
       if (deleteProducts) {
         showNotification(`Brand "${brandToDelete.name}" and ${brandToDelete.count} product(s) permanently deleted!`);
       } else {
@@ -533,7 +589,15 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setIsDeletingTaxonomy(true);
     try {
       const deleteProducts = categoryToDelete.count > 0;
-      await api.deleteCategory(categoryToDelete.id, deleteProducts);
+      const res = await api.deleteCategory(categoryToDelete.id, deleteProducts);
+      if (res && res.categories) {
+        setTaxonomy(prev => ({ ...prev, categories: res.categories }));
+      } else {
+        setTaxonomy(prev => ({
+          ...prev,
+          categories: (prev.categories || []).filter(c => c.id !== categoryToDelete.id)
+        }));
+      }
       if (deleteProducts) {
         showNotification(`Category "${categoryToDelete.name}" and ${categoryToDelete.count} product(s) permanently deleted!`);
       } else {
@@ -3481,6 +3545,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     {taxonomy.brands.map(b => (
                       <option key={b} value={b}>{b}</option>
                     ))}
+                    {productForm.brand && !(taxonomy.brands || []).includes(productForm.brand) && (
+                      <option value={productForm.brand}>{productForm.brand}</option>
+                    )}
                   </select>
                 </div>
 
@@ -3541,6 +3608,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     {taxonomy.categories.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
+                    {productForm.category && !(taxonomy.categories || []).some(c => c.id === productForm.category) && (
+                      <option value={productForm.category}>{productForm.category}</option>
+                    )}
                   </select>
                 </div>
               </div>

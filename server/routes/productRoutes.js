@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 // GET taxonomy (brands & categories) - Must be before /:id
 router.get('/meta/taxonomy', async (req, res) => {
   try {
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     const tax = await db.getTaxonomy();
     res.json({ success: true, ...tax });
   } catch (err) {

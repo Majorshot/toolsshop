@@ -81,7 +81,9 @@ export const api = {
 
   // Taxonomy: Categories and Brands
   async getTaxonomy() {
-    const res = await fetch(`${API_BASE}/products/meta/taxonomy`);
+    const res = await fetch(`${API_BASE}/products/meta/taxonomy?_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
     if (!res.ok) throw new Error('Failed to fetch taxonomy');
     return await res.json();
   },
