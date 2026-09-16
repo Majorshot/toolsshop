@@ -46,13 +46,87 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// POST create customer manually
-router.post('/', async (req, res) => {
+// POST add new delivery address (Flipkart style)
+router.post('/:id/addresses', async (req, res) => {
   try {
-    const created = await db.createCustomer(req.body);
-    res.status(201).json({ success: true, message: "Customer registered successfully", data: created });
+    const {
+      name,
+      phone,
+      pincode,
+      locality,
+      address,
+      city,
+      district,
+      state,
+      landmark,
+      alternatePhone,
+      addressType,
+      isDefault
+    } = req.body;
+
+    if (!pincode || !address) {
+      return res.status(400).json({ success: false, message: "Pincode and street address are required" });
+    }
+
+    const newAddress = {
+      id: 'addr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: name || '',
+      phone: phone || '',
+      pincode: String(pincode).trim(),
+      locality: locality || '',
+      address: address || '',
+      city: city || district || 'Pathanamthitta',
+      district: district || 'Pathanamthitta',
+      state: state || 'Kerala',
+      landmark: landmark || '',
+      alternatePhone: alternatePhone || '',
+      addressType: addressType || 'HOME',
+      isDefault: !!isDefault
+    };
+
+    // Update customer: set primary address fields and append to savedAddresses
+    const updated = await db.updateCustomer(req.params.id, {
+      $set: {
+        address: newAddress.address,
+        district: newAddress.district,
+        state: newAddress.state,
+        pincode: newAddress.pincode,
+        landmark: newAddress.landmark
+      },
+      $push: {
+        savedAddresses: newAddress
+      }
+    });
+
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Address saved successfully",
+      data: updated,
+      address: newAddress
+    });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// DELETE remove a saved address
+router.delete('/:id/addresses/:addressId', async (req, res) => {
+  try {
+    const updated = await db.updateCustomer(req.params.id, {
+      $pull: {
+        savedAddresses: { id: req.params.addressId }
+      }
+    });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+    res.json({ success: true, message: "Address deleted successfully", data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

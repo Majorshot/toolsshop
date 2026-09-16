@@ -450,6 +450,28 @@ export const api = {
     return result;
   },
 
+  // Customer: Add new delivery address (Flipkart style)
+  async addCustomerAddress(customerId, addressData) {
+    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(addressData)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to save delivery address');
+    return result;
+  },
+
+  // Customer: Delete a saved address
+  async deleteCustomerAddress(customerId, addressId) {
+    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to delete saved address');
+    return result;
+  },
+
   // Trigger WhatsApp notification for order
   async sendOrderWhatsApp(orderId, messageType = 'confirmed') {
     const res = await fetch(`${API_BASE}/orders/${orderId}/send-whatsapp`, {

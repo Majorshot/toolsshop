@@ -54,12 +54,36 @@ const COURIER_PARTNERS = {
   }
 };
 
+// Detailed Locality & Post Office hints for high-frequency Pathanamthitta & Central Travancore pincodes
+const KERALA_LOCALITY_HINTS = {
+  '689641': { locality: 'Kozhencherry Town', district: 'Pathanamthitta', state: 'Kerala' },
+  '689642': { locality: 'Naranganam', district: 'Pathanamthitta', state: 'Kerala' },
+  '689643': { locality: 'Kumbanad', district: 'Pathanamthitta', state: 'Kerala' },
+  '689644': { locality: 'Koipram', district: 'Pathanamthitta', state: 'Kerala' },
+  '689645': { locality: 'Aranmula / Elanthoor', district: 'Pathanamthitta', state: 'Kerala' },
+  '689646': { locality: 'Mallapally', district: 'Pathanamthitta', state: 'Kerala' },
+  '689647': { locality: 'Pullad', district: 'Pathanamthitta', state: 'Kerala' },
+  '689648': { locality: 'Ayroor', district: 'Pathanamthitta', state: 'Kerala' },
+  '689653': { locality: 'Cherukole', district: 'Pathanamthitta', state: 'Kerala' },
+  '689101': { locality: 'Thiruvalla Town', district: 'Pathanamthitta', state: 'Kerala' },
+  '689691': { locality: 'Adoor Town', district: 'Pathanamthitta', state: 'Kerala' },
+  '689672': { locality: 'Ranni Town', district: 'Pathanamthitta', state: 'Kerala' },
+  '689661': { locality: 'Konni', district: 'Pathanamthitta', state: 'Kerala' },
+  '686101': { locality: 'Changanassery', district: 'Kottayam', state: 'Kerala' },
+  '686001': { locality: 'Kottayam Town', district: 'Kottayam', state: 'Kerala' },
+  '688001': { locality: 'Alappuzha Town', district: 'Alappuzha', state: 'Kerala' },
+  '682001': { locality: 'Ernakulam (Kochi)', district: 'Ernakulam', state: 'Kerala' },
+  '680001': { locality: 'Thrissur City', district: 'Thrissur', state: 'Kerala' },
+  '691001': { locality: 'Kollam City', district: 'Kollam', state: 'Kerala' },
+  '695001': { locality: 'Trivandrum City', district: 'Thiruvananthapuram', state: 'Kerala' }
+};
+
 // District lookup for Kerala pincodes
 const KERALA_PIN_PREFIXES = {
   '689': 'Pathanamthitta',
   '686': 'Kottayam',
   '688': 'Alappuzha',
-  '682': 'Ernakulam (Kochi)',
+  '682': 'Ernakulam',
   '683': 'Ernakulam',
   '680': 'Thrissur',
   '685': 'Idukki',
@@ -95,20 +119,24 @@ function checkPincode(pincode) {
   const prefix3 = cleanPin.substring(0, 3);
   const prefix2 = cleanPin.substring(0, 2);
   const isKerala = ['67', '68', '69'].includes(prefix2);
-  const keralaDistrict = KERALA_PIN_PREFIXES[prefix3] || (isKerala ? 'Kerala Region' : null);
 
-  const cityName = cleanPin === '689641' 
-    ? 'Kozhencherry, Pathanamthitta'
-    : (keralaDistrict ? `${keralaDistrict}, Kerala` : 'India Speed Delivery Zone');
+  // Exact match from locality hints if available
+  const hint = KERALA_LOCALITY_HINTS[cleanPin];
+  const districtName = hint?.district || KERALA_PIN_PREFIXES[prefix3] || (isKerala ? 'Kerala Region' : 'National Delivery Zone');
+  const stateName = hint?.state || (isKerala ? 'Kerala' : 'India');
+  const localityHint = hint?.locality || '';
+
+  const cityName = hint ? `${hint.locality}, ${districtName}` : (isKerala ? `${districtName}, Kerala` : 'India Speed Delivery Zone');
 
   return {
     success: true,
     serviceable: true,
     pincode: cleanPin,
     isKerala,
-    city: cityName,
-    district: keralaDistrict || 'All-India Zone',
-    state: isKerala ? 'Kerala' : 'National Delivery',
+    city: districtName,
+    district: districtName,
+    state: stateName,
+    localityHint,
     codAvailable: true,
     prepaidAvailable: true,
     estimatedDelivery: isKerala ? 'Next Day / 48 hrs (Kerala Express)' : '3-5 Business Days',

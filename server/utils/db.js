@@ -1541,7 +1541,9 @@ const db = {
     ensureMongoConnected();
     const isObjectId = mongoose.isValidObjectId(id);
     const query = isObjectId ? { _id: id } : { phone: id };
-    return await CustomerModel.findOneAndUpdate(query, { $set: updates }, { new: true }).lean();
+    const hasOperators = updates && typeof updates === 'object' && Object.keys(updates).some(k => k.startsWith('$'));
+    const payload = hasOperators ? updates : { $set: updates };
+    return await CustomerModel.findOneAndUpdate(query, payload, { new: true }).lean();
   },
 
   async createCustomer(customerData) {

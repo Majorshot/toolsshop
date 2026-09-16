@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   CheckCircle, MapPin, Truck, ShieldCheck, AlertCircle, ArrowRight,
   User, Lock, Mail, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, Edit3,
-  ShoppingBag, Shield, Check, Clock, Package, Building
+  ShoppingBag, Shield, Check, Clock, Package, Building, Plus, Navigation, Home, Briefcase, Trash2
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -48,19 +48,10 @@ export const CheckoutPage = () => {
   const isCustomerLoggedIn = isLoggedIn && user && user.role === 'customer';
   const [step, setStep] = useState(isCustomerLoggedIn ? 2 : 1);
 
-  // Delivery & Customer Form State
-  const [formData, setFormData] = useState({
-    name: user?.name && !user.name.toLowerCase().includes('valued customer') ? user.name : '',
-    phone: user?.phone || '',
-    email: user?.email && !user.email.includes('valuedcustomer') ? user.email : '',
-    address: user?.address || '',
-    landmark: user?.landmark || '',
-    district: user?.district || 'Pathanamthitta',
-    pincode: user?.pincode || '689641',
-    paymentMethod: 'razorpay' // 'razorpay' or 'cash'
-  });
+  // Payment method selection ('razorpay' or 'cash')
+  const [paymentMethod, setPaymentMethod] = useState('razorpay');
 
-  // Inline Step 1 Login State
+  // Inline Step 1 Login State (Account Phone is Primary)
   const [loginForm, setLoginForm] = useState({
     name: '',
     phone: '',
@@ -68,15 +59,36 @@ export const CheckoutPage = () => {
   });
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Blinkit / Zepto Style Phone Lookup & Auto-Registration state
+  // Phone Lookup & Auto-Detection state
   const [phoneLookup, setPhoneLookup] = useState({
     checking: false,
     checkedPhone: '',
     exists: null,
     customerName: null,
+    customerEmail: null,
     hasAddress: false
   });
   const [accountNotice, setAccountNotice] = useState(null);
+
+  // Flipkart-Style Delivery Address State
+  const [deliveryAddress, setDeliveryAddress] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
+    pincode: user?.pincode || '689641',
+    locality: user?.locality || '',
+    address: user?.address || '',
+    city: user?.city || user?.district || 'Pathanamthitta',
+    district: user?.district || 'Pathanamthitta',
+    state: user?.state || 'Kerala',
+    landmark: user?.landmark || '',
+    alternatePhone: user?.alternatePhone || '',
+    addressType: 'HOME' // 'HOME' or 'WORK'
+  });
+
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   // Coupon inline input
   const [couponInput, setCouponInput] = useState('');
@@ -89,29 +101,54 @@ export const CheckoutPage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [pincodeCheck, setPincodeCheck] = useState(null);
 
-  // Sync user profile data from AuthContext / Atlas
+  // Sync user profile & saved addresses from AuthContext / Atlas
   useEffect(() => {
     if (isCustomerLoggedIn) {
-      setFormData(prev => ({
-        ...prev,
-        name: prev.name || user.name || '',
-        phone: prev.phone || user.phone || '',
-        email: prev.email || user.email || '',
-        address: prev.address || user.address || '',
-        landmark: prev.landmark || user.landmark || '',
-        district: prev.district || user.district || 'Pathanamthitta',
-        pincode: prev.pincode || user.pincode || '689641'
-      }));
+      const saved = user.savedAddresses || [];
+      if (saved.length > 0) {
+        const defaultAddr = saved.find(a => a.isDefault) || saved[0];
+        setSelectedAddressId(defaultAddr.id || defaultAddr._id);
+        setDeliveryAddress({
+          name: defaultAddr.name || user.name || '',
+          phone: defaultAddr.phone || user.phone || '',
+          pincode: defaultAddr.pincode || '689641',
+          locality: defaultAddr.locality || '',
+          address: defaultAddr.address || '',
+          city: defaultAddr.city || defaultAddr.district || 'Pathanamthitta',
+          district: defaultAddr.district || 'Pathanamthitta',
+          state: defaultAddr.state || 'Kerala',
+          landmark: defaultAddr.landmark || '',
+          alternatePhone: defaultAddr.alternatePhone || '',
+          addressType: defaultAddr.addressType || 'HOME'
+        });
+        setIsAddingNewAddress(false);
+      } else {
+        // Initialize with account info as baseline
+        setDeliveryAddress({
+          name: user.name || '',
+          phone: user.phone || '',
+          pincode: user.pincode || '689641',
+          locality: user.locality || '',
+          address: user.address || '',
+          city: user.district || 'Pathanamthitta',
+          district: user.district || 'Pathanamthitta',
+          state: user.state || 'Kerala',
+          landmark: user.landmark || '',
+          alternatePhone: '',
+          addressType: 'HOME'
+        });
+        setIsAddingNewAddress(true);
+      }
       setStep(prev => (prev === 1 ? 2 : prev));
     } else {
       setStep(1);
     }
   }, [user, isCustomerLoggedIn]);
 
-  // Live Kerala Pincode Serviceability Check
+  // Live Pincode Serviceability & Auto-Fill for Delivery Address (Flipkart Style)
   useEffect(() => {
-    if (deliveryType === 'kerala-courier' && formData.pincode && formData.pincode.trim().length === 6) {
-      const pin = formData.pincode.trim();
+    const pin = (deliveryAddress.pincode || '').trim().replace(/[^0-9]/g, '');
+    if (deliveryType === 'kerala-courier' && pin.length === 6) {
       let active = true;
       setPincodeCheck({ checking: true });
       api.checkShippingPincode(pin)
@@ -121,9 +158,22 @@ export const CheckoutPage = () => {
               checking: false,
               serviceable: res.serviceable,
               city: res.city || res.district,
+              district: res.district,
+              state: res.state || 'Kerala',
               codAvailable: res.codAvailable,
               message: res.message
             });
+            // Auto-complete City/District & State!
+            if (res.serviceable) {
+              setDeliveryAddress(prev => ({
+                ...prev,
+                city: res.city || res.district || prev.city,
+                district: res.district || prev.district,
+                state: res.state || 'Kerala',
+                // If locality hint exists and locality is blank, auto-fill locality hint!
+                locality: (!prev.locality && res.localityHint) ? res.localityHint : prev.locality
+              }));
+            }
           }
         })
         .catch(() => {
@@ -133,9 +183,9 @@ export const CheckoutPage = () => {
     } else {
       setPincodeCheck(null);
     }
-  }, [formData.pincode, deliveryType]);
+  }, [deliveryAddress.pincode, deliveryType]);
 
-  // Live Blinkit/Zepto Phone Existence Check
+  // Live Phone Existence Check (Account Lookup)
   useEffect(() => {
     const clean = (loginForm.phone || '').replace(/[^0-9]/g, '').slice(-10);
     if (clean.length === 10) {
@@ -149,41 +199,120 @@ export const CheckoutPage = () => {
               checkedPhone: clean,
               exists: !!res.exists,
               customerName: res.name || null,
+              customerEmail: res.email || null,
               hasAddress: !!res.hasAddress
             });
-            // If existing customer and name was empty, auto-populate name
-            if (res.exists && res.name && !loginForm.name.trim()) {
+            if (res.exists && res.name) {
               setLoginForm(prev => ({ ...prev, name: res.name }));
             }
           }
         })
         .catch(() => {
           if (active) {
-            setPhoneLookup({ checking: false, checkedPhone: clean, exists: null, customerName: null, hasAddress: false });
+            setPhoneLookup({ checking: false, checkedPhone: clean, exists: null, customerName: null, customerEmail: null, hasAddress: false });
           }
         });
       return () => { active = false; };
     } else {
-      setPhoneLookup({ checking: false, checkedPhone: '', exists: null, customerName: null, hasAddress: false });
+      setPhoneLookup({ checking: false, checkedPhone: '', exists: null, customerName: null, customerEmail: null, hasAddress: false });
     }
   }, [loginForm.phone]);
 
   const formatPrice = (num) => '₹' + Number(num || 0).toLocaleString('en-IN');
 
-  const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleDeliveryAddressChange = (e) => {
+    const { name, value } = e.target;
+    setDeliveryAddress(prev => ({ ...prev, [name]: value }));
   };
 
-  // Step 1: Customer Account Sign-In / Register (Blinkit & Zepto Auto-Flow)
+  // HTML5 Browser Geolocation Reverse Lookup (Matches Flipkart "Use my current location")
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+          const data = await res.json();
+          if (data && data.address) {
+            const rawPin = data.address.postcode ? String(data.address.postcode).replace(/[^0-9]/g, '').slice(0, 6) : '';
+            const locality = data.address.suburb || data.address.neighbourhood || data.address.village || data.address.road || '';
+            const district = (data.address.state_district || data.address.county || data.address.city || 'Pathanamthitta').replace(' District', '');
+            const state = data.address.state || 'Kerala';
+
+            setDeliveryAddress(prev => ({
+              ...prev,
+              pincode: rawPin || prev.pincode,
+              locality: locality || prev.locality,
+              district: district || prev.district,
+              city: district || prev.city,
+              state: state || prev.state
+            }));
+          }
+        } catch (err) {
+          console.warn("Location error:", err);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (err) => {
+        console.warn("Geolocation error:", err.message);
+        setIsLocating(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
+
+  // Select a saved address from list
+  const handleSelectSavedAddress = (addr) => {
+    setSelectedAddressId(addr.id || addr._id);
+    setDeliveryAddress({
+      name: addr.name || user?.name || '',
+      phone: addr.phone || user?.phone || '',
+      pincode: addr.pincode || '689641',
+      locality: addr.locality || '',
+      address: addr.address || '',
+      city: addr.city || addr.district || 'Pathanamthitta',
+      district: addr.district || 'Pathanamthitta',
+      state: addr.state || 'Kerala',
+      landmark: addr.landmark || '',
+      alternatePhone: addr.alternatePhone || '',
+      addressType: addr.addressType || 'HOME'
+    });
+    setIsAddingNewAddress(false);
+  };
+
+  // Delete a saved address
+  const handleDeleteSavedAddress = async (e, addressId) => {
+    e.stopPropagation();
+    if (!window.confirm("Remove this saved address from your account?")) return;
+    try {
+      if (user && (user.id || user._id)) {
+        const res = await api.deleteCustomerAddress(user.id || user._id, addressId);
+        if (res.success && res.data) {
+          updateUser(res.data);
+          const remaining = res.data.savedAddresses || [];
+          if (remaining.length > 0) {
+            handleSelectSavedAddress(remaining[0]);
+          } else {
+            setIsAddingNewAddress(true);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Delete address notice:", err.message);
+    }
+  };
+
+  // Step 1: Customer Account Sign-In / Register (Main Account Identifier)
   const handleAccountLogin = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
     setAccountNotice(null);
-
-    if (!loginForm.name.trim()) {
-      setErrorMsg('Please enter your full customer name.');
-      return;
-    }
 
     const cleanPhone = loginForm.phone.replace(/[^0-9]/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
@@ -195,24 +324,27 @@ export const CheckoutPage = () => {
     try {
       let loggedUser;
       try {
-        // Attempt login first for existing customers
         loggedUser = await login(
           'customer',
           cleanPhone,
           null,
-          loginForm.name.trim(),
+          loginForm.name.trim() || phoneLookup.customerName || 'Valued Customer',
           { email: loginForm.email.trim() }
         );
         setAccountNotice({
           type: 'existing',
-          message: `Welcome back, ${loggedUser.name || loginForm.name.trim()}!`
+          message: `Welcome back, ${loggedUser.name || phoneLookup.customerName || 'Customer'}!`
         });
       } catch (loginErr) {
-        // Blinkit / Zepto Flow: If no account found, register automatically on the spot!
         const errMsg = (loginErr.message || '').toLowerCase();
         const isNotFound = errMsg.includes('no account') || errMsg.includes('register first') || errMsg.includes('not found') || errMsg.includes('404');
 
         if (isNotFound) {
+          if (!loginForm.name.trim()) {
+            setErrorMsg('Please enter your full customer name to create your account.');
+            setLoginLoading(false);
+            return;
+          }
           const fallbackEmail = loginForm.email.trim() || `${cleanPhone}@customer.variathupowertools.com`;
           loggedUser = await register({
             name: loginForm.name.trim(),
@@ -229,22 +361,62 @@ export const CheckoutPage = () => {
         }
       }
 
-      setFormData(prev => ({
-        ...prev,
-        name: loggedUser.name || loginForm.name.trim(),
-        phone: loggedUser.phone || cleanPhone,
-        email: loggedUser.email && !loggedUser.email.includes('@customer.variathupowertools.com') ? loggedUser.email : loginForm.email.trim(),
-        address: loggedUser.address || prev.address,
-        landmark: loggedUser.landmark || prev.landmark,
-        district: loggedUser.district || prev.district,
-        pincode: loggedUser.pincode || prev.pincode
-      }));
-
       setStep(2);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to authenticate customer account.');
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  // Step 2: Save Delivery Address & Proceed to Payment
+  const handleSaveAndDeliver = async (e) => {
+    if (e) e.preventDefault();
+    setErrorMsg('');
+
+    if (deliveryType === 'store-pickup') {
+      setStep(3);
+      return;
+    }
+
+    if (!deliveryAddress.name.trim()) {
+      setErrorMsg('Please enter recipient full name for courier delivery.');
+      return;
+    }
+    const cleanPhone = deliveryAddress.phone.replace(/[^0-9]/g, '').slice(-10);
+    if (cleanPhone.length !== 10) {
+      setErrorMsg('Please enter recipient 10-digit mobile number.');
+      return;
+    }
+    if (!deliveryAddress.pincode || deliveryAddress.pincode.trim().length !== 6) {
+      setErrorMsg('Please enter a valid 6-digit postal pincode.');
+      return;
+    }
+    if (!deliveryAddress.address.trim()) {
+      setErrorMsg('Please enter house/building/street address.');
+      return;
+    }
+
+    setIsSavingAddress(true);
+    try {
+      if (user && (user.id || user._id)) {
+        const customerId = user.id || user._id;
+        const res = await api.addCustomerAddress(customerId, deliveryAddress);
+        if (res.success && res.data) {
+          updateUser(res.data);
+          if (res.address && res.address.id) {
+            setSelectedAddressId(res.address.id);
+          }
+        }
+      }
+      setIsAddingNewAddress(false);
+      setStep(3);
+    } catch (err) {
+      console.warn("Save address notice:", err.message);
+      setIsAddingNewAddress(false);
+      setStep(3);
+    } finally {
+      setIsSavingAddress(false);
     }
   };
 
@@ -254,24 +426,14 @@ export const CheckoutPage = () => {
     setErrorMsg('');
 
     if (deliveryType === 'kerala-courier') {
-      if (!formData.address.trim()) {
+      if (!deliveryAddress.address?.trim()) {
         setErrorMsg('Please enter your delivery street / shop address.');
         return;
       }
-      if (!formData.pincode || formData.pincode.trim().length !== 6) {
+      if (!deliveryAddress.pincode || deliveryAddress.pincode.trim().length !== 6) {
         setErrorMsg('Please enter a valid 6-digit Kerala postal pincode.');
         return;
       }
-    }
-
-    // Auto-sync customer profile in MongoDB Atlas with the latest address
-    if (user && user.id) {
-      api.updateCustomer(user.id, {
-        address: formData.address,
-        landmark: formData.landmark,
-        district: formData.district,
-        pincode: formData.pincode
-      }).catch(err => console.warn('Could not auto-sync customer address:', err.message));
     }
 
     setStep(3);
@@ -286,9 +448,9 @@ export const CheckoutPage = () => {
     setErrorMsg('');
     try {
       const userIdent = {
-        customerId: user?.id,
-        phone: formData.phone || user?.phone,
-        email: formData.email || user?.email
+        customerId: user?.id || user?._id,
+        phone: user?.phone || loginForm.phone,
+        email: user?.email || loginForm.email
       };
       const res = await applyCoupon(couponInput.trim(), userIdent);
       if (res && res.success) {
@@ -314,19 +476,19 @@ export const CheckoutPage = () => {
       return;
     }
 
-    const cleanPhone = formData.phone.replace(/[^0-9]/g, '').slice(-10);
-    if (cleanPhone.length !== 10) {
+    const cleanAccountPhone = (user?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (cleanAccountPhone.length !== 10) {
       setStep(1);
-      setErrorMsg('Valid 10-digit mobile number is required.');
+      setErrorMsg('Valid 10-digit mobile number is required on customer account.');
       return;
     }
 
     // Final anti-abuse check for single-use coupon
     if (activeCoupon && Number(activeCoupon.usageLimitPerUser) === 1) {
       const userIdent = {
-        customerId: user?.id,
-        phone: cleanPhone,
-        email: formData.email || user?.email
+        customerId: user?.id || user?._id,
+        phone: cleanAccountPhone,
+        email: user?.email
       };
       const vRes = await verifyCouponWithPhone(userIdent, { silent: true });
       if (vRes && !vRes.valid) {
@@ -338,17 +500,37 @@ export const CheckoutPage = () => {
     setIsSubmitting(true);
 
     try {
-      const isPrepaid = formData.paymentMethod === 'razorpay';
+      const isPrepaid = paymentMethod === 'razorpay';
+      const recipientName = deliveryType === 'store-pickup'
+        ? (user?.name || 'Customer')
+        : (deliveryAddress.name?.trim() || user?.name || 'Customer');
+
+      const recipientPhone = deliveryType === 'store-pickup'
+        ? cleanAccountPhone
+        : (deliveryAddress.phone?.replace(/[^0-9]/g, '').slice(-10) || cleanAccountPhone);
+
+      const formattedDeliveryAddress = deliveryType === 'store-pickup'
+        ? 'Poyanil Building Store Pickup, Kozhencherry, Kerala - 689641'
+        : `${deliveryAddress.address?.trim()}${deliveryAddress.locality ? ', ' + deliveryAddress.locality.trim() : ''}${deliveryAddress.landmark ? ', near ' + deliveryAddress.landmark.trim() : ''}, ${deliveryAddress.city || deliveryAddress.district || 'Pathanamthitta'}, ${deliveryAddress.state || 'Kerala'} - ${deliveryAddress.pincode || '689641'}`;
+
       const orderPayload = {
-        customerId: user?.id,
+        customerId: user?.id || user?._id,
         customer: {
-          name: formData.name.trim(),
-          phone: cleanPhone,
-          email: formData.email.trim(),
-          address: formData.address || (deliveryType === 'store-pickup' ? 'Poyanil Building Store Pickup, Kozhencherry' : ''),
-          landmark: formData.landmark,
-          district: formData.district,
-          pincode: formData.pincode
+          name: user?.name?.trim() || recipientName,
+          phone: cleanAccountPhone, // Main account phone (all notifications & receipts go here!)
+          email: (user?.email || '').trim(),
+          recipientName,
+          recipientPhone,
+          address: formattedDeliveryAddress,
+          street: deliveryAddress.address,
+          locality: deliveryAddress.locality,
+          city: deliveryAddress.city || deliveryAddress.district || 'Pathanamthitta',
+          district: deliveryAddress.district || 'Pathanamthitta',
+          state: deliveryAddress.state || 'Kerala',
+          pincode: deliveryAddress.pincode || '689641',
+          landmark: deliveryAddress.landmark || '',
+          alternatePhone: deliveryAddress.alternatePhone || '',
+          addressType: deliveryAddress.addressType || 'HOME'
         },
         items: cart.map(item => ({
           id: item.id,
@@ -380,8 +562,8 @@ export const CheckoutPage = () => {
           finalTotal,
           `rcpt_${Date.now().toString().slice(-6)}`,
           {
-            customer_name: formData.name.trim(),
-            customer_phone: cleanPhone,
+            customer_name: user?.name?.trim() || recipientName,
+            customer_phone: cleanAccountPhone,
             delivery_type: deliveryType
           }
         );
@@ -393,19 +575,21 @@ export const CheckoutPage = () => {
           amount: rzpOrder.amount,
           currency: rzpOrder.currency || 'INR',
           name: 'Variathu Power Tools',
-          description: `Order #${rzpOrder.id} • ${formData.name.trim()}`,
+          description: `Order #${rzpOrder.id} • ${recipientName}`,
           image: '/Logo.jpeg',
           order_id: rzpOrder.id,
           prefill: {
-            name: formData.name.trim(),
-            contact: cleanPhone,
-            email: formData.email.trim()
+            name: user?.name?.trim() || recipientName,
+            contact: cleanAccountPhone,
+            email: (user?.email || '').trim()
           },
           notes: {
-            customerId: String(user?.id || ''),
-            address: formData.address || 'Poyanil Building, Kozhencherry, Kerala - 689641',
-            district: formData.district || 'Pathanamthitta',
-            pincode: formData.pincode || '689641'
+            customerId: String(user?.id || user?._id || ''),
+            recipientName,
+            recipientPhone,
+            address: formattedDeliveryAddress,
+            district: deliveryAddress.district || 'Pathanamthitta',
+            pincode: deliveryAddress.pincode || '689641'
           },
           theme: { color: '#ea580c' },
           handler: async function (response) {
@@ -475,7 +659,10 @@ export const CheckoutPage = () => {
   const getWhatsAppInvoiceUrl = (order) => {
     let text = `*VARIATHU POWER TOOLS - ORDER CONFIRMATION*\n`;
     text += `Order ID: *${order.id}*\n`;
-    text += `Customer: ${order.customer?.name} (${order.customer?.phone})\n`;
+    text += `Account: ${order.customer?.name} (+91 ${order.customer?.phone})\n`;
+    if (order.customer?.recipientName && order.customer.recipientName !== order.customer.name) {
+      text += `Consignee: ${order.customer.recipientName} (+91 ${order.customer?.recipientPhone})\n`;
+    }
     text += `Delivery: ${order.deliveryType === 'store-pickup' ? 'Store Pickup (Poyanil Building)' : 'Courier (' + (order.customer?.district || 'Kerala') + ')'}\n`;
     text += `Payment: ${order.paymentMethod} (${order.paymentStatus || 'CONFIRMED'})\n`;
     if (order.pickupOtp) text += `Pickup OTP: *${order.pickupOtp}*\n`;
@@ -535,7 +722,7 @@ export const CheckoutPage = () => {
           >
             <Mail size={22} style={{ flexShrink: 0 }} />
             <span style={{ textAlign: 'left' }}>
-              An official order receipt, warranty copy, and GST breakdown has been sent to <strong>{completedOrder.customer?.email || formData.email || 'your registered email'}</strong> via Resend.
+              An official order receipt, warranty copy, and GST breakdown has been sent to <strong>{completedOrder.customer?.email || user?.email || 'your registered email'}</strong> via Resend.
             </span>
           </div>
 
@@ -757,124 +944,156 @@ export const CheckoutPage = () => {
 
               {/* Verified Account Summary (When Logged In) */}
               {isCustomerLoggedIn ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px' }}>
                   {accountNotice && (
                     <div style={{ background: accountNotice.type === 'created' ? '#ecfdf5' : '#f0f9ff', border: accountNotice.type === 'created' ? '1px solid #a7f3d0' : '1px solid #bae6fd', borderRadius: '8px', padding: '10px 14px', color: accountNotice.type === 'created' ? '#047857' : '#0369a1', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
                       <CheckCircle2 size={16} />
                       <span>{accountNotice.message}</span>
                     </div>
                   )}
-                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px 16px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 18px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>
+                      <div style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a' }}>
                         {user.name}
                       </div>
-                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
-                        Phone: <strong style={{ color: '#334155' }}>+91 {user.phone}</strong> {user.email && !user.email.includes('@customer.variathupowertools.com') ? `• ${user.email}` : ''}
+                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '3px' }}>
+                        Primary Mobile: <strong style={{ color: '#0f172a' }}>+91 {user.phone}</strong> {user.email && !user.email.includes('@customer.variathupowertools.com') ? `• ${user.email}` : ''}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontSize: '0.8rem', fontWeight: '700' }}>
-                      <CheckCircle2 size={16} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontSize: '0.82rem', fontWeight: '700', background: '#ecfdf5', padding: '4px 10px', borderRadius: '9999px', border: '1px solid #bbf7d0' }}>
+                      <CheckCircle2 size={15} />
                       <span>Verified Account</span>
                     </div>
                   </div>
+
+                  {step === 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      className="btn-hero-clean"
+                      style={{ justifyContent: 'center', width: '100%', padding: '12px', marginTop: '4px' }}
+                    >
+                      <span>Continue to Delivery Address</span>
+                      <ArrowRight size={16} />
+                    </button>
+                  )}
                 </div>
               ) : (
                 /* Inline Login Form (When Not Logged In) */
                 <form onSubmit={handleAccountLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ background: '#fff7ed', borderRadius: '8px', padding: '10px 14px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.82rem', lineHeight: '1.4' }}>
-                    Orders and single-use promo coupons are securely tied to verified customer accounts.
+                    Orders, payment receipts, and delivery tracking are tied to your primary mobile account.
                   </div>
 
+                  {/* Primary Mobile Number Input */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                      Full Customer Name *
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
+                      10-Digit Mobile Number (Account ID) *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Thomas Varghese"
-                      value={loginForm.name}
-                      onChange={(e) => setLoginForm({ ...loginForm, name: e.target.value })}
-                      style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                        10-Digit Mobile Number *
-                      </label>
+                    <div style={{ display: 'flex', alignItems: 'center', border: phoneLookup.exists === true ? '2px solid #22c55e' : phoneLookup.exists === false ? '2px solid #f59e0b' : '1px solid #cbd5e1', borderRadius: '10px', overflow: 'hidden', background: '#ffffff', transition: 'all 0.2s ease' }}>
+                      <span style={{ padding: '12px 14px', background: '#f8fafc', color: '#475569', fontWeight: '800', fontSize: '0.9rem', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🇮🇳 +91
+                      </span>
                       <input
                         type="tel"
                         required
-                        placeholder="e.g. 9847123456"
+                        maxLength={10}
+                        placeholder="Enter 10-digit mobile number"
                         value={loginForm.phone}
                         onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
-                        style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: phoneLookup.exists === false ? '1px solid #f59e0b' : phoneLookup.exists === true ? '1px solid #22c55e' : '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: phoneLookup.exists === true ? '#f0fdf4' : '#ffffff' }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                        Email Address (Optional, for Resend Receipts)
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="e.g. thomas@domain.com"
-                        value={loginForm.email}
-                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                        style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                        style={{ flex: 1, padding: '12px 14px', border: 'none', fontSize: '0.95rem', fontWeight: '700', outline: 'none', color: '#0f172a' }}
+                        id="input-account-phone"
                       />
                     </div>
                   </div>
 
-                  {/* Blinkit / Zepto Live Account Status Indicator */}
+                  {/* Checking indicator */}
                   {phoneLookup.checking && (
                     <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 4px' }}>
                       <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ea580c', animation: 'pulse 1s infinite' }} />
-                      <span>Checking customer account for +91 {phoneLookup.checkedPhone}...</span>
+                      <span>Checking customer profile for +91 {phoneLookup.checkedPhone}...</span>
                     </div>
                   )}
 
+                  {/* Existing Customer: Show Details Card Right Below & 1-Click Continue */}
                   {phoneLookup.exists === true && !phoneLookup.checking && (
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 14px', color: '#15803d', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
-                      <span>
-                        Welcome back<strong>{phoneLookup.customerName ? `, ${phoneLookup.customerName}` : ''}</strong>! Your account and saved address will be loaded.
-                      </span>
+                    <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', fontWeight: '800', fontSize: '0.86rem' }}>
+                        <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
+                        <span>Existing Customer Account Found</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
+                        <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Customer Name</span>
+                          <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>{phoneLookup.customerName || 'Valued Customer'}</div>
+                        </div>
+                        <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Account Mobile</span>
+                          <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>+91 {phoneLookup.checkedPhone}</div>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '0.78rem', color: '#166534', margin: '2px 0 0' }}>
+                        Welcome back! Your verified customer profile and saved delivery addresses will be loaded.
+                      </p>
                     </div>
                   )}
 
+                  {/* New Customer: Show Name & Email Inputs */}
                   {phoneLookup.exists === false && !phoneLookup.checking && (
-                    <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', color: '#92400e', fontSize: '0.82rem', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <AlertCircle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: '800', fontSize: '0.86rem' }}>
+                        <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                        <span>New Customer Account for +91 {phoneLookup.checkedPhone}</span>
+                      </div>
+                      <p style={{ fontSize: '0.78rem', color: '#92400e', margin: 0, lineHeight: '1.4' }}>
+                        Enter your name below. All delivery addresses, invoices, and tracking will be saved to this mobile number account.
+                      </p>
+
                       <div>
-                        <strong style={{ color: '#78350f', display: 'block', marginBottom: '2px' }}>
-                          No account found for +91 {phoneLookup.checkedPhone}
-                        </strong>
-                        <span style={{ fontSize: '0.78rem', color: '#92400e', lineHeight: '1.4' }}>
-                          First time here? No problem! When you click <strong>Register & Continue</strong>, we'll instantly create your verified customer account so your warranty and order tracking are linked.
-                        </span>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                          Your Full Name *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Midhun Mohan"
+                          value={loginForm.name}
+                          onChange={(e) => setLoginForm({ ...loginForm, name: e.target.value })}
+                          style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                          Email Address (Optional, for Resend Receipts)
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="e.g. midhun@gmail.com"
+                          value={loginForm.email}
+                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                          style={{ width: '100%', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                        />
                       </div>
                     </div>
                   )}
 
+                  {/* Action Button */}
                   <button
                     type="submit"
-                    disabled={loginLoading}
+                    disabled={loginLoading || (phoneLookup.exists === false && !loginForm.name.trim()) || loginForm.phone.length !== 10}
                     className="btn-hero-clean"
-                    style={{ justifyContent: 'center', width: '100%', padding: '12px', marginTop: '6px' }}
+                    style={{ justifyContent: 'center', width: '100%', padding: '13px', marginTop: '4px', opacity: (loginForm.phone.length === 10) ? 1 : 0.6 }}
                     id="btn-checkout-login-continue"
                   >
                     <span>
                       {loginLoading
-                        ? (phoneLookup.exists === false ? 'Registering Account...' : 'Verifying Account...')
+                        ? (phoneLookup.exists === false ? 'Creating Account...' : 'Signing In...')
                         : (phoneLookup.exists === false
                             ? 'Register & Continue to Delivery'
                             : phoneLookup.exists === true
                               ? 'Sign In & Continue to Delivery'
-                              : 'Continue to Delivery Details')}
+                              : 'Enter 10-Digit Mobile to Continue')}
                     </span>
                     {!loginLoading && <ArrowRight size={16} />}
                   </button>
@@ -882,7 +1101,7 @@ export const CheckoutPage = () => {
               )}
             </div>
 
-            {/* STEP 2 CARD: DELIVERY FULFILLMENT & ADDRESS */}
+            {/* STEP 2 CARD: DELIVERY FULFILLMENT & ADDRESS (FLIPKART ARCHITECTURE) */}
             <div
               style={{
                 background: '#ffffff',
@@ -928,44 +1147,54 @@ export const CheckoutPage = () => {
                     type="button"
                     onClick={() => setStep(2)}
                     style={{
-                      background: 'transparent',
-                      border: 'none',
+                      background: '#fff7ed',
+                      border: '1px solid #fed7aa',
                       color: '#ea580c',
                       fontSize: '0.8rem',
                       fontWeight: '700',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
                       cursor: 'pointer'
                     }}
                   >
-                    Edit
+                    Change
                   </button>
                 )}
               </div>
 
               {/* Step 2 Summary when on Step 3 */}
               {step > 2 ? (
-                <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px 16px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '700', color: '#0f172a', fontSize: '0.88rem' }}>
+                <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', color: '#0f172a', fontSize: '0.9rem' }}>
                     {deliveryType === 'store-pickup' ? <Building size={16} style={{ color: '#ea580c' }} /> : <Truck size={16} style={{ color: '#ea580c' }} />}
                     <span>{deliveryType === 'store-pickup' ? 'Store Counter Pickup (FREE)' : 'Express Courier Delivery (₹120)'}</span>
+                    {deliveryType === 'kerala-courier' && (
+                      <span style={{ background: '#e2e8f0', color: '#334155', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                        {deliveryAddress.addressType || 'HOME'}
+                      </span>
+                    )}
                   </div>
-                  <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px' }}>
+                  <div style={{ fontSize: '0.84rem', color: '#334155', lineHeight: '1.5' }}>
                     {deliveryType === 'store-pickup' ? (
                       'Poyanil Building, Poyanil Junction, Kozhencherry, Kerala - 689641'
                     ) : (
-                      `${formData.address}${formData.landmark ? ', near ' + formData.landmark : ''}, ${formData.district} - ${formData.pincode}`
+                      <>
+                        <strong>{deliveryAddress.name}</strong> • 📞 +91 {deliveryAddress.phone}<br />
+                        {deliveryAddress.address}{deliveryAddress.locality ? `, ${deliveryAddress.locality}` : ''}{deliveryAddress.landmark ? `, near ${deliveryAddress.landmark}` : ''}, {deliveryAddress.city || deliveryAddress.district}, {deliveryAddress.state || 'Kerala'} - <strong>{deliveryAddress.pincode}</strong>
+                      </>
                     )}
                   </div>
                 </div>
               ) : (
-                /* Step 2 Active Form */
-                <form onSubmit={handleProceedToPayment} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                /* Step 2 Active Mode Selector & Address Manager */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   {/* Delivery Mode Tabs */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div
                       onClick={() => setDeliveryType('store-pickup')}
                       style={{
                         border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                        borderRadius: '10px',
+                        borderRadius: '12px',
                         padding: '14px',
                         cursor: 'pointer',
                         background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
@@ -973,7 +1202,8 @@ export const CheckoutPage = () => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a' }}>
+                        <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Building size={16} style={{ color: '#ea580c' }} />
                           Store Pickup
                         </span>
                         <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
@@ -989,7 +1219,7 @@ export const CheckoutPage = () => {
                       onClick={() => setDeliveryType('kerala-courier')}
                       style={{
                         border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1px solid #cbd5e1',
-                        borderRadius: '10px',
+                        borderRadius: '12px',
                         padding: '14px',
                         cursor: 'pointer',
                         background: deliveryType === 'kerala-courier' ? '#fff7ed' : '#ffffff',
@@ -997,7 +1227,8 @@ export const CheckoutPage = () => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a' }}>
+                        <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Truck size={16} style={{ color: '#ea580c' }} />
                           Express Courier
                         </span>
                         <span style={{ color: '#ea580c', fontSize: '0.82rem', fontWeight: '800' }}>
@@ -1010,105 +1241,429 @@ export const CheckoutPage = () => {
                     </div>
                   </div>
 
-                  {/* If Courier is selected: Address inputs */}
-                  {deliveryType === 'kerala-courier' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#334155', textTransform: 'uppercase' }}>
-                          Shipping Address (Saved to Account)
-                        </span>
-                        {user?.address && (
-                          <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700' }}>
-                            ✓ Pre-filled from Account
-                          </span>
-                        )}
+                  {/* If Store Pickup is Selected */}
+                  {deliveryType === 'store-pickup' && (
+                    <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
+                        <MapPin size={18} style={{ color: '#ea580c' }} />
+                        <span>Pickup Counter Address</span>
                       </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                          House / Building / Shop Address *
-                        </label>
-                        <textarea
-                          rows={2}
-                          required
-                          name="address"
-                          value={formData.address}
-                          onChange={handleChange}
-                          placeholder="e.g. Shop No. 4, Market Road, Near Town Hall"
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                          Landmark (Optional)
-                        </label>
-                        <input
-                          type="text"
-                          name="landmark"
-                          value={formData.landmark}
-                          onChange={handleChange}
-                          placeholder="e.g. Opposite Federal Bank / Near St. Thomas HSS"
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                            District *
-                          </label>
-                          <select
-                            name="district"
-                            value={formData.district}
-                            onChange={handleChange}
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
-                          >
-                            {KERALA_DISTRICTS.map(d => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
-                            Kerala Pincode *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            name="pincode"
-                            value={formData.pincode}
-                            onChange={(e) => setFormData({ ...formData, pincode: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) })}
-                            placeholder="689641"
-                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Pincode Live Check Result */}
-                      {pincodeCheck && (
-                        <div style={{ fontSize: '0.78rem', color: pincodeCheck.serviceable ? '#16a34a' : '#b45309', fontWeight: '600', marginTop: '2px' }}>
-                          {pincodeCheck.checking ? 'Verifying postal code serviceability...' : (
-                            pincodeCheck.serviceable
-                              ? `✓ Express shipping available to ${pincodeCheck.city || formData.district}`
-                              : pincodeCheck.message || 'Custom carrier routing will be arranged.'
-                          )}
-                        </div>
-                      )}
+                      <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: '1.5' }}>
+                        Variathu Power Tools Showroom & Service Clinic<br />
+                        Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641<br />
+                        <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Store Hours: 9:00 AM - 7:30 PM (Mon - Sat) • Phone: +91 94473 05613</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setStep(3)}
+                        className="btn-hero-clean"
+                        style={{ justifyContent: 'center', width: '100%', padding: '12px', marginTop: '6px' }}
+                      >
+                        <span>Continue to Payment</span>
+                        <ArrowRight size={16} />
+                      </button>
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    className="btn-hero-clean"
-                    style={{ justifyContent: 'center', width: '100%', padding: '12px' }}
-                    id="btn-checkout-address-continue"
-                  >
-                    <span>Proceed to Order Review & Payment</span>
-                    <ArrowRight size={16} />
-                  </button>
-                </form>
+                  {/* If Express Courier is Selected: Flipkart Architecture */}
+                  {deliveryType === 'kerala-courier' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                      {/* Saved Addresses List (Flipkart Style) */}
+                      {user?.savedAddresses && user.savedAddresses.length > 0 && !isAddingNewAddress && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              Saved Delivery Addresses ({user.savedAddresses.length})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsAddingNewAddress(true);
+                                setDeliveryAddress({
+                                  name: user.name || '',
+                                  phone: user.phone || '',
+                                  pincode: '689641',
+                                  locality: '',
+                                  address: '',
+                                  city: 'Pathanamthitta',
+                                  district: 'Pathanamthitta',
+                                  state: 'Kerala',
+                                  landmark: '',
+                                  alternatePhone: '',
+                                  addressType: 'HOME'
+                                });
+                              }}
+                              style={{
+                                background: '#eff6ff',
+                                border: '1px solid #bfdbfe',
+                                color: '#1d4ed8',
+                                fontSize: '0.78rem',
+                                fontWeight: '700',
+                                padding: '5px 12px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Plus size={14} />
+                              <span>+ Add New Address</span>
+                            </button>
+                          </div>
+
+                          {user.savedAddresses.map((addr) => {
+                            const isSelected = selectedAddressId === (addr.id || addr._id);
+                            return (
+                              <div
+                                key={addr.id || addr._id}
+                                onClick={() => handleSelectSavedAddress(addr)}
+                                style={{
+                                  border: isSelected ? '2px solid #2874f0' : '1px solid #e2e8f0',
+                                  borderRadius: '12px',
+                                  padding: '16px',
+                                  background: isSelected ? '#f8faff' : '#ffffff',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '8px'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <input
+                                      type="radio"
+                                      name="selectedSavedAddress"
+                                      checked={isSelected}
+                                      onChange={() => handleSelectSavedAddress(addr)}
+                                      style={{ accentColor: '#2874f0', cursor: 'pointer' }}
+                                    />
+                                    <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                      {addr.addressType || 'HOME'}
+                                    </span>
+                                    <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>
+                                      {addr.name}
+                                    </strong>
+                                    <span style={{ fontSize: '0.86rem', color: '#334155', fontWeight: '700' }}>
+                                      {addr.phone}
+                                    </span>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteSavedAddress(e, addr.id || addr._id)}
+                                    title="Delete address"
+                                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+
+                                <div style={{ fontSize: '0.84rem', color: '#475569', paddingLeft: '24px', lineHeight: '1.5' }}>
+                                  {addr.address}{addr.locality ? `, ${addr.locality}` : ''}{addr.landmark ? `, Near ${addr.landmark}` : ''}, {addr.city || addr.district}, {addr.state || 'Kerala'} - <strong>{addr.pincode}</strong>
+                                  {addr.alternatePhone && (
+                                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                                      Alternate Phone: {addr.alternatePhone}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {isSelected && (
+                                  <div style={{ paddingLeft: '24px', marginTop: '6px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setStep(3)}
+                                      style={{
+                                        background: '#fb641b',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        padding: '10px 24px',
+                                        fontSize: '0.88rem',
+                                        fontWeight: '800',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 10px rgba(251, 100, 27, 0.3)'
+                                      }}
+                                    >
+                                      DELIVER HERE ➔
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Add / Edit Address Form (Flipkart Style Screenshot Match) */}
+                      {(isAddingNewAddress || !user?.savedAddresses || user.savedAddresses.length === 0) && (
+                        <form onSubmit={handleSaveAndDeliver} style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc', padding: '20px', borderRadius: '14px', border: '1.5px solid #cbd5e1' }}>
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                            <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Add / Edit Delivery Address
+                            </span>
+
+                            {/* Flipkart 'Use my current location' Button */}
+                            <button
+                              type="button"
+                              onClick={handleUseCurrentLocation}
+                              disabled={isLocating}
+                              style={{
+                                background: '#2874f0',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '8px 16px',
+                                fontSize: '0.82rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                boxShadow: '0 2px 6px rgba(40, 116, 240, 0.25)'
+                              }}
+                            >
+                              <Navigation size={14} />
+                              <span>{isLocating ? 'Locating via GPS...' : 'Use my current location'}</span>
+                            </button>
+                          </div>
+
+                          {/* Row 1: Recipient Name & 10-digit mobile number */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                Recipient Name *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                name="name"
+                                value={deliveryAddress.name}
+                                onChange={handleDeliveryAddressChange}
+                                placeholder="e.g. Midhun Mohan"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                10-digit mobile number *
+                              </label>
+                              <input
+                                type="tel"
+                                required
+                                name="phone"
+                                maxLength={10}
+                                value={deliveryAddress.phone}
+                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
+                                placeholder="e.g. 6238270613"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Row 2: Pincode & Locality */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                Pincode (Auto-completes District & State) *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                name="pincode"
+                                maxLength={6}
+                                value={deliveryAddress.pincode}
+                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, pincode: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) }))}
+                                placeholder="e.g. 689642"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: pincodeCheck?.serviceable ? '2px solid #22c55e' : '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                              {pincodeCheck && (
+                                <div style={{ fontSize: '0.75rem', color: pincodeCheck.serviceable ? '#16a34a' : '#b45309', fontWeight: '700', marginTop: '3px' }}>
+                                  {pincodeCheck.checking ? 'Checking postal code serviceability...' : (
+                                    pincodeCheck.serviceable
+                                      ? `✓ Express Delivery Available to ${pincodeCheck.city || deliveryAddress.district}`
+                                      : (pincodeCheck.message || 'Custom courier routing enabled.')
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                Locality *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                name="locality"
+                                value={deliveryAddress.locality}
+                                onChange={handleDeliveryAddressChange}
+                                placeholder="e.g. Nirannukala-Adiyani Road, Naranganam"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Row 3: Address (Area and Street) */}
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                              Address (Area and Street) *
+                            </label>
+                            <textarea
+                              rows={2}
+                              required
+                              name="address"
+                              value={deliveryAddress.address}
+                              onChange={handleDeliveryAddressChange}
+                              placeholder="e.g. Poovanunniikkunnathil, Nerunnukala padi"
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            />
+                          </div>
+
+                          {/* Row 4: City/District/Town & State */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                City / District / Town *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                name="city"
+                                value={deliveryAddress.city || deliveryAddress.district}
+                                onChange={handleDeliveryAddressChange}
+                                placeholder="e.g. Pathanamthitta"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                State *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                name="state"
+                                value={deliveryAddress.state || 'Kerala'}
+                                onChange={handleDeliveryAddressChange}
+                                placeholder="Kerala"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Row 5: Landmark (Optional) & Alternate Phone (Optional) */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                Landmark (Optional)
+                              </label>
+                              <input
+                                type="text"
+                                name="landmark"
+                                value={deliveryAddress.landmark}
+                                onChange={handleDeliveryAddressChange}
+                                placeholder="e.g. Near NSS Karayogam / Temple"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                                Alternate Phone (Optional)
+                              </label>
+                              <input
+                                type="tel"
+                                name="alternatePhone"
+                                maxLength={10}
+                                value={deliveryAddress.alternatePhone}
+                                onChange={(e) => setDeliveryAddress(prev => ({ ...prev, alternatePhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
+                                placeholder="e.g. 9995855774"
+                                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Row 6: Address Type Radio Buttons */}
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '8px' }}>
+                              Address Type
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer' }}>
+                                <input
+                                  type="radio"
+                                  name="addressType"
+                                  value="HOME"
+                                  checked={deliveryAddress.addressType === 'HOME'}
+                                  onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'HOME' }))}
+                                  style={{ accentColor: '#2874f0' }}
+                                />
+                                <span>Home (All day delivery)</span>
+                              </label>
+
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#1e293b', cursor: 'pointer' }}>
+                                <input
+                                  type="radio"
+                                  name="addressType"
+                                  value="WORK"
+                                  checked={deliveryAddress.addressType === 'WORK'}
+                                  onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'WORK' }))}
+                                  style={{ accentColor: '#2874f0' }}
+                                />
+                                <span>Work (Delivery between 10 AM - 5 PM)</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
+                            <button
+                              type="submit"
+                              disabled={isSavingAddress}
+                              style={{
+                                background: '#fb641b',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '12px 28px',
+                                fontSize: '0.9rem',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 12px rgba(251, 100, 27, 0.3)'
+                              }}
+                            >
+                              {isSavingAddress ? 'SAVING...' : 'SAVE AND DELIVER HERE ➔'}
+                            </button>
+
+                            {user?.savedAddresses && user.savedAddresses.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setIsAddingNewAddress(false)}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: '#2874f0',
+                                  fontSize: '0.88rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  padding: '12px 16px'
+                                }}
+                              >
+                                CANCEL
+                              </button>
+                            )}
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -1153,17 +1708,34 @@ export const CheckoutPage = () => {
               </div>
 
               {step === 3 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+                  {/* Delivery & Account Notification Summary */}
+                  <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ fontSize: '0.84rem', color: '#0f172a' }}>
+                      📦 <strong>Deliver To:</strong> {deliveryType === 'store-pickup' ? 'Poyanil Building Store Pickup' : `${deliveryAddress.name} (+91 ${deliveryAddress.phone})`}
+                    </div>
+                    {deliveryType === 'kerala-courier' && (
+                      <div style={{ fontSize: '0.8rem', color: '#475569', paddingLeft: '22px' }}>
+                        {deliveryAddress.address}, {deliveryAddress.locality ? `${deliveryAddress.locality}, ` : ''}{deliveryAddress.city || deliveryAddress.district}, {deliveryAddress.state || 'Kerala'} - {deliveryAddress.pincode}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '0.78rem', color: '#0369a1', background: '#f0f9ff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bae6fd', marginTop: '4px' }}>
+                      📱 <strong>Primary Account (+91 {user?.phone}):</strong> Payment confirmation, WhatsApp invoice, and courier tracking will be sent directly to your registered number.
+                    </div>
+                  </div>
+
+                  {/* Payment Options Grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
                     {/* Razorpay Online */}
                     <div
-                      onClick={() => setFormData({ ...formData, paymentMethod: 'razorpay' })}
+                      onClick={() => setPaymentMethod('razorpay')}
                       style={{
-                        border: formData.paymentMethod === 'razorpay' ? '2px solid #ea580c' : '1px solid #cbd5e1',
+                        border: paymentMethod === 'razorpay' ? '2px solid #ea580c' : '1px solid #cbd5e1',
                         borderRadius: '12px',
                         padding: '16px',
                         cursor: 'pointer',
-                        background: formData.paymentMethod === 'razorpay' ? '#fff7ed' : '#ffffff',
+                        background: paymentMethod === 'razorpay' ? '#fff7ed' : '#ffffff',
                         transition: 'all 0.2s ease'
                       }}
                     >
@@ -1182,13 +1754,13 @@ export const CheckoutPage = () => {
 
                     {/* Cash on Delivery / Counter */}
                     <div
-                      onClick={() => setFormData({ ...formData, paymentMethod: 'cash' })}
+                      onClick={() => setPaymentMethod('cash')}
                       style={{
-                        border: formData.paymentMethod === 'cash' ? '2px solid #ea580c' : '1px solid #cbd5e1',
+                        border: paymentMethod === 'cash' ? '2px solid #ea580c' : '1px solid #cbd5e1',
                         borderRadius: '12px',
                         padding: '16px',
                         cursor: 'pointer',
-                        background: formData.paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
+                        background: paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
                         transition: 'all 0.2s ease'
                       }}
                     >

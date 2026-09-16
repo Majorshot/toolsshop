@@ -314,10 +314,10 @@ async function sendOrderConfirmationEmail(order) {
           ` : ''}
         ` : `
           <p style="font-size: 13px; color: #0f172a; margin: 0; line-height: 1.5;">
-            <strong>Recipient:</strong> ${customerName}<br>
+            <strong>Recipient:</strong> ${order.customer?.recipientName || customerName}<br>
             ${order.customer?.address || 'Customer Delivery Address'}<br>
             ${order.customer?.district || 'Pathanamthitta'}, Kerala - ${order.customer?.pincode || '689641'}<br>
-            <strong>Phone:</strong> ${order.customer?.phone || ''}
+            <strong>Delivery Contact:</strong> ${order.customer?.recipientPhone || order.customer?.phone || ''}
           </p>
         `}
       </div>
@@ -482,10 +482,10 @@ async function sendOrderDispatchedEmail(order, courierPartner, awb) {
           📍 Delivery Destination
         </h3>
         <p style="font-size: 13px; color: #0f172a; margin: 0; line-height: 1.5;">
-          <strong>${customerName}</strong><br>
+          <strong>Consignee / Recipient:</strong> ${order.customer?.recipientName || customerName}<br>
           ${order.customer?.address || ''}<br>
           ${order.customer?.district || 'Pathanamthitta'}, ${order.customer?.state || 'Kerala'} - ${order.customer?.pincode || '689641'}<br>
-          <strong>Phone:</strong> ${order.customer?.phone || ''}
+          <strong>Delivery Phone:</strong> ${order.customer?.recipientPhone || order.customer?.phone || ''}
         </p>
       </div>
 

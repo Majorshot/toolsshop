@@ -100,9 +100,13 @@ const sendOrderConfirmationWhatsApp = async (order) => {
     .map((item, idx) => `${idx + 1}. *${item.name || item.title}* (Qty: ${item.quantity || 1}) - ₹${item.price}`)
     .join('\n');
 
+  const recipientPart = order.customer?.recipientName && order.customer.recipientName !== order.customer.name
+    ? `👤 *Delivery Recipient:* *${order.customer.recipientName}*${order.customer.recipientPhone ? ` (📞 ${order.customer.recipientPhone})` : ''}\n`
+    : (order.customer?.recipientPhone && order.customer.recipientPhone !== order.customer.phone ? `📞 *Delivery Contact:* *${order.customer.recipientPhone}*\n` : '');
+
   const deliveryNotice = order.deliveryType === 'store-pickup'
     ? `🏬 *Pickup Location:* Poyanil Building, Kozhencherry\n🔐 *Your Pickup OTP:* *${order.pickupOtp || '4819'}*\n_Please present this 4-digit code at the store counter to collect your tools._`
-    : `🚚 *Delivery Method:* Courier Express Delivery\n📍 *Deliver To:* ${order.customer?.address || ''}, ${order.customer?.city || order.customer?.district || 'Kerala'}`;
+    : `🚚 *Delivery Method:* Courier Express Delivery\n${recipientPart}📍 *Deliver To:* ${order.customer?.address || ''}, ${order.customer?.city || order.customer?.district || 'Kerala'} - PIN: ${order.customer?.pincode || ''}`;
 
   const message = `🛠️ *VARIATHU POWER TOOLS*
 *Order Confirmed!*
@@ -132,6 +136,8 @@ const sendOrderDispatchedWhatsApp = async (order, courierPartner, awb) => {
 
   const carrier = courierPartner || order.courierPartner || 'Courier Express';
   const trackingNumber = awb || order.awb || 'Assigned at Hub';
+  const consigneeName = order.customer?.recipientName || order.customer?.name || 'Customer';
+  const consigneePhone = order.customer?.recipientPhone || order.customer?.phone || '';
 
   const message = `🚚 *VARIATHU POWER TOOLS*
 *Your Order is on the Way!*
@@ -141,6 +147,7 @@ Great news! Your order *${order.id}* has been packed and dispatched from our Koz
 
 📦 *Carrier:* *${carrier}*
 🔖 *Tracking / AWB No:* *${trackingNumber}*
+👤 *Consignee:* *${consigneeName}*${consigneePhone && consigneePhone !== order.customer?.phone ? ` (📞 ${consigneePhone})` : ''}
 📍 *Destination:* ${order.customer?.city || order.customer?.district || 'Kerala'} - PIN: ${order.customer?.pincode || '689641'}
 
 You will receive your package soon. Thank you for choosing Variathu Power Tools!
