@@ -958,7 +958,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       'CGST 9% (INR)',
       'SGST 9% (INR)',
       'Total Amount (INR)',
-      'AWB / Tracking'
+      'AWB / Tracking',
+      'Cancellation Reason'
     ];
 
     const rows = orders.map(o => {
@@ -989,7 +990,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         cgst,
         sgst,
         total,
-        o.awb || o.pickupOtp || 'N/A'
+        o.awb || o.pickupOtp || 'N/A',
+        `"${(o.cancellationReason || o.cancellationRequestReason || '').replace(/"/g, '""')}"`
       ];
     });
 
@@ -1839,7 +1841,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           fontWeight: '700'
                         }}
                       >
-                        Cancelled by {order.cancelledBy || 'store'}
+                        Cancelled by {order.cancelledBy || 'customer'}
+                      </span>
+                    ) : order.cancellationRequested ? (
+                      <span
+                        style={{
+                          background: '#fef3c7',
+                          color: '#b45309',
+                          border: '1px solid #fde68a',
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        ⏳ CANCEL REQUEST PENDING
                       </span>
                     ) : order.deliveryType === 'store-pickup' ? (
                       <span
@@ -1913,16 +1932,60 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                   {/* Cancelled Alert Box (if applicable) */}
                   {order.status === 'Cancelled' && (
-                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', fontSize: '0.8rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', fontWeight: '700' }}>
-                        <XCircle size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
-                        <span>Order Cancelled by {order.cancelledBy || 'store'} {order.cancelReason ? `(${order.cancelReason})` : ''}</span>
+                    <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.82rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: (order.cancellationReason || order.cancellationRequestReason || order.cancelReason) ? '8px' : '0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', fontWeight: '800' }}>
+                          <XCircle size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
+                          <span>Order Cancelled by {(order.cancelledBy || 'customer').toUpperCase()}</span>
+                        </div>
+                        {order.paymentStatus === 'REFUNDED' && (
+                          <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>
+                            ⚡ Refund Reference: {order.refundId || 'Processed'}
+                          </span>
+                        )}
                       </div>
-                      {order.paymentStatus === 'REFUNDED' && (
-                        <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
-                          ⚡ Refund Reference: {order.refundId || 'Processed'}
-                        </span>
+                      {(order.cancellationReason || order.cancellationRequestReason || order.cancelReason) && (
+                        <div style={{ background: '#ffffff', border: '1px solid #fca5a5', borderRadius: '6px', padding: '8px 12px', fontSize: '0.8rem', color: '#7f1d1d' }}>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase', color: '#b91c1c', display: 'block', marginBottom: '2px' }}>
+                            Cancellation Reason:
+                          </span>
+                          <strong>"{order.cancellationReason || order.cancellationRequestReason || order.cancelReason}"</strong>
+                        </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Pending Cancellation Request Alert Box */}
+                  {order.cancellationRequested && order.status !== 'Cancelled' && (
+                    <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.82rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400e', fontWeight: '800' }}>
+                          <AlertTriangle size={16} style={{ color: '#b45309', flexShrink: 0 }} />
+                          <span>⚠️ CUSTOMER REQUESTED CANCELLATION</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('cancellations')}
+                          style={{
+                            background: '#f59e0b',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '4px 10px',
+                            fontSize: '0.74rem',
+                            fontWeight: '800',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Review in Cancellations Tab &rarr;
+                        </button>
+                      </div>
+                      <div style={{ background: '#ffffff', border: '1px solid #fef08a', borderRadius: '6px', padding: '8px 12px', fontSize: '0.8rem', color: '#78350f' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase', color: '#b45309', display: 'block', marginBottom: '2px' }}>
+                          Customer Reason:
+                        </span>
+                        <strong>"{order.cancellationRequestReason || order.cancellationReason || 'Customer requested order cancellation'}"</strong>
+                      </div>
                     </div>
                   )}
 
@@ -3249,12 +3312,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
 
                     {/* Customer Reason */}
-                    {order.cancellationRequestReason && (
-                      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.82rem' }}>
-                        <span style={{ color: '#64748b', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                          Customer's Reason
+                    {(order.cancellationRequestReason || order.cancellationReason) && (
+                      <div style={{ background: '#ffffff', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', fontSize: '0.86rem' }}>
+                        <span style={{ color: '#b45309', fontWeight: '800', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                          Customer's Cancellation Reason
                         </span>
-                        <span style={{ color: '#0f172a' }}>{order.cancellationRequestReason}</span>
+                        <span style={{ color: '#78350f', fontWeight: '700', lineHeight: 1.5, display: 'block', fontStyle: 'italic' }}>
+                          "{order.cancellationRequestReason || order.cancellationReason}"
+                        </span>
                       </div>
                     )}
 
@@ -4520,6 +4585,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                               {isOnline ? '💳 Online / UPI' : '💵 Cash at Counter'}
                             </span>
                           </div>
+                          {(ord.cancellationReason || ord.cancellationRequestReason) && (
+                            <div style={{ marginTop: '6px', padding: '4px 8px', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '0.74rem', color: '#991b1b' }}>
+                              <strong>Cancellation Reason:</strong> {ord.cancellationReason || ord.cancellationRequestReason}
+                            </div>
+                          )}
                         </div>
 
                         <div style={{ textAlign: 'right' }}>

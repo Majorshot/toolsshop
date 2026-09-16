@@ -50,6 +50,24 @@ export const CustomerAccountPage = () => {
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [cancelFeedback, setCancelFeedback] = useState(null);
 
+  const [cancelReasonPreset, setCancelReasonPreset] = useState('');
+  const [cancelReasonCustom, setCancelReasonCustom] = useState('');
+
+  const CANCELLATION_REASONS = [
+    'Ordered by mistake / wrong model',
+    'Found lower price elsewhere',
+    'Delivery time is too long',
+    'Want to change delivery address or phone',
+    'Specifications don’t fit requirements',
+    'Other reason'
+  ];
+
+  const handleOpenCustomerCancelModal = (order) => {
+    setCustomerCancelOrder(order);
+    setCancelReasonPreset('');
+    setCancelReasonCustom('');
+  };
+
   // Address & Profile Management (Verified Customer Account)
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
@@ -103,23 +121,36 @@ export const CustomerAccountPage = () => {
 
   const handleConfirmCustomerCancel = async () => {
     if (!customerCancelOrder) return;
+    
+    let finalReason = cancelReasonCustom.trim();
+    if (cancelReasonPreset) {
+      finalReason = finalReason ? `${cancelReasonPreset}: ${finalReason}` : cancelReasonPreset;
+    }
+    if (!finalReason) {
+      finalReason = 'Customer requested cancellation from account dashboard';
+    }
+
     setCancellingOrder(true);
     try {
       if (isCancelOrderDispatched(customerCancelOrder)) {
         // Dispatched order → submit cancellation request
         const res = await api.requestCancellation(customerCancelOrder.id, {
-          reason: 'Customer requested cancellation from account dashboard'
+          reason: finalReason
         });
         setCustomerCancelOrder(null);
+        setCancelReasonPreset('');
+        setCancelReasonCustom('');
         setCancelFeedback(res.message || 'Cancellation request submitted. Awaiting store approval.');
         setTimeout(() => setCancelFeedback(null), 8000);
       } else {
         // Non-dispatched order → instant cancel
         const res = await api.cancelOrder(customerCancelOrder.id, {
-          reason: 'Customer cancelled from account dashboard',
+          reason: finalReason,
           cancelledBy: 'customer'
         });
         setCustomerCancelOrder(null);
+        setCancelReasonPreset('');
+        setCancelReasonCustom('');
         setCancelFeedback(res.message || 'Order cancelled successfully.');
         setTimeout(() => setCancelFeedback(null), 6000);
       }
@@ -536,6 +567,15 @@ export const CustomerAccountPage = () => {
                       </div>
                     )}
 
+                    {(order.cancellationReason || order.cancellationRequestReason) && (
+                      <div style={{ background: '#ffffff', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '8px 12px', marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem', color: '#991b1b' }}>
+                        <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#b91c1c', fontWeight: '800', display: 'block', marginBottom: '2px' }}>
+                          Cancellation Reason:
+                        </span>
+                        <strong>"{order.cancellationReason || order.cancellationRequestReason}"</strong>
+                      </div>
+                    )}
+
                     {order.cancelledAt && (
                       <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
                         Cancelled on: {new Date(order.cancelledAt).toLocaleDateString()} at {new Date(order.cancelledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -755,22 +795,32 @@ export const CustomerAccountPage = () => {
                       padding: '14px 18px',
                       marginBottom: '18px',
                       display: 'flex',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
                       gap: '12px'
                     }}
                   >
-                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
                       <AlertCircle size={18} />
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <strong style={{ fontSize: '0.9rem', color: '#92400e', display: 'block' }}>
                         Cancellation Request Submitted
                       </strong>
                       <p style={{ fontSize: '0.8rem', color: '#78350f', margin: '2px 0 0', lineHeight: 1.5 }}>
                         Your cancellation request is being reviewed by the store manager at Variathu Power Tools. You'll see the updated status here once it's processed. If approved, a full refund will be initiated automatically.
                       </p>
+
+                      {order.cancellationRequestReason && (
+                        <div style={{ marginTop: '8px', padding: '8px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '0.78rem', color: '#92400e' }}>
+                          <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#b45309', fontWeight: '800', display: 'block', marginBottom: '2px' }}>
+                            Your Cancellation Reason:
+                          </span>
+                          <strong>"{order.cancellationRequestReason}"</strong>
+                        </div>
+                      )}
+
                       {order.cancellationRequestedAt && (
-                        <span style={{ fontSize: '0.72rem', color: '#a16207', display: 'block', marginTop: '4px' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#a16207', display: 'block', marginTop: '6px' }}>
                           Requested on: {new Date(order.cancellationRequestedAt).toLocaleDateString()} at {new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       )}
@@ -821,7 +871,7 @@ export const CustomerAccountPage = () => {
                   {!isCancelled && !hasPendingCancelRequest && (
                     <button
                       type="button"
-                      onClick={() => setCustomerCancelOrder(order)}
+                      onClick={() => handleOpenCustomerCancelModal(order)}
                       style={{
                         background: isDispatched ? '#fffbeb' : '#ffffff',
                         border: `1px solid ${isDispatched ? '#fde68a' : '#fecaca'}`,
@@ -859,19 +909,20 @@ export const CustomerAccountPage = () => {
                       alignItems: 'center',
                       gap: '6px'
                     }}
-                    id={`btn-view-invoice-${order.id}`}
+                    title="Download Official GST B2C Tax Invoice (18% GST itemized breakdown)"
+                    id={`btn-customer-invoice-${order.id}`}
                   >
                     <FileText size={15} style={{ color: '#ea580c' }} />
-                    <span>Official GST Tax Invoice</span>
+                    <span>GST Tax Invoice</span>
                   </button>
 
                   <a
-                    href={getWhatsAppInquiry(order)}
+                    href={`https://wa.me/919447123456?text=${encodeURIComponent(`Hello Variathu Power Tools, I have a query about my order ${order.id}.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      background: '#f0fdf4',
-                      border: '1px solid #bbf7d0',
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
                       color: '#15803d',
                       padding: '8px 14px',
                       borderRadius: '8px',
@@ -882,9 +933,10 @@ export const CustomerAccountPage = () => {
                       alignItems: 'center',
                       gap: '6px'
                     }}
+                    id={`btn-customer-whatsapp-${order.id}`}
                   >
                     <MessageCircle size={15} />
-                    <span>Inquire on WhatsApp</span>
+                    <span>WhatsApp Shop</span>
                   </a>
                 </div>
               </div>
@@ -893,7 +945,7 @@ export const CustomerAccountPage = () => {
         </div>
       )}
 
-      {/* Official Unified GST Tax Invoice Modal (Buyer Copy Only) */}
+      {/* GST Invoice Modal */}
       {invoiceOrder && (
         <GstInvoiceModal
           order={invoiceOrder}
@@ -908,15 +960,17 @@ export const CustomerAccountPage = () => {
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '480px', padding: '24px', textAlign: 'left' }}
+            style={{ maxWidth: '500px', padding: '24px', textAlign: 'left' }}
             id="modal-customer-cancel-order"
           >
             {(() => {
               const isDispatchedModal = isCancelOrderDispatched(customerCancelOrder);
+              const hasReasonProvided = Boolean(cancelReasonPreset || cancelReasonCustom.trim());
+
               return (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDispatchedModal ? '#fef3c7' : '#fee2e2', color: isDispatchedModal ? '#b45309' : '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDispatchedModal ? '#fef3c7' : '#fee2e2', color: isDispatchedModal ? '#b45309' : '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {isDispatchedModal ? <AlertCircle size={22} /> : <XCircle size={22} />}
                     </div>
                     <div>
@@ -931,37 +985,100 @@ export const CustomerAccountPage = () => {
 
                   {isDispatchedModal ? (
                     <>
-                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.84rem', color: '#92400e' }}>
+                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.84rem', color: '#92400e' }}>
                         <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                           <span>📦 Order Already Dispatched</span>
                         </div>
-                        This order has been dispatched via courier <strong>(AWB: {customerCancelOrder.awb})</strong>. Since it's already in transit, your cancellation request will be sent to the store manager for review.
+                        This order has been dispatched via courier <strong>(AWB: {customerCancelOrder.awb})</strong>. Your cancellation request will be sent to the store manager with your reason for prompt review.
                       </div>
-                      <p style={{ fontSize: '0.84rem', color: '#475569', marginBottom: '16px', lineHeight: 1.5 }}>
-                        The store manager at Variathu Power Tools will review your request and coordinate with the courier partner. If approved, a full refund will be processed automatically.
-                      </p>
                     </>
                   ) : (
                     <>
                       {customerCancelOrder.paymentStatus === 'PAID' ? (
-                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.84rem', color: '#166534' }}>
+                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.84rem', color: '#166534' }}>
                           <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                             <span>⚡ Instant Online Refund Guaranteed</span>
                           </div>
                           Because you paid online via Razorpay/UPI, a <strong>full refund of {formatPrice(customerCancelOrder.totalAmount)}</strong> will be automatically refunded to your original payment account.
                         </div>
                       ) : (
-                        <p style={{ fontSize: '0.86rem', color: '#475569', marginBottom: '16px' }}>
+                        <p style={{ fontSize: '0.86rem', color: '#475569', marginBottom: '14px' }}>
                           Are you sure you want to cancel this order? This will cancel your equipment reservation at our Poyanil Building counter.
                         </p>
                       )}
                     </>
                   )}
 
+                  {/* CANCELLATION REASON SECTION */}
+                  <div style={{ marginBottom: '18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a', display: 'block', marginBottom: '8px' }}>
+                      Select Reason for Cancellation <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+
+                    {/* Quick Preset Chips */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                      {CANCELLATION_REASONS.map((preset) => {
+                        const isSelected = cancelReasonPreset === preset;
+                        return (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setCancelReasonPreset(isSelected ? '' : preset)}
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: isSelected ? '800' : '600',
+                              padding: '5px 11px',
+                              borderRadius: '20px',
+                              border: `1.5px solid ${isSelected ? '#dc2626' : '#cbd5e1'}`,
+                              background: isSelected ? '#fee2e2' : '#ffffff',
+                              color: isSelected ? '#b91c1c' : '#475569',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {preset}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Reason Textarea */}
+                    <div>
+                      <textarea
+                        rows={2}
+                        value={cancelReasonCustom}
+                        onChange={(e) => setCancelReasonCustom(e.target.value)}
+                        placeholder="Write additional details or specific reason (optional if chip selected)..."
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          border: '1.5px solid #cbd5e1',
+                          borderRadius: '8px',
+                          fontSize: '0.82rem',
+                          color: '#0f172a',
+                          resize: 'vertical',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          fontFamily: 'inherit',
+                          lineHeight: 1.4,
+                          background: '#ffffff'
+                        }}
+                        id="input-customer-cancel-reason"
+                      />
+                      <span style={{ fontSize: '0.71rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                        ℹ️ This reason will appear in the store manager dashboard and your email confirmation.
+                      </span>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
                     <button
                       type="button"
-                      onClick={() => setCustomerCancelOrder(null)}
+                      onClick={() => {
+                        setCustomerCancelOrder(null);
+                        setCancelReasonPreset('');
+                        setCancelReasonCustom('');
+                      }}
                       disabled={cancellingOrder}
                       style={{
                         background: '#f1f5f9',
@@ -980,19 +1097,21 @@ export const CustomerAccountPage = () => {
                     <button
                       type="button"
                       onClick={handleConfirmCustomerCancel}
-                      disabled={cancellingOrder}
+                      disabled={cancellingOrder || !hasReasonProvided}
                       style={{
-                        background: isDispatchedModal ? '#b45309' : '#dc2626',
+                        background: !hasReasonProvided ? '#94a3b8' : (isDispatchedModal ? '#b45309' : '#dc2626'),
                         border: 'none',
                         color: '#ffffff',
                         padding: '9px 18px',
                         borderRadius: '8px',
                         fontSize: '0.84rem',
                         fontWeight: '800',
-                        cursor: 'pointer',
-                        boxShadow: isDispatchedModal ? '0 2px 8px rgba(180, 83, 9, 0.25)' : '0 2px 8px rgba(220, 38, 38, 0.25)'
+                        cursor: hasReasonProvided ? 'pointer' : 'not-allowed',
+                        boxShadow: hasReasonProvided ? (isDispatchedModal ? '0 2px 8px rgba(180, 83, 9, 0.25)' : '0 2px 8px rgba(220, 38, 38, 0.25)') : 'none',
+                        transition: 'all 0.15s ease'
                       }}
                       id="btn-confirm-customer-cancel"
+                      title={!hasReasonProvided ? 'Please select or write a cancellation reason first' : ''}
                     >
                       {cancellingOrder
                         ? (isDispatchedModal ? 'Submitting Request...' : 'Processing Refund...')

@@ -523,6 +523,7 @@ async function sendCancellationRequestEmail(order, reason) {
     }
 
     const customerName = order.customer?.name || 'Valued Customer';
+    const displayReason = (reason && String(reason).trim()) || order.cancellationRequestReason || order.cancellationReason || 'Customer requested cancellation from account dashboard';
 
     const bodyContent = `
       <!-- Status Pill -->
@@ -540,7 +541,7 @@ async function sendCancellationRequestEmail(order, reason) {
 
       <!-- Request Card -->
       <div style="padding: 24px 24px 10px;">
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 18px; margin-bottom: 20px;">
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 18px; margin-bottom: 16px;">
           <h4 style="font-size: 12px; color: #92400e; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700;">
             Request Overview
           </h4>
@@ -553,13 +554,17 @@ async function sendCancellationRequestEmail(order, reason) {
               <td style="font-size: 13px; color: #78350f; padding-bottom: 6px;">Order Total:</td>
               <td style="font-size: 13px; font-weight: 700; color: #dc2626; text-align: right; padding-bottom: 6px;">₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}</td>
             </tr>
-            ${reason ? `
-              <tr>
-                <td style="font-size: 13px; color: #78350f; padding-top: 4px;">Cancellation Reason:</td>
-                <td style="font-size: 13px; font-style: italic; color: #78350f; text-align: right; padding-top: 4px;">"${reason}"</td>
-              </tr>
-            ` : ''}
           </table>
+
+          <!-- Prominent Cancellation Reason Box -->
+          <div style="margin-top: 12px; background: #ffffff; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 12px 14px;">
+            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #b45309; display: block; marginBottom: 4px;">
+              Reason for Cancellation:
+            </span>
+            <div style="font-size: 14px; font-weight: 700; color: #78350f; font-style: italic; line-height: 1.4;">
+              "${displayReason}"
+            </div>
+          </div>
         </div>
 
         <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 0 0 12px; font-weight: 700;">
@@ -588,11 +593,55 @@ async function sendCancellationRequestEmail(order, reason) {
       </div>
     `;
 
-    return await sendEmailSafely(resend, {
+    // 1. Send confirmation to Customer
+    const customerSendResult = await sendEmailSafely(resend, {
       to: customerEmail,
       subject: `Cancellation Request Received #${order.id} - Variathu Power Tools`,
       html: emailWrapper(`Cancellation Request #${order.id}`, bodyContent)
     });
+
+    // 2. Also send real-time notification to Store Owner / Manager
+    const adminEmail = process.env.STORE_ADMIN_EMAIL || process.env.RESEND_TEST_EMAIL || 'homekzhy@gmail.com';
+    if (adminEmail) {
+      const adminHtml = emailWrapper(`⚠️ New Cancellation Request #${order.id}`, `
+        <div style="padding: 24px;">
+          <div style="background: #fef3c7; border: 1.5px solid #fde68a; color: #92400e; padding: 10px 14px; border-radius: 8px; font-weight: 800; font-size: 13px; margin-bottom: 16px;">
+            ⚠️ ACTION REQUIRED: CUSTOMER CANCELLATION REQUEST
+          </div>
+          <h2 style="margin: 0 0 10px; font-size: 20px; color: #0f172a;">
+            Cancellation Requested for Order #${order.id}
+          </h2>
+          <div style="background: #ffffff; border: 2px solid #f59e0b; border-radius: 10px; padding: 16px; margin-bottom: 18px;">
+            <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #b45309; margin-bottom: 4px;">
+              Customer's Cancellation Reason:
+            </div>
+            <div style="font-size: 15px; font-weight: 700; color: #78350f; font-style: italic;">
+              "${displayReason}"
+            </div>
+          </div>
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 13px; margin-bottom: 16px;">
+            <tr><td style="color: #64748b; padding: 4px 0;">Customer Name:</td><td style="font-weight: 700; color: #0f172a; text-align: right;">${customerName}</td></tr>
+            <tr><td style="color: #64748b; padding: 4px 0;">Customer Phone:</td><td style="font-weight: 700; color: #0f172a; text-align: right;">${order.customer?.phone || 'N/A'}</td></tr>
+            <tr><td style="color: #64748b; padding: 4px 0;">Order Total:</td><td style="font-weight: 800; color: #dc2626; text-align: right;">₹${Number(order.totalAmount || 0).toLocaleString('en-IN')}</td></tr>
+            <tr><td style="color: #64748b; padding: 4px 0;">Courier Partner:</td><td style="font-weight: 700; color: #0369a1; text-align: right;">${order.courierPartner || 'Courier'}</td></tr>
+            <tr><td style="color: #64748b; padding: 4px 0;">AWB Number:</td><td style="font-family: monospace; font-weight: 700; color: #1e3a5f; text-align: right;">${order.awb || 'N/A'}</td></tr>
+          </table>
+          <div style="text-align: center; margin-top: 20px;">
+            <a href="${CLIENT_URL}/admin" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 13px;">
+              Open Store Dashboard & Review Request &rarr;
+            </a>
+          </div>
+        </div>
+      `);
+
+      sendEmailSafely(resend, {
+        to: adminEmail,
+        subject: `⚠️ Cancellation Request #${order.id} (${customerName}) - Reason: ${displayReason.slice(0, 40)}`,
+        html: adminHtml
+      }).catch(err => console.warn('[Resend Email] Admin cancellation alert error:', err.message));
+    }
+
+    return customerSendResult;
   } catch (err) {
     console.warn(`[Resend Email] Error sending cancellation request email:`, err.message);
     return { success: false, error: err.message };
@@ -615,7 +664,7 @@ async function sendOrderCancelledEmail(order, reason, cancelledBy) {
 
     const customerName = order.customer?.name || 'Valued Customer';
     const isByStore = cancelledBy === 'store';
-    const isRefunded = order.paymentStatus === 'REFUNDED' || order.paymentStatus === 'PAID';
+    const displayReason = (reason && String(reason).trim()) || order.cancellationReason || order.cancellationRequestReason || order.cancelReason || 'Order cancelled';
 
     const bodyContent = `
       <!-- Status Pill -->
@@ -652,13 +701,17 @@ async function sendOrderCancelledEmail(order, reason, cancelledBy) {
                 <td style="font-size: 12px; font-family: monospace; font-weight: 700; color: #7f1d1d; text-align: right; padding-bottom: 6px;">${order.refundId}</td>
               </tr>
             ` : ''}
-            ${reason ? `
-              <tr>
-                <td style="font-size: 13px; color: #7f1d1d; padding-top: 4px;">Reason:</td>
-                <td style="font-size: 13px; font-style: italic; color: #7f1d1d; text-align: right; padding-top: 4px;">"${reason}"</td>
-              </tr>
-            ` : ''}
           </table>
+
+          <!-- Reason Callout Box -->
+          <div style="margin-top: 12px; background: #ffffff; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 12px 14px;">
+            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: #dc2626; display: block; margin-bottom: 4px;">
+              Cancellation Reason:
+            </span>
+            <div style="font-size: 14px; font-weight: 700; color: #991b1b; font-style: italic; line-height: 1.4;">
+              "${displayReason}"
+            </div>
+          </div>
         </div>
 
         <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 0 0 12px; font-weight: 700;">
