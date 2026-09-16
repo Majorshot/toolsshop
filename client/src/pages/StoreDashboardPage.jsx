@@ -182,6 +182,191 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [approvingCancelId, setApprovingCancelId] = useState(null);
   const [rejectingCancelId, setRejectingCancelId] = useState(null);
 
+  // Customer Orders Smart Filtering & Sorting State
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all'); // 'all', 'today', 'undispatched', 'dispatched', 'pickup-pending', 'completed', 'cancel-pending', 'cancelled'
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [orderDateFilter, setOrderDateFilter] = useState('all'); // 'all', 'today', 'yesterday', 'week', 'month'
+  const [orderDeliveryFilter, setOrderDeliveryFilter] = useState('all'); // 'all', 'courier', 'pickup'
+  const [orderPaymentFilter, setOrderPaymentFilter] = useState('all'); // 'all', 'paid', 'cod', 'refunded'
+  const [orderSortFilter, setOrderSortFilter] = useState('newest'); // 'newest', 'oldest', 'amount-high', 'amount-low'
+
+  const isOrderDateToday = (dateVal) => {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const today = new Date();
+    return d.getDate() === today.getDate() &&
+           d.getMonth() === today.getMonth() &&
+           d.getFullYear() === today.getFullYear();
+  };
+
+  const isOrderDateYesterday = (dateVal) => {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    return d.getDate() === y.getDate() &&
+           d.getMonth() === y.getMonth() &&
+           d.getFullYear() === y.getFullYear();
+  };
+
+  const isOrderDateThisWeek = (dateVal) => {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    const diffDays = (now - d) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 7;
+  };
+
+  const isOrderDateThisMonth = (dateVal) => {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  };
+
+  const isOrderDispatched = (order) => {
+    if (order.deliveryType === 'store-pickup') return false;
+    if ((order.status || '').toLowerCase() === 'cancelled') return false;
+    const hasAwb = Boolean(order.awb && order.awb.trim());
+    const isDisp = ['dispatched', 'shipped', 'in transit', 'out for delivery'].includes((order.status || '').toLowerCase());
+    return hasAwb || isDisp;
+  };
+
+  const isOrderUndispatched = (order) => {
+    if (order.deliveryType === 'store-pickup') return false;
+    if ((order.status || '').toLowerCase() === 'cancelled') return false;
+    if (['delivered', 'completed'].includes((order.status || '').toLowerCase())) return false;
+    return !isOrderDispatched(order);
+  };
+
+  const isOrderPickupPending = (order) => {
+    return order.deliveryType === 'store-pickup' && !order.handoverVerified && (order.status || '').toLowerCase() !== 'cancelled';
+  };
+
+  const isOrderCompleted = (order) => {
+    if ((order.status || '').toLowerCase() === 'cancelled') return false;
+    if (['delivered', 'completed'].includes((order.status || '').toLowerCase())) return true;
+    if (order.deliveryType === 'store-pickup' && order.handoverVerified) return true;
+    return false;
+  };
+
+  const orderCounts = useMemo(() => {
+    return {
+      all: orders.length,
+      today: orders.filter(o => isOrderDateToday(o.createdAt || o.date)).length,
+      undispatched: orders.filter(isOrderUndispatched).length,
+      dispatched: orders.filter(isOrderDispatched).length,
+      pickupPending: orders.filter(isOrderPickupPending).length,
+      completed: orders.filter(isOrderCompleted).length,
+      cancelPending: orders.filter(o => o.cancellationRequested && (o.status || '').toLowerCase() !== 'cancelled').length,
+      cancelled: orders.filter(o => (o.status || '').toLowerCase() === 'cancelled').length,
+    };
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      // 1. Status Filter Chip
+      if (orderStatusFilter === 'today') {
+        if (!isOrderDateToday(order.createdAt || order.date)) return false;
+      } else if (orderStatusFilter === 'undispatched') {
+        if (!isOrderUndispatched(order)) return false;
+      } else if (orderStatusFilter === 'dispatched') {
+        if (!isOrderDispatched(order)) return false;
+      } else if (orderStatusFilter === 'pickup-pending') {
+        if (!isOrderPickupPending(order)) return false;
+      } else if (orderStatusFilter === 'completed') {
+        if (!isOrderCompleted(order)) return false;
+      } else if (orderStatusFilter === 'cancel-pending') {
+        if (!order.cancellationRequested || (order.status || '').toLowerCase() === 'cancelled') return false;
+      } else if (orderStatusFilter === 'cancelled') {
+        if ((order.status || '').toLowerCase() !== 'cancelled') return false;
+      }
+
+      // 2. Date Filter Dropdown
+      if (orderDateFilter === 'today') {
+        if (!isOrderDateToday(order.createdAt || order.date)) return false;
+      } else if (orderDateFilter === 'yesterday') {
+        if (!isOrderDateYesterday(order.createdAt || order.date)) return false;
+      } else if (orderDateFilter === 'week') {
+        if (!isOrderDateThisWeek(order.createdAt || order.date)) return false;
+      } else if (orderDateFilter === 'month') {
+        if (!isOrderDateThisMonth(order.createdAt || order.date)) return false;
+      }
+
+      // 3. Delivery Method Filter
+      if (orderDeliveryFilter === 'courier') {
+        if (order.deliveryType === 'store-pickup') return false;
+      } else if (orderDeliveryFilter === 'pickup') {
+        if (order.deliveryType !== 'store-pickup') return false;
+      }
+
+      // 4. Payment Filter
+      if (orderPaymentFilter === 'paid') {
+        if (order.paymentStatus !== 'PAID') return false;
+      } else if (orderPaymentFilter === 'cod') {
+        if (order.paymentStatus === 'PAID' || order.paymentStatus === 'REFUNDED') return false;
+      } else if (orderPaymentFilter === 'refunded') {
+        if (order.paymentStatus !== 'REFUNDED') return false;
+      }
+
+      // 5. Search Query Filter
+      if (orderSearchQuery.trim()) {
+        const q = orderSearchQuery.toLowerCase().trim();
+        const matchesId = (order.id || '').toLowerCase().includes(q);
+        const matchesName = (order.customer?.name || '').toLowerCase().includes(q);
+        const cleanPhone = (order.customer?.phone || '').replace(/[^0-9]/g, '');
+        const cleanQ = q.replace(/[^0-9]/g, '');
+        const matchesPhone = (cleanQ && cleanPhone.includes(cleanQ)) || (order.customer?.phone || '').toLowerCase().includes(q);
+        const matchesEmail = (order.customer?.email || '').toLowerCase().includes(q);
+        const matchesCity = (order.customer?.city || '').toLowerCase().includes(q);
+        const matchesDistrict = (order.customer?.district || '').toLowerCase().includes(q);
+        const matchesAwb = (order.awb || '').toLowerCase().includes(q);
+        const matchesCourier = (order.courierPartner || '').toLowerCase().includes(q);
+        const matchesItem = (order.items || []).some(item => 
+          (item.name || '').toLowerCase().includes(q) || 
+          (item.model || '').toLowerCase().includes(q)
+        );
+        if (!matchesId && !matchesName && !matchesPhone && !matchesEmail && !matchesCity && !matchesDistrict && !matchesAwb && !matchesCourier && !matchesItem) {
+          return false;
+        }
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (orderSortFilter === 'oldest') {
+        return new Date(a.createdAt || a.date || 0) - new Date(b.createdAt || b.date || 0);
+      }
+      if (orderSortFilter === 'amount-high') {
+        return (Number(b.total) || 0) - (Number(a.total) || 0);
+      }
+      if (orderSortFilter === 'amount-low') {
+        return (Number(a.total) || 0) - (Number(b.total) || 0);
+      }
+      return new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0);
+    });
+  }, [orders, orderStatusFilter, orderSearchQuery, orderDateFilter, orderDeliveryFilter, orderPaymentFilter, orderSortFilter]);
+
+  const handleResetOrderFilters = () => {
+    setOrderStatusFilter('all');
+    setOrderSearchQuery('');
+    setOrderDateFilter('all');
+    setOrderDeliveryFilter('all');
+    setOrderPaymentFilter('all');
+    setOrderSortFilter('newest');
+  };
+
+  const hasActiveOrderFilters = 
+    orderStatusFilter !== 'all' ||
+    orderSearchQuery.trim() !== '' ||
+    orderDateFilter !== 'all' ||
+    orderDeliveryFilter !== 'all' ||
+    orderPaymentFilter !== 'all' ||
+    orderSortFilter !== 'newest';
+
   const pendingCancellationRequests = orders.filter(
     o => o.cancellationRequested && (o.status || '').toLowerCase() !== 'cancelled'
   );
@@ -1593,6 +1778,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         >
           <ShoppingBag size={16} />
           <span>Customer Orders ({orders.length})</span>
+          {orderCounts.undispatched > 0 && (
+            <span className="store-nav-badge-alert" style={{ background: '#ea580c', color: '#fff' }}>
+              {orderCounts.undispatched} undispatched
+            </span>
+          )}
         </button>
 
         <button
@@ -1709,8 +1899,360 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>When customers place equipment orders or counter pickups, they will appear here.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {orders.map((order) => (
+            <>
+              {/* Urgent Action Alert Banner (Undispatched / Pending Cancellation) */}
+              {(orderCounts.undispatched > 0 || orderCounts.cancelPending > 0) && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                  border: '1.5px solid #fde68a',
+                  borderRadius: '12px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ background: '#ea580c', color: '#ffffff', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <AlertTriangle size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#9a3412' }}>
+                        Fulfillment Action Needed: {orderCounts.undispatched > 0 ? `${orderCounts.undispatched} Order${orderCounts.undispatched === 1 ? '' : 's'} Pending Courier Dispatch` : ''}{orderCounts.undispatched > 0 && orderCounts.cancelPending > 0 ? ' • ' : ''}{orderCounts.cancelPending > 0 ? `${orderCounts.cancelPending} Cancellation Request${orderCounts.cancelPending === 1 ? '' : 's'} Pending Review` : ''}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#b45309' }}>
+                        Assign courier partners & print shipping labels, or review customer cancellation requests.
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {orderCounts.undispatched > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setOrderStatusFilter('undispatched')}
+                        style={{
+                          background: '#ea580c',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '7px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        id="btn-alert-undispatched"
+                      >
+                        <Truck size={14} />
+                        <span>Filter Undispatched ({orderCounts.undispatched})</span>
+                      </button>
+                    )}
+                    {orderCounts.cancelPending > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setOrderStatusFilter('cancel-pending')}
+                        style={{
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '7px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        id="btn-alert-cancel-req"
+                      >
+                        <AlertTriangle size={14} />
+                        <span>Filter Cancel Requests ({orderCounts.cancelPending})</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Status Filter Chips (Horizontal Scroll/Wrap) */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '14px',
+                  overflowX: 'auto',
+                  paddingBottom: '4px',
+                  scrollbarWidth: 'thin'
+                }}
+                className="store-order-status-chips"
+              >
+                {[
+                  { id: 'all', label: 'All Orders', count: orderCounts.all, icon: ShoppingBag, color: '#0f172a' },
+                  { id: 'today', label: "⚡ Today's Orders", count: orderCounts.today, icon: Clock, color: '#ea580c' },
+                  { id: 'undispatched', label: '📦 Undispatched', count: orderCounts.undispatched, icon: AlertCircle, color: '#d97706' },
+                  { id: 'dispatched', label: '🚚 Dispatched', count: orderCounts.dispatched, icon: Truck, color: '#16a34a' },
+                  { id: 'pickup-pending', label: '🏬 Counter Pickup', count: orderCounts.pickupPending, icon: ShieldCheck, color: '#0284c7' },
+                  { id: 'completed', label: '✅ Completed', count: orderCounts.completed, icon: CheckCircle2, color: '#059669' },
+                  ...(orderCounts.cancelPending > 0 ? [
+                    { id: 'cancel-pending', label: '⚠️ Cancel Requests', count: orderCounts.cancelPending, icon: AlertTriangle, color: '#dc2626' }
+                  ] : []),
+                  { id: 'cancelled', label: '❌ Cancelled', count: orderCounts.cancelled, icon: XCircle, color: '#64748b' }
+                ].map(chip => {
+                  const isSelected = orderStatusFilter === chip.id;
+                  const IconComp = chip.icon;
+                  return (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={() => setOrderStatusFilter(chip.id)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        borderRadius: '9999px',
+                        fontSize: '0.8rem',
+                        fontWeight: isSelected ? '800' : '600',
+                        cursor: 'pointer',
+                        border: isSelected ? `1.5px solid ${chip.color}` : '1px solid #cbd5e1',
+                        background: isSelected ? chip.color : '#ffffff',
+                        color: isSelected ? '#ffffff' : '#334155',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.12)' : 'none',
+                        whiteSpace: 'nowrap'
+                      }}
+                      id={`btn-filter-order-status-${chip.id}`}
+                    >
+                      <IconComp size={14} style={{ color: isSelected ? '#ffffff' : chip.color }} />
+                      <span>{chip.label}</span>
+                      <span
+                        style={{
+                          background: isSelected ? 'rgba(255, 255, 255, 0.28)' : '#f1f5f9',
+                          color: isSelected ? '#ffffff' : '#0f172a',
+                          fontSize: '0.72rem',
+                          fontWeight: '800',
+                          padding: '2px 7px',
+                          borderRadius: '9999px',
+                          marginLeft: '2px'
+                        }}
+                      >
+                        {chip.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Filter Toolbar (Search + Date + Delivery + Payment + Sort) */}
+              <div className="store-inventory-toolbar" style={{ marginBottom: '16px', background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                {/* Search Box */}
+                <div className="store-inv-search-wrap" style={{ flex: '1 1 260px', minWidth: '220px', position: 'relative' }}>
+                  <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    placeholder="Search by Order ID, name, phone, city, AWB, item..."
+                    value={orderSearchQuery}
+                    onChange={(e) => setOrderSearchQuery(e.target.value)}
+                    className="store-inv-search-input"
+                    style={{ paddingLeft: '34px', paddingRight: '28px', width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                    id="input-order-search"
+                  />
+                  {orderSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setOrderSearchQuery('')}
+                      style={{
+                        position: 'absolute',
+                        right: 8,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      title="Clear search text"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Date Filter */}
+                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Date:</label>
+                  <select
+                    value={orderDateFilter}
+                    onChange={(e) => setOrderDateFilter(e.target.value)}
+                    className="store-inv-select"
+                    style={{
+                      height: '38px',
+                      padding: '0 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      background: orderDateFilter !== 'all' ? '#eff6ff' : '#ffffff',
+                      borderColor: orderDateFilter !== 'all' ? '#0284c7' : '#cbd5e1',
+                      color: orderDateFilter !== 'all' ? '#0369a1' : '#0f172a'
+                    }}
+                    id="select-order-date-filter"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">This Month</option>
+                  </select>
+                </div>
+
+                {/* Delivery Mode Filter */}
+                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Delivery:</label>
+                  <select
+                    value={orderDeliveryFilter}
+                    onChange={(e) => setOrderDeliveryFilter(e.target.value)}
+                    className="store-inv-select"
+                    style={{
+                      height: '38px',
+                      padding: '0 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      background: orderDeliveryFilter !== 'all' ? '#eff6ff' : '#ffffff',
+                      borderColor: orderDeliveryFilter !== 'all' ? '#0284c7' : '#cbd5e1',
+                      color: orderDeliveryFilter !== 'all' ? '#0369a1' : '#0f172a'
+                    }}
+                    id="select-order-delivery-filter"
+                  >
+                    <option value="all">All Delivery Types</option>
+                    <option value="courier">Courier Express (Home)</option>
+                    <option value="pickup">Store Counter Pickup</option>
+                  </select>
+                </div>
+
+                {/* Payment Status Filter */}
+                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Payment:</label>
+                  <select
+                    value={orderPaymentFilter}
+                    onChange={(e) => setOrderPaymentFilter(e.target.value)}
+                    className="store-inv-select"
+                    style={{
+                      height: '38px',
+                      padding: '0 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      background: orderPaymentFilter !== 'all' ? '#eff6ff' : '#ffffff',
+                      borderColor: orderPaymentFilter !== 'all' ? '#0284c7' : '#cbd5e1',
+                      color: orderPaymentFilter !== 'all' ? '#0369a1' : '#0f172a'
+                    }}
+                    id="select-order-payment-filter"
+                  >
+                    <option value="all">All Payments</option>
+                    <option value="paid">Paid Online (UPI/Card)</option>
+                    <option value="cod">Cash on Delivery / Pending</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+
+                {/* Sort Order */}
+                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Sort:</label>
+                  <select
+                    value={orderSortFilter}
+                    onChange={(e) => setOrderSortFilter(e.target.value)}
+                    className="store-inv-select"
+                    style={{
+                      height: '38px',
+                      padding: '0 10px',
+                      borderRadius: '8px',
+                      fontSize: '0.82rem',
+                      background: orderSortFilter !== 'newest' ? '#fff7ed' : '#ffffff',
+                      borderColor: orderSortFilter !== 'newest' ? '#ea580c' : '#cbd5e1',
+                      color: orderSortFilter !== 'newest' ? '#c2410c' : '#0f172a'
+                    }}
+                    id="select-order-sort"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="amount-high">Amount: High to Low</option>
+                    <option value="amount-low">Amount: Low to High</option>
+                  </select>
+                </div>
+
+                {/* Reset Filters */}
+                {hasActiveOrderFilters && (
+                  <button
+                    type="button"
+                    onClick={handleResetOrderFilters}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '0 12px',
+                      height: '38px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      color: '#ea580c',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      whiteSpace: 'nowrap'
+                    }}
+                    title="Clear all active filters and searches"
+                    id="btn-reset-order-filters"
+                  >
+                    <X size={14} />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Active Filter Counter Bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
+                  Showing <strong style={{ color: '#0f172a' }}>{filteredOrders.length}</strong> of <strong style={{ color: '#0f172a' }}>{orders.length}</strong> customer orders
+                  {hasActiveOrderFilters && (
+                    <span style={{ marginLeft: '8px', fontSize: '0.76rem', color: '#ea580c', fontWeight: '700' }}>
+                      (Filtered)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Empty Results When Filter Matches Zero Orders */}
+              {filteredOrders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                  <Search size={28} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+                  <strong style={{ fontSize: '0.94rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>No Orders Match Your Filter Criteria</strong>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '12px' }}>Try switching the status chip above or clearing your search keywords.</p>
+                  <button
+                    type="button"
+                    onClick={handleResetOrderFilters}
+                    style={{
+                      background: '#ea580c',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 16px',
+                      fontSize: '0.82rem',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {filteredOrders.map((order) => (
                 <div
                   key={order.id}
                   className="store-order-card"
@@ -2171,6 +2713,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               ))}
             </div>
           )}
+        </>
+      )}
         </div>
       )}
 
