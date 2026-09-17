@@ -129,12 +129,18 @@ const customerSchema = new mongoose.Schema({
     name: String,
     phone: String,
     address: String,
-    landmark: String,
-    district: String,
-    state: String,
+    locality: { type: String, default: '' },
+    city: { type: String, default: '' },
+    landmark: { type: String, default: '' },
+    district: { type: String, default: 'Pathanamthitta' },
+    state: { type: String, default: 'Kerala' },
     pincode: String,
-    isDefault: Boolean
+    alternatePhone: { type: String, default: '' },
+    addressType: { type: String, default: 'HOME' },
+    isDefault: { type: Boolean, default: false }
   }],
+  addressType: { type: String, default: 'HOME' },
+  locality: { type: String, default: '' },
   notes: { type: String, default: '' },
   totalOrders: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
@@ -234,25 +240,30 @@ async function syncCustomerFromOrder(orderData) {
       if (email && (!existing.email || !existing.email.includes('@'))) {
         existing.email = email;
       }
-      if (address) existing.address = address;
+      const rawStreet = orderData.customer?.street || orderData.customer?.address || address;
+      if (rawStreet) existing.address = rawStreet;
       if (orderData.customer?.landmark) existing.landmark = orderData.customer.landmark;
+      if (orderData.customer?.locality) existing.locality = orderData.customer.locality;
       if (district) existing.district = district;
       if (pincode) existing.pincode = pincode;
+      if (orderData.customer?.addressType) existing.addressType = orderData.customer.addressType;
 
       // Maintain saved addresses list for 1-click address selection
-      if (address && pincode) {
+      if (rawStreet && pincode) {
         if (!existing.savedAddresses) existing.savedAddresses = [];
-        const exists = existing.savedAddresses.some(a => a.address === address && a.pincode === pincode);
+        const exists = existing.savedAddresses.some(a => (a.address === rawStreet || a.address === address) && a.pincode === pincode);
         if (!exists) {
           existing.savedAddresses.push({
             id: `addr-${Date.now()}`,
             name: name || existing.name,
             phone: phone || existing.phone,
-            address,
+            address: rawStreet,
+            locality: orderData.customer?.locality || '',
             landmark: orderData.customer?.landmark || '',
             district,
             state: 'Kerala',
             pincode,
+            addressType: orderData.customer?.addressType || 'HOME',
             isDefault: existing.savedAddresses.length === 0
           });
         }

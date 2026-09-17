@@ -430,7 +430,8 @@ export const CheckoutPage = () => {
 
   // Start Editing Address inside Modal
   const handleStartEditAddressInModal = (addr) => {
-    setEditingAddressId(addr.id || addr._id);
+    const addrId = addr.id || addr._id;
+    setEditingAddressId(addrId);
     setModalAddressForm({
       name: addr.name || user?.name || '',
       phone: addr.phone || user?.phone || '',
@@ -442,7 +443,7 @@ export const CheckoutPage = () => {
       state: addr.state || 'Kerala',
       landmark: addr.landmark || '',
       alternatePhone: addr.alternatePhone || '',
-      addressType: addr.addressType || 'HOME',
+      addressType: (addr.addressType || 'HOME').toUpperCase() === 'WORK' ? 'WORK' : 'HOME',
       isDefault: Boolean(addr.isDefault)
     });
     setModalError('');
@@ -465,7 +466,7 @@ export const CheckoutPage = () => {
       state: addr.state || 'Kerala',
       landmark: addr.landmark || '',
       alternatePhone: addr.alternatePhone || '',
-      addressType: addr.addressType || 'HOME'
+      addressType: (addr.addressType || 'HOME').toUpperCase() === 'WORK' ? 'WORK' : 'HOME'
     });
     setShowAddressModal(false);
   };
@@ -538,9 +539,9 @@ export const CheckoutPage = () => {
 
     setModalIsSaving(true);
     try {
-      const customerId = user?.id || user?._id;
+      const customerId = user?.id || user?._id || user?.phone;
+      const normalizedAddressType = modalAddressForm.addressType === 'WORK' ? 'WORK' : 'HOME';
       const payload = {
-        ...modalAddressForm,
         name: modalAddressForm.name.trim(),
         phone: cleanPhone,
         pincode: cleanPin,
@@ -551,7 +552,7 @@ export const CheckoutPage = () => {
         state: modalAddressForm.state || 'Kerala',
         landmark: modalAddressForm.landmark?.trim() || '',
         alternatePhone: (modalAddressForm.alternatePhone || '').replace(/[^0-9]/g, '').slice(-10),
-        addressType: modalAddressForm.addressType || 'HOME',
+        addressType: normalizedAddressType,
         isDefault: Boolean(modalAddressForm.isDefault)
       };
 
@@ -566,8 +567,8 @@ export const CheckoutPage = () => {
         const res = await api.addCustomerAddress(customerId, payload);
         if (res.success && res.data) {
           updateUser(res.data);
-          if (res.address && res.address.id) {
-            targetAddressId = res.address.id;
+          if (res.address && (res.address.id || res.address._id)) {
+            targetAddressId = res.address.id || res.address._id;
           }
         }
       }
@@ -586,10 +587,12 @@ export const CheckoutPage = () => {
         state: payload.state,
         landmark: payload.landmark,
         alternatePhone: payload.alternatePhone,
-        addressType: payload.addressType
+        addressType: normalizedAddressType
       });
 
+      setEditingAddressId(null);
       setShowAddressModal(false);
+      setAddressModalView('list');
     } catch (err) {
       setModalError(err.message || 'Failed to save address.');
     } finally {

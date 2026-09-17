@@ -172,7 +172,7 @@ export const CustomerAccountPage = () => {
       state: addr.state || 'Kerala',
       landmark: addr.landmark || '',
       alternatePhone: addr.alternatePhone || '',
-      addressType: addr.addressType || 'HOME',
+      addressType: (addr.addressType || 'HOME').toUpperCase() === 'WORK' ? 'WORK' : 'HOME',
       isDefault: Boolean(addr.isDefault)
     });
     setAddressView('form');
@@ -264,13 +264,18 @@ export const CustomerAccountPage = () => {
       const customerId = user?.id || user?._id || user?.phone;
       if (!customerId) throw new Error("Customer identifier missing");
 
+      const payload = {
+        ...addressForm,
+        addressType: addressForm.addressType === 'WORK' ? 'WORK' : 'HOME'
+      };
+
       let updatedCustomer;
       if (editingAddressId) {
-        const res = await api.updateCustomerAddress(customerId, editingAddressId, addressForm);
+        const res = await api.updateCustomerAddress(customerId, editingAddressId, payload);
         updatedCustomer = res.data;
         setAddressFeedback('Delivery address updated successfully!');
       } else {
-        const res = await api.addCustomerAddress(customerId, addressForm);
+        const res = await api.addCustomerAddress(customerId, payload);
         updatedCustomer = res.data;
         setAddressFeedback('New delivery address added successfully!');
       }
