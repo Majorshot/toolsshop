@@ -14,11 +14,24 @@ export const CartProvider = ({ children }) => {
   });
 
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [deliveryType, setDeliveryType] = useState('store-pickup'); // 'store-pickup' or 'kerala-courier'
+  const [deliveryType, setDeliveryType] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vpt_delivery_type');
+      return saved === 'store-pickup' ? 'store-pickup' : 'kerala-courier';
+    } catch {
+      return 'kerala-courier';
+    }
+  });
   const [couponCode, setCouponCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0); // percentage or info
   const [activeCoupon, setActiveCoupon] = useState(null); // { code, discountType, discountValue, description }
   const [toastMessage, setToastMessage] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vpt_delivery_type', deliveryType);
+    } catch {}
+  }, [deliveryType]);
 
   useEffect(() => {
     localStorage.setItem('vpt_cart', JSON.stringify(cart));

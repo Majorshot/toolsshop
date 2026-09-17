@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   CheckCircle, MapPin, Truck, ShieldCheck, AlertCircle, ArrowRight,
   User, Lock, Mail, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, Edit3,
-  ShoppingBag, Shield, Check, Clock, Package, Building, Plus, Navigation, Home, Briefcase, Trash2,
-  Minus, Star, X
+  ShoppingBag, Shield, Check, Package, Building, Plus, Navigation, Home, Briefcase, Trash2,
+  Minus, X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -307,18 +307,6 @@ export const CheckoutPage = () => {
 
   const formatPrice = (num) => '₹' + Number(num || 0).toLocaleString('en-IN');
 
-  const getEstimatedDelivery = () => {
-    if (deliveryType === 'store-pickup') {
-      return 'Ready for Pickup Today';
-    }
-    const d = new Date();
-    d.setDate(d.getDate() + 3);
-    const dayName = d.toLocaleDateString('en-IN', { weekday: 'short' });
-    const monthName = d.toLocaleDateString('en-IN', { month: 'short' });
-    const dayNum = d.getDate();
-    return `${monthName} ${dayNum}, ${dayName}`;
-  };
-
   const handleDeliveryAddressChange = (e) => {
     const { name, value } = e.target;
     setDeliveryAddress(prev => ({ ...prev, [name]: value }));
@@ -465,6 +453,7 @@ export const CheckoutPage = () => {
   const handleSelectAndDeliverFromModal = (addr) => {
     const addrId = addr.id || addr._id;
     setSelectedAddressId(addrId);
+    setDeliveryType('kerala-courier');
     setDeliveryAddress({
       name: addr.name || user?.name || '',
       phone: addr.phone || user?.phone || '',
@@ -585,6 +574,7 @@ export const CheckoutPage = () => {
 
       // Automatically apply this saved address to the current checkout order!
       setSelectedAddressId(targetAddressId || 'saved-addr');
+      setDeliveryType('kerala-courier');
       setDeliveryAddress({
         name: payload.name,
         phone: payload.phone,
@@ -1951,7 +1941,105 @@ export const CheckoutPage = () => {
             {step === 'summary' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                {/* 1. DELIVER TO CARD (FLIPKART STYLE FROM SCREENSHOT) */}
+                {/* 1. DELIVERY MODE SELECTOR (DOORSTEP COURIER VS STORE PICKUP) */}
+                <div style={{
+                  background: '#ffffff',
+                  borderRadius: '4px',
+                  border: '1px solid #e0e0e0',
+                  padding: '16px 20px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Select Delivery Method:
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                    {/* Option 1: Doorstep Courier Delivery */}
+                    <div
+                      onClick={() => setDeliveryType('kerala-courier')}
+                      style={{
+                        border: deliveryType === 'kerala-courier' ? '2px solid #2874f0' : '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        padding: '12px 14px',
+                        cursor: 'pointer',
+                        background: deliveryType === 'kerala-courier' ? '#f0f6ff' : '#ffffff',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px'
+                      }}
+                      id="opt-checkout-courier"
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="radio"
+                          name="summaryDeliveryType"
+                          checked={deliveryType === 'kerala-courier'}
+                          onChange={() => setDeliveryType('kerala-courier')}
+                          style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                        <div>
+                          <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Truck size={16} style={{ color: '#2874f0' }} />
+                            Doorstep Courier Delivery
+                          </span>
+                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block' }}>
+                            Fast parcel dispatch to your address across Kerala
+                          </span>
+                        </div>
+                      </div>
+                      <span style={{ color: '#2874f0', fontSize: '0.84rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                        ₹120
+                      </span>
+                    </div>
+
+                    {/* Option 2: Store Pickup */}
+                    <div
+                      onClick={() => setDeliveryType('store-pickup')}
+                      style={{
+                        border: deliveryType === 'store-pickup' ? '2px solid #2874f0' : '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        padding: '12px 14px',
+                        cursor: 'pointer',
+                        background: deliveryType === 'store-pickup' ? '#f0f6ff' : '#ffffff',
+                        transition: 'all 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '8px'
+                      }}
+                      id="opt-checkout-pickup"
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          type="radio"
+                          name="summaryDeliveryType"
+                          checked={deliveryType === 'store-pickup'}
+                          onChange={() => setDeliveryType('store-pickup')}
+                          style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                        <div>
+                          <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Building size={16} style={{ color: '#16a34a' }} />
+                            Store Pickup (Kozhencherry)
+                          </span>
+                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block' }}>
+                            Direct handover at Poyanil Building Showroom
+                          </span>
+                        </div>
+                      </div>
+                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>
+                        FREE
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. DELIVER TO / PICKUP DETAILS CARD */}
                 <div style={{
                   background: '#ffffff',
                   borderRadius: '4px',
@@ -1965,7 +2053,7 @@ export const CheckoutPage = () => {
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ fontSize: '0.82rem', color: '#717478', fontWeight: '500' }}>
-                      Deliver to:
+                      {deliveryType === 'store-pickup' ? 'Collect From:' : 'Deliver to:'}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -1973,8 +2061,8 @@ export const CheckoutPage = () => {
                         {deliveryType === 'store-pickup' ? (user?.name || 'Customer') : (deliveryAddress.name || user?.name || 'Customer')}
                       </strong>
                       <span style={{
-                        background: '#f0f0f0',
-                        color: '#717478',
+                        background: deliveryType === 'store-pickup' ? '#ecfdf5' : '#f0f0f0',
+                        color: deliveryType === 'store-pickup' ? '#16a34a' : '#717478',
                         fontSize: '0.7rem',
                         fontWeight: '800',
                         padding: '2px 8px',
@@ -1999,32 +2087,56 @@ export const CheckoutPage = () => {
                     </div>
 
                     <div style={{ fontSize: '0.88rem', color: '#212121', fontWeight: '700' }}>
-                      {deliveryType === 'store-pickup' ? '+91 94473 05613' : (deliveryAddress.phone || user?.phone)}
+                      {deliveryType === 'store-pickup' ? '+91 94473 05613 (Showroom Helpline)' : (deliveryAddress.phone || user?.phone)}
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleOpenAddressModal}
-                    id="btn-checkout-change-address"
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #e0e0e0',
-                      color: '#2874f0',
-                      fontSize: '0.86rem',
-                      fontWeight: '700',
-                      padding: '8px 20px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    Change
-                  </button>
+                  {deliveryType === 'kerala-courier' ? (
+                    <button
+                      type="button"
+                      onClick={handleOpenAddressModal}
+                      id="btn-checkout-change-address"
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e0e0e0',
+                        color: '#2874f0',
+                        fontSize: '0.86rem',
+                        fontWeight: '700',
+                        padding: '8px 20px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      Change
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeliveryType('kerala-courier');
+                        handleOpenAddressModal();
+                      }}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e0e0e0',
+                        color: '#2874f0',
+                        fontSize: '0.84rem',
+                        fontWeight: '700',
+                        padding: '8px 16px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      Switch to Courier
+                    </button>
+                  )}
                 </div>
 
-                {/* 2. ORDER ITEMS LIST (FLIPKART STYLE MATCHING SCREENSHOT) */}
+                {/* 3. ORDER ITEMS LIST */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {cart.map((item) => {
                     const itemMrp = item.mrp || Math.round(item.price * 1.35);
@@ -2044,19 +2156,6 @@ export const CheckoutPage = () => {
                           gap: '10px'
                         }}
                       >
-                        {/* Hot Deal / In Stock Badge */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{
-                            fontSize: '0.74rem',
-                            fontWeight: '800',
-                            color: '#388e3c',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em'
-                          }}>
-                            Hot Deal
-                          </span>
-                        </div>
-
                         {/* Product Details Row */}
                         <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
                           {/* Thumbnail */}
@@ -2097,38 +2196,6 @@ export const CheckoutPage = () => {
                                 {item.brand} • Professional Tools
                               </span>
                             )}
-
-                            {/* Rating badge & Assured */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                              <span style={{
-                                background: '#388e3c',
-                                color: '#ffffff',
-                                fontSize: '0.74rem',
-                                fontWeight: '800',
-                                padding: '2px 6px',
-                                borderRadius: '4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '2px'
-                              }}>
-                                <Star size={11} fill="#ffffff" stroke="none" />
-                                <span>4.8</span>
-                              </span>
-                              <span style={{ fontSize: '0.78rem', color: '#878787' }}>
-                                (115)
-                              </span>
-                              <span style={{
-                                fontSize: '0.76rem',
-                                color: '#2874f0',
-                                fontWeight: '800',
-                                fontStyle: 'italic',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '2px'
-                              }}>
-                                ✓ Assured
-                              </span>
-                            </div>
 
                             {/* Quantity Stepper */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
@@ -2192,7 +2259,7 @@ export const CheckoutPage = () => {
                               </button>
                             </div>
 
-                            {/* Pricing Line: ↓ 81%  ₹1,999  ₹366 */}
+                            {/* Pricing Line */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
                               {discountPct > 0 && (
                                 <span style={{ fontSize: '0.92rem', fontWeight: '800', color: '#388e3c' }}>
@@ -2207,11 +2274,6 @@ export const CheckoutPage = () => {
                               <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#212121' }}>
                                 {formatPrice(item.price)}
                               </span>
-                            </div>
-
-                            {/* Delivery Promise */}
-                            <div style={{ fontSize: '0.82rem', color: '#212121', marginTop: '4px' }}>
-                              Delivery by <strong>{getEstimatedDelivery()}</strong>
                             </div>
                           </div>
                         </div>
@@ -2569,61 +2631,6 @@ export const CheckoutPage = () => {
                   </div>
                 )}
               </div>
-
-              {/* Sidebar Action Button */}
-              <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '18px', paddingTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  {totalMrp > finalTotal && (
-                    <span style={{ fontSize: '0.78rem', color: '#878787', textDecoration: 'line-through', display: 'block' }}>
-                      {formatPrice(totalMrp)}
-                    </span>
-                  )}
-                  <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#212121', fontFamily: 'monospace' }}>
-                    {formatPrice(finalTotal)}
-                  </span>
-                </div>
-
-                {step === 'summary' && (
-                  <button
-                    type="button"
-                    onClick={handleContinueFromSummary}
-                    style={{
-                      background: '#fb641b',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '10px 24px',
-                      fontSize: '0.88rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
-                    }}
-                  >
-                    Continue
-                  </button>
-                )}
-
-                {step === 'payment' && (
-                  <button
-                    type="button"
-                    onClick={handleSubmitOrder}
-                    disabled={isSubmitting || isProcessingPayment}
-                    style={{
-                      background: '#fb641b',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      padding: '10px 20px',
-                      fontSize: '0.88rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
-                    }}
-                  >
-                    {isProcessingPayment ? 'Processing...' : isSubmitting ? 'Placing...' : 'Place Order'}
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* Store Guarantees */}
@@ -2759,6 +2766,89 @@ export const CheckoutPage = () => {
                     <Plus size={14} />
                     <span>+ Add New Address</span>
                   </button>
+                </div>
+
+                {/* Store Pickup Showroom Option */}
+                <div
+                  onClick={() => {
+                    setDeliveryType('store-pickup');
+                    setShowAddressModal(false);
+                  }}
+                  style={{
+                    border: deliveryType === 'store-pickup' ? '2px solid #2874f0' : '1px solid #e2e8f0',
+                    background: deliveryType === 'store-pickup' ? '#f0f7ff' : '#ffffff',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    boxShadow: deliveryType === 'store-pickup' ? '0 2px 8px rgba(40, 116, 240, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="modalSelectedAddressOrPickup"
+                    checked={deliveryType === 'store-pickup'}
+                    onChange={() => {
+                      setDeliveryType('store-pickup');
+                      setShowAddressModal(false);
+                    }}
+                    style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px', marginTop: '3px' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                          background: '#ecfdf5',
+                          color: '#059669',
+                          fontSize: '0.7rem',
+                          fontWeight: '800',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em'
+                        }}>
+                          STORE PICKUP
+                        </span>
+                        <strong style={{ fontSize: '0.94rem', color: '#1e293b' }}>
+                          Direct Pickup at Kozhencherry Showroom
+                        </strong>
+                      </div>
+                      <span style={{ background: '#ecfdf5', color: '#059669', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px' }}>
+                        FREE
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: '#334155', marginTop: '6px', lineHeight: '1.5' }}>
+                      Variathu Power Tools Showroom, Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - <strong>689641</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                        Helpline: +91 94473 05613 • Direct counter collection
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeliveryType('store-pickup');
+                          setShowAddressModal(false);
+                        }}
+                        style={{
+                          background: deliveryType === 'store-pickup' ? '#fb641b' : '#2874f0',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '6px 16px',
+                          fontSize: '0.82rem',
+                          fontWeight: '800',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {deliveryType === 'store-pickup' ? 'PICKUP HERE ➔' : 'Select Store Pickup'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* List of Saved Addresses */}
