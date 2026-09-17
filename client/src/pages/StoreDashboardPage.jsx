@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -605,6 +605,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   // Invoice & Shipping Label Printing State
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
   const [selectedOrderForLabel, setSelectedOrderForLabel] = useState(null);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
+  const [copiedOrderId, setCopiedOrderId] = useState(false);
 
   // Inline Stock & Price Editing
   const [editingPriceId, setEditingPriceId] = useState(null);
@@ -695,6 +697,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     loadRepairs();
     loadCustomers();
   }, [user]);
+
+  // Keep selectedOrderForDetails in sync whenever orders list updates
+  useEffect(() => {
+    if (selectedOrderForDetails) {
+      const updated = orders.find(o => o.id === selectedOrderForDetails.id);
+      if (updated) {
+        setSelectedOrderForDetails(updated);
+      }
+    }
+  }, [orders]);
 
   const loadTaxonomy = async () => {
     setLoadingTaxonomy(true);
@@ -1393,6 +1405,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       alert(err.message);
     }
   };
+
+  const handleStatusChange = handleUpdateOrderStatus;
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
@@ -2874,11 +2888,33 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                             </td>
 
                             <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
-                              <span style={{ fontWeight: '700', color: '#0f172a' }}>
-                                {order.items?.length || 1} Item{order.items?.length === 1 ? '' : 's'}
-                              </span>
-                              <div style={{ fontSize: '0.72rem', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {order.items?.map(i => `${i.quantity || 1}x ${i.name || i.title}`).join(', ') || 'Tools & Accessories'}
+                              <div
+                                onClick={() => setSelectedOrderForDetails(order)}
+                                style={{ cursor: 'pointer' }}
+                                title="Click to view full order & product specifications"
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                  <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.82rem' }}>
+                                    {order.items?.length || 1} Product{order.items?.length === 1 ? '' : 's'}
+                                  </span>
+                                  <span style={{ fontSize: '0.68rem', color: '#0284c7', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '4px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                    <Eye size={10} /> Details
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {order.items?.slice(0, 3).map((it, i) => {
+                                    const mProd = products.find(p => (p.id && it.id && String(p.id) === String(it.id)) || (p.name && it.name && p.name.toLowerCase() === it.name.toLowerCase()));
+                                    const img = it.image || mProd?.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=100&q=80';
+                                    return (
+                                      <div key={i} style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid #e2e8f0', background: '#ffffff', overflow: 'hidden', flexShrink: 0, padding: '1px' }}>
+                                        <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=100&q=80'; }} />
+                                      </div>
+                                    );
+                                  })}
+                                  <div style={{ fontSize: '0.72rem', color: '#475569', maxWidth: '170px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {order.items?.map(i => `${i.quantity || 1}x ${i.name || i.title}`).join(', ') || 'Tools & Equipment'}
+                                  </div>
+                                </div>
                               </div>
                             </td>
 
@@ -2929,6 +2965,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                             <td style={{ padding: '12px 14px', verticalAlign: 'top', textAlign: 'right' }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedOrderForDetails(order)}
+                                  style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', padding: '4px 8px', fontSize: '0.72rem', fontWeight: '800', color: '#0284c7', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="View Full Order & Products Breakdown"
+                                >
+                                  <Eye size={12} />
+                                  <span>Details</span>
+                                </button>
+
                                 <button
                                   type="button"
                                   onClick={() => setSelectedOrderForInvoice(order)}
@@ -3315,37 +3361,221 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   )}
 
-                  {/* Items List */}
-                  <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', fontSize: '0.82rem' }}>
-                    <span style={{ fontSize: '0.74rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                      Ordered Tools ({order.items?.length})
-                    </span>
-                    {order.items?.map((item, idx) => (
-                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: idx < order.items.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                        <span>
-                          • {item.product || item.id ? (
-                            <a
-                              href={`/product/${item.product || item.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#0f172a', fontWeight: '700', textDecoration: 'none' }}
-                              onMouseEnter={(e) => { e.currentTarget.style.color = '#ea580c'; e.currentTarget.style.textDecoration = 'underline'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.color = '#0f172a'; e.currentTarget.style.textDecoration = 'none'; }}
-                              title="View product page"
-                            >
-                              {item.name}
-                            </a>
-                          ) : (
-                            <strong>{item.name}</strong>
-                          )} (x{item.quantity})
+                  {/* Rich Ordered Products Section */}
+                  <div style={{
+                    background: '#ffffff',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    fontSize: '0.82rem',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '10px',
+                      paddingBottom: '8px',
+                      borderBottom: '1px solid #f1f5f9',
+                      flexWrap: 'wrap',
+                      gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Package size={15} style={{ color: '#ea580c' }} />
+                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Ordered Equipment & Tools ({order.items?.length || 0})
                         </span>
-                        <span style={{ color: '#0f172a', fontWeight: '700' }}>{formatPrice(item.price * item.quantity)}</span>
                       </div>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForDetails(order)}
+                        style={{
+                          background: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          color: '#1d4ed8',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; }}
+                        title="Inspect full product specs, customer address & order breakdown"
+                      >
+                        <Eye size={13} />
+                        <span>View Order & Products Details</span>
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {order.items?.map((item, idx) => {
+                        const matchedProd = products.find(p =>
+                          (p.id && item.id && String(p.id) === String(item.id)) ||
+                          (p._id && item.id && String(p._id) === String(item.id)) ||
+                          (p.name && item.name && p.name.toLowerCase() === item.name.toLowerCase())
+                        );
+                        const displayImg = item.image || matchedProd?.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80';
+                        const brand = item.brand || matchedProd?.brand || '';
+
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '12px',
+                              padding: '8px 10px',
+                              background: '#f8fafc',
+                              borderRadius: '8px',
+                              border: '1px solid #f1f5f9',
+                              transition: 'all 0.15s ease'
+                            }}
+                            className="order-product-item-row"
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                              {/* Product Thumbnail */}
+                              <div
+                                onClick={() => setSelectedOrderForDetails(order)}
+                                style={{
+                                  width: '46px',
+                                  height: '46px',
+                                  borderRadius: '6px',
+                                  background: '#ffffff',
+                                  border: '1px solid #e2e8f0',
+                                  padding: '2px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  cursor: 'pointer',
+                                  overflow: 'hidden'
+                                }}
+                                title="Click to view details"
+                              >
+                                <img
+                                  src={displayImg}
+                                  alt={item.name}
+                                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80'; }}
+                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                />
+                              </div>
+
+                              {/* Title & Brand Info */}
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
+                                  {brand && (
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      fontWeight: '900',
+                                      letterSpacing: '0.04em',
+                                      textTransform: 'uppercase',
+                                      color: brand.toLowerCase().includes('dewalt') ? '#b45309' : brand.toLowerCase().includes('bosch') ? '#0284c7' : '#ea580c',
+                                      background: brand.toLowerCase().includes('dewalt') ? '#fef3c7' : brand.toLowerCase().includes('bosch') ? '#eff6ff' : '#fff7ed',
+                                      padding: '1px 6px',
+                                      borderRadius: '4px',
+                                      border: `1px solid ${brand.toLowerCase().includes('dewalt') ? '#fde68a' : brand.toLowerCase().includes('bosch') ? '#bfdbfe' : '#fed7aa'}`
+                                    }}>
+                                      {brand}
+                                    </span>
+                                  )}
+                                  {matchedProd?.category && (
+                                    <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '600' }}>
+                                      • {matchedProd.category}
+                                    </span>
+                                  )}
+                                  {matchedProd?.stock !== undefined && (
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      color: matchedProd.stock > 3 ? '#166534' : '#dc2626',
+                                      fontWeight: '700',
+                                      background: matchedProd.stock > 3 ? '#f0fdf4' : '#fef2f2',
+                                      padding: '1px 5px',
+                                      borderRadius: '4px'
+                                    }}>
+                                      {matchedProd.stock > 0 ? `${matchedProd.stock} in stock` : 'Out of stock'}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div
+                                  onClick={() => setSelectedOrderForDetails(order)}
+                                  style={{
+                                    fontWeight: '700',
+                                    color: '#0f172a',
+                                    fontSize: '0.82rem',
+                                    cursor: 'pointer',
+                                    lineHeight: '1.3'
+                                  }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.color = '#ea580c'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.color = '#0f172a'; }}
+                                  title="Click to view details"
+                                >
+                                  {item.name}
+                                </div>
+
+                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span>Qty: <strong style={{ color: '#0f172a' }}>{item.quantity || 1}</strong></span>
+                                  <span>&bull;</span>
+                                  <span>Unit: <strong style={{ color: '#0f172a' }}>{formatPrice(item.price)}</strong></span>
+                                  {(item.product || item.id) && (
+                                    <>
+                                      <span>&bull;</span>
+                                      <a
+                                        href={`/product/${item.product || item.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: '#ea580c', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Open store product page in new tab"
+                                      >
+                                        Live Page <ExternalLink size={10} />
+                                      </a>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Item Line Price */}
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <div style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.92rem', fontFamily: 'var(--font-mono)' }}>
+                                {formatPrice(item.price * (item.quantity || 1))}
+                              </div>
+                              <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '600' }}>
+                                Total
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Order Actions: Invoices, Shipping Labels, Customer Contact & Cancel */}
                   <div className="store-order-actions-grid">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrderForDetails(order)}
+                      className="btn-store-action"
+                      style={{
+                        background: '#eff6ff',
+                        borderColor: '#bfdbfe',
+                        color: '#1d4ed8',
+                        fontWeight: '800'
+                      }}
+                      title="Inspect complete order specifications, customer address & product details"
+                      id={`btn-view-details-${order.id}`}
+                    >
+                      <Eye size={13} style={{ color: '#1d4ed8' }} />
+                      <span>View Order & Products</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => setSelectedOrderForInvoice(order)}
@@ -6975,6 +7205,621 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     ⚠️ HEAVY / FRAGILE
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: FULL ORDER & PRODUCTS INSPECTION DETAILS MODAL                     */}
+      {/* ========================================================================= */}
+      {selectedOrderForDetails && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '16px'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedOrderForDetails(null);
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '860px',
+              width: '100%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '18px 24px',
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '1.2rem', fontWeight: '900', letterSpacing: '-0.01em', fontFamily: 'var(--font-mono)' }}>
+                    {selectedOrderForDetails.id}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedOrderForDetails.id);
+                      setCopiedOrderId(true);
+                      setTimeout(() => setCopiedOrderId(false), 2000);
+                    }}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#ffffff',
+                      borderRadius: '6px',
+                      padding: '3px 8px',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                    title="Copy Order ID"
+                  >
+                    {copiedOrderId ? <Check size={12} style={{ color: '#4ade80' }} /> : <Copy size={12} />}
+                    <span>{copiedOrderId ? 'Copied!' : 'Copy ID'}</span>
+                  </button>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: '800',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    background: selectedOrderForDetails.deliveryType === 'store-pickup' ? '#0284c7' : '#ea580c',
+                    color: '#ffffff'
+                  }}>
+                    {selectedOrderForDetails.deliveryType === 'store-pickup' ? '🏬 Store Counter Pickup' : '🚚 Express Courier'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '4px' }}>
+                  Placed on {new Date(selectedOrderForDetails.createdAt || selectedOrderForDetails.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} at {new Date(selectedOrderForDetails.createdAt || selectedOrderForDetails.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  fontSize: '0.76rem',
+                  fontWeight: '800',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: selectedOrderForDetails.paymentStatus === 'PAID' ? '#166534' : selectedOrderForDetails.paymentStatus === 'REFUNDED' ? '#991b1b' : '#b45309',
+                  color: '#ffffff'
+                }}>
+                  {selectedOrderForDetails.paymentStatus === 'PAID' ? 'PAID ONLINE' : selectedOrderForDetails.paymentStatus === 'REFUNDED' ? 'REFUNDED' : 'PENDING PAYMENT (COD)'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderForDetails(null)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    color: '#ffffff',
+                    borderRadius: '8px',
+                    padding: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Close Modal"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body - Scrollable */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Pickup OTP Banner inside modal if store pickup */}
+              {selectedOrderForDetails.deliveryType === 'store-pickup' && (
+                <div style={{
+                  background: selectedOrderForDetails.handoverVerified ? '#f0fdf4' : '#fff7ed',
+                  border: `1.5px solid ${selectedOrderForDetails.handoverVerified ? '#86efac' : '#fed7aa'}`,
+                  borderRadius: '12px',
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      background: selectedOrderForDetails.handoverVerified ? '#16a34a' : '#ea580c',
+                      color: '#ffffff',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: selectedOrderForDetails.handoverVerified ? '#166534' : '#9a3412' }}>
+                        {selectedOrderForDetails.handoverVerified ? '✅ Equipment Handed Over & Verified' : 'Store Pickup Code: ' + (selectedOrderForDetails.pickupOtp || '4819')}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        {selectedOrderForDetails.handoverVerified
+                          ? `Completed on ${new Date(selectedOrderForDetails.collectedAt || Date.now()).toLocaleString()}`
+                          : 'Verify this 4-digit code provided by customer before handing over tools.'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {!selectedOrderForDetails.handoverVerified && (
+                    <form
+                      onSubmit={(e) => handleVerifySingleOrderOtp(e, selectedOrderForDetails.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <input
+                        type="text"
+                        maxLength={6}
+                        placeholder="Enter OTP"
+                        value={orderOtpInputs[selectedOrderForDetails.id] || ''}
+                        onChange={(e) => setOrderOtpInputs({ ...orderOtpInputs, [selectedOrderForDetails.id]: e.target.value })}
+                        style={{
+                          width: '110px',
+                          padding: '7px 10px',
+                          textAlign: 'center',
+                          fontSize: '0.92rem',
+                          fontWeight: '800',
+                          letterSpacing: '0.12em',
+                          fontFamily: 'var(--font-mono)',
+                          border: '2px solid #cbd5e1',
+                          borderRadius: '6px',
+                          outline: 'none'
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={verifyingOrderId === selectedOrderForDetails.id}
+                        className="btn-hero-clean"
+                        style={{ padding: '7px 14px', fontSize: '0.78rem' }}
+                      >
+                        {verifyingOrderId === selectedOrderForDetails.id ? 'Verifying...' : 'Verify Handover'}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {/* TWO COLUMN CONTENT: LEFT (PRODUCTS), RIGHT (CUSTOMER & SUMMARY) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', alignItems: 'start' }}>
+                {/* LEFT COLUMN: ORDERED PRODUCTS */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                      <Package size={16} style={{ color: '#ea580c' }} />
+                      <span>Ordered Products ({selectedOrderForDetails.items?.length || 0})</span>
+                    </h3>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#64748b' }}>
+                      Subtotal: {formatPrice(selectedOrderForDetails.items?.reduce((s, it) => s + (it.price * (it.quantity || 1)), 0) || selectedOrderForDetails.totalAmount)}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {selectedOrderForDetails.items?.map((item, idx) => {
+                      const matchedProd = products.find(p =>
+                        (p.id && item.id && String(p.id) === String(item.id)) ||
+                        (p._id && item.id && String(p._id) === String(item.id)) ||
+                        (p.name && item.name && p.name.toLowerCase() === item.name.toLowerCase())
+                      );
+                      const displayImg = item.image || matchedProd?.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80';
+                      const brand = item.brand || matchedProd?.brand || '';
+                      const qty = item.quantity || 1;
+                      const lineTotal = item.price * qty;
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            background: '#ffffff',
+                            border: '1.5px solid #e2e8f0',
+                            borderRadius: '12px',
+                            padding: '14px',
+                            display: 'flex',
+                            gap: '14px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {/* Large Product Image Thumbnail */}
+                          <div style={{
+                            width: '76px',
+                            height: '76px',
+                            borderRadius: '10px',
+                            background: '#f8fafc',
+                            border: '1px solid #cbd5e1',
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            overflow: 'hidden'
+                          }}>
+                            <img
+                              src={displayImg}
+                              alt={item.name}
+                              onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80'; }}
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          </div>
+
+                          {/* Product Details Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                              {brand && (
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: '900',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.04em',
+                                  color: brand.toLowerCase().includes('dewalt') ? '#b45309' : brand.toLowerCase().includes('bosch') ? '#0284c7' : '#ea580c',
+                                  background: brand.toLowerCase().includes('dewalt') ? '#fef3c7' : brand.toLowerCase().includes('bosch') ? '#eff6ff' : '#fff7ed',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  border: `1px solid ${brand.toLowerCase().includes('dewalt') ? '#fde68a' : brand.toLowerCase().includes('bosch') ? '#bfdbfe' : '#fed7aa'}`
+                                }}>
+                                  {brand}
+                                </span>
+                              )}
+                              {matchedProd?.category && (
+                                <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '700', background: '#f1f5f9', padding: '2px 7px', borderRadius: '4px' }}>
+                                  {matchedProd.category}
+                                </span>
+                              )}
+                              {matchedProd?.stock !== undefined && (
+                                <span style={{
+                                  fontSize: '0.68rem',
+                                  fontWeight: '700',
+                                  color: matchedProd.stock > 3 ? '#166534' : '#dc2626',
+                                  background: matchedProd.stock > 3 ? '#ecfdf5' : '#fef2f2',
+                                  padding: '2px 7px',
+                                  borderRadius: '4px'
+                                }}>
+                                  📦 {matchedProd.stock > 0 ? `${matchedProd.stock} in inventory` : 'Out of Stock'}
+                                </span>
+                              )}
+                            </div>
+
+                            <h4 style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px', lineHeight: '1.35' }}>
+                              {item.name}
+                            </h4>
+
+                            {matchedProd?.description && (
+                              <p style={{ fontSize: '0.74rem', color: '#64748b', margin: '0 0 8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.3' }}>
+                                {matchedProd.description}
+                              </p>
+                            )}
+
+                            {/* Price Breakdown */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+                              <div style={{ fontSize: '0.78rem', color: '#475569' }}>
+                                <span>Unit Price: <strong>{formatPrice(item.price)}</strong></span>
+                                <span style={{ margin: '0 6px', color: '#cbd5e1' }}>&bull;</span>
+                                <span>Quantity: <strong style={{ color: '#ea580c', background: '#fff7ed', padding: '1px 6px', borderRadius: '4px' }}>x{qty}</strong></span>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <span style={{ fontSize: '0.96rem', fontWeight: '900', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                                  {formatPrice(lineTotal)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Item Action Links */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px', fontSize: '0.74rem' }}>
+                              {(item.product || item.id) && (
+                                <a
+                                  href={`/product/${item.product || item.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#ea580c', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                >
+                                  <span>View Live Product in Store</span>
+                                  <ExternalLink size={11} />
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(item.name);
+                                  showNotification(`Copied "${item.name}"`);
+                                }}
+                                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0, fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                              >
+                                <Copy size={11} />
+                                <span>Copy Title</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: CUSTOMER, DELIVERY & BILLING BREAKDOWN */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Customer Information Card */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#0f172a', fontWeight: '800', fontSize: '0.84rem' }}>
+                      <Users size={14} style={{ color: '#ea580c' }} />
+                      <span>Customer Contact</span>
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#0f172a' }}>
+                      {selectedOrderForDetails.customer?.name || 'Customer'}
+                    </div>
+                    <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '2px' }}>
+                      📞 <a href={`tel:${selectedOrderForDetails.customer?.phone}`} style={{ color: '#ea580c', fontWeight: '700', textDecoration: 'none' }}>
+                        {selectedOrderForDetails.customer?.phone}
+                      </a>
+                    </div>
+                    {selectedOrderForDetails.customer?.email && (
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                        ✉️ {selectedOrderForDetails.customer?.email}
+                      </div>
+                    )}
+                    {selectedOrderForDetails.customer?.alternatePhone && (
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                        Alt Phone: {selectedOrderForDetails.customer?.alternatePhone}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
+                      <a
+                        href={`tel:${selectedOrderForDetails.customer?.phone}`}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '6px',
+                          padding: '6px 8px',
+                          fontSize: '0.74rem',
+                          fontWeight: '700',
+                          color: '#0f172a',
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Phone size={12} style={{ color: '#ea580c' }} />
+                        <span>Call</span>
+                      </a>
+                      <a
+                        href={`https://wa.me/${(selectedOrderForDetails.customer?.phone || '').replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(selectedOrderForDetails.customer?.name || '')},%20this%20is%20Variathu%20Power%20Tools%20regarding%20order%20${selectedOrderForDetails.id}.`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          borderRadius: '6px',
+                          padding: '6px 8px',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          color: '#15803d',
+                          textAlign: 'center',
+                          textDecoration: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <MessageCircle size={12} />
+                        <span>WhatsApp</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Delivery / Destination Details Card */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#0f172a', fontWeight: '800', fontSize: '0.84rem' }}>
+                      <MapPin size={14} style={{ color: '#ea580c' }} />
+                      <span>{selectedOrderForDetails.deliveryType === 'store-pickup' ? 'Store Pickup Location' : 'Courier Shipping Destination'}</span>
+                    </div>
+
+                    {selectedOrderForDetails.deliveryType === 'store-pickup' ? (
+                      <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: '1.4' }}>
+                        <strong>Variathu Power Tools</strong><br />
+                        Poyanil Building, Near St Thomas HSS Ground<br />
+                        Poyanil Junction, Kozhencherry - 689641, Kerala<br />
+                        <span style={{ color: '#ea580c', fontWeight: '700', marginTop: '4px', display: 'inline-block' }}>
+                          Customer Pickup OTP: <strong>{selectedOrderForDetails.pickupOtp || '4819'}</strong>
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.8rem', color: '#334155', lineHeight: '1.4' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <span style={{
+                            fontSize: '0.68rem',
+                            fontWeight: '800',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            background: '#dbeafe',
+                            color: '#1e40af'
+                          }}>
+                            {selectedOrderForDetails.customer?.addressType || 'HOME'}
+                          </span>
+                          <strong>{selectedOrderForDetails.customer?.name}</strong>
+                        </div>
+                        <div>{selectedOrderForDetails.customer?.address || 'Address provided at checkout'}</div>
+                        {selectedOrderForDetails.customer?.landmark && (
+                          <div style={{ color: '#64748b', fontSize: '0.76rem' }}>Landmark: {selectedOrderForDetails.customer?.landmark}</div>
+                        )}
+                        <div style={{ fontWeight: '700', marginTop: '2px' }}>
+                          {selectedOrderForDetails.customer?.city || selectedOrderForDetails.customer?.district || 'Pathanamthitta'}, PIN: {selectedOrderForDetails.customer?.pincode || '689641'}
+                        </div>
+
+                        {/* Courier Dispatch Status */}
+                        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '0.78rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#64748b' }}>Courier Partner:</span>
+                            <strong>{selectedOrderForDetails.courierPartner || 'Needs Dispatch'}</strong>
+                          </div>
+                          {selectedOrderForDetails.awb && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                              <span style={{ color: '#64748b' }}>AWB Track No:</span>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', color: '#ea580c' }}>{selectedOrderForDetails.awb}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pricing & Payment Breakdown Card */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#0f172a', fontWeight: '800', fontSize: '0.84rem' }}>
+                      <DollarSign size={14} style={{ color: '#ea580c' }} />
+                      <span>Payment & Price Breakdown</span>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                        <span>Items Subtotal</span>
+                        <span style={{ fontWeight: '700', color: '#0f172a' }}>
+                          {formatPrice(selectedOrderForDetails.items?.reduce((s, it) => s + (it.price * (it.quantity || 1)), 0) || selectedOrderForDetails.totalAmount)}
+                        </span>
+                      </div>
+
+                      {selectedOrderForDetails.discountAmount > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+                          <span>Coupon Discount {selectedOrderForDetails.couponCode ? `(${selectedOrderForDetails.couponCode})` : ''}</span>
+                          <span style={{ fontWeight: '800' }}>-{formatPrice(selectedOrderForDetails.discountAmount)}</span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                        <span>Delivery Fee</span>
+                        <span style={{ fontWeight: '700', color: selectedOrderForDetails.deliveryFee ? '#0f172a' : '#16a34a' }}>
+                          {selectedOrderForDetails.deliveryFee ? formatPrice(selectedOrderForDetails.deliveryFee) : 'FREE'}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', marginTop: '4px', borderTop: '1.5px dashed #cbd5e1', fontSize: '0.96rem' }}>
+                        <strong style={{ color: '#0f172a' }}>Total Amount:</strong>
+                        <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)', fontSize: '1.05rem' }}>
+                          {formatPrice(selectedOrderForDetails.totalAmount)}
+                        </strong>
+                      </div>
+
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '6px' }}>
+                        Payment Method: <strong style={{ color: '#0f172a' }}>{selectedOrderForDetails.paymentMethod || (selectedOrderForDetails.paymentStatus === 'PAID' ? 'Razorpay Online UPI' : 'Counter Cash / COD')}</strong>
+                        {selectedOrderForDetails.transactionId && (
+                          <div>Txn Ref: <span style={{ fontFamily: 'var(--font-mono)' }}>{selectedOrderForDetails.transactionId}</span></div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Bottom Actions Footer */}
+            <div style={{
+              padding: '14px 24px',
+              background: '#f8fafc',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: '700', color: '#475569' }}>Order Status:</span>
+                <select
+                  value={selectedOrderForDetails.status}
+                  onChange={(e) => handleUpdateOrderStatus(selectedOrderForDetails.id, e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.78rem',
+                    fontWeight: '700',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {STATUS_OPTIONS.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderForInvoice(selectedOrderForDetails)}
+                  className="btn-store-action"
+                  title="Generate & Print Official A4 GST Tax Invoice"
+                >
+                  <Printer size={13} style={{ color: '#0284c7' }} />
+                  <span>Print GST Invoice</span>
+                </button>
+
+                {selectedOrderForDetails.deliveryType !== 'store-pickup' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrderForLabel(selectedOrderForDetails)}
+                    className="btn-store-action"
+                    title="Generate & Print 4x6 Thermal Courier Shipping Label"
+                  >
+                    <Truck size={13} style={{ color: '#ea580c' }} />
+                    <span>Print Shipping Label</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrderForDetails(null)}
+                  style={{
+                    padding: '7px 16px',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>
