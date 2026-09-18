@@ -1149,13 +1149,13 @@ export const CheckoutPage = () => {
           </div>
         </div>
 
-        {/* FLIPKART HORIZONTAL STEPPER BAR (MATCHES SCREENSHOT) */}
+        {/* HORIZONTAL STEPPER BAR (MATCHES IMAGE 1 STYLING) */}
         <div style={{
           background: '#ffffff',
-          borderRadius: '4px',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          border: '1px solid #e2e8f0',
-          padding: '14px 20px',
+          borderRadius: '12px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          border: '1.5px solid #e2e8f0',
+          padding: '16px 20px',
           marginBottom: '20px'
         }}>
           <div style={{
@@ -1184,8 +1184,8 @@ export const CheckoutPage = () => {
                 height: '24px',
                 borderRadius: '50%',
                 background: (step === 'summary' || step === 'payment')
-                  ? '#2874f0'
-                  : (step === 'address' || step === 'login' ? '#2874f0' : '#e0e0e0'),
+                  ? '#ea580c'
+                  : (step === 'address' || step === 'login' ? '#ea580c' : '#e0e0e0'),
                 color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
@@ -1203,8 +1203,8 @@ export const CheckoutPage = () => {
                 fontSize: '0.88rem',
                 fontWeight: (step === 'address' || step === 'login') ? '800' : '600',
                 color: (step === 'summary' || step === 'payment')
-                  ? '#212121'
-                  : (step === 'address' || step === 'login' ? '#2874f0' : '#878787')
+                  ? '#0f172a'
+                  : (step === 'address' || step === 'login' ? '#ea580c' : '#878787')
               }}>
                 {!isCustomerLoggedIn ? 'Login' : 'Address'}
               </span>
@@ -1214,7 +1214,7 @@ export const CheckoutPage = () => {
             <div style={{
               flex: 1,
               height: '2px',
-              background: (step === 'summary' || step === 'payment') ? '#2874f0' : '#e0e0e0',
+              background: (step === 'summary' || step === 'payment') ? '#ea580c' : '#e2e8f0',
               margin: '0 10px',
               transition: 'background 0.2s ease'
             }} />
@@ -1240,10 +1240,10 @@ export const CheckoutPage = () => {
                 height: '24px',
                 borderRadius: '50%',
                 background: step === 'payment'
-                  ? '#2874f0'
-                  : (step === 'summary' ? '#2874f0' : '#f1f5f9'),
+                  ? '#ea580c'
+                  : (step === 'summary' ? '#ea580c' : '#f1f5f9'),
                 color: (step === 'summary' || step === 'payment') ? '#ffffff' : '#878787',
-                border: (step === 'summary' || step === 'payment') ? 'none' : '1px solid #cbd5e1',
+                border: (step === 'summary' || step === 'payment') ? 'none' : '1.5px solid #cbd5e1',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1260,8 +1260,8 @@ export const CheckoutPage = () => {
                 fontSize: '0.88rem',
                 fontWeight: step === 'summary' ? '800' : '600',
                 color: step === 'summary'
-                  ? '#2874f0'
-                  : (step === 'payment' ? '#212121' : '#878787')
+                  ? '#ea580c'
+                  : (step === 'payment' ? '#0f172a' : '#878787')
               }}>
                 Order Summary
               </span>
@@ -1271,7 +1271,7 @@ export const CheckoutPage = () => {
             <div style={{
               flex: 1,
               height: '2px',
-              background: step === 'payment' ? '#2874f0' : '#e0e0e0',
+              background: step === 'payment' ? '#ea580c' : '#e2e8f0',
               margin: '0 10px',
               transition: 'background 0.2s ease'
             }} />
@@ -1288,9 +1288,9 @@ export const CheckoutPage = () => {
                 width: '24px',
                 height: '24px',
                 borderRadius: '50%',
-                background: step === 'payment' ? '#2874f0' : '#f1f5f9',
+                background: step === 'payment' ? '#ea580c' : '#f1f5f9',
                 color: step === 'payment' ? '#ffffff' : '#878787',
-                border: step === 'payment' ? 'none' : '1px solid #cbd5e1',
+                border: step === 'payment' ? 'none' : '1.5px solid #cbd5e1',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1302,7 +1302,7 @@ export const CheckoutPage = () => {
               <span style={{
                 fontSize: '0.88rem',
                 fontWeight: step === 'payment' ? '800' : '600',
-                color: step === 'payment' ? '#2874f0' : '#878787'
+                color: step === 'payment' ? '#ea580c' : '#878787'
               }}>
                 Payment
               </span>
@@ -1342,23 +1342,23 @@ export const CheckoutPage = () => {
             {/* VIEW A: STEP === 'login' (UNAUTHENTICATED)                     */}
             {/* ============================================================ */}
             {step === 'login' && (
-              <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '18px' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ea580c', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
                     1
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#212121', margin: 0 }}>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                       1. LOGIN OR SIGNUP
                     </h3>
-                    <p style={{ fontSize: '0.78rem', color: '#878787', margin: '2px 0 0' }}>
+                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
                       Enter your mobile number to view saved addresses and order history
                     </p>
                   </div>
                 </div>
 
                 <form onSubmit={handleAccountLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#fff7ed', borderRadius: '6px', padding: '10px 14px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                  <div style={{ background: '#fff7ed', borderRadius: '8px', padding: '10px 14px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.8rem', lineHeight: '1.4' }}>
                     Orders, payment receipts, and delivery tracking are tied to your primary mobile account.
                   </div>
 
@@ -1366,7 +1366,7 @@ export const CheckoutPage = () => {
                     <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
                       10-Digit Mobile Number *
                     </label>
-                    <div style={{ display: 'flex', alignItems: 'center', border: phoneLookup.exists === true ? '2px solid #22c55e' : phoneLookup.exists === false ? '2px solid #f59e0b' : '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden', background: '#ffffff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', border: phoneLookup.exists === true ? '2px solid #22c55e' : phoneLookup.exists === false ? '2px solid #f59e0b' : '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', background: '#ffffff' }}>
                       <span style={{ padding: '10px 14px', background: '#f8fafc', color: '#475569', fontWeight: '800', fontSize: '0.9rem', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         🇮🇳 +91
                       </span>
@@ -1385,7 +1385,7 @@ export const CheckoutPage = () => {
 
                   {phoneLookup.checking && (
                     <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 4px' }}>
-                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#fb641b', animation: 'pulse 1s infinite' }} />
+                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ea580c', animation: 'pulse 1s infinite' }} />
                       <span>Checking customer profile for +91 {phoneLookup.checkedPhone}...</span>
                     </div>
                   )}
@@ -1421,7 +1421,7 @@ export const CheckoutPage = () => {
                           placeholder="e.g. Midhun Mohan"
                           value={loginForm.name}
                           onChange={(e) => setLoginForm({ ...loginForm, name: e.target.value })}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
                       <div>
@@ -1433,7 +1433,7 @@ export const CheckoutPage = () => {
                           placeholder="e.g. midhun@gmail.com"
                           value={loginForm.email}
                           onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
                     </div>
@@ -1443,19 +1443,21 @@ export const CheckoutPage = () => {
                     type="submit"
                     disabled={loginLoading || (phoneLookup.exists === false && !loginForm.name.trim()) || loginForm.phone.length !== 10}
                     style={{
-                      background: '#fb641b',
+                      background: '#dc2626',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '4px',
-                      padding: '13px',
-                      fontSize: '0.92rem',
+                      borderRadius: '10px',
+                      padding: '14px',
+                      fontSize: '0.94rem',
                       fontWeight: '800',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      opacity: (loginForm.phone.length === 10) ? 1 : 0.6
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                      opacity: (loginForm.phone.length === 10) ? 1 : 0.6,
+                      transition: 'all 0.15s ease'
                     }}
                     id="btn-checkout-login-continue"
                   >
@@ -1476,17 +1478,17 @@ export const CheckoutPage = () => {
             {/* VIEW B: STEP === 'address' (MANAGE / ADD DELIVERY ADDRESS)    */}
             {/* ============================================================ */}
             {step === 'address' && (
-              <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '24px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ea580c', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
                       1
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#212121', margin: 0 }}>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                         DELIVERY ADDRESS
                       </h3>
-                      <p style={{ fontSize: '0.78rem', color: '#878787', margin: '2px 0 0' }}>
+                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
                         Select existing saved address or add a new one
                       </p>
                     </div>
@@ -1496,7 +1498,7 @@ export const CheckoutPage = () => {
                     <button
                       type="button"
                       onClick={() => setStep('summary')}
-                      style={{ background: 'transparent', border: 'none', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' }}
+                      style={{ background: 'transparent', border: 'none', color: '#ea580c', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' }}
                     >
                       Back to Order Summary
                     </button>
@@ -1508,17 +1510,17 @@ export const CheckoutPage = () => {
                   <div
                     onClick={() => setDeliveryType('store-pickup')}
                     style={{
-                      border: deliveryType === 'store-pickup' ? '2px solid #2874f0' : '1px solid #cbd5e1',
-                      borderRadius: '8px',
+                      border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                      borderRadius: '10px',
                       padding: '14px',
                       cursor: 'pointer',
-                      background: deliveryType === 'store-pickup' ? '#f0f6ff' : '#ffffff',
+                      background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
                       transition: 'all 0.15s ease'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Building size={16} style={{ color: '#2874f0' }} />
+                        <Building size={16} style={{ color: '#16a34a' }} />
                         Store Pickup
                       </span>
                       <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
@@ -1533,20 +1535,20 @@ export const CheckoutPage = () => {
                   <div
                     onClick={() => setDeliveryType('kerala-courier')}
                     style={{
-                      border: deliveryType === 'kerala-courier' ? '2px solid #2874f0' : '1px solid #cbd5e1',
-                      borderRadius: '8px',
+                      border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                      borderRadius: '10px',
                       padding: '14px',
                       cursor: 'pointer',
-                      background: deliveryType === 'kerala-courier' ? '#f0f6ff' : '#ffffff',
+                      background: deliveryType === 'kerala-courier' ? '#fff7ed' : '#ffffff',
                       transition: 'all 0.15s ease'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Truck size={16} style={{ color: '#2874f0' }} />
+                        <Truck size={16} style={{ color: '#0284c7' }} />
                         Express Courier
                       </span>
-                      <span style={{ color: '#2874f0', fontSize: '0.82rem', fontWeight: '800' }}>
+                      <span style={{ color: '#ea580c', fontSize: '0.82rem', fontWeight: '800' }}>
                         ₹120
                       </span>
                     </div>
@@ -1558,9 +1560,9 @@ export const CheckoutPage = () => {
 
                 {/* If Store Pickup is Selected */}
                 {deliveryType === 'store-pickup' && (
-                  <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '16px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '700', fontSize: '0.88rem' }}>
-                      <MapPin size={18} style={{ color: '#2874f0' }} />
+                      <MapPin size={18} style={{ color: '#ea580c' }} />
                       <span>Pickup Counter Location</span>
                     </div>
                     <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: '1.5' }}>
@@ -1572,15 +1574,15 @@ export const CheckoutPage = () => {
                       type="button"
                       onClick={() => setStep('summary')}
                       style={{
-                        background: '#fb641b',
+                        background: '#dc2626',
                         color: '#ffffff',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: '10px',
                         padding: '12px 24px',
                         fontSize: '0.88rem',
                         fontWeight: '800',
                         cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)',
+                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
                         width: 'fit-content'
                       }}
                     >
@@ -1616,7 +1618,7 @@ export const CheckoutPage = () => {
                                 addressType: 'HOME'
                               });
                             }}
-                            style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '0.78rem', fontWeight: '700', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{ background: '#fff7ed', border: '1px solid #fed7aa', color: '#c2410c', fontSize: '0.78rem', fontWeight: '700', padding: '5px 14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                           >
                             <Plus size={14} />
                             <span>+ Add New Address</span>
@@ -1630,10 +1632,10 @@ export const CheckoutPage = () => {
                               key={addr.id || addr._id}
                               onClick={() => handleSelectSavedAddress(addr)}
                               style={{
-                                border: isSelected ? '2px solid #2874f0' : '1px solid #e2e8f0',
-                                borderRadius: '8px',
+                                border: isSelected ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                                borderRadius: '10px',
                                 padding: '16px',
-                                background: isSelected ? '#f8faff' : '#ffffff',
+                                background: isSelected ? '#fff7ed' : '#ffffff',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s ease',
                                 display: 'flex',
@@ -1648,12 +1650,12 @@ export const CheckoutPage = () => {
                                     name="selectedSavedAddress"
                                     checked={isSelected}
                                     onChange={() => handleSelectSavedAddress(addr)}
-                                    style={{ accentColor: '#2874f0', cursor: 'pointer' }}
+                                    style={{ accentColor: '#ea580c', cursor: 'pointer' }}
                                   />
-                                  <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                  <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
                                     {addr.addressType || 'HOME'}
                                   </span>
-                                  <strong style={{ fontSize: '0.92rem', color: '#212121' }}>
+                                  <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>
                                     {addr.name}
                                   </strong>
                                   <span style={{ fontSize: '0.86rem', color: '#475569', fontWeight: '700' }}>
@@ -1681,15 +1683,15 @@ export const CheckoutPage = () => {
                                     type="button"
                                     onClick={() => setStep('summary')}
                                     style={{
-                                      background: '#fb641b',
+                                      background: '#dc2626',
                                       color: '#ffffff',
                                       border: 'none',
-                                      borderRadius: '4px',
+                                      borderRadius: '10px',
                                       padding: '10px 24px',
                                       fontSize: '0.88rem',
                                       fontWeight: '800',
                                       cursor: 'pointer',
-                                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
                                     }}
                                   >
                                     DELIVER HERE ➔
@@ -1702,9 +1704,9 @@ export const CheckoutPage = () => {
                       </div>
                     )}
 
-                    {/* Flipkart Address Entry Form */}
+                    {/* Address Entry Form */}
                     {(!user?.savedAddresses || user.savedAddresses.length === 0 || isAddingNewAddress) && (
-                      <form onSubmit={handleSaveAndDeliver} style={{ background: '#f8fafc', borderRadius: '8px', padding: '18px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <form onSubmit={handleSaveAndDeliver} style={{ background: '#f8fafc', borderRadius: '12px', padding: '18px', border: '1.5px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
                           <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a' }}>
                             ADD A NEW ADDRESS
@@ -1714,11 +1716,11 @@ export const CheckoutPage = () => {
                             onClick={handleUseCurrentLocation}
                             disabled={isLocating}
                             style={{
-                              background: '#2874f0',
+                              background: '#0f172a',
                               color: '#ffffff',
                               border: 'none',
-                              borderRadius: '4px',
-                              padding: '6px 14px',
+                              borderRadius: '8px',
+                              padding: '7px 14px',
                               fontSize: '0.78rem',
                               fontWeight: '700',
                               cursor: 'pointer',
@@ -1743,7 +1745,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.name}
                               onChange={handleDeliveryAddressChange}
                               placeholder="Recipient Name"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                           </div>
 
@@ -1757,7 +1759,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.phone}
                               onChange={(e) => setDeliveryAddress(prev => ({ ...prev, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
                               placeholder="Delivery Mobile"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                           </div>
                         </div>
@@ -1774,7 +1776,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.pincode}
                               onChange={handleDeliveryAddressChange}
                               placeholder="e.g. 689641"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                             {pincodeCheck?.serviceable === true && (
                               <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700', marginTop: '2px', display: 'block' }}>
@@ -1792,7 +1794,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.locality}
                               onChange={handleDeliveryAddressChange}
                               placeholder="e.g. Nirannukala Road"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                           </div>
                         </div>
@@ -1807,7 +1809,7 @@ export const CheckoutPage = () => {
                             value={deliveryAddress.address}
                             onChange={handleDeliveryAddressChange}
                             placeholder="House No., Building Name, Street"
-                            style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                           />
                         </div>
 
@@ -1822,7 +1824,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.city || deliveryAddress.district}
                               onChange={handleDeliveryAddressChange}
                               placeholder="e.g. Pathanamthitta"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                           </div>
 
@@ -1835,7 +1837,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.state || 'Kerala'}
                               onChange={handleDeliveryAddressChange}
                               placeholder="Kerala"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                           </div>
                         </div>
@@ -1850,7 +1852,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.landmark}
                               onChange={handleDeliveryAddressChange}
                               placeholder="e.g. Near Temple"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                           </div>
 
@@ -1863,7 +1865,7 @@ export const CheckoutPage = () => {
                               value={deliveryAddress.alternatePhone}
                               onChange={(e) => setDeliveryAddress(prev => ({ ...prev, alternatePhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) }))}
                               placeholder="e.g. 9995855774"
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                             />
                           </div>
                         </div>
@@ -1872,26 +1874,26 @@ export const CheckoutPage = () => {
                         <div>
                           <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Address Type</label>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
                               <input
                                 type="radio"
                                 name="addressType"
                                 value="HOME"
                                 checked={deliveryAddress.addressType === 'HOME'}
                                 onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'HOME' }))}
-                                style={{ accentColor: '#2874f0' }}
+                                style={{ accentColor: '#ea580c' }}
                               />
                               <span>Home (All day delivery)</span>
                             </label>
 
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
                               <input
                                 type="radio"
                                 name="addressType"
                                 value="WORK"
                                 checked={deliveryAddress.addressType === 'WORK'}
                                 onChange={() => setDeliveryAddress(prev => ({ ...prev, addressType: 'WORK' }))}
-                                style={{ accentColor: '#2874f0' }}
+                                style={{ accentColor: '#ea580c' }}
                               />
                               <span>Work (Delivery between 10 AM - 5 PM)</span>
                             </label>
@@ -1904,15 +1906,16 @@ export const CheckoutPage = () => {
                             type="submit"
                             disabled={isSavingAddress}
                             style={{
-                              background: '#fb641b',
+                              background: '#dc2626',
                               color: '#ffffff',
                               border: 'none',
-                              borderRadius: '4px',
-                              padding: '12px 28px',
+                              borderRadius: '10px',
+                              padding: '13px 28px',
                               fontSize: '0.88rem',
                               fontWeight: '800',
                               cursor: 'pointer',
-                              boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                              transition: 'all 0.15s ease'
                             }}
                           >
                             {isSavingAddress ? 'SAVING...' : 'SAVE AND DELIVER HERE ➔'}
@@ -1925,7 +1928,7 @@ export const CheckoutPage = () => {
                                 setIsAddingNewAddress(false);
                                 setStep('summary');
                               }}
-                              style={{ background: 'transparent', border: 'none', color: '#2874f0', fontSize: '0.86rem', fontWeight: '700', cursor: 'pointer', padding: '10px 16px' }}
+                              style={{ background: 'transparent', border: 'none', color: '#64748b', fontSize: '0.86rem', fontWeight: '700', cursor: 'pointer', padding: '10px 16px' }}
                             >
                               CANCEL
                             </button>
@@ -1939,7 +1942,7 @@ export const CheckoutPage = () => {
             )}
 
             {/* ============================================================ */}
-            {/* VIEW C: STEP === 'summary' (EXACT FLIPKART ORDER SUMMARY)    */}
+            {/* VIEW C: STEP === 'summary' (ORDER SUMMARY - IMAGE 1 STYLE)   */}
             {/* ============================================================ */}
             {step === 'summary' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1947,15 +1950,15 @@ export const CheckoutPage = () => {
                 {/* 1. DELIVERY MODE SELECTOR (DOORSTEP COURIER VS STORE PICKUP) */}
                 <div style={{
                   background: '#ffffff',
-                  borderRadius: '4px',
-                  border: '1px solid #e0e0e0',
-                  padding: '16px 20px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '18px 20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px'
                 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Select Delivery Method:
                   </div>
 
@@ -1964,38 +1967,39 @@ export const CheckoutPage = () => {
                     <div
                       onClick={() => setDeliveryType('kerala-courier')}
                       style={{
-                        border: deliveryType === 'kerala-courier' ? '2px solid #2874f0' : '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        padding: '12px 14px',
+                        border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                        borderRadius: '10px',
+                        padding: '14px 16px',
                         cursor: 'pointer',
-                        background: deliveryType === 'kerala-courier' ? '#f0f6ff' : '#ffffff',
+                        background: deliveryType === 'kerala-courier' ? '#fff7ed' : '#ffffff',
                         transition: 'all 0.15s ease',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '8px'
+                        gap: '8px',
+                        boxShadow: deliveryType === 'kerala-courier' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                       }}
                       id="opt-checkout-courier"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <input
                           type="radio"
                           name="summaryDeliveryType"
                           checked={deliveryType === 'kerala-courier'}
                           onChange={() => setDeliveryType('kerala-courier')}
-                          style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px' }}
+                          style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
                         />
                         <div>
-                          <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Truck size={16} style={{ color: '#2874f0' }} />
+                          <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Truck size={16} style={{ color: '#0284c7' }} />
                             Doorstep Courier Delivery
                           </span>
-                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block' }}>
+                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
                             Fast parcel dispatch to your address across Kerala
                           </span>
                         </div>
                       </div>
-                      <span style={{ color: '#2874f0', fontSize: '0.84rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: '#ea580c', fontSize: '0.88rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
                         ₹120
                       </span>
                     </div>
@@ -2004,38 +2008,39 @@ export const CheckoutPage = () => {
                     <div
                       onClick={() => setDeliveryType('store-pickup')}
                       style={{
-                        border: deliveryType === 'store-pickup' ? '2px solid #2874f0' : '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        padding: '12px 14px',
+                        border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                        borderRadius: '10px',
+                        padding: '14px 16px',
                         cursor: 'pointer',
-                        background: deliveryType === 'store-pickup' ? '#f0f6ff' : '#ffffff',
+                        background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
                         transition: 'all 0.15s ease',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '8px'
+                        gap: '8px',
+                        boxShadow: deliveryType === 'store-pickup' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                       }}
                       id="opt-checkout-pickup"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <input
                           type="radio"
                           name="summaryDeliveryType"
                           checked={deliveryType === 'store-pickup'}
                           onChange={() => setDeliveryType('store-pickup')}
-                          style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px' }}
+                          style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
                         />
                         <div>
-                          <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Building size={16} style={{ color: '#16a34a' }} />
                             Store Pickup (Kozhencherry)
                           </span>
-                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block' }}>
+                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
                             Direct handover at Poyanil Building Showroom
                           </span>
                         </div>
                       </div>
-                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>
+                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.74rem', fontWeight: '800', padding: '3px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>
                         FREE
                       </span>
                     </div>
@@ -2045,31 +2050,31 @@ export const CheckoutPage = () => {
                 {/* 2. DELIVER TO / PICKUP DETAILS CARD */}
                 <div style={{
                   background: '#ffffff',
-                  borderRadius: '4px',
-                  border: '1px solid #e0e0e0',
-                  padding: '16px 20px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '18px 20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
                   gap: '16px'
                 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontSize: '0.82rem', color: '#717478', fontWeight: '500' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       {deliveryType === 'store-pickup' ? 'Collect From:' : 'Deliver to:'}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: '0.98rem', color: '#212121', fontWeight: '800' }}>
+                      <strong style={{ fontSize: '0.98rem', color: '#0f172a', fontWeight: '800' }}>
                         {deliveryType === 'store-pickup' ? (user?.name || 'Customer') : (deliveryAddress.name || user?.name || 'Customer')}
                       </strong>
                       <span style={{
-                        background: deliveryType === 'store-pickup' ? '#ecfdf5' : '#f0f0f0',
-                        color: deliveryType === 'store-pickup' ? '#16a34a' : '#717478',
-                        fontSize: '0.7rem',
+                        background: deliveryType === 'store-pickup' ? '#ecfdf5' : '#f1f5f9',
+                        color: deliveryType === 'store-pickup' ? '#16a34a' : '#475569',
+                        fontSize: '0.72rem',
                         fontWeight: '800',
                         padding: '2px 8px',
-                        borderRadius: '4px',
+                        borderRadius: '6px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em'
                       }}>
@@ -2077,7 +2082,7 @@ export const CheckoutPage = () => {
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '0.88rem', color: '#212121', lineHeight: '1.5', maxWidth: '640px' }}>
+                    <div style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.5', maxWidth: '640px' }}>
                       {deliveryType === 'store-pickup' ? (
                         'Variathu Power Tools Showroom, Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641'
                       ) : (
@@ -2089,7 +2094,7 @@ export const CheckoutPage = () => {
                       )}
                     </div>
 
-                    <div style={{ fontSize: '0.88rem', color: '#212121', fontWeight: '700' }}>
+                    <div style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: '700' }}>
                       {deliveryType === 'store-pickup' ? '+91 94473 05613 (Showroom Helpline)' : (deliveryAddress.phone || user?.phone)}
                     </div>
                   </div>
@@ -2101,12 +2106,12 @@ export const CheckoutPage = () => {
                       id="btn-checkout-change-address"
                       style={{
                         background: '#ffffff',
-                        border: '1px solid #e0e0e0',
-                        color: '#2874f0',
-                        fontSize: '0.86rem',
+                        border: '1.5px solid #cbd5e1',
+                        color: '#0f172a',
+                        fontSize: '0.84rem',
                         fontWeight: '700',
                         padding: '8px 20px',
-                        borderRadius: '4px',
+                        borderRadius: '8px',
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                         transition: 'all 0.15s ease'
@@ -2123,12 +2128,12 @@ export const CheckoutPage = () => {
                       }}
                       style={{
                         background: '#ffffff',
-                        border: '1px solid #e0e0e0',
-                        color: '#2874f0',
+                        border: '1.5px solid #cbd5e1',
+                        color: '#0f172a',
                         fontSize: '0.84rem',
                         fontWeight: '700',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
+                        padding: '8px 18px',
+                        borderRadius: '8px',
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                         transition: 'all 0.15s ease'
@@ -2139,159 +2144,13 @@ export const CheckoutPage = () => {
                   )}
                 </div>
 
-                {/* 3. ORDER ITEMS LIST */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {cart.map((item) => {
-                    const itemMrp = item.mrp || Math.round(item.price * 1.35);
-                    const discountPct = Math.round(((itemMrp - item.price) / itemMrp) * 100);
-
-                    return (
-                      <div
-                        key={item.id}
-                        style={{
-                          background: '#ffffff',
-                          borderRadius: '4px',
-                          border: '1px solid #e0e0e0',
-                          padding: '18px 20px',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px'
-                        }}
-                      >
-                        {/* Product Details Row */}
-                        <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start' }}>
-                          {/* Thumbnail */}
-                          <div style={{
-                            width: '88px',
-                            height: '88px',
-                            borderRadius: '6px',
-                            background: '#ffffff',
-                            border: '1px solid #f1f5f9',
-                            overflow: 'hidden',
-                            flexShrink: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            <img
-                              src={item.image || '/Logo.jpeg'}
-                              alt={item.name}
-                              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                              onError={(e) => { e.target.src = '/Logo.jpeg'; }}
-                            />
-                          </div>
-
-                          {/* Info */}
-                          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <h4 style={{
-                              fontSize: '0.98rem',
-                              fontWeight: '700',
-                              color: '#212121',
-                              margin: 0,
-                              lineHeight: '1.4'
-                            }}>
-                              {item.name}
-                            </h4>
-
-                            {item.brand && (
-                              <span style={{ fontSize: '0.8rem', color: '#878787', fontWeight: '500' }}>
-                                {item.brand} • Professional Tools
-                              </span>
-                            )}
-
-                            {/* Quantity Stepper */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
-                              <span style={{ fontSize: '0.84rem', color: '#878787', fontWeight: '600' }}>
-                                Qty:
-                              </span>
-                              <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #e0e0e0', borderRadius: '4px', background: '#ffffff' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                  style={{
-                                    border: 'none',
-                                    background: 'transparent',
-                                    padding: '4px 8px',
-                                    cursor: 'pointer',
-                                    color: '#212121',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
-                                  title="Decrease"
-                                >
-                                  <Minus size={12} />
-                                </button>
-                                <span style={{ padding: '0 8px', fontSize: '0.86rem', fontWeight: '800', color: '#212121' }}>
-                                  {item.quantity}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                  style={{
-                                    border: 'none',
-                                    background: 'transparent',
-                                    padding: '4px 8px',
-                                    cursor: 'pointer',
-                                    color: '#212121',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
-                                  title="Increase"
-                                >
-                                  <Plus size={12} />
-                                </button>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => removeFromCart(item.id)}
-                                style={{
-                                  background: 'transparent',
-                                  border: 'none',
-                                  color: '#878787',
-                                  fontSize: '0.8rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
-                                  marginLeft: '8px'
-                                }}
-                              >
-                                REMOVE
-                              </button>
-                            </div>
-
-                            {/* Pricing Line */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px', flexWrap: 'wrap' }}>
-                              {discountPct > 0 && (
-                                <span style={{ fontSize: '0.92rem', fontWeight: '800', color: '#388e3c' }}>
-                                  ↓ {discountPct}%
-                                </span>
-                              )}
-                              {itemMrp > item.price && (
-                                <span style={{ fontSize: '0.88rem', color: '#878787', textDecoration: 'line-through' }}>
-                                  {formatPrice(itemMrp)}
-                                </span>
-                              )}
-                              <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#212121' }}>
-                                {formatPrice(item.price)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* 3. BOTTOM BAR: TERMS & ORANGE CONTINUE BUTTON */}
+                {/* 3. BOTTOM BAR: TERMS & CONTINUE BUTTON (IMAGE 1 STYLE) */}
                 <div style={{
                   background: '#ffffff',
-                  borderRadius: '4px',
-                  border: '1px solid #e0e0e0',
-                  padding: '16px 20px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '18px 20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -2300,7 +2159,7 @@ export const CheckoutPage = () => {
                 }}>
                   <p style={{
                     fontSize: '0.78rem',
-                    color: '#878787',
+                    color: '#64748b',
                     margin: 0,
                     lineHeight: '1.5',
                     maxWidth: '480px'
@@ -2312,20 +2171,20 @@ export const CheckoutPage = () => {
                     type="button"
                     onClick={handleContinueFromSummary}
                     style={{
-                      background: '#fb641b',
+                      background: '#dc2626',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '4px',
-                      padding: '14px 44px',
+                      borderRadius: '10px',
+                      padding: '14px 40px',
                       fontSize: '0.96rem',
                       fontWeight: '800',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
+                      letterSpacing: '0.02em',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.4)',
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '8px',
+                      transition: 'all 0.15s ease'
                     }}
                     id="btn-flipkart-continue-to-payment"
                   >
@@ -2346,23 +2205,23 @@ export const CheckoutPage = () => {
                 {/* Collapsed Step 1 Address Bar */}
                 <div style={{
                   background: '#ffffff',
-                  borderRadius: '4px',
-                  border: '1px solid #e0e0e0',
-                  padding: '14px 20px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '16px 20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#16a34a', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
                       ✓
                     </span>
                     <div>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#878787', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         1. DELIVERY ADDRESS
                       </span>
-                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#212121', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a', marginTop: '2px' }}>
                         {deliveryType === 'store-pickup' ? 'Poyanil Building Store Pickup' : `${deliveryAddress.name}, ${deliveryAddress.city || deliveryAddress.district} - ${deliveryAddress.pincode}`}
                       </div>
                     </div>
@@ -2371,7 +2230,7 @@ export const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={handleOpenAddressModal}
-                    style={{ background: '#ffffff', border: '1px solid #e0e0e0', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#0f172a', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s ease' }}
                   >
                     Change
                   </button>
@@ -2380,23 +2239,23 @@ export const CheckoutPage = () => {
                 {/* Collapsed Step 2 Order Summary Bar */}
                 <div style={{
                   background: '#ffffff',
-                  borderRadius: '4px',
-                  border: '1px solid #e0e0e0',
-                  padding: '14px 20px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '16px 20px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#16a34a', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
                       ✓
                     </span>
                     <div>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#878787', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         2. ORDER SUMMARY
                       </span>
-                      <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#212121', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a', marginTop: '2px' }}>
                         {cart.reduce((s, i) => s + i.quantity, 0)} Item(s) • Total {formatPrice(finalTotal)}
                       </div>
                     </div>
@@ -2405,7 +2264,7 @@ export const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={() => setStep('summary')}
-                    style={{ background: '#ffffff', border: '1px solid #e0e0e0', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#0f172a', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s ease' }}
                   >
                     Change
                   </button>
@@ -2414,23 +2273,23 @@ export const CheckoutPage = () => {
                 {/* Expanded Step 3 Payment Options */}
                 <div style={{
                   background: '#ffffff',
-                  borderRadius: '4px',
-                  border: '1px solid #e0e0e0',
-                  padding: '24px',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
+                  padding: '22px 24px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '18px'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#2874f0', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ea580c', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
                       3
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#212121', margin: 0 }}>
+                      <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                         PAYMENT OPTIONS
                       </h3>
-                      <p style={{ fontSize: '0.78rem', color: '#878787', margin: '2px 0 0' }}>
+                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
                         Select your preferred payment mode
                       </p>
                     </div>
@@ -2442,19 +2301,20 @@ export const CheckoutPage = () => {
                     <div
                       onClick={() => setPaymentMethod('razorpay')}
                       style={{
-                        border: paymentMethod === 'razorpay' ? '2px solid #2874f0' : '1px solid #e0e0e0',
-                        borderRadius: '8px',
+                        border: paymentMethod === 'razorpay' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                        borderRadius: '10px',
                         padding: '16px',
                         cursor: 'pointer',
-                        background: paymentMethod === 'razorpay' ? '#f0f6ff' : '#ffffff',
-                        transition: 'all 0.15s ease'
+                        background: paymentMethod === 'razorpay' ? '#fff7ed' : '#ffffff',
+                        transition: 'all 0.15s ease',
+                        boxShadow: paymentMethod === 'razorpay' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                         <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
                           ⚡ Razorpay Online
                         </span>
-                        <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
+                        <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
                           Recommended
                         </span>
                       </div>
@@ -2467,12 +2327,13 @@ export const CheckoutPage = () => {
                     <div
                       onClick={() => setPaymentMethod('cash')}
                       style={{
-                        border: paymentMethod === 'cash' ? '2px solid #2874f0' : '1px solid #e0e0e0',
-                        borderRadius: '8px',
+                        border: paymentMethod === 'cash' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                        borderRadius: '10px',
                         padding: '16px',
                         cursor: 'pointer',
-                        background: paymentMethod === 'cash' ? '#f0f6ff' : '#ffffff',
-                        transition: 'all 0.15s ease'
+                        background: paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
+                        transition: 'all 0.15s ease',
+                        boxShadow: paymentMethod === 'cash' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
@@ -2487,15 +2348,15 @@ export const CheckoutPage = () => {
                   </div>
 
                   {/* Promo Coupon Box */}
-                  <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '14px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
                     <span style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px' }}>
                       Have a Promo Coupon?
                     </span>
 
                     {activeCoupon ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '6px', padding: '8px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '10px 14px' }}>
                         <div>
-                          <span style={{ fontSize: '0.86rem', fontWeight: '800', color: '#065f46', letterSpacing: '0.05em' }}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#065f46', letterSpacing: '0.05em' }}>
                             {activeCoupon.code}
                           </span>
                           <span style={{ display: 'block', fontSize: '0.74rem', color: '#047857' }}>
@@ -2517,12 +2378,12 @@ export const CheckoutPage = () => {
                           placeholder="ENTER COUPON CODE"
                           value={couponInput}
                           onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                          style={{ flex: 1, padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.82rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
+                          style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
                         />
                         <button
                           type="submit"
                           disabled={couponLoading || !couponInput.trim()}
-                          style={{ background: '#2874f0', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer' }}
+                          style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
                         >
                           {couponLoading ? '...' : 'Apply'}
                         </button>
@@ -2531,20 +2392,20 @@ export const CheckoutPage = () => {
                   </div>
 
                   {/* Primary Account Notification Reminder */}
-                  <div style={{ fontSize: '0.78rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '6px', border: '1px solid #bae6fd' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
                     📱 <strong>Account Notice:</strong> WhatsApp order receipt and live dispatch updates will be sent to primary number <strong>+91 {user?.phone}</strong>.
                   </div>
 
-                  {/* Confirm & Place Order Button */}
+                  {/* Confirm & Place Order Button (Image 1 Red Style) */}
                   <button
                     type="button"
                     onClick={handleSubmitOrder}
                     disabled={isSubmitting || isProcessingPayment}
                     style={{
-                      background: '#fb641b',
+                      background: '#dc2626',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '4px',
+                      borderRadius: '10px',
                       padding: '16px',
                       fontSize: '1rem',
                       fontWeight: '800',
@@ -2553,7 +2414,8 @@ export const CheckoutPage = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '8px',
-                      boxShadow: '0 2px 10px rgba(251, 100, 27, 0.4)'
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                      transition: 'all 0.15s ease'
                     }}
                     id="btn-checkout-place-order"
                   >
@@ -2573,46 +2435,250 @@ export const CheckoutPage = () => {
 
           </div>
 
-          {/* RIGHT COLUMN: FLIPKART PRICE DETAILS SIDEBAR (MATCHING SCREENSHOT) */}
+          {/* RIGHT COLUMN: PRODUCT DETAILS & PRICE DETAILS SIDEBAR (MATCHING SCREENSHOT 1 STYLE) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '80px' }}>
 
-            <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-              <div style={{ fontSize: '1rem', fontWeight: '800', color: '#878787', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
+            {/* 1. PRODUCT DETAILS (MOVED DIRECTLY ABOVE PRICE DETAILS) */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1.5px solid #e2e8f0',
+              padding: '18px 20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{
+                fontSize: '0.82rem',
+                fontWeight: '800',
+                color: '#475569',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                paddingBottom: '10px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ color: '#0f172a', fontSize: '0.94rem' }}>Order Items ({cart.length})</span>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>
+                  {cart.reduce((s, i) => s + i.quantity, 0)} total unit(s)
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {cart.map((item, idx) => {
+                  const itemMrp = item.mrp || Math.round(item.price * 1.35);
+                  const discountPct = Math.round(((itemMrp - item.price) / itemMrp) * 100);
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        paddingBottom: idx < cart.length - 1 ? '14px' : '0',
+                        borderBottom: idx < cart.length - 1 ? '1px dashed #e2e8f0' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                      }}
+                    >
+                      {/* Product Details Row */}
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                        {/* Thumbnail */}
+                        <div style={{
+                          width: '76px',
+                          height: '76px',
+                          borderRadius: '10px',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px'
+                        }}>
+                          <img
+                            src={item.image || '/Logo.jpeg'}
+                            alt={item.name}
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            onError={(e) => { e.target.src = '/Logo.jpeg'; }}
+                          />
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          {item.brand && (
+                            <span style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {item.brand}
+                            </span>
+                          )}
+
+                          <h4 style={{
+                            fontSize: '0.9rem',
+                            fontWeight: '700',
+                            color: '#0f172a',
+                            margin: 0,
+                            lineHeight: '1.35'
+                          }}>
+                            {item.name}
+                          </h4>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                              Unit Price: <strong style={{ color: '#0f172a' }}>{formatPrice(item.price)}</strong>
+                            </span>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              color: '#0284c7',
+                              fontWeight: '700',
+                              background: '#f0f9ff',
+                              border: '1px solid #bae6fd',
+                              padding: '1px 6px',
+                              borderRadius: '4px'
+                            }}>
+                              🚚 Courier: {item.deliveryCost === 0 ? <strong style={{ color: '#16a34a' }}>FREE</strong> : `₹${item.deliveryCost ?? 120}/unit`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Stepper, Remove & Line Total */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            background: '#f8fafc',
+                            border: '1.5px solid #cbd5e1',
+                            borderRadius: '8px',
+                            overflow: 'hidden'
+                          }}>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                padding: '4px 8px',
+                                cursor: 'pointer',
+                                color: '#334155',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Decrease quantity"
+                            >
+                              <Minus size={12} />
+                            </button>
+                            <span style={{ padding: '0 8px', fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                padding: '4px 8px',
+                                cursor: 'pointer',
+                                color: '#334155',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Increase quantity"
+                            >
+                              <Plus size={12} />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(item.id)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '5px 10px',
+                              background: '#fef2f2',
+                              border: '1px solid #fee2e2',
+                              borderRadius: '8px',
+                              color: '#dc2626',
+                              fontSize: '0.76rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                            title="Remove item"
+                          >
+                            <Trash2 size={13} />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+
+                        {/* Price Line */}
+                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {discountPct > 0 && (
+                            <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#16a34a' }}>
+                              ↓ {discountPct}%
+                            </span>
+                          )}
+                          {itemMrp > item.price && (
+                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                              {formatPrice(itemMrp * item.quantity)}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>
+                            {formatPrice(item.price * item.quantity)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. PRICE DETAILS CARD (IMAGE 1 STYLE) */}
+            <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
                 Price Details
               </div>
 
               {/* Breakdown Rows */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.9rem', color: '#212121' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.88rem', color: '#475569' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>MRP (incl. of all taxes)</span>
-                  <span style={{ fontWeight: '600' }}>{formatPrice(totalMrp)}</span>
+                  <span style={{ fontWeight: '700', color: '#0f172a' }}>{formatPrice(totalMrp)}</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Fees</span>
-                  <span style={{ color: deliveryType === 'store-pickup' ? '#388e3c' : '#212121', fontWeight: '600' }}>
+                  <span style={{ color: deliveryType === 'store-pickup' ? '#16a34a' : '#0f172a', fontWeight: '700' }}>
                     {deliveryType === 'store-pickup' ? 'FREE' : formatPrice(deliveryFee || 120)}
                   </span>
                 </div>
 
                 {mrpDiscount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#388e3c' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
                     <span>Discount on MRP</span>
                     <span style={{ fontWeight: '700' }}>- {formatPrice(mrpDiscount)}</span>
                   </div>
                 )}
 
                 {discountAmount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#388e3c' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
                     <span>Coupons Applied ({activeCoupon?.code})</span>
                     <span style={{ fontWeight: '700' }}>- {formatPrice(discountAmount)}</span>
                   </div>
                 )}
 
                 {/* Total Amount */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.12rem', fontWeight: '800', color: '#212121', borderTop: '1px dashed #e0e0e0', paddingTop: '14px', marginTop: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', borderTop: '2px solid #0f172a', paddingTop: '14px', marginTop: '4px' }}>
                   <span>Total Amount</span>
-                  <span style={{ color: '#212121', fontFamily: 'monospace' }}>{formatPrice(finalTotal)}</span>
+                  <span style={{ color: '#ea580c', fontFamily: 'monospace', fontSize: '1.25rem' }}>{formatPrice(finalTotal)}</span>
                 </div>
 
                 {/* Green Savings Highlight */}
@@ -2620,11 +2686,11 @@ export const CheckoutPage = () => {
                   <div style={{
                     background: '#f0fdf4',
                     border: '1px solid #bbf7d0',
-                    borderRadius: '4px',
+                    borderRadius: '8px',
                     padding: '10px 12px',
                     color: '#16a34a',
                     fontWeight: '700',
-                    fontSize: '0.86rem',
+                    fontSize: '0.84rem',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px'
@@ -2636,18 +2702,18 @@ export const CheckoutPage = () => {
               </div>
             </div>
 
-            {/* Store Guarantees */}
-            <div style={{ background: '#ffffff', borderRadius: '4px', border: '1px solid #e0e0e0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {/* 3. STORE GUARANTEES */}
+            <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
-                <ShieldCheck size={16} style={{ color: '#2874f0', flexShrink: 0 }} />
+                <ShieldCheck size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
                 <span>100% Genuine Tools from Authorized Dealers</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
-                <FileText size={16} style={{ color: '#2874f0', flexShrink: 0 }} />
+                <FileText size={16} style={{ color: '#0284c7', flexShrink: 0 }} />
                 <span>Official GST Tax Invoice & Warranty Card</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
-                <Mail size={16} style={{ color: '#2874f0', flexShrink: 0 }} />
+                <Mail size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
                 <span>Instant WhatsApp & Email Order Receipts</span>
               </div>
             </div>
@@ -2752,13 +2818,13 @@ export const CheckoutPage = () => {
                     type="button"
                     onClick={handleStartAddAddressInModal}
                     style={{
-                      background: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      color: '#1d4ed8',
+                      background: '#fff7ed',
+                      border: '1px solid #fed7aa',
+                      color: '#c2410c',
                       fontSize: '0.8rem',
                       fontWeight: '700',
                       padding: '6px 14px',
-                      borderRadius: '4px',
+                      borderRadius: '8px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -2778,16 +2844,16 @@ export const CheckoutPage = () => {
                     setShowAddressModal(false);
                   }}
                   style={{
-                    border: deliveryType === 'store-pickup' ? '2px solid #2874f0' : '1px solid #e2e8f0',
-                    background: deliveryType === 'store-pickup' ? '#f0f7ff' : '#ffffff',
-                    borderRadius: '8px',
+                    border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                    background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
+                    borderRadius: '10px',
                     padding: '16px',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '12px',
-                    boxShadow: deliveryType === 'store-pickup' ? '0 2px 8px rgba(40, 116, 240, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
+                    boxShadow: deliveryType === 'store-pickup' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
                   }}
                 >
                   <input
@@ -2798,7 +2864,7 @@ export const CheckoutPage = () => {
                       setDeliveryType('store-pickup');
                       setShowAddressModal(false);
                     }}
-                    style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px', marginTop: '3px' }}
+                    style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px', marginTop: '3px' }}
                   />
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
@@ -2809,13 +2875,13 @@ export const CheckoutPage = () => {
                           fontSize: '0.7rem',
                           fontWeight: '800',
                           padding: '2px 8px',
-                          borderRadius: '4px',
+                          borderRadius: '6px',
                           textTransform: 'uppercase',
                           letterSpacing: '0.04em'
                         }}>
                           STORE PICKUP
                         </span>
-                        <strong style={{ fontSize: '0.94rem', color: '#1e293b' }}>
+                        <strong style={{ fontSize: '0.94rem', color: '#0f172a' }}>
                           Direct Pickup at Kozhencherry Showroom
                         </strong>
                       </div>
@@ -2838,11 +2904,11 @@ export const CheckoutPage = () => {
                           setShowAddressModal(false);
                         }}
                         style={{
-                          background: deliveryType === 'store-pickup' ? '#fb641b' : '#2874f0',
+                          background: deliveryType === 'store-pickup' ? '#dc2626' : '#0f172a',
                           color: '#ffffff',
                           border: 'none',
-                          borderRadius: '4px',
-                          padding: '6px 16px',
+                          borderRadius: '8px',
+                          padding: '7px 16px',
                           fontSize: '0.82rem',
                           fontWeight: '800',
                           cursor: 'pointer'
@@ -2874,7 +2940,7 @@ export const CheckoutPage = () => {
 
                   if (addresses.length === 0) {
                     return (
-                      <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                      <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #cbd5e1' }}>
                         <MapPin size={36} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
                         <p style={{ fontSize: '0.9rem', color: '#64748b', margin: '0 0 14px' }}>
                           No delivery addresses saved on this account yet.
@@ -2883,14 +2949,15 @@ export const CheckoutPage = () => {
                           type="button"
                           onClick={handleStartAddAddressInModal}
                           style={{
-                            background: '#fb641b',
+                            background: '#dc2626',
                             color: '#ffffff',
                             border: 'none',
-                            padding: '10px 20px',
-                            borderRadius: '4px',
+                            padding: '11px 22px',
+                            borderRadius: '8px',
                             fontSize: '0.86rem',
                             fontWeight: '800',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
                           }}
                         >
                           + Add First Address
@@ -2911,16 +2978,16 @@ export const CheckoutPage = () => {
                             key={addrId}
                             onClick={() => setSelectedAddressId(addrId)}
                             style={{
-                              border: isSelected ? '2px solid #2874f0' : '1px solid #e2e8f0',
-                              background: isSelected ? '#f8faff' : '#ffffff',
-                              borderRadius: '8px',
+                              border: isSelected ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                              background: isSelected ? '#fff7ed' : '#ffffff',
+                              borderRadius: '10px',
                               padding: '16px',
                               cursor: 'pointer',
                               transition: 'all 0.15s ease',
                               display: 'flex',
                               flexDirection: 'column',
                               gap: '10px',
-                              boxShadow: isSelected ? '0 2px 8px rgba(40, 116, 240, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
+                              boxShadow: isSelected ? '0 2px 8px rgba(234, 88, 12, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
                             }}
                           >
                             {/* Card Header */}
@@ -2931,7 +2998,7 @@ export const CheckoutPage = () => {
                                   name="modalSelectedAddress"
                                   checked={isSelected}
                                   onChange={() => setSelectedAddressId(addrId)}
-                                  style={{ accentColor: '#2874f0', cursor: 'pointer', width: '16px', height: '16px' }}
+                                  style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
                                 />
                                 <span style={{
                                   background: '#f1f5f9',
@@ -2939,13 +3006,13 @@ export const CheckoutPage = () => {
                                   fontSize: '0.7rem',
                                   fontWeight: '800',
                                   padding: '2px 8px',
-                                  borderRadius: '4px',
+                                  borderRadius: '6px',
                                   textTransform: 'uppercase',
                                   letterSpacing: '0.04em'
                                 }}>
                                   {addr.addressType || 'HOME'}
                                 </span>
-                                <strong style={{ fontSize: '0.94rem', color: '#1e293b' }}>
+                                <strong style={{ fontSize: '0.94rem', color: '#0f172a' }}>
                                   {addr.name}
                                 </strong>
                                 <span style={{ fontSize: '0.86rem', color: '#475569', fontWeight: '700' }}>
@@ -2972,13 +3039,13 @@ export const CheckoutPage = () => {
                                   type="button"
                                   onClick={() => handleStartEditAddressInModal(addr)}
                                   style={{
-                                    background: '#eff6ff',
-                                    border: '1px solid #bfdbfe',
-                                    color: '#1d4ed8',
+                                    background: '#fff7ed',
+                                    border: '1px solid #fed7aa',
+                                    color: '#c2410c',
                                     fontSize: '0.76rem',
                                     fontWeight: '700',
                                     padding: '4px 10px',
-                                    borderRadius: '4px',
+                                    borderRadius: '6px',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -3044,15 +3111,15 @@ export const CheckoutPage = () => {
                                   handleSelectAndDeliverFromModal(addr);
                                 }}
                                 style={{
-                                  background: isSelected ? '#fb641b' : '#2874f0',
+                                  background: '#dc2626',
                                   color: '#ffffff',
                                   border: 'none',
-                                  borderRadius: '4px',
+                                  borderRadius: '8px',
                                   padding: '8px 20px',
                                   fontSize: '0.84rem',
                                   fontWeight: '800',
                                   cursor: 'pointer',
-                                  boxShadow: isSelected ? '0 2px 8px rgba(251, 100, 27, 0.3)' : 'none'
+                                  boxShadow: isSelected ? '0 4px 12px rgba(220, 38, 38, 0.25)' : 'none'
                                 }}
                               >
                                 {isSelected ? 'DELIVER HERE ➔' : 'Select & Deliver'}
@@ -3074,7 +3141,7 @@ export const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={() => setAddressModalView('list')}
-                    style={{ background: 'transparent', border: 'none', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ background: 'transparent', border: 'none', color: '#ea580c', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     ← Back to Saved Addresses
                   </button>
@@ -3084,11 +3151,11 @@ export const CheckoutPage = () => {
                     onClick={handleModalUseCurrentLocation}
                     disabled={modalIsLocating}
                     style={{
-                      background: '#2874f0',
+                      background: '#0f172a',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '4px',
-                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      padding: '7px 14px',
                       fontSize: '0.78rem',
                       fontWeight: '700',
                       cursor: 'pointer',
@@ -3112,7 +3179,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.name}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, name: e.target.value })}
                       placeholder="Recipient Full Name"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
 
@@ -3125,7 +3192,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.phone}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
                       placeholder="Delivery Mobile"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -3141,7 +3208,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.pincode}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, pincode: e.target.value.replace(/[^0-9]/g, '').slice(0, 6) })}
                       placeholder="e.g. 689641"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                     {modalPincodeCheck?.serviceable === true && (
                       <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: '700', marginTop: '2px', display: 'block' }}>
@@ -3158,7 +3225,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.locality}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, locality: e.target.value })}
                       placeholder="e.g. Nirannukala Road"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -3172,7 +3239,7 @@ export const CheckoutPage = () => {
                     value={modalAddressForm.address}
                     onChange={(e) => setModalAddressForm({ ...modalAddressForm, address: e.target.value })}
                     placeholder="House name, Building, Street address"
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
@@ -3186,7 +3253,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.city || modalAddressForm.district}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, city: e.target.value, district: e.target.value })}
                       placeholder="Pathanamthitta"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
 
@@ -3198,7 +3265,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.state || 'Kerala'}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, state: e.target.value })}
                       placeholder="Kerala"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -3212,7 +3279,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.landmark}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, landmark: e.target.value })}
                       placeholder="e.g. Near Temple / Waiting shed"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
 
@@ -3224,7 +3291,7 @@ export const CheckoutPage = () => {
                       value={modalAddressForm.alternatePhone}
                       onChange={(e) => setModalAddressForm({ ...modalAddressForm, alternatePhone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
                       placeholder="Alternate Mobile"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                     />
                   </div>
                 </div>
@@ -3233,26 +3300,26 @@ export const CheckoutPage = () => {
                 <div>
                   <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: '700', color: '#475569', marginBottom: '6px' }}>Address Type</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="modalAddressType"
                         value="HOME"
                         checked={modalAddressForm.addressType === 'HOME'}
                         onChange={() => setModalAddressForm({ ...modalAddressForm, addressType: 'HOME' })}
-                        style={{ accentColor: '#2874f0', cursor: 'pointer' }}
+                        style={{ accentColor: '#ea580c', cursor: 'pointer' }}
                       />
                       <span>Home (All day delivery)</span>
                     </label>
 
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#212121', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '600', color: '#0f172a', cursor: 'pointer' }}>
                       <input
                         type="radio"
                         name="modalAddressType"
                         value="WORK"
                         checked={modalAddressForm.addressType === 'WORK'}
                         onChange={() => setModalAddressForm({ ...modalAddressForm, addressType: 'WORK' })}
-                        style={{ accentColor: '#2874f0', cursor: 'pointer' }}
+                        style={{ accentColor: '#ea580c', cursor: 'pointer' }}
                       />
                       <span>Work (Delivery between 10 AM - 5 PM)</span>
                     </label>
@@ -3266,7 +3333,7 @@ export const CheckoutPage = () => {
                     id="modal-check-default-address"
                     checked={modalAddressForm.isDefault}
                     onChange={(e) => setModalAddressForm({ ...modalAddressForm, isDefault: e.target.checked })}
-                    style={{ accentColor: '#2874f0', width: '16px', height: '16px', cursor: 'pointer' }}
+                    style={{ accentColor: '#ea580c', width: '16px', height: '16px', cursor: 'pointer' }}
                   />
                   <label htmlFor="modal-check-default-address" style={{ fontSize: '0.82rem', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>
                     Set as my default delivery address
@@ -3280,12 +3347,12 @@ export const CheckoutPage = () => {
                     onClick={() => setAddressModalView('list')}
                     style={{
                       background: 'transparent',
-                      border: '1px solid #cbd5e1',
+                      border: '1.5px solid #cbd5e1',
                       color: '#475569',
                       fontSize: '0.86rem',
                       fontWeight: '700',
-                      padding: '10px 18px',
-                      borderRadius: '4px',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
                       cursor: 'pointer'
                     }}
                   >
@@ -3296,15 +3363,16 @@ export const CheckoutPage = () => {
                     type="submit"
                     disabled={modalIsSaving}
                     style={{
-                      background: '#fb641b',
+                      background: '#dc2626',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '4px',
+                      borderRadius: '8px',
                       padding: '11px 28px',
                       fontSize: '0.88rem',
                       fontWeight: '800',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(251, 100, 27, 0.3)'
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     {modalIsSaving ? 'SAVING...' : 'SAVE & DELIVER HERE ➔'}
