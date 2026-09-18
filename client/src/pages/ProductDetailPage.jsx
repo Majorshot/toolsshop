@@ -196,6 +196,7 @@ export const ProductDetailPage = () => {
   useEffect(() => {
     if (isFullScreenOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
       const handleKeyDown = (e) => {
         if (e.key === 'Escape') closeFullScreen();
         if (e.key === 'ArrowRight') nextFullScreenImage();
@@ -204,10 +205,12 @@ export const ProductDetailPage = () => {
       window.addEventListener('keydown', handleKeyDown);
       return () => {
         document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
         window.removeEventListener('keydown', handleKeyDown);
       };
     } else {
       document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
   }, [isFullScreenOpen, galleryImages.length]);
 
