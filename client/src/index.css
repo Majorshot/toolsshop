@@ -5591,3 +5591,277 @@ header.main-site-header {
     padding: 16px 12px !important;
   }
 }
+
+/* ==========================================================================
+   Customer Dashboard - HoverDevCards Design System (Variathu Red/Orange)
+   ========================================================================== */
+.hover-dev-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+@media (min-width: 900px) {
+  .hover-dev-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.hover-dev-card {
+  position: relative;
+  overflow: hidden;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px 20px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 146px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+  outline: none;
+  text-decoration: none;
+  color: inherit;
+  width: 100%;
+}
+
+.hover-dev-card:hover {
+  border-color: #f87171;
+  box-shadow: 0 12px 24px -6px rgba(220, 38, 38, 0.2), 0 8px 12px -4px rgba(234, 88, 12, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Sliding Background Gradient */
+.hover-dev-card-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 1;
+}
+
+.hover-dev-card:hover .hover-dev-card-bg {
+  transform: translateY(0%);
+}
+
+/* Watermark Giant Background Icon */
+.hover-dev-card-watermark {
+  position: absolute !important;
+  top: -24px !important;
+  right: -24px !important;
+  color: #f1f5f9 !important;
+  z-index: 2 !important;
+  pointer-events: none !important;
+  transition: transform 0.35s ease, color 0.35s ease !important;
+  opacity: 0.85;
+}
+
+.hover-dev-card:hover .hover-dev-card-watermark {
+  color: rgba(255, 255, 255, 0.16) !important;
+  transform: rotate(12deg) scale(1.1) !important;
+  opacity: 1;
+}
+
+/* Foreground Icon */
+.hover-dev-card-icon {
+  position: relative;
+  z-index: 3;
+  color: #dc2626;
+  margin-bottom: 12px;
+  transition: color 0.25s ease, transform 0.2s ease;
+}
+
+.hover-dev-card:hover .hover-dev-card-icon {
+  color: #ffffff !important;
+  transform: scale(1.08);
+}
+
+/* Card Title */
+.hover-dev-card-title {
+  position: relative;
+  z-index: 3;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  transition: color 0.25s ease;
+  line-height: 1.3;
+}
+
+.hover-dev-card:hover .hover-dev-card-title {
+  color: #ffffff !important;
+}
+
+/* Card Subtitle */
+.hover-dev-card-subtitle {
+  position: relative;
+  z-index: 3;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+  transition: color 0.25s ease;
+}
+
+.hover-dev-card:hover .hover-dev-card-subtitle {
+  color: #ffedd5 !important;
+}
+
+/* Card Badge Pill */
+.hover-dev-card-badge {
+  position: relative;
+  z-index: 3;
+  align-self: flex-start;
+  margin-top: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.hover-dev-card:hover .hover-dev-card-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/* ==========================================================================
+   Customer Dashboard - Compact Ordered Product Item with Expandable Details
+   ========================================================================== */
+.customer-ordered-product-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 16px;
+}
+
+.customer-ordered-product-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: var(--shadow-sm);
+}
+
+.customer-product-summary-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  background: #ffffff;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.customer-product-summary-header:hover {
+  background: #fafafa;
+}
+
+.customer-product-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.customer-product-thumb {
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.customer-product-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.customer-product-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customer-product-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.customer-product-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.customer-product-price {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #0f172a;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.customer-product-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.customer-product-summary-header:hover .customer-product-toggle-btn {
+  background: #ea580c;
+  color: #ffffff;
+  border-color: #ea580c;
+}
+
+.customer-product-expanded-body {
+  border-top: 1px solid #f1f5f9;
+  padding: 20px;
+  background: #fcfcfd;
+}
+
+@media (max-width: 768px) {
+  .customer-product-summary-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .customer-product-summary-right {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+  }
+}
+

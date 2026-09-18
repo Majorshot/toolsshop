@@ -4,13 +4,55 @@ import {
   User, Package, MapPin, Truck, CheckCircle2, Clock, MessageCircle, LogOut,
   ShoppingBag, ArrowRight, Phone, RefreshCw, FileText, Printer, Shield, QrCode,
   X, ExternalLink, Navigation, Copy, Check, XCircle, AlertCircle, Edit3, Plus, Trash2,
-  Building, Home, Briefcase
+  Building, Home, Briefcase, LayoutDashboard, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import GstInvoiceModal from '../components/GstInvoiceModal';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm } from '../components/SpringModal';
+
+export const HoverDevCard = ({ title, subtitle, Icon, onClick, href, badge }) => {
+  const content = (
+    <>
+      <div className="hover-dev-card-bg" />
+      {Icon && (
+        <Icon
+          size={110}
+          strokeWidth={1.4}
+          className="hover-dev-card-watermark"
+        />
+      )}
+      <div>
+        {Icon && (
+          <Icon
+            size={26}
+            strokeWidth={2}
+            className="hover-dev-card-icon"
+          />
+        )}
+        <h3 className="hover-dev-card-title">{title}</h3>
+        <p className="hover-dev-card-subtitle">{subtitle}</p>
+      </div>
+      {badge && <span className="hover-dev-card-badge">{badge}</span>}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} className="hover-dev-card">
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onClick} className="hover-dev-card">
+      {content}
+    </button>
+  );
+};
+
 
 export const resolveCourierPartner = (courierName = '') => {
   const c = (courierName || '').toLowerCase();
@@ -491,7 +533,38 @@ export const CustomerAccountPage = () => {
     return `https://wa.me/919447123456?text=${text}`;
   };
 
-  const [sidebarTab, setSidebarTab] = useState('orders');
+  const [sidebarTab, setSidebarTab] = useState('overview');
+  const [expandedOrders, setExpandedOrders] = useState({});
+
+  useEffect(() => {
+    if (orders && orders.length > 0) {
+      setExpandedOrders((prev) => {
+        if (Object.keys(prev).length === 0) {
+          return { [orders[0].id]: true };
+        }
+        return prev;
+      });
+    }
+  }, [orders]);
+
+  const toggleOrderExpand = (orderId) => {
+    setExpandedOrders((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId]
+    }));
+  };
+
+  const handleExpandAllOrders = () => {
+    const all = {};
+    orders.forEach((o) => {
+      all[o.id] = true;
+    });
+    setExpandedOrders(all);
+  };
+
+  const handleCollapseAllOrders = () => {
+    setExpandedOrders({});
+  };
 
   if (!user) return null;
 
@@ -512,9 +585,16 @@ export const CustomerAccountPage = () => {
 
   const customerSidebarItems = [
     {
+      id: 'overview',
+      title: 'Overview',
+      icon: LayoutDashboard,
+      selected: sidebarTab === 'overview',
+      onClick: () => setSidebarTab('overview')
+    },
+    {
       id: 'orders',
-      title: `Placed Orders${orders.length > 0 ? ` (${orders.length})` : ''}`,
-      icon: ShoppingBag,
+      title: `Ordered Products${orders.length > 0 ? ` (${orders.length})` : ''}`,
+      icon: Package,
       selected: sidebarTab === 'orders',
       notifs: orders.length > 0 ? orders.length : undefined,
       notifsColor: '#ea580c',
@@ -527,16 +607,7 @@ export const CustomerAccountPage = () => {
       selected: sidebarTab === 'addresses',
       notifs: savedAddressesList.length > 0 ? savedAddressesList.length : undefined,
       notifsColor: '#0284c7',
-      onClick: () => {
-        setSidebarTab('addresses');
-        handleOpenAddressModal();
-      }
-    },
-    {
-      id: 'shop',
-      title: 'Shop Equipment',
-      icon: Package,
-      onClick: () => navigate('/shop')
+      onClick: () => setSidebarTab('addresses')
     },
     {
       id: 'refresh',
@@ -547,6 +618,12 @@ export const CustomerAccountPage = () => {
   ];
 
   const customerBottomNavItems = [
+    {
+      id: 'shop-equipment',
+      title: 'Shop Equipment',
+      icon: ShoppingBag,
+      onClick: () => navigate('/shop')
+    },
     {
       id: 'whatsapp',
       title: 'WhatsApp Support',
@@ -567,6 +644,587 @@ export const CustomerAccountPage = () => {
       onClick: handleCustomerLogout
     }
   ];
+
+  const renderOrderProductCard = (order) => {
+    const isCancelled = (order.status || '').toLowerCase().includes('cancel') || order.paymentStatus === 'REFUNDED';
+    const isPickup = order.deliveryType === 'store-pickup';
+    const isDispatched = Boolean(order.awb && String(order.awb).trim() !== '') || (order.status || '').toLowerCase().includes('dispatch');
+    const courierCfg = resolveCourierPartner(order.courierPartner);
+    const hasPendingCancelRequest = Boolean(order.cancellationRequested && order.status !== 'Cancelled');
+    const isExpanded = Boolean(expandedOrders[order.id]);
+
+    const primaryItem = order.items?.[0] || {};
+    const otherItemsCount = (order.items?.length || 1) - 1;
+
+    let statusBadgeText = 'Order Placed • Processing at Shop';
+    let statusBadgeBg = 'rgba(234, 88, 12, 0.08)';
+    let statusBadgeColor = '#ea580c';
+    let statusBadgeBorder = 'rgba(234, 88, 12, 0.25)';
+
+    if (isCancelled) {
+      statusBadgeText = order.paymentStatus === 'REFUNDED' ? 'Cancelled & Refunded' : 'Order Cancelled';
+      statusBadgeBg = '#fef2f2';
+      statusBadgeColor = '#dc2626';
+      statusBadgeBorder = '#fecaca';
+    } else if (hasPendingCancelRequest) {
+      statusBadgeText = 'Cancellation Requested • Awaiting Approval';
+      statusBadgeBg = '#fffbeb';
+      statusBadgeColor = '#b45309';
+      statusBadgeBorder = '#fde68a';
+    } else if (isPickup) {
+      if (order.handoverVerified || (order.status || '').toLowerCase().includes('completed')) {
+        statusBadgeText = 'Handover Completed';
+        statusBadgeBg = '#ecfdf5';
+        statusBadgeColor = '#16a34a';
+        statusBadgeBorder = '#bbf7d0';
+      } else if ((order.status || '').toLowerCase().includes('ready')) {
+        statusBadgeText = 'Ready for Store Pickup';
+        statusBadgeBg = '#eff6ff';
+        statusBadgeColor = '#0284c7';
+        statusBadgeBorder = '#bae6fd';
+      }
+    } else {
+      if (isDispatched) {
+        statusBadgeText = 'Dispatched via Courier';
+        statusBadgeBg = '#ecfdf5';
+        statusBadgeColor = '#16a34a';
+        statusBadgeBorder = '#bbf7d0';
+      }
+    }
+
+    return (
+      <div
+        key={order.id}
+        className="customer-ordered-product-card"
+        id={`customer-order-${order.id}`}
+      >
+        {/* Compact Summary Header (The Product Detail View) */}
+        <div
+          className="customer-product-summary-header"
+          onClick={() => toggleOrderExpand(order.id)}
+        >
+          <div className="customer-product-summary-left">
+            <img
+              src={primaryItem.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80'}
+              alt={primaryItem.name || 'Equipment'}
+              className="customer-product-thumb"
+              onError={(e) => {
+                e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+              }}
+            />
+            <div className="customer-product-info">
+              <h4 className="customer-product-name" title={primaryItem.name}>
+                {primaryItem.name || 'Power Tool Equipment'}
+                {otherItemsCount > 0 && (
+                  <span style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: '800', marginLeft: '6px' }}>
+                    +{otherItemsCount} more item{otherItemsCount > 1 ? 's' : ''}
+                  </span>
+                )}
+              </h4>
+              <div className="customer-product-meta">
+                <span>Order: <strong style={{ color: '#0f172a' }}>{order.id}</strong></span>
+                <span>•</span>
+                <span>Qty: {primaryItem.quantity || 1}</span>
+                <span>•</span>
+                <span>{new Date(order.date).toLocaleDateString()}</span>
+                <span>•</span>
+                <span
+                  style={{
+                    background: statusBadgeBg,
+                    color: statusBadgeColor,
+                    border: `1px solid ${statusBadgeBorder}`,
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    fontSize: '0.72rem',
+                    fontWeight: '800'
+                  }}
+                >
+                  ● {statusBadgeText}
+                </span>
+                <span
+                  style={{
+                    background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
+                    color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
+                    border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    fontSize: '0.7rem',
+                    fontWeight: '800'
+                  }}
+                >
+                  {order.paymentStatus === 'REFUNDED'
+                    ? 'REFUNDED'
+                    : order.paymentStatus === 'PAID'
+                    ? 'PAID (UPI)'
+                    : 'PAY AT STORE'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="customer-product-summary-right">
+            <span className="customer-product-price">
+              {formatPrice(order.totalAmount)}
+            </span>
+
+            <button
+              type="button"
+              className="customer-product-toggle-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleOrderExpand(order.id);
+              }}
+            >
+              <span>{isExpanded ? 'Hide Details' : 'View Order Details'}</span>
+              {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded Full Order Body: Delivery Pass, Tracking, All Items, Invoice, Cancellation */}
+        {isExpanded && (
+          <div className="customer-product-expanded-body">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', fontSize: '0.78rem', color: '#64748b', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+              <span>Placed on {new Date(order.date).toLocaleDateString()} at {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span>Payment Method: <strong style={{ color: '#0f172a' }}>{order.paymentMethod}</strong></span>
+            </div>
+
+            {/* Cancelled View */}
+            {isCancelled ? (
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1.5px solid #fecaca',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  marginBottom: '16px'
+                }}
+                id={`order-cancelled-box-${order.id}`}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <XCircle size={18} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                      Order Status • Cancelled
+                    </span>
+                    <strong style={{ fontSize: '0.94rem', color: '#991b1b', lineHeight: 1.3, display: 'block' }}>
+                      {order.paymentStatus === 'REFUNDED' ? 'Order Cancelled & Full Refund Processed' : 'Order Cancelled'}
+                    </strong>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: '0.82rem', color: '#7f1d1d', margin: '0 0 10px', lineHeight: 1.5 }}>
+                  {order.paymentStatus === 'REFUNDED' ? (
+                    <>
+                      Your order has been cancelled. An automatic full refund of <strong>{formatPrice(order.totalAmount)}</strong> was initiated to your original payment method. Depending on your bank/UPI app, it will reflect within 1-2 business days.
+                    </>
+                  ) : (
+                    'This order has been cancelled. No payment was charged.'
+                  )}
+                </p>
+
+                {order.refundId && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#047857', background: '#ecfdf5', padding: '5px 10px', borderRadius: '6px', border: '1px solid #a7f3d0', fontFamily: 'var(--font-mono)', fontWeight: '700', marginBottom: '6px', wordBreak: 'break-all', maxWidth: '100%' }}>
+                    <span>⚡ Refund Reference ID: {order.refundId}</span>
+                  </div>
+                )}
+
+                {(order.cancellationReason || order.cancellationRequestReason) && (
+                  <div style={{ background: '#ffffff', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '8px 12px', marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem', color: '#991b1b' }}>
+                    <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#b91c1c', fontWeight: '800', display: 'block', marginBottom: '2px' }}>
+                      Cancellation Reason:
+                    </span>
+                    <strong>"{order.cancellationReason || order.cancellationRequestReason}"</strong>
+                  </div>
+                )}
+
+                {order.cancelledAt && (
+                  <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                    Cancelled on: {new Date(order.cancelledAt).toLocaleDateString()} at {new Date(order.cancelledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
+              </div>
+            ) : isPickup ? (
+              <div
+                style={{
+                  background: order.handoverVerified ? '#f8fafc' : 'linear-gradient(135deg, rgba(234, 88, 12, 0.04) 0%, rgba(234, 88, 12, 0.1) 100%)',
+                  border: order.handoverVerified ? '1px solid #e2e8f0' : '1.5px dashed #ea580c',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                    🏬 Store Counter Pickup Pass
+                  </span>
+                  <p style={{ fontSize: '0.82rem', color: '#475569', margin: '2px 0 6px' }}>
+                    {order.handoverVerified
+                      ? '✅ Handover verified by Poyanil counter staff. Equipment collected.'
+                      : 'Show this 4-digit code at Poyanil Junction counter to collect your tested tools:'}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', color: '#64748b' }}>
+                    <MapPin size={12} style={{ color: '#ea580c' }} />
+                    <span>Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641</span>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'center', minWidth: '130px' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
+                    {order.handoverVerified ? 'VERIFIED OTP' : 'SECRET OTP'}
+                  </span>
+                  <div
+                    style={{
+                      fontSize: '1.6rem',
+                      fontWeight: '900',
+                      letterSpacing: '0.25em',
+                      color: order.handoverVerified ? '#16a34a' : '#0f172a',
+                      fontFamily: 'var(--font-mono)'
+                    }}
+                  >
+                    {order.pickupOtp}
+                  </div>
+                </div>
+              </div>
+            ) : !isDispatched ? (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.04) 0%, rgba(234, 88, 12, 0.09) 100%)',
+                  border: '1.5px dashed #ea580c',
+                  borderRadius: '12px',
+                  padding: '18px 20px',
+                  marginBottom: '18px'
+                }}
+                id={`order-processing-box-${order.id}`}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(234, 88, 12, 0.12)', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.72rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                      Step 1 of 2 • Order Status
+                    </span>
+                    <strong style={{ fontSize: '0.98rem', color: '#0f172a' }}>
+                      Order Placed • Processing at Shop
+                    </strong>
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.84rem', color: '#475569', margin: '0 0 12px', lineHeight: 1.5 }}>
+                  Our workshop technicians at <strong>Poyanil Building, Kozhencherry</strong> are inspecting, testing, and packaging your power tools. Once handed over to the courier partner, your official AWB consignment number and live tracking button will appear right here.
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748b', background: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+                  <MapPin size={14} style={{ color: '#ea580c', flexShrink: 0 }} />
+                  <span>
+                    Destination: <strong>{order.customer?.address || 'Customer Address'}, {order.customer?.district || 'Pathanamthitta'}, Kerala {order.customer?.pincode ? `• PIN: ${order.customer.pincode}` : ''}</strong>
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.04) 0%, rgba(2, 132, 199, 0.09) 100%)',
+                  border: '1.5px solid #bae6fd',
+                  borderRadius: '12px',
+                  padding: '18px 20px',
+                  marginBottom: '18px'
+                }}
+                id={`order-dispatched-box-${order.id}`}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        minWidth: '36px',
+                        height: '32px',
+                        padding: '0 8px',
+                        borderRadius: '8px',
+                        background: courierCfg.color,
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '900',
+                        fontSize: '0.75rem',
+                        letterSpacing: '-0.02em',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                      }}
+                    >
+                      {courierCfg.badge}
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Step 2 of 2 • Delivery Details
+                      </span>
+                      <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block' }}>
+                        {courierCfg.name}
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        Dispatched from Poyanil Building, Kozhencherry, Kerala
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: '0.86rem', color: '#0369a1', fontFamily: 'var(--font-mono)', fontWeight: '800', background: '#ffffff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                      AWB: {order.awb}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(order.awb);
+                        setCopiedAwb(order.id);
+                        setTimeout(() => setCopiedAwb(null), 2000);
+                      }}
+                      style={{
+                        fontSize: '0.76rem',
+                        color: copiedAwb === order.id ? '#15803d' : '#334155',
+                        background: copiedAwb === order.id ? '#dcfce7' : '#ffffff',
+                        border: `1px solid ${copiedAwb === order.id ? '#86efac' : '#cbd5e1'}`,
+                        padding: '7px 12px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontWeight: '700'
+                      }}
+                      title="Copy AWB Consignment Code"
+                      id={`btn-copy-awb-${order.id}`}
+                    >
+                      {copiedAwb === order.id ? <Check size={13} /> : <Copy size={13} />}
+                      <span>{copiedAwb === order.id ? 'Copied!' : 'Copy AWB'}</span>
+                    </button>
+
+                    <a
+                      href={courierCfg.trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: '0.76rem',
+                        color: '#ffffff',
+                        textDecoration: 'none',
+                        fontWeight: '800',
+                        background: courierCfg.color,
+                        padding: '7px 14px',
+                        borderRadius: '8px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.18)'
+                      }}
+                      title={`Track live on official ${courierCfg.name} portal`}
+                      id={`btn-track-courier-${order.id}`}
+                    >
+                      <span>Track on {courierCfg.badge} Website</span>
+                      <ExternalLink size={13} />
+                    </a>
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', borderRadius: '8px', padding: '10px 14px', border: '1px solid #e0f2fe', fontSize: '0.78rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0369a1', fontWeight: '600' }}>
+                    <Truck size={14} />
+                    <span>Live parcel transit movement is tracked directly on the official courier portal using your AWB number above.</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
+                    <MapPin size={14} style={{ color: '#ea580c', flexShrink: 0 }} />
+                    <span>
+                      Delivery Destination: <strong>{order.customer?.address || 'Customer Address'}, {order.customer?.district || 'Pathanamthitta'}, Kerala {order.customer?.pincode ? `• PIN: ${order.customer.pincode}` : ''}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Cancellation Requested Banner */}
+            {hasPendingCancelRequest && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.12) 100%)',
+                  border: '1.5px solid #fde68a',
+                  borderRadius: '12px',
+                  padding: '14px 18px',
+                  marginBottom: '18px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px'
+                }}
+              >
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
+                  <AlertCircle size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ fontSize: '0.9rem', color: '#92400e', display: 'block' }}>
+                    Cancellation Request Submitted
+                  </strong>
+                  <p style={{ fontSize: '0.8rem', color: '#78350f', margin: '2px 0 0', lineHeight: 1.5 }}>
+                    Your cancellation request is being reviewed by the store manager at Variathu Power Tools. You'll see the updated status here once it's processed. If approved, a full refund will be initiated automatically.
+                  </p>
+
+                  {order.cancellationRequestReason && (
+                    <div style={{ marginTop: '8px', padding: '8px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '0.78rem', color: '#92400e' }}>
+                      <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#b45309', fontWeight: '800', display: 'block', marginBottom: '2px' }}>
+                        Your Cancellation Reason:
+                      </span>
+                      <strong>"{order.cancellationRequestReason}"</strong>
+                    </div>
+                  )}
+
+                  {order.cancellationRequestedAt && (
+                    <span style={{ fontSize: '0.72rem', color: '#a16207', display: 'block', marginTop: '6px' }}>
+                      Requested on: {new Date(order.cancellationRequestedAt).toLocaleDateString()} at {new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Complete Items in Order */}
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.03em' }}>
+                Ordered Equipment ({order.items?.length})
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {order.items?.map((item, idx) => (
+                  <div key={idx} className="customer-order-item-row">
+                    <a
+                      href={`/product/${item.product || item.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="customer-order-item-link"
+                      title="View product details"
+                    >
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="customer-order-item-img"
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 className="customer-order-item-name">{item.name}</h4>
+                        <span className="customer-order-item-sub">Quantity: {item.quantity}</span>
+                      </div>
+                    </a>
+
+                    <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)', flexShrink: 0, paddingLeft: '8px' }}>
+                      {formatPrice(item.price * item.quantity)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons: Cancel, GST Invoice, WhatsApp & Collapse */}
+            <div className="customer-order-actions-bar">
+              {!isCancelled && !hasPendingCancelRequest && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenCustomerCancelModal(order)}
+                  style={{
+                    background: isDispatched ? '#fffbeb' : '#ffffff',
+                    border: `1px solid ${isDispatched ? '#fde68a' : '#fecaca'}`,
+                    color: isDispatched ? '#b45309' : '#dc2626',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  title={isDispatched ? 'Request cancellation for dispatched order (requires store approval)' : 'Cancel order and get immediate automatic refund if paid online'}
+                  id={`btn-customer-cancel-${order.id}`}
+                >
+                  {isDispatched ? <AlertCircle size={15} /> : <XCircle size={15} />}
+                  <span>{isDispatched ? 'Request Cancellation' : 'Cancel Order'}</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setInvoiceOrder(order)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                title="Download Official GST B2C Tax Invoice"
+                id={`btn-customer-invoice-${order.id}`}
+              >
+                <FileText size={15} style={{ color: '#ea580c' }} />
+                <span>GST Tax Invoice</span>
+              </button>
+
+              <a
+                href={`https://wa.me/919447123456?text=${encodeURIComponent(`Hello Variathu Power Tools, I have a query about my order ${order.id}.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#15803d',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                id={`btn-customer-whatsapp-${order.id}`}
+              >
+                <MessageCircle size={15} />
+                <span>WhatsApp Shop</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => toggleOrderExpand(order.id)}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#64748b',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <ChevronUp size={14} />
+                <span>Close Details</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
 
   return (
     <div
@@ -615,740 +1273,578 @@ export const CustomerAccountPage = () => {
         }}
       >
         <div className="customer-page-wrapper" style={{ margin: '0 auto', maxWidth: '1020px' }}>
-      {/* Top Customer Banner */}
-      <div className="customer-profile-card">
-        <div className="customer-profile-top">
-          <div className="customer-profile-avatar">
-            {user.name ? user.name[0].toUpperCase() : 'U'}
-          </div>
-
-          <div className="customer-profile-info">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                {user.name}
-              </h1>
-              <span
-                style={{
-                  background: 'rgba(234, 88, 12, 0.08)',
-                  color: '#ea580c',
-                  fontSize: '0.72rem',
-                  fontWeight: '700',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  border: '1px solid rgba(234, 88, 12, 0.2)'
-                }}
-              >
-                Customer Account
-              </span>
-            </div>
-            <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '3px 0 0' }}>
-              {user.phone || user.email} • Kozhencherry, Pathanamthitta
-            </p>
-          </div>
-        </div>
-
-        <div className="customer-profile-actions">
-          <button
-            onClick={loadCustomerOrders}
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #cbd5e1',
-              color: '#0f172a',
-              borderRadius: '8px',
-              padding: '9px 14px',
-              fontSize: '0.82rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <RefreshCw size={14} />
-            <span>Refresh Status</span>
-          </button>
-
-          <button
-            onClick={handleCustomerLogout}
-            style={{
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#dc2626',
-              borderRadius: '8px',
-              padding: '9px 14px',
-              fontSize: '0.82rem',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-            id="btn-customer-logout"
-          >
-            <LogOut size={14} />
-            <span>Sign Out</span>
-          </button>
-        </div>
-
-        {/* Saved Addresses Bar (Customer Account Model) */}
-        {(() => {
-          const savedList = user.savedAddresses && user.savedAddresses.length > 0
-            ? user.savedAddresses
-            : (user.address ? [{
-                id: 'default-1',
-                name: user.name,
-                phone: user.phone,
-                address: user.address,
-                district: user.district || 'Pathanamthitta',
-                state: user.state || 'Kerala',
-                pincode: user.pincode || '689641',
-                landmark: user.landmark || '',
-                addressType: 'HOME',
-                isDefault: true
-              }] : []);
-          const defaultAddr = savedList.find(a => a.isDefault) || savedList[0];
-
-          return (
-            <div style={{
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: '1px solid #f1f5f9',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', maxWidth: '720px' }}>
-                <MapPin size={18} style={{ color: '#ea580c', marginTop: '2px', flexShrink: 0 }} />
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: '800' }}>
-                      Default Delivery Address & Contact
-                    </span>
-                    {defaultAddr?.addressType && (
-                      <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px' }}>
-                        {defaultAddr.addressType}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: '600', marginTop: '3px', lineHeight: '1.4' }}>
-                    {defaultAddr ? (
-                      <span>
-                        <strong>{defaultAddr.name}</strong> • {defaultAddr.address}{defaultAddr.locality ? `, ${defaultAddr.locality}` : ''}{defaultAddr.landmark ? `, Near ${defaultAddr.landmark}` : ''}, {defaultAddr.city || defaultAddr.district} - <strong>{defaultAddr.pincode}</strong>
-                      </span>
-                    ) : (
-                      <span style={{ color: '#64748b', fontStyle: 'italic', fontWeight: '400' }}>
-                        No delivery address saved yet. Save an address for 1-click rapid express checkout.
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
-                    Delivery Mobile: <strong style={{ color: '#334155' }}>+91 {defaultAddr?.phone || user.phone || 'Not set'}</strong> {user.email ? `• Email: ${user.email}` : '• (Add email for Resend receipts)'}
-                  </div>
-                </div>
+      {/* TAB 1: OVERVIEW */}
+      {sidebarTab === 'overview' && (
+        <>
+          {/* Top Customer Banner */}
+          <div className="customer-profile-card">
+            <div className="customer-profile-top">
+              <div className="customer-profile-avatar">
+                {user.name ? user.name[0].toUpperCase() : 'U'}
               </div>
 
+              <div className="customer-profile-info">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    {user.name}
+                  </h1>
+                  <span
+                    style={{
+                      background: 'rgba(234, 88, 12, 0.08)',
+                      color: '#ea580c',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      border: '1px solid rgba(234, 88, 12, 0.2)'
+                    }}
+                  >
+                    Customer Account
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '3px 0 0' }}>
+                  {user.phone ? `+91 ${user.phone}` : user.email} • Kozhencherry, Pathanamthitta
+                </p>
+              </div>
+            </div>
+
+            <div className="customer-profile-actions">
               <button
-                type="button"
-                onClick={() => handleOpenAddressModal()}
+                onClick={loadCustomerOrders}
                 style={{
-                  background: '#fff7ed',
-                  border: '1px solid #fdba74',
-                  color: '#c2410c',
-                  padding: '8px 16px',
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
                   borderRadius: '8px',
+                  padding: '9px 14px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={14} />
+                <span>Refresh Status</span>
+              </button>
+
+              <button
+                onClick={handleCustomerLogout}
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#dc2626',
+                  borderRadius: '8px',
+                  padding: '9px 14px',
                   fontSize: '0.82rem',
                   fontWeight: '700',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s ease'
+                  gap: '6px'
                 }}
-                id="btn-edit-customer-address"
+                id="btn-customer-logout"
               >
-                <Edit3 size={14} />
-                <span>{savedList.length > 0 ? `Manage Addresses (${savedList.length})` : '+ Add Delivery Address'}</span>
+                <LogOut size={14} />
+                <span>Sign Out</span>
               </button>
             </div>
-          );
-        })()}
-      </div>
 
-      {/* Orders Heading */}
-      <div className="customer-orders-header">
-        <div>
-          <h2 className="customer-orders-title">
-            Your Placed Orders & Live Status
-          </h2>
-          <p className="customer-orders-subtitle">
-            Real-time tracking for store pickups at Poyanil Building and courier shipments
-          </p>
-        </div>
+            {/* Saved Addresses Bar */}
+            {(() => {
+              const defaultAddr = savedAddressesList.find(a => a.isDefault) || savedAddressesList[0];
 
-        <Link
-          to="/shop"
-          className="customer-shop-more-link"
-        >
-          <span>Shop More Tools</span>
-          <ArrowRight size={14} />
-        </Link>
-      </div>
-
-      {/* Orders List */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
-          Loading your order status...
-        </div>
-      ) : orders.length === 0 ? (
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '16px',
-            padding: '40px 20px',
-            textAlign: 'center'
-          }}
-        >
-          <Package size={40} style={{ color: '#94a3b8', margin: '0 auto 12px' }} />
-          <h3 style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: '700', marginBottom: '6px' }}>
-            No Orders Placed Yet
-          </h3>
-          <p style={{ fontSize: '0.86rem', color: '#64748b', marginBottom: '20px' }}>
-            Browse our heavy duty power tools catalog and place your first order.
-          </p>
-          <Link to="/shop" className="btn-hero-clean">
-            <span>Explore Equipment Catalog</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {orders.map((order) => {
-            const isCancelled = (order.status || '').toLowerCase().includes('cancel') || order.paymentStatus === 'REFUNDED';
-            const isPickup = order.deliveryType === 'store-pickup';
-            const isDispatched = Boolean(order.awb && String(order.awb).trim() !== '') || (order.status || '').toLowerCase().includes('dispatch');
-            const courierCfg = resolveCourierPartner(order.courierPartner);
-
-            // Compute top badge text and colors
-            const hasPendingCancelRequest = Boolean(order.cancellationRequested && order.status !== 'Cancelled');
-
-            let statusBadgeText = 'Order Placed • Processing at Shop';
-            let statusBadgeBg = 'rgba(234, 88, 12, 0.08)';
-            let statusBadgeColor = '#ea580c';
-            let statusBadgeBorder = 'rgba(234, 88, 12, 0.25)';
-
-            if (isCancelled) {
-              statusBadgeText = order.paymentStatus === 'REFUNDED' ? 'Cancelled & Refunded' : 'Order Cancelled';
-              statusBadgeBg = '#fef2f2';
-              statusBadgeColor = '#dc2626';
-              statusBadgeBorder = '#fecaca';
-            } else if (hasPendingCancelRequest) {
-              statusBadgeText = 'Cancellation Requested • Awaiting Approval';
-              statusBadgeBg = '#fffbeb';
-              statusBadgeColor = '#b45309';
-              statusBadgeBorder = '#fde68a';
-            } else if (isPickup) {
-              if (order.handoverVerified || (order.status || '').toLowerCase().includes('completed')) {
-                statusBadgeText = 'Handover Completed';
-                statusBadgeBg = '#ecfdf5';
-                statusBadgeColor = '#16a34a';
-                statusBadgeBorder = '#bbf7d0';
-              } else if ((order.status || '').toLowerCase().includes('ready')) {
-                statusBadgeText = 'Ready for Store Pickup';
-                statusBadgeBg = '#eff6ff';
-                statusBadgeColor = '#0284c7';
-                statusBadgeBorder = '#bae6fd';
-              }
-            } else {
-              if (isDispatched) {
-                statusBadgeText = 'Dispatched via Courier';
-                statusBadgeBg = '#ecfdf5';
-                statusBadgeColor = '#16a34a';
-                statusBadgeBorder = '#bbf7d0';
-              }
-            }
-
-            return (
-              <div
-                key={order.id}
-                className="customer-order-card"
-                id={`customer-order-${order.id}`}
-              >
-                {/* Order Top Line: Order ID & Total Price */}
-                <div className="customer-order-header-row">
-                  <span className="customer-order-id">{order.id}</span>
-                  <span className="customer-order-price">
-                    {formatPrice(order.totalAmount)}
-                  </span>
-                </div>
-
-                {/* Status Badges Row */}
-                <div className="customer-order-badges-row">
-                  <span
-                    style={{
-                      background: statusBadgeBg,
-                      color: statusBadgeColor,
-                      border: `1px solid ${statusBadgeBorder}`,
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      fontSize: '0.74rem',
-                      fontWeight: '800'
-                    }}
-                  >
-                    ● {statusBadgeText}
-                  </span>
-
-                  {/* Payment Status Badge */}
-                  <span
-                    style={{
-                      background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
-                      color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
-                      border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      fontSize: '0.74rem',
-                      fontWeight: '800'
-                    }}
-                  >
-                    {order.paymentStatus === 'REFUNDED'
-                      ? `REFUNDED (${order.refundId || 'UPI'})`
-                      : order.paymentStatus === 'PAID'
-                      ? `PAID (${order.transactionId || 'UPI'})`
-                      : 'PAY AT STORE / COD'}
-                  </span>
-                </div>
-
-                {/* Order Meta Bar */}
-                <div className="customer-order-meta-bar">
-                  <span>
-                    Placed on {new Date(order.date).toLocaleDateString()} at {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <span>
-                    Method: <strong style={{ color: '#0f172a' }}>{order.paymentMethod}</strong>
-                  </span>
-                </div>
-
-                {/* Section A: Cancelled Order View */}
-                {isCancelled ? (
-                  <div
-                    style={{
-                      background: '#fef2f2',
-                      border: '1.5px solid #fecaca',
-                      borderRadius: '12px',
-                      padding: '14px 16px',
-                      marginBottom: '16px'
-                    }}
-                    id={`order-cancelled-box-${order.id}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <XCircle size={18} />
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.7rem', color: '#dc2626', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
-                          Order Status • Cancelled
-                        </span>
-                        <strong style={{ fontSize: '0.94rem', color: '#991b1b', lineHeight: 1.3, display: 'block' }}>
-                          {order.paymentStatus === 'REFUNDED' ? 'Order Cancelled & Full Refund Processed' : 'Order Cancelled'}
-                        </strong>
-                      </div>
-                    </div>
-
-                    <p style={{ fontSize: '0.82rem', color: '#7f1d1d', margin: '0 0 10px', lineHeight: 1.5 }}>
-                      {order.paymentStatus === 'REFUNDED' ? (
-                        <>
-                          Your order has been cancelled. An automatic full refund of <strong>{formatPrice(order.totalAmount)}</strong> was initiated to your original payment method. Depending on your bank/UPI app, it will reflect within 1-2 business days.
-                        </>
-                      ) : (
-                        'This order has been cancelled. No payment was charged.'
-                      )}
-                    </p>
-
-                    {order.refundId && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#047857', background: '#ecfdf5', padding: '5px 10px', borderRadius: '6px', border: '1px solid #a7f3d0', fontFamily: 'var(--font-mono)', fontWeight: '700', marginBottom: '6px', wordBreak: 'break-all', maxWidth: '100%' }}>
-                        <span>⚡ Refund Reference ID: {order.refundId}</span>
-                      </div>
-                    )}
-
-                    {(order.cancellationReason || order.cancellationRequestReason) && (
-                      <div style={{ background: '#ffffff', border: '1.5px solid #fecaca', borderRadius: '8px', padding: '8px 12px', marginTop: '4px', marginBottom: '8px', fontSize: '0.8rem', color: '#991b1b' }}>
-                        <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#b91c1c', fontWeight: '800', display: 'block', marginBottom: '2px' }}>
-                          Cancellation Reason:
-                        </span>
-                        <strong>"{order.cancellationReason || order.cancellationRequestReason}"</strong>
-                      </div>
-                    )}
-
-                    {order.cancelledAt && (
-                      <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
-                        Cancelled on: {new Date(order.cancelledAt).toLocaleDateString()} at {new Date(order.cancelledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    )}
-                  </div>
-                ) : isPickup ? (
-                  <div
-                    style={{
-                      background: order.handoverVerified ? '#f8fafc' : 'linear-gradient(135deg, rgba(234, 88, 12, 0.04) 0%, rgba(234, 88, 12, 0.1) 100%)',
-                      border: order.handoverVerified ? '1px solid #e2e8f0' : '1.5px dashed #ea580c',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      marginBottom: '18px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '12px'
-                    }}
-                  >
+              return (
+                <div style={{
+                  marginTop: '16px',
+                  paddingTop: '16px',
+                  borderTop: '1px solid #f1f5f9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', maxWidth: '720px' }}>
+                    <MapPin size={18} style={{ color: '#ea580c', marginTop: '2px', flexShrink: 0 }} />
                     <div>
-                      <span style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
-                        🏬 Store Counter Pickup Pass
-                      </span>
-                      <p style={{ fontSize: '0.82rem', color: '#475569', margin: '2px 0 6px' }}>
-                        {order.handoverVerified
-                          ? '✅ Handover verified by Poyanil counter staff. Equipment collected.'
-                          : 'Show this 4-digit code at Poyanil Junction counter to collect your tested tools:'}
-                      </p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', color: '#64748b' }}>
-                        <MapPin size={12} style={{ color: '#ea580c' }} />
-                        <span>Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641</span>
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'center', minWidth: '130px' }}>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
-                        {order.handoverVerified ? 'VERIFIED OTP' : 'SECRET OTP'}
-                      </span>
-                      <div
-                        style={{
-                          fontSize: '1.6rem',
-                          fontWeight: '900',
-                          letterSpacing: '0.25em',
-                          color: order.handoverVerified ? '#16a34a' : '#0f172a',
-                          fontFamily: 'var(--font-mono)'
-                        }}
-                      >
-                        {order.pickupOtp}
-                      </div>
-                    </div>
-                  </div>
-                ) : !isDispatched ? (
-                  /* Section B - State 1: Order Placed & Processing at Shop */
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.04) 0%, rgba(234, 88, 12, 0.09) 100%)',
-                      border: '1.5px dashed #ea580c',
-                      borderRadius: '12px',
-                      padding: '18px 20px',
-                      marginBottom: '18px'
-                    }}
-                    id={`order-processing-box-${order.id}`}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                      <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: 'rgba(234, 88, 12, 0.12)', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Clock size={18} />
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '0.72rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
-                          Step 1 of 2 • Order Status
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: '800' }}>
+                          Default Delivery Address & Contact
                         </span>
-                        <strong style={{ fontSize: '0.98rem', color: '#0f172a' }}>
-                          Order Placed • Processing at Shop
-                        </strong>
-                      </div>
-                    </div>
-                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: '0 0 12px', lineHeight: 1.5 }}>
-                      Our workshop technicians at <strong>Poyanil Building, Kozhencherry</strong> are inspecting, testing, and packaging your power tools. Once handed over to the courier partner, your official AWB consignment number and live tracking button will appear right here.
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#64748b', background: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
-                      <MapPin size={14} style={{ color: '#ea580c', flexShrink: 0 }} />
-                      <span>
-                        Destination: <strong>{order.customer?.address || 'Customer Address'}, {order.customer?.district || 'Pathanamthitta'}, Kerala {order.customer?.pincode ? `• PIN: ${order.customer.pincode}` : ''}</strong>
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  /* Section B - State 2: Dispatched via Courier (Delivery Details) */
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.04) 0%, rgba(2, 132, 199, 0.09) 100%)',
-                      border: '1.5px solid #bae6fd',
-                      borderRadius: '12px',
-                      padding: '18px 20px',
-                      marginBottom: '18px'
-                    }}
-                    id={`order-dispatched-box-${order.id}`}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          style={{
-                            minWidth: '36px',
-                            height: '32px',
-                            padding: '0 8px',
-                            borderRadius: '8px',
-                            background: courierCfg.color,
-                            color: '#ffffff',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: '900',
-                            fontSize: '0.75rem',
-                            letterSpacing: '-0.02em',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-                          }}
-                        >
-                          {courierCfg.badge}
-                        </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                              Step 2 of 2 • Delivery Details
-                            </span>
-                          </div>
-                          <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block' }}>
-                            {courierCfg.name}
-                          </strong>
-                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                            Dispatched from Poyanil Building, Kozhencherry, Kerala
+                        {defaultAddr?.addressType && (
+                          <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px' }}>
+                            {defaultAddr.addressType}
                           </span>
-                        </div>
+                        )}
                       </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <div style={{ fontSize: '0.86rem', color: '#0369a1', fontFamily: 'var(--font-mono)', fontWeight: '800', background: '#ffffff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                          AWB: {order.awb}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(order.awb);
-                            setCopiedAwb(order.id);
-                            setTimeout(() => setCopiedAwb(null), 2000);
-                          }}
-                          style={{
-                            fontSize: '0.76rem',
-                            color: copiedAwb === order.id ? '#15803d' : '#334155',
-                            background: copiedAwb === order.id ? '#dcfce7' : '#ffffff',
-                            border: `1px solid ${copiedAwb === order.id ? '#86efac' : '#cbd5e1'}`,
-                            padding: '7px 12px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontWeight: '700'
-                          }}
-                          title="Copy AWB Consignment Code"
-                          id={`btn-copy-awb-${order.id}`}
-                        >
-                          {copiedAwb === order.id ? <Check size={13} /> : <Copy size={13} />}
-                          <span>{copiedAwb === order.id ? 'Copied!' : 'Copy AWB'}</span>
-                        </button>
-
-                        <a
-                          href={courierCfg.trackingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: '0.76rem',
-                            color: '#ffffff',
-                            textDecoration: 'none',
-                            fontWeight: '800',
-                            background: courierCfg.color,
-                            padding: '7px 14px',
-                            borderRadius: '8px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.18)'
-                          }}
-                          title={`Track live on official ${courierCfg.name} portal`}
-                          id={`btn-track-courier-${order.id}`}
-                        >
-                          <span>Track on {courierCfg.badge} Website</span>
-                          <ExternalLink size={13} />
-                        </a>
-                      </div>
-                    </div>
-
-                    <div style={{ background: '#ffffff', borderRadius: '8px', padding: '10px 14px', border: '1px solid #e0f2fe', fontSize: '0.78rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0369a1', fontWeight: '600' }}>
-                        <Truck size={14} />
-                        <span>Live parcel transit movement is tracked directly on the official courier portal using your AWB number above.</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
-                        <MapPin size={14} style={{ color: '#ea580c', flexShrink: 0 }} />
-                        <span>
-                          Delivery Destination: <strong>{order.customer?.address || 'Customer Address'}, {order.customer?.district || 'Pathanamthitta'}, Kerala {order.customer?.pincode ? `• PIN: ${order.customer.pincode}` : ''}</strong>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Cancellation Requested Banner */}
-                {hasPendingCancelRequest && (
-                  <div
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.12) 100%)',
-                      border: '1.5px solid #fde68a',
-                      borderRadius: '12px',
-                      padding: '14px 18px',
-                      marginBottom: '18px',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: '12px'
-                    }}
-                  >
-                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#fef3c7', color: '#b45309', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
-                      <AlertCircle size={18} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <strong style={{ fontSize: '0.9rem', color: '#92400e', display: 'block' }}>
-                        Cancellation Request Submitted
-                      </strong>
-                      <p style={{ fontSize: '0.8rem', color: '#78350f', margin: '2px 0 0', lineHeight: 1.5 }}>
-                        Your cancellation request is being reviewed by the store manager at Variathu Power Tools. You'll see the updated status here once it's processed. If approved, a full refund will be initiated automatically.
-                      </p>
-
-                      {order.cancellationRequestReason && (
-                        <div style={{ marginTop: '8px', padding: '8px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '0.78rem', color: '#92400e' }}>
-                          <span style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#b45309', fontWeight: '800', display: 'block', marginBottom: '2px' }}>
-                            Your Cancellation Reason:
+                      <div style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: '600', marginTop: '3px', lineHeight: '1.4' }}>
+                        {defaultAddr ? (
+                          <span>
+                            <strong>{defaultAddr.name}</strong> • {defaultAddr.address}{defaultAddr.locality ? `, ${defaultAddr.locality}` : ''}{defaultAddr.landmark ? `, Near ${defaultAddr.landmark}` : ''}, {defaultAddr.city || defaultAddr.district} - <strong>{defaultAddr.pincode}</strong>
                           </span>
-                          <strong>"{order.cancellationRequestReason}"</strong>
-                        </div>
-                      )}
-
-                      {order.cancellationRequestedAt && (
-                        <span style={{ fontSize: '0.72rem', color: '#a16207', display: 'block', marginTop: '6px' }}>
-                          Requested on: {new Date(order.cancellationRequestedAt).toLocaleDateString()} at {new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
+                        ) : (
+                          <span style={{ color: '#64748b', fontStyle: 'italic', fontWeight: '400' }}>
+                            No delivery address saved yet. Save an address for 1-click rapid express checkout.
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
+                        Delivery Mobile: <strong style={{ color: '#334155' }}>+91 {defaultAddr?.phone || user.phone || 'Not set'}</strong> {user.email ? `• Email: ${user.email}` : '• (Add email for Resend receipts)'}
+                      </div>
                     </div>
                   </div>
-                )}
-
-                {/* Items in Order */}
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', marginBottom: '16px' }}>
-                  <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '10px', letterSpacing: '0.03em' }}>
-                    Ordered Equipment ({order.items?.length})
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {order.items?.map((item, idx) => (
-                      <div key={idx} className="customer-order-item-row">
-                        <a
-                          href={`/product/${item.product || item.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="customer-order-item-link"
-                          title="View product details"
-                        >
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="customer-order-item-img"
-                            onError={(e) => {
-                              e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
-                            }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <h4 className="customer-order-item-name">{item.name}</h4>
-                            <span className="customer-order-item-sub">Quantity: {item.quantity}</span>
-                          </div>
-                        </a>
-
-                        <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)', flexShrink: 0, paddingLeft: '8px' }}>
-                          {formatPrice(item.price * item.quantity)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Bottom Action Buttons: GST Invoice & WhatsApp & Cancel Order */}
-                <div className="customer-order-actions-bar">
-                  {/* Cancel / Request Cancellation button */}
-                  {!isCancelled && !hasPendingCancelRequest && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenCustomerCancelModal(order)}
-                      style={{
-                        background: isDispatched ? '#fffbeb' : '#ffffff',
-                        border: `1px solid ${isDispatched ? '#fde68a' : '#fecaca'}`,
-                        color: isDispatched ? '#b45309' : '#dc2626',
-                        padding: '8px 14px',
-                        borderRadius: '8px',
-                        fontSize: '0.82rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                      title={isDispatched ? 'Request cancellation for dispatched order (requires store approval)' : 'Cancel order and get immediate automatic refund if paid online'}
-                      id={`btn-customer-cancel-${order.id}`}
-                    >
-                      {isDispatched ? <AlertCircle size={15} /> : <XCircle size={15} />}
-                      <span>{isDispatched ? 'Request Cancellation' : 'Cancel Order'}</span>
-                    </button>
-                  )}
 
                   <button
                     type="button"
-                    onClick={() => setInvoiceOrder(order)}
+                    onClick={() => handleOpenAddressModal()}
                     style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#0f172a',
-                      padding: '8px 14px',
+                      background: '#fff7ed',
+                      border: '1px solid #fdba74',
+                      color: '#c2410c',
+                      padding: '8px 16px',
                       borderRadius: '8px',
                       fontSize: '0.82rem',
                       fontWeight: '700',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '6px',
+                      transition: 'all 0.2s ease'
                     }}
-                    title="Download Official GST B2C Tax Invoice (18% GST itemized breakdown)"
-                    id={`btn-customer-invoice-${order.id}`}
+                    id="btn-edit-customer-address"
                   >
-                    <FileText size={15} style={{ color: '#ea580c' }} />
-                    <span>GST Tax Invoice</span>
+                    <Edit3 size={14} />
+                    <span>{savedAddressesList.length > 0 ? `Manage Addresses (${savedAddressesList.length})` : '+ Add Delivery Address'}</span>
                   </button>
+                </div>
+              );
+            })()}
+          </div>
 
-                  <a
-                    href={`https://wa.me/919447123456?text=${encodeURIComponent(`Hello Variathu Power Tools, I have a query about my order ${order.id}.`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+          {/* Quick Account Summary Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fff7ed', color: '#ea580c', display: 'grid', placeContent: 'center' }}>
+                <Package size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Orders</span>
+                <h4 style={{ fontSize: '1.28rem', fontWeight: '900', color: '#0f172a', margin: '2px 0 0' }}>{orders.length}</h4>
+              </div>
+            </div>
+
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#eff6ff', color: '#0284c7', display: 'grid', placeContent: 'center' }}>
+                <Clock size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>In Shop / Active</span>
+                <h4 style={{ fontSize: '1.28rem', fontWeight: '900', color: '#0f172a', margin: '2px 0 0' }}>
+                  {orders.filter(o => !o.status?.toLowerCase().includes('cancel') && !o.handoverVerified && !o.status?.toLowerCase().includes('completed')).length}
+                </h4>
+              </div>
+            </div>
+
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'grid', placeContent: 'center' }}>
+                <MapPin size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Saved Locations</span>
+                <h4 style={{ fontSize: '1.28rem', fontWeight: '900', color: '#0f172a', margin: '2px 0 0' }}>{savedAddressesList.length}</h4>
+              </div>
+            </div>
+          </div>
+
+          {/* HoverDevCards Navigation Section (Variathu Brand Colours) */}
+          <div style={{ marginTop: '24px', marginBottom: '28px' }}>
+            <div style={{ marginBottom: '12px' }}>
+              <h3 style={{ fontSize: '1.12rem', fontWeight: '800', color: '#0f172a', margin: '0 0 3px' }}>
+                Account Services & Navigation
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
+                Direct access to your purchases, delivery destinations, catalog, and Kozhencherry support:
+              </p>
+            </div>
+
+            <div className="hover-dev-cards-grid">
+              <HoverDevCard
+                title="Ordered Products"
+                subtitle={`${orders.length} orders placed • Live tracking & invoices`}
+                Icon={Package}
+                badge={`${orders.length} Orders`}
+                onClick={() => setSidebarTab('orders')}
+              />
+              <HoverDevCard
+                title="Saved Addresses"
+                subtitle={`${savedAddressesList.length} saved delivery destinations in Kerala`}
+                Icon={MapPin}
+                badge={`${savedAddressesList.length} Saved`}
+                onClick={() => setSidebarTab('addresses')}
+              />
+              <HoverDevCard
+                title="Profile & Contact"
+                subtitle={`${user.name || 'Customer'} • +91 ${user.phone || 'Manage info'}`}
+                Icon={User}
+                badge="Verified"
+                onClick={() => {
+                  setModalTab('profile');
+                  setShowAddressModal(true);
+                }}
+              />
+              <HoverDevCard
+                title="Shop Equipment"
+                subtitle="Explore heavy duty power tools & workshop gear"
+                Icon={ShoppingBag}
+                badge="Catalog"
+                onClick={() => navigate('/shop')}
+              />
+              <HoverDevCard
+                title="WhatsApp Support"
+                subtitle="Direct chat with Poyanil Junction counter staff"
+                Icon={MessageCircle}
+                badge="Online"
+                onClick={() => window.open('https://wa.me/919447123456', '_blank')}
+              />
+              <HoverDevCard
+                title="Refresh Status"
+                subtitle="Sync real-time order tracking & shipments"
+                Icon={RefreshCw}
+                badge="Live Sync"
+                onClick={loadCustomerOrders}
+              />
+            </div>
+          </div>
+
+          {/* Latest Order Preview */}
+          <div style={{ marginTop: '30px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 3px' }}>
+                  Latest Order Activity
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
+                  Quick glimpse of your most recent order placed at Variathu Power Tools
+                </p>
+              </div>
+
+              {orders.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarTab('orders')}
+                  className="customer-shop-more-link"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#ea580c', fontWeight: '700', fontSize: '0.84rem' }}
+                >
+                  <span>View All Ordered Products ({orders.length})</span>
+                  <ArrowRight size={14} />
+                </button>
+              )}
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                Loading your latest order status...
+              </div>
+            ) : orders.length === 0 ? (
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '40px 20px', textAlign: 'center' }}>
+                <Package size={40} style={{ color: '#94a3b8', margin: '0 auto 12px' }} />
+                <h4 style={{ fontSize: '1.05rem', color: '#0f172a', fontWeight: '700', marginBottom: '6px' }}>No Orders Placed Yet</h4>
+                <p style={{ fontSize: '0.84rem', color: '#64748b', marginBottom: '18px' }}>
+                  Browse our heavy duty power tools catalog and place your first order.
+                </p>
+                <Link to="/shop" className="btn-hero-clean">
+                  <span>Explore Equipment Catalog</span>
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            ) : (
+              renderOrderProductCard(orders[0])
+            )}
+          </div>
+        </>
+      )}
+
+      {/* TAB 2: ORDERED PRODUCTS */}
+      {sidebarTab === 'orders' && (
+        <>
+          {/* Orders Heading */}
+          <div className="customer-orders-header">
+            <div>
+              <h2 className="customer-orders-title">
+                Your Ordered Products & Live Status
+              </h2>
+              <p className="customer-orders-subtitle">
+                Showing all {orders.length} orders. Click any product card to view full delivery pass, courier tracking, GST invoice, and cancellation.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {orders.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleExpandAllOrders}
                     style={{
                       background: '#ffffff',
                       border: '1px solid #cbd5e1',
-                      color: '#15803d',
-                      padding: '8px 14px',
+                      color: '#334155',
                       borderRadius: '8px',
-                      fontSize: '0.82rem',
+                      padding: '6px 12px',
+                      fontSize: '0.78rem',
                       fontWeight: '700',
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
+                      cursor: 'pointer'
                     }}
-                    id={`btn-customer-whatsapp-${order.id}`}
                   >
-                    <MessageCircle size={15} />
-                    <span>WhatsApp Shop</span>
-                  </a>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                    Expand All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCollapseAllOrders}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Collapse All
+                  </button>
+                </>
+              )}
+
+              <Link to="/shop" className="customer-shop-more-link">
+                <span>Shop More Tools</span>
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+
+          {/* Orders List */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '50px', color: '#64748b' }}>
+              Loading your ordered products...
+            </div>
+          ) : orders.length === 0 ? (
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '16px',
+                padding: '40px 20px',
+                textAlign: 'center'
+              }}
+            >
+              <Package size={40} style={{ color: '#94a3b8', margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: '700', marginBottom: '6px' }}>
+                No Orders Placed Yet
+              </h3>
+              <p style={{ fontSize: '0.86rem', color: '#64748b', marginBottom: '20px' }}>
+                Browse our heavy duty power tools catalog and place your first order.
+              </p>
+              <Link to="/shop" className="btn-hero-clean">
+                <span>Explore Equipment Catalog</span>
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          ) : (
+            <div>
+              {orders.map((order) => renderOrderProductCard(order))}
+            </div>
+          )}
+        </>
       )}
+
+      {/* TAB 3: SAVED ADDRESSES */}
+      {sidebarTab === 'addresses' && (
+        <>
+          <div className="customer-orders-header">
+            <div>
+              <h2 className="customer-orders-title">
+                Saved Delivery Addresses
+              </h2>
+              <p className="customer-orders-subtitle">
+                Manage delivery destinations for rapid 1-click express checkout on Variathu Power Tools.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleStartAddAddress}
+                style={{
+                  background: 'linear-gradient(135deg, #dc2626 0%, #ea580c 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Plus size={15} />
+                <span>Add New Address</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSidebarTab('overview')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#334155',
+                  borderRadius: '8px',
+                  padding: '8px 14px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Back to Overview
+              </button>
+            </div>
+          </div>
+
+          {savedAddressesList.length === 0 ? (
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '40px 20px', textAlign: 'center' }}>
+              <MapPin size={40} style={{ color: '#94a3b8', margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: '700', marginBottom: '6px' }}>
+                No Delivery Addresses Saved Yet
+              </h3>
+              <p style={{ fontSize: '0.86rem', color: '#64748b', marginBottom: '20px' }}>
+                Save your job site, workshop, or home address for rapid express checkout.
+              </p>
+              <button
+                type="button"
+                onClick={handleStartAddAddress}
+                style={{
+                  background: '#ea580c',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 18px',
+                  fontSize: '0.88rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                + Add Delivery Address
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              {savedAddressesList.map((addr) => (
+                <div
+                  key={addr.id || addr._id}
+                  style={{
+                    background: '#ffffff',
+                    border: addr.isDefault ? '2px solid #ea580c' : '1px solid #e2e8f0',
+                    borderRadius: '14px',
+                    padding: '18px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                        {addr.addressType || 'HOME'}
+                      </span>
+                      {addr.isDefault && (
+                        <span style={{ background: '#ecfdf5', color: '#16a34a', border: '1px solid #bbf7d0', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '6px' }}>
+                          Default Address
+                        </span>
+                      )}
+                    </div>
+                    <h4 style={{ fontSize: '0.98rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                      {addr.name}
+                    </h4>
+                    <p style={{ fontSize: '0.84rem', color: '#475569', margin: '0 0 6px', lineHeight: 1.45 }}>
+                      {addr.address}{addr.locality ? `, ${addr.locality}` : ''}{addr.landmark ? `, Near ${addr.landmark}` : ''}, {addr.city || addr.district} - <strong>{addr.pincode}</strong>
+                    </p>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      Phone: <strong style={{ color: '#0f172a' }}>+91 {addr.phone}</strong>
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                    {!addr.isDefault && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetDefaultAddress(addr.id || addr._id)}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          color: '#334155',
+                          borderRadius: '6px',
+                          padding: '6px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Set Default
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleStartEditAddress(addr)}
+                      style={{
+                        background: '#fff7ed',
+                        border: '1px solid #fed7aa',
+                        color: '#ea580c',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteAddress(addr.id || addr._id)}
+                      style={{
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#dc2626',
+                        borderRadius: '6px',
+                        padding: '6px 10px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
 
       {/* GST Invoice Modal */}
       {invoiceOrder && (
