@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import GstInvoiceModal from '../components/GstInvoiceModal';
+import DashboardSidebar from '../components/DashboardSidebar';
 
 export const resolveCourierPartner = (courierName = '') => {
   const c = (courierName || '').toLowerCase();
@@ -464,10 +465,133 @@ export const CustomerAccountPage = () => {
     return `https://wa.me/919447123456?text=${text}`;
   };
 
+  const [sidebarTab, setSidebarTab] = useState('orders');
+
   if (!user) return null;
 
+  const savedAddressesList = (user.savedAddresses && user.savedAddresses.length > 0)
+    ? user.savedAddresses
+    : (user.address ? [{
+        id: 'default-1',
+        name: user.name,
+        phone: user.phone,
+        address: user.address,
+        district: user.district || 'Pathanamthitta',
+        state: user.state || 'Kerala',
+        pincode: user.pincode || '689641',
+        landmark: user.landmark || '',
+        addressType: 'HOME',
+        isDefault: true
+      }] : []);
+
+  const customerSidebarItems = [
+    {
+      id: 'orders',
+      title: `Placed Orders${orders.length > 0 ? ` (${orders.length})` : ''}`,
+      icon: ShoppingBag,
+      selected: sidebarTab === 'orders',
+      notifs: orders.length > 0 ? orders.length : undefined,
+      notifsColor: '#ea580c',
+      onClick: () => setSidebarTab('orders')
+    },
+    {
+      id: 'addresses',
+      title: `Saved Addresses${savedAddressesList.length > 0 ? ` (${savedAddressesList.length})` : ''}`,
+      icon: MapPin,
+      selected: sidebarTab === 'addresses',
+      notifs: savedAddressesList.length > 0 ? savedAddressesList.length : undefined,
+      notifsColor: '#0284c7',
+      onClick: () => {
+        setSidebarTab('addresses');
+        handleOpenAddressModal();
+      }
+    },
+    {
+      id: 'shop',
+      title: 'Shop Equipment',
+      icon: Package,
+      onClick: () => navigate('/shop')
+    },
+    {
+      id: 'refresh',
+      title: 'Refresh Status',
+      icon: RefreshCw,
+      onClick: loadCustomerOrders
+    }
+  ];
+
+  const customerBottomNavItems = [
+    {
+      id: 'whatsapp',
+      title: 'WhatsApp Support',
+      icon: MessageCircle,
+      onClick: () => window.open('https://wa.me/919447123456', '_blank')
+    },
+    {
+      id: 'view-site',
+      title: 'Home / Store',
+      icon: Home,
+      onClick: () => navigate('/')
+    },
+    {
+      id: 'sign-out',
+      title: 'Sign Out',
+      icon: LogOut,
+      variant: 'danger',
+      onClick: () => {
+        logout();
+        navigate('/');
+      }
+    }
+  ];
+
   return (
-    <div className="customer-page-wrapper">
+    <div
+      className="customer-dashboard-shell"
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        backgroundColor: '#f8fafc',
+        position: 'relative'
+      }}
+    >
+      <DashboardSidebar
+        title={user.name || 'Valued Customer'}
+        subtitle="Customer Account"
+        logo={
+          <div
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+              color: '#ffffff',
+              display: 'grid',
+              placeContent: 'center',
+              fontWeight: '800',
+              fontSize: '1rem',
+              boxShadow: '0 4px 10px rgba(234, 88, 12, 0.25)',
+              flexShrink: 0
+            }}
+          >
+            {user.name ? user.name[0].toUpperCase() : 'U'}
+          </div>
+        }
+        items={customerSidebarItems}
+        bottomItems={customerBottomNavItems}
+        onTitleClick={() => handleOpenAddressModal()}
+      />
+
+      <div
+        className="customer-dashboard-main-area"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          padding: '24px 32px',
+          overflowX: 'hidden'
+        }}
+      >
+        <div className="customer-page-wrapper" style={{ margin: '0 auto', maxWidth: '1020px' }}>
       {/* Top Customer Banner */}
       <div className="customer-profile-card">
         <div className="customer-profile-top">
@@ -1994,6 +2118,8 @@ export const CustomerAccountPage = () => {
           <span>{cancelFeedback}</span>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 };

@@ -5569,3 +5569,25 @@ header.main-site-header {
   }
 }
 
+/* ==========================================================================
+   Dashboard Sidebar & Two-Column Layout (Store Owner & Customer Portals)
+   ========================================================================== */
+.dashboard-sidebar-nav {
+  user-select: none;
+}
+
+.dashboard-sidebar-nav ::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dashboard-sidebar-nav ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .store-dashboard-main-area,
+  .customer-dashboard-main-area {
+    padding: 16px 12px !important;
+  }
+}

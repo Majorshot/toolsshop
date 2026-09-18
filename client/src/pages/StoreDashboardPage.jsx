@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
 import GstInvoiceModal from '../components/GstInvoiceModal';
+import DashboardSidebar from '../components/DashboardSidebar';
 
 const STATUS_OPTIONS = [
   'Order Placed',
@@ -1701,8 +1702,122 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   if (!user) return null;
 
+  const sidebarNavItems = [
+    {
+      id: 'orders',
+      title: `Customer Orders${orderCounts.all > 0 ? ` (${orderCounts.all})` : ''}`,
+      icon: ShoppingBag,
+      notifs: orderCounts.undispatched > 0 ? orderCounts.undispatched : undefined,
+      notifsColor: '#ea580c',
+      selected: activeTab === 'orders',
+      onClick: () => setActiveTab('orders')
+    },
+    {
+      id: 'cancellations',
+      title: 'Cancel Requests',
+      icon: Ban,
+      notifs: pendingCancellationRequests.length > 0 ? pendingCancellationRequests.length : undefined,
+      notifsColor: '#dc2626',
+      selected: activeTab === 'cancellations',
+      onClick: () => setActiveTab('cancellations')
+    },
+    {
+      id: 'customers',
+      title: `Customers (${customers.length})`,
+      icon: Users,
+      selected: activeTab === 'customers',
+      onClick: () => setActiveTab('customers')
+    },
+    {
+      id: 'inventory',
+      title: `Inventory (${products.length})`,
+      icon: Package,
+      notifs: lowStockCount > 0 ? `${lowStockCount} low` : undefined,
+      notifsColor: '#ea580c',
+      selected: activeTab === 'inventory',
+      onClick: () => setActiveTab('inventory')
+    },
+    {
+      id: 'coupons',
+      title: `Coupons (${coupons.length})`,
+      icon: Tag,
+      selected: activeTab === 'coupons',
+      onClick: () => setActiveTab('coupons')
+    },
+    {
+      id: 'repairs',
+      title: `Repairs (${repairs.length})`,
+      icon: Wrench,
+      selected: activeTab === 'repairs',
+      onClick: () => setActiveTab('repairs')
+    },
+    {
+      id: 'taxonomy',
+      title: 'Categories & Brands',
+      icon: Layers,
+      selected: activeTab === 'taxonomy',
+      onClick: () => setActiveTab('taxonomy')
+    }
+  ];
+
+  const sidebarBottomNavItems = [
+    {
+      id: 'analytics-toggle',
+      title: analyticsCollapsed ? 'Open Analytics' : 'Collapse Analytics',
+      icon: BarChart3,
+      selected: !analyticsCollapsed,
+      onClick: () => {
+        const next = !analyticsCollapsed;
+        setAnalyticsCollapsed(next);
+        localStorage.setItem('vpt_analytics_collapsed', String(next));
+      }
+    },
+    {
+      id: 'view-site',
+      title: 'View Site',
+      icon: Globe,
+      onClick: () => navigate('/')
+    },
+    {
+      id: 'sign-out',
+      title: 'Sign Out',
+      icon: LogOut,
+      variant: 'danger',
+      onClick: () => {
+        logout();
+        navigate('/');
+      }
+    }
+  ];
+
   return (
-    <div className="store-dashboard-wrapper">
+    <div
+      className="store-dashboard-shell"
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        backgroundColor: '#f8fafc',
+        position: 'relative'
+      }}
+    >
+      <DashboardSidebar
+        title="Variathu Store"
+        subtitle="Store Owner Portal"
+        items={sidebarNavItems}
+        bottomItems={sidebarBottomNavItems}
+        onTitleClick={() => navigate('/')}
+      />
+
+      <div
+        className="store-dashboard-main-area"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          padding: '24px 28px',
+          overflowX: 'hidden'
+        }}
+      >
+        <div className="store-dashboard-wrapper">
       {/* Toast Notification */}
       {notification && (
         <div
@@ -7857,6 +7972,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           }
         }
       `}</style>
+        </div>
+      </div>
     </div>
   );
 };
