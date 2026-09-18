@@ -180,7 +180,11 @@ export const SidebarOption = ({
           color: selected ? "#dc2626" : isDanger ? "#ef4444" : "#64748b"
         }}
       >
-        {typeof Icon === "function" ? <Icon /> : Icon}
+        {React.isValidElement(Icon) ? (
+          Icon
+        ) : Icon ? (
+          React.createElement(Icon, { size: 18 })
+        ) : null}
       </motion.div>
 
       {open && (
