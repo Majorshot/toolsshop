@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import Barcode from '../components/Barcode';
 import GstInvoiceModal from '../components/GstInvoiceModal';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { useConfirm, SpringModal } from '../components/SpringModal';
 
 const STATUS_OPTIONS = [
   'Order Placed',
@@ -75,7 +76,23 @@ export const resolveCourierConfig = (partnerName = '') => {
 
 export const StoreDashboardPage = ({ onProductUpdated }) => {
   const { user, logout } = useAuth();
+  const { confirm } = useConfirm();
   const navigate = useNavigate();
+
+  const handleStoreLogout = () => {
+    confirm({
+      title: "Sign Out of Store?",
+      description: "Are you sure you want to sign out? You will need your store master PIN to log back in to the portal.",
+      confirmText: "Sign Out",
+      cancelText: "Stay Signed In",
+      variant: "danger",
+      iconType: "logout",
+      onConfirm: () => {
+        logout();
+        navigate('/');
+      }
+    });
+  };
 
   // Drag-to-scroll for tabs bar
   const tabsBarRef = useRef(null);
@@ -1150,16 +1167,25 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
-  const handleDeleteCoupon = async (coupon) => {
-    if (!window.confirm(`Are you sure you want to delete coupon code "${coupon.code}"?`)) return;
-    try {
-      const targetId = coupon.id || coupon._id;
-      await api.deleteCoupon(targetId);
-      showNotification(`Coupon "${coupon.code}" deleted.`);
-      loadCoupons();
-    } catch (err) {
-      showNotification(`Error: ${err.message}`);
-    }
+  const handleDeleteCoupon = (coupon) => {
+    confirm({
+      title: `Delete Coupon "${coupon.code}"?`,
+      description: "Customers will no longer be able to use this promotional discount code at checkout. This cannot be undone.",
+      confirmText: "Delete Coupon",
+      cancelText: "Keep Coupon",
+      variant: "danger",
+      iconType: "trash",
+      onConfirm: async () => {
+        try {
+          const targetId = coupon.id || coupon._id;
+          await api.deleteCoupon(targetId);
+          showNotification(`Coupon "${coupon.code}" deleted.`);
+          loadCoupons();
+        } catch (err) {
+          showNotification(`Error: ${err.message}`);
+        }
+      }
+    });
   };
 
   const handleSaveCoupon = async (e) => {
@@ -1279,16 +1305,25 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
-  const handleDeleteRepair = async (job) => {
-    if (!window.confirm(`Delete repair card #${job.jobId} for "${job.toolModel}"?`)) return;
-    try {
-      const targetId = job.id || job.jobId || job._id;
-      await api.deleteRepairJob(targetId);
-      showNotification(`Repair #${job.jobId} deleted.`);
-      loadRepairs();
-    } catch (err) {
-      showNotification(`Error: ${err.message}`);
-    }
+  const handleDeleteRepair = (job) => {
+    confirm({
+      title: `Delete Repair #${job.jobId}?`,
+      description: `Are you sure you want to permanently delete service job #${job.jobId} for "${job.toolModel}"?`,
+      confirmText: "Delete Record",
+      cancelText: "Cancel",
+      variant: "danger",
+      iconType: "trash",
+      onConfirm: async () => {
+        try {
+          const targetId = job.id || job.jobId || job._id;
+          await api.deleteRepairJob(targetId);
+          showNotification(`Repair #${job.jobId} deleted.`);
+          loadRepairs();
+        } catch (err) {
+          showNotification(`Error: ${err.message}`);
+        }
+      }
+    });
   };
 
   const getWhatsAppRepairText = (job) => {
@@ -1783,10 +1818,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       title: 'Sign Out',
       icon: LogOut,
       variant: 'danger',
-      onClick: () => {
-        logout();
-        navigate('/');
-      }
+      onClick: handleStoreLogout
     }
   ];
 
@@ -1870,7 +1902,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
 
         <button
-          onClick={() => { logout(); navigate('/'); }}
+          onClick={handleStoreLogout}
           className="store-logout-btn"
           id="btn-store-logout"
         >
@@ -5405,127 +5437,41 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
       )}
 
-      {/* CUSTOM IN-APP CONFIRMATION MODAL FOR DELETING A PRODUCT */}
-      {productToDelete && (
-        <div
-          className="modal-overlay"
-          onClick={() => !isDeleting && setProductToDelete(null)}
-          style={{ zIndex: 1100 }}
-        >
-          <div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '440px', padding: '28px 24px', textAlign: 'center' }}
-            id="modal-delete-confirm"
-          >
-            <div
-              style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                background: '#fef2f2',
-                border: '2px solid #fecaca',
-                color: '#dc2626',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 16px'
-              }}
-            >
-              <Trash2 size={28} />
-            </div>
-
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
-              Delete Equipment?
-            </h3>
-
-            <p style={{ fontSize: '0.86rem', color: '#64748b', lineHeight: 1.5, marginBottom: '20px' }}>
-              Are you sure you want to delete this tool? It will be permanently removed from the live online catalog.
-            </p>
-
-            {/* Preview Box */}
-            <div
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '10px',
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                textAlign: 'left',
-                marginBottom: '24px'
-              }}
-            >
+      {/* SPRING CONFIRMATION MODAL FOR DELETING A PRODUCT */}
+      <SpringModal
+        isOpen={Boolean(productToDelete)}
+        setIsOpen={(open) => !open && !isDeleting && setProductToDelete(null)}
+        title="Delete Equipment?"
+        description="Are you sure you want to delete this tool? It will be permanently removed from the live online catalog and inventory database."
+        confirmText={isDeleting ? 'Deleting...' : 'Delete Permanently'}
+        cancelText="Cancel"
+        variant="danger"
+        iconType="trash"
+        itemPreview={
+          productToDelete && (
+            <>
               <img
                 src={productToDelete.image}
                 alt={productToDelete.name}
-                style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover', background: '#ffffff', border: '1px solid #cbd5e1' }}
+                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover', background: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.3)' }}
               />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#ea580c', textTransform: 'uppercase' }}>
+              <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#fef08a', textTransform: 'uppercase', display: 'block' }}>
                   {productToDelete.brand} • {productToDelete.category}
                 </span>
-                <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {productToDelete.name}
                 </div>
-                <div style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                <div style={{ fontSize: '0.84rem', fontWeight: '800', color: '#fef08a', fontFamily: 'var(--font-mono)' }}>
                   {formatPrice(productToDelete.price)}
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setProductToDelete(null)}
-                disabled={isDeleting}
-                style={{
-                  flex: 1,
-                  padding: '11px 16px',
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  fontSize: '0.86rem',
-                  fontWeight: '700',
-                  color: '#475569',
-                  cursor: 'pointer'
-                }}
-                id="btn-cancel-delete"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                style={{
-                  flex: 1,
-                  padding: '11px 16px',
-                  background: '#dc2626',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '0.86rem',
-                  fontWeight: '700',
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
-                }}
-                id="btn-confirm-delete"
-              >
-                <Trash2 size={16} />
-                <span>{isDeleting ? 'Deleting...' : 'Delete Permanently'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </>
+          )
+        }
+        onConfirm={handleConfirmDelete}
+        onCancel={() => !isDeleting && setProductToDelete(null)}
+      />
 
       {/* SAFETY WARNING MODAL FOR DELETING A BRAND */}
       {brandToDelete && (

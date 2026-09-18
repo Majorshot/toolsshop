@@ -10,6 +10,7 @@ import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { useConfirm } from '../components/SpringModal';
 
 const KERALA_DISTRICTS = [
   'Pathanamthitta',
@@ -47,6 +48,7 @@ export const CheckoutPage = () => {
     updateQuantity,
     removeFromCart
   } = useCart();
+  const { confirm } = useConfirm();
 
   const isCustomerLoggedIn = isLoggedIn && user && user.role === 'customer';
 
@@ -374,25 +376,34 @@ export const CheckoutPage = () => {
   };
 
   // Delete a saved address
-  const handleDeleteSavedAddress = async (e, addressId) => {
+  const handleDeleteSavedAddress = (e, addressId) => {
     e.stopPropagation();
-    if (!window.confirm("Remove this saved address from your account?")) return;
-    try {
-      if (user && (user.id || user._id)) {
-        const res = await api.deleteCustomerAddress(user.id || user._id, addressId);
-        if (res.success && res.data) {
-          updateUser(res.data);
-          const remaining = res.data.savedAddresses || [];
-          if (remaining.length > 0) {
-            handleSelectSavedAddress(remaining[0]);
-          } else {
-            setIsAddingNewAddress(true);
+    confirm({
+      title: "Remove Saved Address?",
+      description: "Are you sure you want to remove this delivery address from your account? This action cannot be undone.",
+      confirmText: "Remove Address",
+      cancelText: "Keep Address",
+      variant: "danger",
+      iconType: "trash",
+      onConfirm: async () => {
+        try {
+          if (user && (user.id || user._id)) {
+            const res = await api.deleteCustomerAddress(user.id || user._id, addressId);
+            if (res.success && res.data) {
+              updateUser(res.data);
+              const remaining = res.data.savedAddresses || [];
+              if (remaining.length > 0) {
+                handleSelectSavedAddress(remaining[0]);
+              } else {
+                setIsAddingNewAddress(true);
+              }
+            }
           }
+        } catch (err) {
+          console.warn("Delete address notice:", err.message);
         }
       }
-    } catch (err) {
-      console.warn("Delete address notice:", err.message);
-    }
+    });
   };
 
   // ============================================================
@@ -614,22 +625,31 @@ export const CheckoutPage = () => {
   };
 
   // Delete Address from inside Modal
-  const handleModalDeleteAddress = async (e, addressId) => {
+  const handleModalDeleteAddress = (e, addressId) => {
     e.stopPropagation();
-    if (!window.confirm("Remove this saved address from your account?")) return;
-    try {
-      const customerId = user?.id || user?._id;
-      const res = await api.deleteCustomerAddress(customerId, addressId);
-      if (res.success && res.data) {
-        updateUser(res.data);
-        const remaining = res.data.savedAddresses || [];
-        if (remaining.length > 0) {
-          handleSelectAndDeliverFromModal(remaining[0]);
+    confirm({
+      title: "Remove Saved Address?",
+      description: "Are you sure you want to remove this delivery address from your account? This action cannot be undone.",
+      confirmText: "Remove Address",
+      cancelText: "Keep Address",
+      variant: "danger",
+      iconType: "trash",
+      onConfirm: async () => {
+        try {
+          const customerId = user?.id || user?._id;
+          const res = await api.deleteCustomerAddress(customerId, addressId);
+          if (res.success && res.data) {
+            updateUser(res.data);
+            const remaining = res.data.savedAddresses || [];
+            if (remaining.length > 0) {
+              handleSelectAndDeliverFromModal(remaining[0]);
+            }
+          }
+        } catch (err) {
+          console.warn("Delete address failed:", err.message);
         }
       }
-    } catch (err) {
-      console.warn("Delete address failed:", err.message);
-    }
+    });
   };
 
   // Customer Account Sign-In / Register (Main Account Identifier)

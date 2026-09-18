@@ -19,6 +19,7 @@ import { api } from './services/api';
 import { CheckCircle, MessageCircle } from 'lucide-react';
 import AnimatedContent from './components/AnimatedContent';
 import SlideInNotifications from './components/SlideInNotifications';
+import { ConfirmationProvider } from './components/SpringModal';
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -324,7 +325,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <MainApp />
+          <ConfirmationProvider>
+            <MainApp />
+          </ConfirmationProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

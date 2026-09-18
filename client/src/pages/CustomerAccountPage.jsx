@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import GstInvoiceModal from '../components/GstInvoiceModal';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { useConfirm } from '../components/SpringModal';
 
 export const resolveCourierPartner = (courierName = '') => {
   const c = (courierName || '').toLowerCase();
@@ -47,7 +48,23 @@ export const resolveCourierPartner = (courierName = '') => {
 
 export const CustomerAccountPage = () => {
   const { user, logout, updateUser } = useAuth();
+  const { confirm } = useConfirm();
   const navigate = useNavigate();
+
+  const handleCustomerLogout = () => {
+    confirm({
+      title: "Sign Out of Account?",
+      description: "Are you sure you want to sign out? You will need your mobile phone number to log back into your account.",
+      confirmText: "Sign Out",
+      cancelText: "Stay Signed In",
+      variant: "danger",
+      iconType: "logout",
+      onConfirm: () => {
+        logout();
+        navigate('/');
+      }
+    });
+  };
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copiedAwb, setCopiedAwb] = useState(null);
@@ -310,19 +327,28 @@ export const CustomerAccountPage = () => {
   };
 
   // Delete Address
-  const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm("Are you sure you want to delete this delivery address?")) return;
-    try {
-      const customerId = user?.id || user?._id || user?.phone;
-      const res = await api.deleteCustomerAddress(customerId, addressId);
-      if (res.data) {
-        updateUser(res.data);
-        setAddressFeedback('Delivery address removed.');
-        setTimeout(() => setAddressFeedback(null), 4000);
+  const handleDeleteAddress = (addressId) => {
+    confirm({
+      title: "Delete Delivery Address?",
+      description: "Are you sure you want to delete this delivery address? This action cannot be undone.",
+      confirmText: "Delete Address",
+      cancelText: "Keep Address",
+      variant: "danger",
+      iconType: "trash",
+      onConfirm: async () => {
+        try {
+          const customerId = user?.id || user?._id || user?.phone;
+          const res = await api.deleteCustomerAddress(customerId, addressId);
+          if (res.data) {
+            updateUser(res.data);
+            setAddressFeedback('Delivery address removed.');
+            setTimeout(() => setAddressFeedback(null), 4000);
+          }
+        } catch (err) {
+          alert(`Failed to delete address: ${err.message}`);
+        }
       }
-    } catch (err) {
-      alert(`Failed to delete address: ${err.message}`);
-    }
+    });
   };
 
   // Save Profile Info
@@ -538,10 +564,7 @@ export const CustomerAccountPage = () => {
       title: 'Sign Out',
       icon: LogOut,
       variant: 'danger',
-      onClick: () => {
-        logout();
-        navigate('/');
-      }
+      onClick: handleCustomerLogout
     }
   ];
 
@@ -646,7 +669,7 @@ export const CustomerAccountPage = () => {
           </button>
 
           <button
-            onClick={() => { logout(); navigate('/'); }}
+            onClick={handleCustomerLogout}
             style={{
               background: '#fef2f2',
               border: '1px solid #fecaca',

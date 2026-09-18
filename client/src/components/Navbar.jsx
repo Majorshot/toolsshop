@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirm } from './SpringModal';
 
 export const Navbar = ({
   onOpenStoreModal,
@@ -27,10 +28,31 @@ export const Navbar = ({
 }) => {
   const { totalItemsCount } = useCart();
   const { user, isLoggedIn, isStoreOwner, logout } = useAuth();
+  const { confirm } = useConfirm();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const navigate = useNavigate();
 
   const closeMenu = () => setIsMobileMenuOpen(false);
+
+  const handleNavLogout = () => {
+    confirm({
+      title: "Sign Out?",
+      description: isStoreOwner
+        ? "Are you sure you want to sign out of the Store Owner Portal?"
+        : "Are you sure you want to sign out of your account?",
+      confirmText: "Sign Out",
+      cancelText: "Cancel",
+      variant: "danger",
+      iconType: "logout",
+      onConfirm: () => {
+        logout();
+        setIsMobileMenuOpen(false);
+        navigate('/');
+      }
+    });
+  };
 
   return (
     <header className="main-site-header">
@@ -137,7 +159,7 @@ export const Navbar = ({
                     </Link>
 
                     <button
-                      onClick={() => { logout(); navigate('/'); }}
+                      onClick={handleNavLogout}
                       className="btn-logout-subtle"
                       title="Sign Out"
                       id="top-logout-btn"
@@ -230,7 +252,7 @@ export const Navbar = ({
                   </Link>
 
                   <button
-                    onClick={() => { logout(); closeMenu(); navigate('/'); }}
+                    onClick={handleNavLogout}
                     style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '6px' }}
                     title="Logout"
                   >
