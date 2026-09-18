@@ -26,6 +26,7 @@ export const CartProvider = ({ children }) => {
   const [appliedDiscount, setAppliedDiscount] = useState(0); // percentage or info
   const [activeCoupon, setActiveCoupon] = useState(null); // { code, discountType, discountValue, description }
   const [toastMessage, setToastMessage] = useState(null);
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
     try {
@@ -43,11 +44,38 @@ export const CartProvider = ({ children }) => {
     } catch {}
   }, []);
 
-  const showToast = (message) => {
+  const removeNotif = (id) => {
+    setNotifications((pv) => pv.filter((n) => n.id !== id));
+  };
+
+  const showToast = (message, explicitType) => {
     setToastMessage(message);
+    let type = explicitType || 'brand';
+    if (!explicitType && typeof message === 'string') {
+      if (message.includes('✅') || message.includes('🎉')) {
+        type = 'success';
+      } else if (
+        message.includes('⚠️') ||
+        message.toLowerCase().includes('sorry') ||
+        message.toLowerCase().includes('limit') ||
+        message.toLowerCase().includes('invalid')
+      ) {
+        type = 'warning';
+      } else {
+        type = 'brand';
+      }
+    }
+
+    const newNotif = {
+      id: Date.now() + Math.random(),
+      text: message,
+      type
+    };
+    setNotifications((pv) => [newNotif, ...pv]);
+
     setTimeout(() => {
       setToastMessage(null);
-    }, 2800);
+    }, 5000);
   };
 
   const addToCart = (product, quantity = 1) => {
@@ -278,6 +306,8 @@ export const CartProvider = ({ children }) => {
         recordDeviceCouponRedemption,
         finalTotal,
         toastMessage,
+        notifications,
+        removeNotif,
         showToast
       }}
     >

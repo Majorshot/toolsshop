@@ -18,6 +18,7 @@ import { StoreDashboardPage } from './pages/StoreDashboardPage';
 import { api } from './services/api';
 import { CheckCircle, MessageCircle } from 'lucide-react';
 import AnimatedContent from './components/AnimatedContent';
+import SlideInNotifications from './components/SlideInNotifications';
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -97,32 +98,8 @@ const MainApp = () => {
     <div className="app-layout">
       <ScrollToTop />
 
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '84px',
-            right: '24px',
-            zIndex: 999,
-            background: '#ffffff',
-            color: '#0f172a',
-            border: '1px solid var(--brand-primary)',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            padding: '12px 20px',
-            borderRadius: '10px',
-            fontSize: '0.86rem',
-            fontWeight: '600',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            animation: 'fadeIn 0.25s ease'
-          }}
-        >
-          <CheckCircle size={17} style={{ color: 'var(--brand-primary)' }} />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      {/* Animated Slide-In Notifications */}
+      <SlideInNotifications />
 
       {/* Navbar */}
       <Navbar
