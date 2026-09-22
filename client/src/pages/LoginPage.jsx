@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, ShieldCheck, ArrowRight, Lock, Phone, Mail, AlertCircle,
-  UserPlus, LogIn, CheckCircle2, Sparkles, Eye, EyeOff, Store, ChevronRight, Check
+  UserPlus, LogIn, CheckCircle2, Sparkles, Eye, EyeOff, Store, ChevronRight, Check,
+  KeyRound, RefreshCw, Edit3, ArrowLeft, Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AnimatedContent from '../components/AnimatedContent';
@@ -10,6 +11,15 @@ import AnimatedContent from '../components/AnimatedContent';
 export const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('customer'); // 'customer' or 'store'
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  
+  // Customer Step: 'input' (Step 1: Phone/Details) or 'otp' (Step 2: 6-Digit OTP)
+  const [customerStep, setCustomerStep] = useState('input');
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
+  const [devOtp, setDevOtp] = useState('');
+  const [maskedDestination, setMaskedDestination] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  // Form Fields
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -21,8 +31,19 @@ export const LoginPage = () => {
 
   const [focusedField, setFocusedField] = useState(null);
 
-  const { login, register } = useAuth();
+  const { login, sendOtp, verifyOtp, resendOtp } = useAuth();
   const navigate = useNavigate();
+
+  // Resend Countdown Timer
+  useEffect(() => {
+    let timer;
+    if (resendCountdown > 0) {
+      timer = setInterval(() => {
+        setResendCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCountdown]);
 
   const resetForm = () => {
     setIdentifier('');
@@ -32,10 +53,18 @@ export const LoginPage = () => {
     setError('');
     setSuccessMsg('');
     setShowPassword(false);
+    setCustomerStep('input');
+    setOtpDigits(['', '', '', '', '', '']);
+    setDevOtp('');
+    setMaskedDestination('');
+    setResendCountdown(0);
   };
 
   const handleModeSwitch = (mode) => {
     setAuthMode(mode);
+    setCustomerStep('input');
+    setOtpDigits(['', '', '', '', '', '']);
+    setDevOtp('');
     setError('');
     setSuccessMsg('');
   };
@@ -45,30 +74,78 @@ export const LoginPage = () => {
     resetForm();
   };
 
-  const handleSubmit = async (e) => {
+  // OTP Digit Change Handler
+  const handleOtpChange = (index, value) => {
+    const clean = value.replace(/[^0-9]/g, '');
+    if (!clean) {
+      const next = [...otpDigits];
+      next[index] = '';
+      setOtpDigits(next);
+      return;
+    }
+
+    // Handle full paste
+    if (clean.length > 1) {
+      const chars = clean.slice(0, 6).split('');
+      const next = [...otpDigits];
+      chars.forEach((c, i) => {
+        if (i < 6) next[i] = c;
+      });
+      setOtpDigits(next);
+      const focusIndex = Math.min(chars.length, 5);
+      const targetEl = document.getElementById(`otp-input-${focusIndex}`);
+      if (targetEl) targetEl.focus();
+      return;
+    }
+
+    const next = [...otpDigits];
+    next[index] = clean;
+    setOtpDigits(next);
+
+    // Advance to next input
+    if (index < 5 && clean) {
+      const nextEl = document.getElementById(`otp-input-${index + 1}`);
+      if (nextEl) nextEl.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      const prevEl = document.getElementById(`otp-input-${index - 1}`);
+      if (prevEl) prevEl.focus();
+    }
+  };
+
+  const handleAutoFillOtp = (code) => {
+    const chars = String(code).replace(/[^0-9]/g, '').slice(0, 6).split('');
+    const next = [...otpDigits];
+    chars.forEach((c, i) => {
+      if (i < 6) next[i] = c;
+    });
+    setOtpDigits(next);
+    const lastEl = document.getElementById('otp-input-5');
+    if (lastEl) lastEl.focus();
+  };
+
+  // Step 1: Send OTP to Customer
+  const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
     setError('');
     setSuccessMsg('');
 
-    if (activeTab === 'store') {
-      if (!identifier.trim()) { setError('Please enter your store admin email.'); return; }
-      if (!password) { setError('Please enter your administrator password.'); return; }
-    } else if (authMode === 'login') {
-      const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
-      if (!cleanPhone || cleanPhone.length !== 10) {
-        setError('Please enter a valid 10-digit mobile number.');
-        return;
-      }
-    } else {
-      // Register validations
-      if (!name.trim()) { setError('Please enter your full name.'); return; }
-      const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
-      if (!cleanPhone || cleanPhone.length !== 10) {
-        setError('Please enter a valid 10-digit mobile number.');
+    const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    if (authMode === 'register') {
+      if (!name.trim()) {
+        setError('Please enter your full name.');
         return;
       }
       if (!email.trim() || !email.includes('@')) {
-        setError('Please enter a valid email address.');
+        setError('Please enter a valid email address for order invoices and OTP.');
         return;
       }
     }
@@ -76,25 +153,104 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      if (activeTab === 'store') {
-        await login('store', identifier.trim(), password);
-        navigate('/admin');
-      } else if (authMode === 'login') {
-        const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
-        await login('customer', cleanPhone);
-        navigate('/account');
-      } else {
-        // Register new customer account
-        const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
-        await register({
-          name: name.trim(),
-          phone: cleanPhone,
-          email: email.trim()
-        });
-        navigate('/account');
-      }
+      const res = await sendOtp({
+        phone: cleanPhone,
+        purpose: authMode,
+        name: name.trim(),
+        email: email.trim()
+      });
+
+      setCustomerStep('otp');
+      setMaskedDestination(res.maskedDestination || `+91 ${cleanPhone}`);
+      setDevOtp(res.devOtp || '');
+      setResendCountdown(30);
+      setSuccessMsg(res.message || 'Verification OTP sent successfully!');
+      setOtpDigits(['', '', '', '', '', '']);
+      setTimeout(() => {
+        const first = document.getElementById('otp-input-0');
+        if (first) first.focus();
+      }, 150);
     } catch (err) {
-      setError(err.message || 'Authentication failed. Please verify your credentials.');
+      setError(err.message || 'Failed to dispatch security OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Resend OTP
+  const handleResendOtp = async () => {
+    if (resendCountdown > 0 || loading) return;
+    setError('');
+    setSuccessMsg('');
+    setLoading(true);
+
+    try {
+      const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
+      const res = await resendOtp({
+        phone: cleanPhone,
+        purpose: authMode
+      });
+      setDevOtp(res.devOtp || '');
+      setResendCountdown(30);
+      setSuccessMsg('A new verification code has been dispatched.');
+    } catch (err) {
+      setError(err.message || 'Failed to resend code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 3: Verify OTP & Sign In / Register
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    const enteredOtp = otpDigits.join('').trim();
+    if (enteredOtp.length !== 6) {
+      setError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
+      await verifyOtp({
+        phone: cleanPhone,
+        otp: enteredOtp,
+        purpose: authMode
+      });
+      navigate('/account');
+    } catch (err) {
+      setError(err.message || 'Verification failed. Please check the code or request a new one.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Store Manager Login (Password credentials - unaffected by Resend test limits)
+  const handleStoreAdminLogin = async (e) => {
+    if (e) e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    if (!identifier.trim()) {
+      setError('Please enter your store admin email.');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your administrator password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await login('store', identifier.trim(), password);
+      navigate('/admin');
+    } catch (err) {
+      setError(err.message || 'Invalid store credentials. Please check your username and password.');
     } finally {
       setLoading(false);
     }
@@ -126,7 +282,7 @@ export const LoginPage = () => {
         zIndex: 0
       }} />
 
-      <AnimatedContent distance={24} delay={0.05} style={{ width: '100%', maxWidth: '440px', position: 'relative', zIndex: 1 }}>
+      <AnimatedContent distance={24} delay={0.05} style={{ width: '100%', maxWidth: '460px', position: 'relative', zIndex: 1 }}>
         
         {/* Main Minimalist Auth Card */}
         <div style={{
@@ -141,7 +297,7 @@ export const LoginPage = () => {
 
           {/* Top Header Section */}
           <div style={{
-            padding: '32px 32px 24px',
+            padding: '30px 32px 22px',
             textAlign: 'center',
             borderBottom: '1px solid #f1f5f9',
             background: 'linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)'
@@ -182,6 +338,11 @@ export const LoginPage = () => {
                   <ShieldCheck size={12} />
                   <span>Store Administration Portal</span>
                 </>
+              ) : customerStep === 'otp' ? (
+                <>
+                  <KeyRound size={12} />
+                  <span>Live Security OTP Verification</span>
+                </>
               ) : (
                 <>
                   <Sparkles size={12} />
@@ -199,9 +360,11 @@ export const LoginPage = () => {
             }}>
               {activeTab === 'store'
                 ? 'Store Manager Sign In'
-                : authMode === 'register'
-                  ? 'Create Customer Account'
-                  : 'Welcome Back'
+                : customerStep === 'otp'
+                  ? 'Verify Security Code'
+                  : authMode === 'register'
+                    ? 'Create Customer Account'
+                    : 'Customer Sign In'
               }
             </h1>
 
@@ -213,9 +376,11 @@ export const LoginPage = () => {
             }}>
               {activeTab === 'store'
                 ? 'Sign in to access inventory, orders & accounting analytics'
-                : authMode === 'register'
-                  ? 'Join Variathu to track equipment orders & GST invoices'
-                  : 'Enter your 10-digit mobile number to access your account'
+                : customerStep === 'otp'
+                  ? `Enter the 6-digit OTP sent to ${maskedDestination}`
+                  : authMode === 'register'
+                    ? 'Register with your mobile to receive instant OTP verification'
+                    : 'Enter your 10-digit mobile number to receive a secure OTP'
               }
             </p>
           </div>
@@ -223,8 +388,8 @@ export const LoginPage = () => {
           {/* Form Content Area */}
           <div style={{ padding: '24px 32px 30px' }}>
             
-            {/* Customer Mode: Sliding Segmented Control */}
-            {activeTab === 'customer' && (
+            {/* Customer Mode: Sliding Segmented Control (Only in Input Step) */}
+            {activeTab === 'customer' && customerStep === 'input' && (
               <div style={{
                 position: 'relative',
                 display: 'grid',
@@ -271,7 +436,7 @@ export const LoginPage = () => {
                   id="tab-sign-in"
                 >
                   <LogIn size={15} color={authMode === 'login' ? '#dc2626' : '#64748b'} />
-                  <span>Sign In</span>
+                  <span>Sign In (OTP)</span>
                 </button>
 
                 <button
@@ -312,8 +477,7 @@ export const LoginPage = () => {
                 marginBottom: '18px',
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '10px',
-                animation: 'slideDown 0.25s ease'
+                gap: '10px'
               }}>
                 <AlertCircle size={17} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div style={{ fontSize: '0.83rem', color: '#991b1b', lineHeight: 1.45, fontWeight: '500' }}>
@@ -341,11 +505,11 @@ export const LoginPage = () => {
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-              {/* REGISTER FIELD: Full Name */}
-              {activeTab === 'customer' && authMode === 'register' && (
+            {/* ======================================================== */}
+            {/* VIEW A: STORE ADMIN LOGIN (Password-Based)                */}
+            {/* ======================================================== */}
+            {activeTab === 'store' && (
+              <form onSubmit={handleStoreAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label style={{
                     display: 'block',
@@ -356,7 +520,7 @@ export const LoginPage = () => {
                     color: '#475569',
                     marginBottom: '6px'
                   }}>
-                    Full Name <span style={{ color: '#dc2626' }}>*</span>
+                    Admin Email Address <span style={{ color: '#4f46e5' }}>*</span>
                   </label>
                   <div style={{ position: 'relative' }}>
                     <div style={{
@@ -364,175 +528,7 @@ export const LoginPage = () => {
                       left: '14px',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: focusedField === 'name' ? '#dc2626' : '#94a3b8',
-                      transition: 'color 0.2s ease',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      <User size={17} />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="e.g. Thomas Mathew"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onFocus={() => setFocusedField('name')}
-                      onBlur={() => setFocusedField(null)}
-                      autoComplete="name"
-                      style={{
-                        width: '100%',
-                        padding: '12px 14px 12px 42px',
-                        background: '#ffffff',
-                        border: focusedField === 'name' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
-                        borderRadius: '12px',
-                        color: '#0f172a',
-                        fontSize: '0.9rem',
-                        outline: 'none',
-                        boxShadow: focusedField === 'name' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
-                        transition: 'all 0.2s ease'
-                      }}
-                      id="input-full-name"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* CUSTOMER PHONE / ADMIN EMAIL FIELD */}
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontSize: '0.74rem',
-                  fontWeight: '700',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  color: '#475569',
-                  marginBottom: '6px'
-                }}>
-                  {activeTab === 'store' ? 'Admin Email Address' : 'Mobile Number'} <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                
-                <div style={{ position: 'relative' }}>
-                  {activeTab === 'store' ? (
-                    <>
-                      <div style={{
-                        position: 'absolute',
-                        left: '14px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: focusedField === 'identifier' ? '#4f46e5' : '#94a3b8',
-                        transition: 'color 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}>
-                        <Mail size={17} />
-                      </div>
-                      <input
-                        type="email"
-                        placeholder="admin@variathupowertools.com"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        onFocus={() => setFocusedField('identifier')}
-                        onBlur={() => setFocusedField(null)}
-                        autoComplete="email"
-                        style={{
-                          width: '100%',
-                          padding: '12px 14px 12px 42px',
-                          background: '#ffffff',
-                          border: focusedField === 'identifier' ? '1.5px solid #4f46e5' : '1.5px solid #e2e8f0',
-                          borderRadius: '12px',
-                          color: '#0f172a',
-                          fontSize: '0.9rem',
-                          outline: 'none',
-                          boxShadow: focusedField === 'identifier' ? '0 0 0 4px rgba(79, 70, 229, 0.08)' : 'none',
-                          transition: 'all 0.2s ease'
-                        }}
-                        id="input-admin-email"
-                      />
-                    </>
-                  ) : (
-                    /* Customer Phone input with integrated +91 Badge */
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      background: '#ffffff',
-                      border: focusedField === 'phone' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      boxShadow: focusedField === 'phone' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}>
-                      <div style={{
-                        padding: '11px 12px 11px 14px',
-                        background: '#f8fafc',
-                        borderRight: '1px solid #e2e8f0',
-                        color: '#334155',
-                        fontSize: '0.88rem',
-                        fontWeight: '700',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        userSelect: 'none'
-                      }}>
-                        <span>🇮🇳</span>
-                        <span>+91</span>
-                      </div>
-                      <input
-                        type="tel"
-                        maxLength={10}
-                        placeholder="94471 23456"
-                        value={identifier}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                          setIdentifier(val);
-                        }}
-                        onFocus={() => setFocusedField('phone')}
-                        onBlur={() => setFocusedField(null)}
-                        autoComplete="tel"
-                        style={{
-                          width: '100%',
-                          padding: '12px 14px',
-                          border: 'none',
-                          outline: 'none',
-                          color: '#0f172a',
-                          fontSize: '0.95rem',
-                          fontWeight: '600',
-                          letterSpacing: '0.04em'
-                        }}
-                        id="input-mobile-number"
-                      />
-                    </div>
-                  )}
-                </div>
-                
-                {activeTab === 'customer' && authMode === 'login' && (
-                  <div style={{ fontSize: '0.74rem', color: '#94a3b8', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Check size={12} color="#16a34a" />
-                    <span>Existing customers can sign in instantly without password</span>
-                  </div>
-                )}
-              </div>
-
-              {/* REGISTER FIELD: Email Address */}
-              {activeTab === 'customer' && authMode === 'register' && (
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.74rem',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: '#475569',
-                    marginBottom: '6px'
-                  }}>
-                    Email Address (for Invoices &amp; Updates) <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <div style={{
-                      position: 'absolute',
-                      left: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: focusedField === 'email' ? '#dc2626' : '#94a3b8',
+                      color: focusedField === 'identifier' ? '#4f46e5' : '#94a3b8',
                       transition: 'color 0.2s ease',
                       display: 'flex',
                       alignItems: 'center'
@@ -541,32 +537,29 @@ export const LoginPage = () => {
                     </div>
                     <input
                       type="email"
-                      placeholder="e.g. customer@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      onFocus={() => setFocusedField('email')}
+                      placeholder="admin@variathupowertools.com"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      onFocus={() => setFocusedField('identifier')}
                       onBlur={() => setFocusedField(null)}
                       autoComplete="email"
                       style={{
                         width: '100%',
                         padding: '12px 14px 12px 42px',
                         background: '#ffffff',
-                        border: focusedField === 'email' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
+                        border: focusedField === 'identifier' ? '1.5px solid #4f46e5' : '1.5px solid #e2e8f0',
                         borderRadius: '12px',
                         color: '#0f172a',
                         fontSize: '0.9rem',
                         outline: 'none',
-                        boxShadow: focusedField === 'email' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
+                        boxShadow: focusedField === 'identifier' ? '0 0 0 4px rgba(79, 70, 229, 0.08)' : 'none',
                         transition: 'all 0.2s ease'
                       }}
-                      id="input-customer-email"
+                      id="input-admin-email"
                     />
                   </div>
                 </div>
-              )}
 
-              {/* STORE ADMIN PASSWORD FIELD */}
-              {activeTab === 'store' && (
                 <div>
                   <label style={{
                     display: 'block',
@@ -577,7 +570,7 @@ export const LoginPage = () => {
                     color: '#475569',
                     marginBottom: '6px'
                   }}>
-                    Security Password <span style={{ color: '#dc2626' }}>*</span>
+                    Security Password <span style={{ color: '#4f46e5' }}>*</span>
                   </label>
                   <div style={{ position: 'relative' }}>
                     <div style={{
@@ -635,58 +628,502 @@ export const LoginPage = () => {
                     </button>
                   </div>
                 </div>
-              )}
 
-              {/* Submit Action Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '13px 20px',
-                  background: activeTab === 'store'
-                    ? 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)'
-                    : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                  color: '#ffffff',
-                  border: 'none',
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '13px 20px',
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.92rem',
+                    fontWeight: '700',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+                    marginTop: '8px',
+                    opacity: loading ? 0.75 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                  id="btn-admin-submit"
+                >
+                  {loading ? <span>Signing In...</span> : (
+                    <>
+                      <span>Sign In to Dashboard</span>
+                      <ArrowRight size={17} />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
+
+            {/* ======================================================== */}
+            {/* VIEW B1: CUSTOMER STEP 1 - PHONE & DETAILS INPUT          */}
+            {/* ======================================================== */}
+            {activeTab === 'customer' && customerStep === 'input' && (
+              <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                {/* Registration: Full Name */}
+                {authMode === 'register' && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.74rem',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: '#475569',
+                      marginBottom: '6px'
+                    }}>
+                      Full Name <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{
+                        position: 'absolute',
+                        left: '14px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: focusedField === 'name' ? '#dc2626' : '#94a3b8',
+                        transition: 'color 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        <User size={17} />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="e.g. Thomas Mathew"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onFocus={() => setFocusedField('name')}
+                        onBlur={() => setFocusedField(null)}
+                        autoComplete="name"
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px 12px 42px',
+                          background: '#ffffff',
+                          border: focusedField === 'name' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
+                          borderRadius: '12px',
+                          color: '#0f172a',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          boxShadow: focusedField === 'name' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        id="input-full-name"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Customer Phone input with +91 badge */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.74rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: '#475569',
+                    marginBottom: '6px'
+                  }}>
+                    Mobile Number <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#ffffff',
+                    border: focusedField === 'phone' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: focusedField === 'phone' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <div style={{
+                      padding: '11px 12px 11px 14px',
+                      background: '#f8fafc',
+                      borderRight: '1px solid #e2e8f0',
+                      color: '#334155',
+                      fontSize: '0.88rem',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      userSelect: 'none'
+                    }}>
+                      <span>🇮🇳</span>
+                      <span>+91</span>
+                    </div>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      placeholder="94471 23456"
+                      value={identifier}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                        setIdentifier(val);
+                      }}
+                      onFocus={() => setFocusedField('phone')}
+                      onBlur={() => setFocusedField(null)}
+                      autoComplete="tel"
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        border: 'none',
+                        outline: 'none',
+                        color: '#0f172a',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                        letterSpacing: '0.04em'
+                      }}
+                      id="input-mobile-number"
+                    />
+                  </div>
+
+                  {authMode === 'login' && (
+                    <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Shield size={12} color="#16a34a" />
+                      <span>We'll send a 6-digit one-time password (OTP) to your phone & email</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Registration: Email Address */}
+                {authMode === 'register' && (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.74rem',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: '#475569',
+                      marginBottom: '6px'
+                    }}>
+                      Email Address (for Invoices & Security OTP) <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{
+                        position: 'absolute',
+                        left: '14px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: focusedField === 'email' ? '#dc2626' : '#94a3b8',
+                        transition: 'color 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}>
+                        <Mail size={17} />
+                      </div>
+                      <input
+                        type="email"
+                        placeholder="e.g. customer@gmail.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onFocus={() => setFocusedField('email')}
+                        onBlur={() => setFocusedField(null)}
+                        autoComplete="email"
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px 12px 42px',
+                          background: '#ffffff',
+                          border: focusedField === 'email' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
+                          borderRadius: '12px',
+                          color: '#0f172a',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          boxShadow: focusedField === 'email' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        id="input-customer-email"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Submit Action Button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{
+                    width: '100%',
+                    padding: '13px 20px',
+                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.92rem',
+                    fontWeight: '700',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
+                    marginTop: '8px',
+                    opacity: loading ? 0.75 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                  id="btn-send-otp"
+                >
+                  {loading ? (
+                    <span>Sending Verification Code...</span>
+                  ) : (
+                    <>
+                      <KeyRound size={17} />
+                      <span>
+                        {authMode === 'register' ? 'Send OTP & Register' : 'Send Verification OTP'}
+                      </span>
+                      <ArrowRight size={17} />
+                    </>
+                  )}
+                </button>
+
+              </form>
+            )}
+
+            {/* ======================================================== */}
+            {/* VIEW B2: CUSTOMER STEP 2 - 6-DIGIT OTP VERIFICATION      */}
+            {/* ======================================================== */}
+            {activeTab === 'customer' && customerStep === 'otp' && (
+              <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                
+                {/* Destination info pill with edit action */}
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
                   borderRadius: '12px',
-                  fontSize: '0.92rem',
-                  fontWeight: '700',
-                  cursor: loading ? 'not-allowed' : 'pointer',
+                  padding: '12px 14px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: activeTab === 'store'
-                    ? '0 4px 14px rgba(79, 70, 229, 0.3)'
-                    : '0 4px 14px rgba(220, 38, 38, 0.25)',
-                  marginTop: '8px',
-                  opacity: loading ? 0.75 : 1,
-                  transition: 'all 0.2s ease'
-                }}
-                id="btn-auth-submit"
-              >
-                {loading ? (
-                  <span>Authenticating...</span>
-                ) : (
-                  <>
-                    <span>
-                      {activeTab === 'store'
-                        ? 'Sign In to Dashboard'
-                        : authMode === 'register'
-                          ? 'Complete Registration'
-                          : 'Sign In to Account'
-                      }
-                    </span>
-                    <ArrowRight size={17} />
-                  </>
-                )}
-              </button>
+                  justifyContent: 'space-between',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: '#334155' }}>
+                    <ShieldCheck size={16} color="#16a34a" />
+                    <span>Sent to: <strong>+91 {identifier.replace(/[^0-9]/g, '').slice(-10)}</strong></span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomerStep('input');
+                      setError('');
+                      setSuccessMsg('');
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#dc2626',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: 0
+                    }}
+                    id="btn-change-phone"
+                  >
+                    <Edit3 size={13} />
+                    <span>Change</span>
+                  </button>
+                </div>
 
-            </form>
+                {/* Instant 1-Click Developer/Sandbox Test OTP Banner */}
+                {devOtp && (
+                  <div
+                    onClick={() => handleAutoFillOtp(devOtp)}
+                    title="Click to automatically paste OTP"
+                    style={{
+                      background: '#fffbeb',
+                      border: '1.5px dashed #f59e0b',
+                      borderRadius: '12px',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    id="pill-dev-otp"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1rem' }}>⚡</span>
+                      <span style={{ fontSize: '0.8rem', color: '#92400e', fontWeight: '600' }}>
+                        Sandbox Test OTP: <strong style={{ letterSpacing: '2px', fontSize: '0.92rem', color: '#78350f', fontFamily: 'monospace' }}>{devOtp}</strong>
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      color: '#b45309',
+                      fontWeight: '800',
+                      textDecoration: 'underline',
+                      background: '#fef3c7',
+                      padding: '3px 8px',
+                      borderRadius: '6px'
+                    }}>
+                      Auto-Fill ↵
+                    </span>
+                  </div>
+                )}
+
+                {/* 6-Digit OTP Box Grid */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.74rem',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: '#475569',
+                    textAlign: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    Enter 6-Digit Verification Code
+                  </label>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    margin: '6px 0 12px'
+                  }}>
+                    {otpDigits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        id={`otp-input-${idx}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                        autoComplete="one-time-code"
+                        style={{
+                          width: '44px',
+                          height: '52px',
+                          textAlign: 'center',
+                          fontSize: '1.4rem',
+                          fontWeight: '800',
+                          color: '#0f172a',
+                          background: digit ? '#fff5f5' : '#ffffff',
+                          border: digit ? '2px solid #dc2626' : '1.5px solid #cbd5e1',
+                          borderRadius: '12px',
+                          outline: 'none',
+                          boxShadow: digit ? '0 0 0 3px rgba(220, 38, 38, 0.1)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Verify Action Button */}
+                <button
+                  type="submit"
+                  disabled={loading || otpDigits.join('').length !== 6}
+                  style={{
+                    width: '100%',
+                    padding: '13px 20px',
+                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '0.92rem',
+                    fontWeight: '700',
+                    cursor: (loading || otpDigits.join('').length !== 6) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
+                    opacity: (loading || otpDigits.join('').length !== 6) ? 0.6 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                  id="btn-verify-otp"
+                >
+                  {loading ? (
+                    <span>Verifying Code...</span>
+                  ) : (
+                    <>
+                      <ShieldCheck size={18} />
+                      <span>Verify &amp; Continue</span>
+                      <ArrowRight size={17} />
+                    </>
+                  )}
+                </button>
+
+                {/* Resend OTP & Back controls */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: '4px',
+                  fontSize: '0.82rem'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomerStep('input');
+                      setError('');
+                      setSuccessMsg('');
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      cursor: 'pointer',
+                      fontWeight: '600'
+                    }}
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Back</span>
+                  </button>
+
+                  <div>
+                    {resendCountdown > 0 ? (
+                      <span style={{ color: '#94a3b8', fontWeight: '500' }}>
+                        Resend OTP in <strong style={{ color: '#0f172a' }}>{resendCountdown}s</strong>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={loading}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#dc2626',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                        id="btn-resend-otp"
+                      >
+                        <RefreshCw size={13} className={loading ? 'spin-slow' : ''} />
+                        <span>Resend OTP</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+              </form>
+            )}
 
             {/* Bottom Quick Switch Link */}
-            {activeTab === 'customer' && (
+            {activeTab === 'customer' && customerStep === 'input' && (
               <div style={{ textAlign: 'center', marginTop: '18px' }}>
                 {authMode === 'login' ? (
                   <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>
@@ -819,8 +1256,8 @@ export const LoginPage = () => {
             </div>
             <div style={{ width: '3px', height: '3px', background: '#cbd5e1', borderRadius: '50%' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <CheckCircle2 size={12} color="#0284c7" />
-              <span>Instant Access</span>
+              <ShieldCheck size={12} color="#0284c7" />
+              <span>Instant OTP</span>
             </div>
             <div style={{ width: '3px', height: '3px', background: '#cbd5e1', borderRadius: '50%' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

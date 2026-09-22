@@ -2,6 +2,253 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
+
+// In-memory OTP storage with automatic TTL cleanup
+// Key: cleanPhone -> { otp, expiresAt, purpose, customerDoc, registerData, lastSentAt }
+const otpStore = new Map();
+
+// Periodic cleanup of expired OTPs every minute
+const cleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [phone, data] of otpStore.entries()) {
+    if (data.expiresAt < now) {
+      otpStore.delete(phone);
+    }
+  }
+}, 60000);
+if (cleanupTimer.unref) cleanupTimer.unref();
+
+// POST /api/auth/send-otp - Dispatch 6-digit OTP via Email/WhatsApp
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { phone, purpose = 'login', name, email } = req.body;
+    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
+
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number.' });
+    }
+
+    // Rate limiting check: 25 seconds cooldown between sends
+    const existing = otpStore.get(cleanPhone);
+    if (existing && Date.now() - existing.lastSentAt < 25000) {
+      const waitSec = Math.ceil((25000 - (Date.now() - existing.lastSentAt)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${waitSec}s before requesting a new code.`
+      });
+    }
+
+    let customerDoc = null;
+    let targetEmail = (email || '').trim();
+    let customerName = (name || '').trim();
+
+    if (purpose === 'login') {
+      customerDoc = await db.lookupCustomerByPhone(cleanPhone);
+      if (!customerDoc) {
+        return res.status(404).json({
+          success: false,
+          message: 'No registered account found with this mobile number. Please switch to "New Customer" to create an account.'
+        });
+      }
+      targetEmail = customerDoc.email || '';
+      customerName = customerDoc.name || 'Valued Customer';
+    } else {
+      // Registration validation
+      if (!customerName) {
+        return res.status(400).json({ success: false, message: 'Full name is required for registration.' });
+      }
+      if (!targetEmail || !targetEmail.includes('@')) {
+        return res.status(400).json({ success: false, message: 'A valid email address is required.' });
+      }
+
+      // Check if already registered
+      const existingCust = await db.lookupCustomerByPhone(cleanPhone);
+      if (existingCust) {
+        return res.status(409).json({
+          success: false,
+          message: 'An account with this mobile number already exists. Please sign in instead.'
+        });
+      }
+    }
+
+    // Generate secure 6-digit numeric OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    otpStore.set(cleanPhone, {
+      otp,
+      expiresAt,
+      purpose,
+      customerDoc,
+      registerData: purpose === 'register' ? { name: customerName, phone: cleanPhone, email: targetEmail } : null,
+      lastSentAt: Date.now()
+    });
+
+    console.log(`[Auth OTP] Generated OTP for +91 ${cleanPhone} (${purpose}): ${otp}`);
+
+    // Dispatch email if target email available
+    if (targetEmail && targetEmail.includes('@')) {
+      emailService.sendOtpEmail({
+        to: targetEmail,
+        name: customerName,
+        otp,
+        purpose
+      }).catch(err => {
+        console.warn('[Auth OTP] Email send error:', err.message);
+      });
+    }
+
+    // Try WhatsApp dispatch if configured
+    try {
+      if (whatsappService && typeof whatsappService.sendWhatsAppMessage === 'function') {
+        const waMsg = `🔐 *Variathu Power Tools Security Code*\n\nYour 6-digit verification OTP is: *${otp}*\n\nThis code is valid for 10 minutes. Please do not share this one-time code with anyone.\n_Kozhencherry, Pathanamthitta, Kerala_`;
+        whatsappService.sendWhatsAppMessage(cleanPhone, waMsg).catch(() => {});
+      }
+    } catch (e) {}
+
+    // Mask phone and email for user privacy display
+    const maskedPhone = `+91 ${cleanPhone.slice(0, 2)}••••••${cleanPhone.slice(-2)}`;
+    const maskedEmail = targetEmail && targetEmail.includes('@')
+      ? `${targetEmail.slice(0, 2)}••••@${targetEmail.split('@')[1]}`
+      : null;
+
+    return res.json({
+      success: true,
+      message: `Verification code sent to ${maskedPhone}${maskedEmail ? ` and ${maskedEmail}` : ''}.`,
+      maskedDestination: maskedEmail ? `${maskedPhone} & ${maskedEmail}` : maskedPhone,
+      devOtp: otp, // Returned for instant developer/sandbox validation and 1-click test fill
+      expiresAt
+    });
+  } catch (err) {
+    console.error('[Auth OTP] Error in /send-otp:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/auth/verify-otp - Validate 6-digit OTP & sign in or register customer
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const submittedOtp = String(otp || '').trim();
+
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number required.' });
+    }
+    if (!submittedOtp || submittedOtp.length !== 6) {
+      return res.status(400).json({ success: false, message: 'Please enter the 6-digit OTP.' });
+    }
+
+    const record = otpStore.get(cleanPhone);
+    if (!record) {
+      return res.status(400).json({
+        success: false,
+        message: 'No active OTP found for this number or it has expired. Please request a new code.'
+      });
+    }
+
+    if (Date.now() > record.expiresAt) {
+      otpStore.delete(cleanPhone);
+      return res.status(400).json({
+        success: false,
+        message: 'This OTP has expired. Please request a fresh verification code.'
+      });
+    }
+
+    if (record.otp !== submittedOtp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid 6-digit OTP. Please re-check the code sent to your mobile or email.'
+      });
+    }
+
+    // OTP Verified! Delete used OTP
+    otpStore.delete(cleanPhone);
+
+    if (record.purpose === 'register' && record.registerData) {
+      // Create new customer account
+      const newCust = await db.findOrCreateCustomer({
+        phone: cleanPhone,
+        name: record.registerData.name,
+        email: record.registerData.email,
+        district: 'Pathanamthitta',
+        pincode: '689641'
+      });
+
+      // Send welcome email asynchronously
+      emailService.sendWelcomeEmail(newCust).catch(err => {
+        console.warn(`[Resend Email] Welcome email error:`, err.message);
+      });
+
+      return res.json({
+        success: true,
+        isNewAccount: true,
+        message: 'Account verified and registered successfully!',
+        user: {
+          id: newCust._id,
+          name: newCust.name,
+          phone: newCust.phone,
+          email: newCust.email || '',
+          address: newCust.address || '',
+          landmark: newCust.landmark || '',
+          district: newCust.district || 'Pathanamthitta',
+          state: newCust.state || 'Kerala',
+          pincode: newCust.pincode || '689641',
+          savedAddresses: newCust.savedAddresses || [],
+          role: 'customer',
+          location: `${newCust.district || 'Pathanamthitta'}, Kerala`
+        }
+      });
+    } else {
+      // Login flow
+      const customerDoc = await db.lookupCustomerByPhone(cleanPhone);
+      if (!customerDoc) {
+        return res.status(404).json({ success: false, message: 'Customer record not found.' });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Successfully verified and signed in!',
+        user: {
+          id: customerDoc._id,
+          name: customerDoc.name,
+          phone: customerDoc.phone,
+          email: customerDoc.email || '',
+          address: customerDoc.address || '',
+          landmark: customerDoc.landmark || '',
+          district: customerDoc.district || 'Pathanamthitta',
+          state: customerDoc.state || 'Kerala',
+          pincode: customerDoc.pincode || '689641',
+          savedAddresses: customerDoc.savedAddresses || [],
+          role: 'customer',
+          location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[Auth OTP] Error in /verify-otp:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/auth/resend-otp - Quick resend endpoint
+router.post('/resend-otp', async (req, res) => {
+  const { phone, purpose } = req.body;
+  const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
+  const existing = otpStore.get(cleanPhone);
+
+  const payload = {
+    phone: cleanPhone,
+    purpose: purpose || existing?.purpose || 'login',
+    name: existing?.registerData?.name,
+    email: existing?.registerData?.email
+  };
+
+  req.body = payload;
+  // Invoke send-otp handler
+  return router.handle({ ...req, url: '/send-otp', originalUrl: '/api/auth/send-otp' }, res);
+});
 
 // POST login endpoint - Customer (lookup only) & Store Owner
 router.post('/login', async (req, res) => {

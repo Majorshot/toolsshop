@@ -29,6 +29,42 @@ export const api = {
     return await res.json();
   },
 
+  // Auth: Send 6-digit OTP to Customer
+  async sendOtp(payload) {
+    const res = await fetch(`${API_BASE}/auth/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to send verification code');
+    return data;
+  },
+
+  // Auth: Verify 6-digit OTP & sign in / register
+  async verifyOtp(payload) {
+    const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Verification failed');
+    return data;
+  },
+
+  // Auth: Resend 6-digit OTP
+  async resendOtp(payload) {
+    const res = await fetch(`${API_BASE}/auth/resend-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to resend verification code');
+    return data;
+  },
+
 
   // Fetch products with search & filters (supports optional pagination)
   async getProducts(params = {}) {

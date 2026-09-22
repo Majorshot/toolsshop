@@ -838,11 +838,81 @@ async function sendWelcomeEmail(customer) {
   }
 }
 
+// ─── 7. OTP Security Verification Email ─────────────────────────────────────────
+async function sendOtpEmail({ to, name, otp, purpose = 'login' }) {
+  try {
+    const resend = getResendClient();
+    const email = (to || '').trim();
+    const customerName = (name || 'Valued Customer').trim();
+    const isLogin = purpose === 'login';
+
+    if (!resend) {
+      console.log(`[Resend Email] Resend not configured. Mocking OTP send: ${otp} for ${email}`);
+      return { success: true, mocked: true, otp };
+    }
+
+    if (!email || !email.includes('@')) {
+      return { success: false, error: 'Invalid recipient email' };
+    }
+
+    const bodyContent = `
+      <!-- Hero Status Banner -->
+      <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 32px 24px; text-align: center; color: #ffffff;">
+        <div style="display: inline-block; background: rgba(220, 38, 38, 0.2); border: 1px solid rgba(220, 38, 38, 0.4); border-radius: 9999px; padding: 4px 14px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #fca5a5; margin-bottom: 12px;">
+          🔐 Security Verification Code
+        </div>
+        <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">
+          ${isLogin ? 'Sign In to Your Account' : 'Verify Your New Account'}
+        </h2>
+        <p style="margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.5; max-width: 440px; margin: 0 auto;">
+          Hello <strong>${customerName}</strong>, please use the 6-digit one-time code below to authenticate your Variathu Power Tools session.
+        </p>
+      </div>
+
+      <!-- OTP Code Display Section -->
+      <div style="padding: 36px 24px; text-align: center; background: #ffffff;">
+        <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px;">
+          Your 6-Digit Verification OTP
+        </div>
+
+        <div style="display: inline-block; background: #fef2f2; border: 2px dashed #dc2626; border-radius: 14px; padding: 16px 32px; margin-bottom: 18px;">
+          <span style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 900; letter-spacing: 10px; color: #dc2626; display: inline-block; padding-left: 10px;">
+            ${otp}
+          </span>
+        </div>
+
+        <div style="font-size: 13px; color: #475569; margin-bottom: 8px;">
+          ⏱️ This code is valid for <strong>10 minutes</strong>.
+        </div>
+        <div style="font-size: 12px; color: #94a3b8; max-width: 380px; margin: 0 auto; line-height: 1.4;">
+          If you did not request this verification code, please ignore this email or contact our Kozhencherry workshop helpline.
+        </div>
+      </div>
+
+      <!-- Security Information Card -->
+      <div style="padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; line-height: 1.5;">
+        <strong>Security Notice:</strong> Variathu Power Tools staff will never call or message you asking for your secret OTP. Never share this code with anyone.
+      </div>
+    `;
+
+    return await sendEmailSafely(resend, {
+      to: email,
+      subject: `🔐 Your Security Code: ${otp} - Variathu Power Tools`,
+      html: emailWrapper(`Variathu Security Verification`, bodyContent)
+    });
+  } catch (err) {
+    console.warn("[Resend Email] Error sending OTP email:", err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendOrderConfirmationEmail,
   sendOrderCompletedEmail,
   sendOrderDispatchedEmail,
   sendCancellationRequestEmail,
   sendOrderCancelledEmail,
-  sendWelcomeEmail
+  sendWelcomeEmail,
+  sendOtpEmail
 };
+

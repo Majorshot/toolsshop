@@ -5865,3 +5865,17 @@ header.main-site-header {
   }
 }
 
+/* ==========================================================================
+   Store Dashboard Hub Cards (Overview Tab)
+   ========================================================================== */
+.store-hub-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease !important;
+}
+
+.store-hub-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.03) !important;
+}
+
+

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   User, Package, MapPin, Truck, CheckCircle2, Clock, MessageCircle, LogOut,
   ShoppingBag, ArrowRight, Phone, RefreshCw, FileText, Printer, Shield, QrCode,
   X, ExternalLink, Navigation, Copy, Check, XCircle, AlertCircle, Edit3, Plus, Trash2,
-  Building, Home, Briefcase, LayoutDashboard, ChevronDown, ChevronUp
+  Building, Home, Briefcase, LayoutDashboard, ChevronDown, ChevronUp, ArrowLeft
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -533,7 +533,23 @@ export const CustomerAccountPage = () => {
     return `https://wa.me/919447123456?text=${text}`;
   };
 
-  const [sidebarTab, setSidebarTab] = useState('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const [sidebarTab, setSidebarTabState] = useState(() => urlTab || 'overview');
+
+  useEffect(() => {
+    if (urlTab && urlTab !== sidebarTab) {
+      setSidebarTabState(urlTab);
+    } else if (!urlTab && sidebarTab !== 'overview') {
+      setSidebarTabState('overview');
+    }
+  }, [urlTab, sidebarTab]);
+
+  const setSidebarTab = (tabId) => {
+    setSidebarTabState(tabId);
+    setSearchParams({ tab: tabId });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const [expandedOrders, setExpandedOrders] = useState({});
 
   useEffect(() => {
@@ -1569,6 +1585,45 @@ export const CustomerAccountPage = () => {
       {/* TAB 2: ORDERED PRODUCTS */}
       {sidebarTab === 'orders' && (
         <>
+          {/* Dedicated Page Top Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px',
+            marginBottom: '18px',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+          }}>
+            <button
+              type="button"
+              onClick={() => setSidebarTab('overview')}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.8rem',
+                fontWeight: '700',
+                color: '#334155',
+                cursor: 'pointer'
+              }}
+              id="btn-customer-back-overview"
+            >
+              <ArrowLeft size={14} />
+              <span>Back to Overview</span>
+            </button>
+
+            <div style={{ fontSize: '0.76rem', color: '#94a3b8', fontWeight: '600' }}>
+              Account / <span style={{ color: '#ea580c', fontWeight: '700' }}>Ordered Products</span>
+            </div>
+          </div>
+
           {/* Orders Heading */}
           <div className="customer-orders-header">
             <div>
@@ -1663,6 +1718,45 @@ export const CustomerAccountPage = () => {
       {/* TAB 3: SAVED ADDRESSES */}
       {sidebarTab === 'addresses' && (
         <>
+          {/* Dedicated Page Top Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '10px 16px',
+            marginBottom: '18px',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+          }}>
+            <button
+              type="button"
+              onClick={() => setSidebarTab('overview')}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.8rem',
+                fontWeight: '700',
+                color: '#334155',
+                cursor: 'pointer'
+              }}
+              id="btn-addresses-back-overview"
+            >
+              <ArrowLeft size={14} />
+              <span>Back to Overview</span>
+            </button>
+
+            <div style={{ fontSize: '0.76rem', color: '#94a3b8', fontWeight: '600' }}>
+              Account / <span style={{ color: '#ea580c', fontWeight: '700' }}>Saved Addresses</span>
+            </div>
+          </div>
+
           <div className="customer-orders-header">
             <div>
               <h2 className="customer-orders-title">

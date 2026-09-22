@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -160,7 +160,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   }, []);
 
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'inventory'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const [activeTab, setActiveTabState] = useState(() => urlTab || 'overview');
+
+  // Keep activeTab in sync with URL query param (?tab=overview, etc.)
+  useEffect(() => {
+    if (urlTab && urlTab !== activeTab) {
+      setActiveTabState(urlTab);
+    } else if (!urlTab && activeTab !== 'overview') {
+      setActiveTabState('overview');
+    }
+  }, [urlTab, activeTab]);
+
+  const setActiveTab = useCallback((tabId) => {
+    setActiveTabState(tabId);
+    setSearchParams({ tab: tabId });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [setSearchParams]);
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -1739,6 +1756,13 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   const sidebarNavItems = [
     {
+      id: 'overview',
+      title: 'Overview',
+      icon: LayoutDashboard,
+      selected: activeTab === 'overview',
+      onClick: () => setActiveTab('overview')
+    },
+    {
       id: 'orders',
       title: `Customer Orders${orderCounts.all > 0 ? ` (${orderCounts.all})` : ''}`,
       icon: ShoppingBag,
@@ -1797,19 +1821,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   const sidebarBottomNavItems = [
     {
-      id: 'analytics-toggle',
-      title: analyticsCollapsed ? 'Open Analytics' : 'Collapse Analytics',
-      icon: BarChart3,
-      selected: !analyticsCollapsed,
-      onClick: () => {
-        const next = !analyticsCollapsed;
-        setAnalyticsCollapsed(next);
-        localStorage.setItem('vpt_analytics_collapsed', String(next));
-      }
-    },
-    {
       id: 'view-site',
-      title: 'View Site',
+      title: 'View Storefront',
       icon: Globe,
       onClick: () => navigate('/')
     },
@@ -1876,8 +1889,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
       )}
 
-      {/* Store Header Banner */}
-      <div className="store-portal-header-banner">
+      {/* OVERVIEW TAB: Main Dashboard View */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Store Header Banner */}
+          <div className="store-portal-header-banner">
         <div className="store-portal-brand-wrap">
           <div className="store-portal-icon">
             <ShieldCheck size={26} />
@@ -2227,108 +2243,573 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         );
       })()}
 
-      {/* Navigation Tabs (6 Tabs) - Horizontal Scroll Strip with Drag-to-Scroll */}
-      <div
-        className="store-nav-tabs-bar"
-        role="tablist"
-        ref={tabsBarRef}
-        onMouseDown={handleTabsDragStart}
-        onMouseMove={handleTabsDragMove}
-        onMouseUp={handleTabsDragEnd}
-        onMouseLeave={handleTabsDragEnd}
-        onWheel={(e) => {
-          if (e.deltaY !== 0) {
-            e.currentTarget.scrollLeft += e.deltaY;
-          }
-        }}
-        style={{ cursor: isDraggingTabs ? 'grabbing' : 'grab' }}
-      >
-        <button
-          type="button"
-          onClick={() => setActiveTab('orders')}
-          className={`store-nav-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
-          id="store-tab-orders"
-        >
-          <ShoppingBag size={16} />
-          <span>Customer Orders{orderCounts.all > 0 ? ` (${orderCounts.all})` : ''}</span>
-          {orderCounts.undispatched > 0 && (
-            <span className="store-nav-badge-alert" style={{ background: '#ea580c', color: '#fff' }}>
-              {orderCounts.undispatched} undispatched
-            </span>
-          )}
-        </button>
+          {/* Quick Navigation Hub Cards for Department Sections */}
+          <div style={{ marginTop: '24px', marginBottom: '24px' }}>
+            <div style={{ marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 3px' }}>
+                Store Operations &amp; Department Hub
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0 }}>
+                Direct access to manage orders, catalog inventory, customer directory, discounts, and repair jobs:
+              </p>
+            </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('cancellations')}
-          className={`store-nav-tab-btn ${activeTab === 'cancellations' ? 'active' : ''}`}
-          id="store-tab-cancellations"
-        >
-          <Ban size={16} />
-          <span>Cancel Requests</span>
-          {pendingCancellationRequests.length > 0 && (
-            <span className="store-nav-badge-alert" style={{ background: '#dc2626', color: '#fff' }}>
-              {pendingCancellationRequests.length}
-            </span>
-          )}
-        </button>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '14px'
+            }}>
+              {/* Hub Card 1: Customer Orders */}
+              <div
+                onClick={() => setActiveTab('orders')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                className="store-hub-card"
+                id="hub-card-orders"
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', display: 'grid', placeContent: 'center' }}>
+                      <ShoppingBag size={20} />
+                    </div>
+                    {orderCounts.undispatched > 0 ? (
+                      <span style={{ background: '#ffedd5', color: '#c2410c', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                        {orderCounts.undispatched} undispatched
+                      </span>
+                    ) : (
+                      <span style={{ background: '#ecfdf5', color: '#15803d', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                        All dispatched
+                      </span>
+                    )}
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                    Customer Orders
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                    {orders.length} total customer orders • Courier shipping &amp; store pickup OTP passes
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
+                  <span>Open Orders Page</span>
+                  <ArrowRight size={14} />
+                </div>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('customers')}
-          className={`store-nav-tab-btn ${activeTab === 'customers' ? 'active' : ''}`}
-          id="store-tab-customers"
-        >
-          <Users size={16} />
-          <span>Customer Directory ({customers.length})</span>
-        </button>
+              {/* Hub Card 2: Inventory & Stock */}
+              <div
+                onClick={() => setActiveTab('inventory')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                className="store-hub-card"
+                id="hub-card-inventory"
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fff7ed', color: '#ea580c', display: 'grid', placeContent: 'center' }}>
+                      <Package size={20} />
+                    </div>
+                    {lowStockCount > 0 ? (
+                      <span style={{ background: '#fee2e2', color: '#b91c1c', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                        {lowStockCount} low stock
+                      </span>
+                    ) : (
+                      <span style={{ background: '#f0fdf4', color: '#166534', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                        Healthy stock
+                      </span>
+                    )}
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                    Inventory &amp; Stock
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                    {products.length} catalog equipment • Instant stock updates, pricing &amp; barcode passes
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
+                  <span>Open Inventory Page</span>
+                  <ArrowRight size={14} />
+                </div>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('inventory')}
-          className={`store-nav-tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
-          id="store-tab-inventory"
-        >
-          <Package size={16} />
-          <span>Inventory & Stock ({products.length})</span>
-          {lowStockCount > 0 && (
-            <span className="store-nav-badge-alert">
-              {lowStockCount} low
-            </span>
-          )}
-        </button>
+              {/* Hub Card 3: Cancel Requests */}
+              <div
+                onClick={() => setActiveTab('cancellations')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                className="store-hub-card"
+                id="hub-card-cancellations"
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef2f2', color: '#ef4444', display: 'grid', placeContent: 'center' }}>
+                      <Ban size={20} />
+                    </div>
+                    <span style={{
+                      background: pendingCancellationRequests.length > 0 ? '#fee2e2' : '#f1f5f9',
+                      color: pendingCancellationRequests.length > 0 ? '#dc2626' : '#64748b',
+                      fontSize: '0.74rem',
+                      fontWeight: '800',
+                      padding: '3px 8px',
+                      borderRadius: '9999px'
+                    }}>
+                      {pendingCancellationRequests.length} pending
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                    Cancel Requests
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                    Review customer cancellation requests for dispatched orders with 1-click refund
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
+                  <span>Review Cancellations</span>
+                  <ArrowRight size={14} />
+                </div>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('coupons')}
-          className={`store-nav-tab-btn ${activeTab === 'coupons' ? 'active' : ''}`}
-          id="store-tab-coupons"
-        >
-          <Percent size={16} />
-          <span>Coupons & Discounts ({coupons.length})</span>
-        </button>
+              {/* Hub Card 4: Customer Directory (CRM) */}
+              <div
+                onClick={() => setActiveTab('customers')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                className="store-hub-card"
+                id="hub-card-customers"
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#eff6ff', color: '#3b82f6', display: 'grid', placeContent: 'center' }}>
+                      <Users size={20} />
+                    </div>
+                    <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                      {customers.length} registered
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                    Customer Directory (CRM)
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                    Customer CRM accounts, lifetime spend, purchase history &amp; WhatsApp communication
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2563eb', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
+                  <span>Open Customer CRM</span>
+                  <ArrowRight size={14} />
+                </div>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('repairs')}
-          className={`store-nav-tab-btn ${activeTab === 'repairs' ? 'active' : ''}`}
-          id="store-tab-repairs"
-        >
-          <Wrench size={16} />
-          <span>Workshop & Repairs ({repairs.length})</span>
-        </button>
+              {/* Hub Card 5: Coupons & Discounts */}
+              <div
+                onClick={() => setActiveTab('coupons')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                className="store-hub-card"
+                id="hub-card-coupons"
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#faf5ff', color: '#a855f7', display: 'grid', placeContent: 'center' }}>
+                      <Percent size={20} />
+                    </div>
+                    <span style={{ background: '#f3e8ff', color: '#7e22ce', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                      {coupons.length} active
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                    Coupons &amp; Discounts
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                    Manage promotional coupon codes, percentage discounts &amp; usage limits
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#9333ea', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
+                  <span>Manage Coupons</span>
+                  <ArrowRight size={14} />
+                </div>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('taxonomy')}
-          className={`store-nav-tab-btn ${activeTab === 'taxonomy' ? 'active' : ''}`}
-          id="store-tab-taxonomy"
-        >
-          <Layers size={16} />
-          <span>Categories & Brands ({taxonomy.categories.length + taxonomy.brands.length})</span>
-        </button>
+              {/* Hub Card 6: Workshop & Repairs */}
+              <div
+                onClick={() => setActiveTab('repairs')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                className="store-hub-card"
+                id="hub-card-repairs"
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeContent: 'center' }}>
+                      <Wrench size={20} />
+                    </div>
+                    <span style={{ background: '#d1fae5', color: '#065f46', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                      {repairs.filter(r => r.status !== 'Handed Over').length} active jobs
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                    Workshop &amp; Repairs
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                    Machinery clinic service queue, job estimates &amp; counter handover OTPs
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
+                  <span>Open Workshop</span>
+                  <ArrowRight size={14} />
+                </div>
+              </div>
 
-      </div>
+              {/* Hub Card 7: Categories & Brands */}
+              <div
+                onClick={() => setActiveTab('taxonomy')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '14px',
+                  padding: '18px 20px',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}
+                className="store-hub-card"
+                id="hub-card-taxonomy"
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fefce8', color: '#eab308', display: 'grid', placeContent: 'center' }}>
+                      <Layers size={20} />
+                    </div>
+                    <span style={{ background: '#fef9c3', color: '#854d0e', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
+                      {taxonomy.categories.length} Categories • {taxonomy.brands.length} Brands
+                    </span>
+                  </div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+                    Categories &amp; Brands
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                    Manage tool categories, equipment classification &amp; verified brand tags
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ca8a04', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
+                  <span>Edit Categories</span>
+                  <ArrowRight size={14} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Orders Activity Preview on Overview */}
+          <div style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '16px',
+            padding: '22px 24px',
+            marginBottom: '24px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 2px' }}>
+                  Recent Orders Activity
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>
+                  Showing latest 5 orders placed at Variathu Power Tools
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('orders')}
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fee2e2',
+                  color: '#dc2626',
+                  borderRadius: '8px',
+                  padding: '7px 14px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                id="btn-view-all-orders-overview"
+              >
+                <span>View Full Orders Management ({orders.length})</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+
+            {orders.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '30px 10px', color: '#64748b', fontSize: '0.86rem' }}>
+                No orders recorded yet.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
+                      <th style={{ padding: '10px 12px', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase' }}>Order ID</th>
+                      <th style={{ padding: '10px 12px', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase' }}>Customer</th>
+                      <th style={{ padding: '10px 12px', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase' }}>Date</th>
+                      <th style={{ padding: '10px 12px', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase' }}>Fulfillment</th>
+                      <th style={{ padding: '10px 12px', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase' }}>Amount</th>
+                      <th style={{ padding: '10px 12px', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase' }}>Live Status</th>
+                      <th style={{ padding: '10px 12px', fontWeight: '700', fontSize: '0.72rem', textTransform: 'uppercase', textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.slice(0, 5).map((ord) => (
+                      <tr key={ord.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '12px', fontWeight: '800', color: '#0f172a' }}>{ord.id}</td>
+                        <td style={{ padding: '12px', color: '#334155' }}>
+                          <strong>{ord.customer?.name || 'Customer'}</strong>
+                          <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748b' }}>+91 {ord.customer?.phone}</span>
+                        </td>
+                        <td style={{ padding: '12px', color: '#64748b' }}>{new Date(ord.date).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px' }}>
+                          <span style={{
+                            background: ord.deliveryType === 'store-pickup' ? '#eff6ff' : '#f0fdf4',
+                            color: ord.deliveryType === 'store-pickup' ? '#0369a1' : '#15803d',
+                            padding: '2px 7px',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: '700'
+                          }}>
+                            {ord.deliveryType === 'store-pickup' ? 'Store Pickup' : 'Courier'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', fontWeight: '800', color: '#0f172a' }}>{formatPrice(ord.totalAmount)}</td>
+                        <td style={{ padding: '12px' }}>
+                          <span style={{
+                            background: ord.status?.includes('Completed') ? '#f0fdf4' : ord.status?.includes('Dispatched') ? '#eff6ff' : '#fffbeb',
+                            color: ord.status?.includes('Completed') ? '#166534' : ord.status?.includes('Dispatched') ? '#1d4ed8' : '#b45309',
+                            padding: '3px 8px',
+                            borderRadius: '9999px',
+                            fontSize: '0.72rem',
+                            fontWeight: '800'
+                          }}>
+                            ● {ord.status || 'Processing'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px', textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('orders');
+                              setOrderSearchQuery(ord.id);
+                            }}
+                            style={{
+                              background: '#f8fafc',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '6px',
+                              padding: '5px 10px',
+                              fontSize: '0.74rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              color: '#334155'
+                            }}
+                          >
+                            Manage
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* DEDICATED PAGE TOP HEADER (When NOT on Overview) */}
+      {activeTab !== 'overview' && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          marginBottom: '20px',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '14px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                padding: '7px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '0.82rem',
+                fontWeight: '700',
+                color: '#334155',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+              id="btn-back-to-overview"
+            >
+              <ArrowLeft size={14} />
+              <span>Back to Overview</span>
+            </button>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.74rem', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span>Store Portal</span>
+                <span>/</span>
+                <span style={{ color: '#ea580c', fontWeight: '800' }}>
+                  {activeTab === 'orders' ? 'Customer Orders' :
+                   activeTab === 'cancellations' ? 'Cancel Requests' :
+                   activeTab === 'customers' ? 'Customer Directory' :
+                   activeTab === 'inventory' ? 'Inventory & Stock' :
+                   activeTab === 'coupons' ? 'Coupons & Discounts' :
+                   activeTab === 'repairs' ? 'Workshop & Repairs' :
+                   'Categories & Brands'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick action toolbar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setSoundEnabled(prev => !prev)}
+              style={{
+                background: soundEnabled ? '#f0fdf4' : '#f8fafc',
+                border: `1px solid ${soundEnabled ? '#bbf7d0' : '#e2e8f0'}`,
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '0.74rem',
+                fontWeight: '700',
+                color: soundEnabled ? '#15803d' : '#64748b',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+              id="btn-sound-toggle-header"
+            >
+              {soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
+              <span>{soundEnabled ? 'Chime ON' : 'Chime Muted'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAutoRefresh(prev => !prev)}
+              style={{
+                background: autoRefresh ? '#f0f9ff' : '#f8fafc',
+                border: `1px solid ${autoRefresh ? '#bae6fd' : '#e2e8f0'}`,
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '0.74rem',
+                fontWeight: '700',
+                color: autoRefresh ? '#0284c7' : '#64748b',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+              id="btn-sync-toggle-header"
+            >
+              <RefreshCw size={12} className={autoRefresh ? 'spin-slow' : ''} />
+              <span>{autoRefresh ? '30s Sync' : 'Sync Paused'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleStoreLogout}
+              style={{
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '0.74rem',
+                fontWeight: '700',
+                color: '#dc2626',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <LogOut size={13} />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: CUSTOMER ORDERS MANAGER */}
       {activeTab === 'orders' && (

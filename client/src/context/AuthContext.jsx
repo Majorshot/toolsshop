@@ -42,6 +42,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const sendOtp = async (payload) => {
+    return await api.sendOtp(payload);
+  };
+
+  const verifyOtp = async (payload) => {
+    const res = await api.verifyOtp(payload);
+    if (res.success && res.user) {
+      setUser(res.user);
+      return res;
+    } else {
+      throw new Error(res.message || 'OTP verification failed');
+    }
+  };
+
+  const resendOtp = async (payload) => {
+    return await api.resendOtp(payload);
+  };
 
   const logout = () => {
     setUser(null);
@@ -70,6 +87,9 @@ export const AuthProvider = ({ children }) => {
         isCustomer,
         login,
         register,
+        sendOtp,
+        verifyOtp,
+        resendOtp,
         logout,
         updateUser
       }}
@@ -86,6 +106,9 @@ const defaultAuthContext = {
   isCustomer: false,
   login: async () => {},
   register: async () => {},
+  sendOtp: async () => {},
+  verifyOtp: async () => {},
+  resendOtp: async () => {},
   logout: () => {},
   updateUser: () => {}
 };
