@@ -11,47 +11,8 @@ import { api } from '../services/api';
 import GstInvoiceModal from '../components/GstInvoiceModal';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm } from '../components/SpringModal';
-
-export const HoverDevCard = ({ title, subtitle, Icon, onClick, href, badge }) => {
-  const content = (
-    <>
-      <div className="hover-dev-card-bg" />
-      {Icon && (
-        <Icon
-          size={110}
-          strokeWidth={1.4}
-          className="hover-dev-card-watermark"
-        />
-      )}
-      <div>
-        {Icon && (
-          <Icon
-            size={26}
-            strokeWidth={2}
-            className="hover-dev-card-icon"
-          />
-        )}
-        <h3 className="hover-dev-card-title">{title}</h3>
-        <p className="hover-dev-card-subtitle">{subtitle}</p>
-      </div>
-      {badge && <span className="hover-dev-card-badge">{badge}</span>}
-    </>
-  );
-
-  if (href) {
-    return (
-      <a href={href} className="hover-dev-card">
-        {content}
-      </a>
-    );
-  }
-
-  return (
-    <button type="button" onClick={onClick} className="hover-dev-card">
-      {content}
-    </button>
-  );
-};
+import HoverDevCard from '../components/HoverDevCard';
+export { HoverDevCard };
 
 
 export const resolveCourierPartner = (courierName = '') => {

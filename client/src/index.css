@@ -5717,10 +5717,9 @@ header.main-site-header {
   position: relative;
   z-index: 3;
   align-self: flex-start;
-  margin-top: 12px;
   font-size: 0.72rem;
   font-weight: 800;
-  padding: 2px 9px;
+  padding: 3px 9px;
   border-radius: 9999px;
   background: #f1f5f9;
   color: #475569;
@@ -5728,8 +5727,70 @@ header.main-site-header {
 }
 
 .hover-dev-card:hover .hover-dev-card-badge {
-  background: rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.24) !important;
   color: #ffffff !important;
+}
+
+/* Card Header row with icon wrap and badge */
+.hover-dev-card-header {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.hover-dev-card-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-content: center;
+  background: #fef2f2;
+  transition: background 0.25s ease, transform 0.2s ease;
+}
+
+.hover-dev-card:hover .hover-dev-card-icon-wrap {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.05);
+}
+
+.hover-dev-card-icon-wrap .hover-dev-card-icon {
+  margin-bottom: 0;
+}
+
+.hover-dev-card-body {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+}
+
+/* Action Link Footer */
+.hover-dev-card-action {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin-top: 14px;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.hover-dev-card:hover .hover-dev-card-action {
+  color: #ffffff !important;
+  transform: translateX(3px);
+}
+
+.hover-dev-card-arrow {
+  transition: transform 0.25s ease;
+}
+
+.hover-dev-card:hover .hover-dev-card-arrow {
+  transform: translateX(3px);
 }
 
 /* ==========================================================================

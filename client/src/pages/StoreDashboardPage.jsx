@@ -7,6 +7,7 @@ import Barcode from '../components/Barcode';
 import GstInvoiceModal from '../components/GstInvoiceModal';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm, SpringModal } from '../components/SpringModal';
+import HoverDevCard from '../components/HoverDevCard';
 
 const STATUS_OPTIONS = [
   'Order Placed',
@@ -2257,306 +2258,126 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '14px'
+              gap: '16px'
             }}>
               {/* Hub Card 1: Customer Orders */}
-              <div
-                onClick={() => setActiveTab('orders')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-                className="store-hub-card"
+              <HoverDevCard
                 id="hub-card-orders"
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', display: 'grid', placeContent: 'center' }}>
-                      <ShoppingBag size={20} />
-                    </div>
-                    {orderCounts.undispatched > 0 ? (
-                      <span style={{ background: '#ffedd5', color: '#c2410c', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                        {orderCounts.undispatched} undispatched
-                      </span>
-                    ) : (
-                      <span style={{ background: '#ecfdf5', color: '#15803d', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                        All dispatched
-                      </span>
-                    )}
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
-                    Customer Orders
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                    {orders.length} total customer orders • Courier shipping &amp; store pickup OTP passes
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
-                  <span>Open Orders Page</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
+                title="Customer Orders"
+                subtitle={`${orders.length} total customer orders • Courier shipping & store pickup OTP passes`}
+                Icon={ShoppingBag}
+                badge={orderCounts.undispatched > 0 ? `${orderCounts.undispatched} undispatched` : 'All dispatched'}
+                badgeBg={orderCounts.undispatched > 0 ? '#ffedd5' : '#ecfdf5'}
+                badgeColor={orderCounts.undispatched > 0 ? '#c2410c' : '#15803d'}
+                iconColor="#dc2626"
+                iconBg="#fef2f2"
+                gradient="linear-gradient(135deg, #dc2626 0%, #ea580c 100%)"
+                actionText="Open Orders Page"
+                actionColor="#dc2626"
+                onClick={() => setActiveTab('orders')}
+              />
 
               {/* Hub Card 2: Inventory & Stock */}
-              <div
-                onClick={() => setActiveTab('inventory')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-                className="store-hub-card"
+              <HoverDevCard
                 id="hub-card-inventory"
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fff7ed', color: '#ea580c', display: 'grid', placeContent: 'center' }}>
-                      <Package size={20} />
-                    </div>
-                    {lowStockCount > 0 ? (
-                      <span style={{ background: '#fee2e2', color: '#b91c1c', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                        {lowStockCount} low stock
-                      </span>
-                    ) : (
-                      <span style={{ background: '#f0fdf4', color: '#166534', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                        Healthy stock
-                      </span>
-                    )}
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
-                    Inventory &amp; Stock
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                    {products.length} catalog equipment • Instant stock updates, pricing &amp; barcode passes
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
-                  <span>Open Inventory Page</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
+                title="Inventory & Stock"
+                subtitle={`${products.length} catalog equipment • Instant stock updates, pricing & barcode passes`}
+                Icon={Package}
+                badge={lowStockCount > 0 ? `${lowStockCount} low stock` : 'Healthy stock'}
+                badgeBg={lowStockCount > 0 ? '#fee2e2' : '#f0fdf4'}
+                badgeColor={lowStockCount > 0 ? '#b91c1c' : '#166534'}
+                iconColor="#ea580c"
+                iconBg="#fff7ed"
+                gradient="linear-gradient(135deg, #ea580c 0%, #f59e0b 100%)"
+                actionText="Open Inventory Page"
+                actionColor="#ea580c"
+                onClick={() => setActiveTab('inventory')}
+              />
 
               {/* Hub Card 3: Cancel Requests */}
-              <div
-                onClick={() => setActiveTab('cancellations')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-                className="store-hub-card"
+              <HoverDevCard
                 id="hub-card-cancellations"
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fef2f2', color: '#ef4444', display: 'grid', placeContent: 'center' }}>
-                      <Ban size={20} />
-                    </div>
-                    <span style={{
-                      background: pendingCancellationRequests.length > 0 ? '#fee2e2' : '#f1f5f9',
-                      color: pendingCancellationRequests.length > 0 ? '#dc2626' : '#64748b',
-                      fontSize: '0.74rem',
-                      fontWeight: '800',
-                      padding: '3px 8px',
-                      borderRadius: '9999px'
-                    }}>
-                      {pendingCancellationRequests.length} pending
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
-                    Cancel Requests
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                    Review customer cancellation requests for dispatched orders with 1-click refund
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
-                  <span>Review Cancellations</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
+                title="Cancel Requests"
+                subtitle="Review customer cancellation requests for dispatched orders with 1-click refund"
+                Icon={Ban}
+                badge={`${pendingCancellationRequests.length} pending`}
+                badgeBg={pendingCancellationRequests.length > 0 ? '#fee2e2' : '#f1f5f9'}
+                badgeColor={pendingCancellationRequests.length > 0 ? '#dc2626' : '#64748b'}
+                iconColor="#ef4444"
+                iconBg="#fef2f2"
+                gradient="linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)"
+                actionText="Review Cancellations"
+                actionColor="#ef4444"
+                onClick={() => setActiveTab('cancellations')}
+              />
 
               {/* Hub Card 4: Customer Directory (CRM) */}
-              <div
-                onClick={() => setActiveTab('customers')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-                className="store-hub-card"
+              <HoverDevCard
                 id="hub-card-customers"
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#eff6ff', color: '#3b82f6', display: 'grid', placeContent: 'center' }}>
-                      <Users size={20} />
-                    </div>
-                    <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                      {customers.length} registered
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
-                    Customer Directory (CRM)
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                    Customer CRM accounts, lifetime spend, purchase history &amp; WhatsApp communication
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2563eb', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
-                  <span>Open Customer CRM</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
+                title="Customer Directory (CRM)"
+                subtitle="Customer CRM accounts, lifetime spend, purchase history & WhatsApp communication"
+                Icon={Users}
+                badge={`${customers.length} registered`}
+                badgeBg="#dbeafe"
+                badgeColor="#1d4ed8"
+                iconColor="#3b82f6"
+                iconBg="#eff6ff"
+                gradient="linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)"
+                actionText="Open Customer CRM"
+                actionColor="#2563eb"
+                onClick={() => setActiveTab('customers')}
+              />
 
               {/* Hub Card 5: Coupons & Discounts */}
-              <div
-                onClick={() => setActiveTab('coupons')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-                className="store-hub-card"
+              <HoverDevCard
                 id="hub-card-coupons"
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#faf5ff', color: '#a855f7', display: 'grid', placeContent: 'center' }}>
-                      <Percent size={20} />
-                    </div>
-                    <span style={{ background: '#f3e8ff', color: '#7e22ce', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                      {coupons.length} active
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
-                    Coupons &amp; Discounts
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                    Manage promotional coupon codes, percentage discounts &amp; usage limits
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#9333ea', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
-                  <span>Manage Coupons</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
+                title="Coupons & Discounts"
+                subtitle="Manage promotional coupon codes, percentage discounts & usage limits"
+                Icon={Percent}
+                badge={`${coupons.length} active`}
+                badgeBg="#f3e8ff"
+                badgeColor="#7e22ce"
+                iconColor="#a855f7"
+                iconBg="#faf5ff"
+                gradient="linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)"
+                actionText="Manage Coupons"
+                actionColor="#9333ea"
+                onClick={() => setActiveTab('coupons')}
+              />
 
               {/* Hub Card 6: Workshop & Repairs */}
-              <div
-                onClick={() => setActiveTab('repairs')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-                className="store-hub-card"
+              <HoverDevCard
                 id="hub-card-repairs"
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeContent: 'center' }}>
-                      <Wrench size={20} />
-                    </div>
-                    <span style={{ background: '#d1fae5', color: '#065f46', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                      {repairs.filter(r => r.status !== 'Handed Over').length} active jobs
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
-                    Workshop &amp; Repairs
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                    Machinery clinic service queue, job estimates &amp; counter handover OTPs
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
-                  <span>Open Workshop</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
+                title="Workshop & Repairs"
+                subtitle="Machinery clinic service queue, job estimates & counter handover OTPs"
+                Icon={Wrench}
+                badge={`${repairs.filter(r => r.status !== 'Handed Over').length} active jobs`}
+                badgeBg="#d1fae5"
+                badgeColor="#065f46"
+                iconColor="#10b981"
+                iconBg="#ecfdf5"
+                gradient="linear-gradient(135deg, #059669 0%, #0d9488 100%)"
+                actionText="Open Workshop"
+                actionColor="#059669"
+                onClick={() => setActiveTab('repairs')}
+              />
 
               {/* Hub Card 7: Categories & Brands */}
-              <div
-                onClick={() => setActiveTab('taxonomy')}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}
-                className="store-hub-card"
+              <HoverDevCard
                 id="hub-card-taxonomy"
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fefce8', color: '#eab308', display: 'grid', placeContent: 'center' }}>
-                      <Layers size={20} />
-                    </div>
-                    <span style={{ background: '#fef9c3', color: '#854d0e', fontSize: '0.74rem', fontWeight: '800', padding: '3px 8px', borderRadius: '9999px' }}>
-                      {taxonomy.categories.length} Categories • {taxonomy.brands.length} Brands
-                    </span>
-                  </div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
-                    Categories &amp; Brands
-                  </h4>
-                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
-                    Manage tool categories, equipment classification &amp; verified brand tags
-                  </p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ca8a04', fontWeight: '700', fontSize: '0.82rem', marginTop: '16px' }}>
-                  <span>Edit Categories</span>
-                  <ArrowRight size={14} />
-                </div>
-              </div>
+                title="Categories & Brands"
+                subtitle="Manage tool categories, equipment classification & verified brand tags"
+                Icon={Layers}
+                badge={`${taxonomy.categories.length} Categories • ${taxonomy.brands.length} Brands`}
+                badgeBg="#fef9c3"
+                badgeColor="#854d0e"
+                iconColor="#eab308"
+                iconBg="#fefce8"
+                gradient="linear-gradient(135deg, #d97706 0%, #eab308 100%)"
+                actionText="Edit Categories"
+                actionColor="#ca8a04"
+                onClick={() => setActiveTab('taxonomy')}
+              />
             </div>
           </div>
 
