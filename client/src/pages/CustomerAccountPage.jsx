@@ -1455,40 +1455,6 @@ export const CustomerAccountPage = () => {
             })()}
           </div>
 
-          {/* Quick Account Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fff7ed', color: '#ea580c', display: 'grid', placeContent: 'center' }}>
-                <Package size={22} />
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Total Orders</span>
-                <h4 style={{ fontSize: '1.28rem', fontWeight: '900', color: '#0f172a', margin: '2px 0 0' }}>{orders.length}</h4>
-              </div>
-            </div>
-
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#eff6ff', color: '#0284c7', display: 'grid', placeContent: 'center' }}>
-                <Clock size={22} />
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>In Shop / Active</span>
-                <h4 style={{ fontSize: '1.28rem', fontWeight: '900', color: '#0f172a', margin: '2px 0 0' }}>
-                  {orders.filter(o => !o.status?.toLowerCase().includes('cancel') && !o.handoverVerified && !o.status?.toLowerCase().includes('completed')).length}
-                </h4>
-              </div>
-            </div>
-
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'grid', placeContent: 'center' }}>
-                <MapPin size={22} />
-              </div>
-              <div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Saved Locations</span>
-                <h4 style={{ fontSize: '1.28rem', fontWeight: '900', color: '#0f172a', margin: '2px 0 0' }}>{savedAddressesList.length}</h4>
-              </div>
-            </div>
-          </div>
 
           {/* HoverDevCards Navigation Section (Variathu Brand Colours) */}
           <div style={{ marginTop: '24px', marginBottom: '28px' }}>
