@@ -1304,7 +1304,7 @@ export const CustomerAccountPage = () => {
           </button>
         </div>
 
-        <div className="customer-page-wrapper" style={{ margin: '0 auto', maxWidth: '1020px' }}>
+        <div className="customer-page-wrapper" style={{ width: '100%', maxWidth: '100%', margin: 0 }}>
       {/* TAB 1: OVERVIEW */}
       {sidebarTab === 'overview' && (
         <>

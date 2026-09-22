@@ -5585,6 +5585,39 @@ header.main-site-header {
   border-radius: 4px;
 }
 
+/* Full Width Dashboard Shells & Wrappers (Touches Left and Right screen edges) */
+.customer-dashboard-shell,
+.store-dashboard-shell {
+  display: flex;
+  min-height: 100vh;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  position: relative;
+}
+
+.customer-dashboard-main-area,
+.store-dashboard-main-area {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 24px 32px;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.customer-page-wrapper,
+.store-dashboard-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
 @media (max-width: 899px) {
   .customer-dashboard-shell,
   .store-dashboard-shell {

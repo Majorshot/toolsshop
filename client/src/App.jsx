@@ -200,11 +200,11 @@ const MainApp = () => {
           />
           <Route
             path="/login"
-            element={<div className="container"><LoginPage /></div>}
+            element={<LoginPage />}
           />
           <Route
             path="/account"
-            element={<div className="container"><CustomerAccountPage /></div>}
+            element={<CustomerAccountPage />}
           />
           <Route
             path="/customer"
@@ -212,7 +212,7 @@ const MainApp = () => {
           />
           <Route
             path="/admin"
-            element={<div className="container"><StoreDashboardPage onProductUpdated={loadProducts} /></div>}
+            element={<StoreDashboardPage onProductUpdated={loadProducts} />}
           />
         </Routes>
       </main>
