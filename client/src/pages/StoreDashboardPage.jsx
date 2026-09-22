@@ -1935,37 +1935,51 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         <>
           {/* Store Header Banner */}
           <div className="store-portal-header-banner">
-        <div className="store-portal-brand-wrap">
-          <div className="store-portal-icon">
-            <ShieldCheck size={26} />
-          </div>
+            <div className="store-portal-brand-wrap">
+              <div className="store-portal-icon">
+                <ShieldCheck size={26} />
+              </div>
 
-          <div>
-            <div className="store-portal-title-row">
-              <h1>Store Owner Portal</h1>
-              <span className="store-admin-badge">ADMIN ACCESS</span>
+              <div>
+                <div className="store-portal-title-row">
+                  <h1>Store Owner Portal</h1>
+                  <span className="store-admin-badge">ADMIN ACCESS</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <img
+                    src="/Logo.jpeg"
+                    alt="Variathu Power Tools"
+                    style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
+                  />
+                  <span className="store-portal-subtitle" style={{ margin: 0 }}>
+                    • Poyanil Building, Kozhencherry, Kerala
+                  </span>
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-              <img
-                src="/Logo.jpeg"
-                alt="Variathu Power Tools"
-                style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
-              />
-              <span className="store-portal-subtitle" style={{ margin: 0 }}>
-                • Poyanil Building, Kozhencherry, Kerala
-              </span>
+
+            <div className="store-portal-actions">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="store-action-btn-secondary"
+                id="btn-store-view-front"
+                title="Open Public Customer Storefront"
+              >
+                <Globe size={15} />
+                <span>View Storefront</span>
+              </button>
+
+              <button
+                onClick={handleStoreLogout}
+                className="store-logout-btn"
+                id="btn-store-logout"
+              >
+                <LogOut size={15} />
+                <span>Sign Out of Store</span>
+              </button>
             </div>
           </div>
-        </div>
-
-        <button
-          onClick={handleStoreLogout}
-          className="store-logout-btn"
-          id="btn-store-logout"
-        >
-          Sign Out of Store
-        </button>
-      </div>
 
       {/* Feature 6: Revenue Analytics & CSV Export Toolbar */}
       <div className="store-analytics-card">
