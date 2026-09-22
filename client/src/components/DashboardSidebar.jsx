@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FiChevronDown,
   FiChevronsRight,
+  FiX
 } from "react-icons/fi";
 import { motion } from "motion/react";
 
@@ -15,6 +16,13 @@ export const DashboardSidebar = ({
   items = [],
   bottomItems = [],
 }) => {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 900;
+    }
+    return false;
+  });
+
   const [internalOpen, setInternalOpen] = useState(() => {
     if (typeof window !== "undefined") {
       return window.innerWidth >= 900;
@@ -25,90 +33,167 @@ export const DashboardSidebar = ({
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledSetOpen !== undefined ? controlledSetOpen : setInternalOpen;
 
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 900;
+      setIsMobile(mobile);
+      if (mobile && controlledOpen === undefined) {
+        setInternalOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [controlledOpen]);
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (isMobile && open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobile, open]);
+
+  const handleItemClick = (item) => {
+    if (item.onClick) item.onClick();
+    if (isMobile) {
+      setOpen(false);
+    }
+  };
+
   return (
-    <motion.nav
-      layout
-      className="dashboard-sidebar-nav"
-      style={{
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-        flexShrink: 0,
-        borderRight: "1px solid #e2e8f0",
-        backgroundColor: "#ffffff",
-        padding: "10px 8px 60px 8px",
-        width: open ? "230px" : "64px",
-        display: "flex",
-        flexDirection: "column",
-        zIndex: 40,
-        boxShadow: "1px 0 8px rgba(0, 0, 0, 0.02)",
-        transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxSizing: "border-box"
-      }}
-    >
-      <TitleSection
-        open={open}
-        title={title}
-        subtitle={subtitle}
-        logo={logo}
-        onTitleClick={onTitleClick}
-      />
+    <>
+      {/* Mobile Dark Backdrop */}
+      {isMobile && open && (
+        <div
+          onClick={() => setOpen(false)}
+          className="dashboard-sidebar-backdrop animate-fade-in"
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(3px)",
+            WebkitBackdropFilter: "blur(3px)",
+            zIndex: 9999
+          }}
+          aria-hidden="true"
+        />
+      )}
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "4px",
-          flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          paddingRight: "2px"
-        }}
+      {/* Main Sidebar: Sticky on Desktop, Slide-In Drawer on Mobile */}
+      <motion.nav
+        layout={!isMobile}
+        className="dashboard-sidebar-nav"
+        style={
+          isMobile
+            ? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                height: "100vh",
+                width: "280px",
+                maxWidth: "85vw",
+                zIndex: 10000,
+                backgroundColor: "#ffffff",
+                borderRight: "1px solid #e2e8f0",
+                boxShadow: open ? "4px 0 25px rgba(0, 0, 0, 0.2)" : "none",
+                display: "flex",
+                flexDirection: "column",
+                padding: "16px 10px 24px 10px",
+                boxSizing: "border-box",
+                transform: open ? "translateX(0)" : "translateX(-100%)",
+                transition: "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
+                visibility: open ? "visible" : "hidden",
+                pointerEvents: open ? "auto" : "none"
+              }
+            : {
+                position: "sticky",
+                top: 0,
+                height: "100vh",
+                flexShrink: 0,
+                borderRight: "1px solid #e2e8f0",
+                backgroundColor: "#ffffff",
+                padding: "10px 8px 60px 8px",
+                width: open ? "230px" : "64px",
+                display: "flex",
+                flexDirection: "column",
+                zIndex: 40,
+                boxShadow: "1px 0 8px rgba(0, 0, 0, 0.02)",
+                transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                boxSizing: "border-box"
+              }
+        }
       >
-        {items.map((item) => (
-          <SidebarOption
-            key={item.id || item.title}
-            Icon={item.icon}
-            title={item.title}
-            selected={Boolean(item.selected)}
-            onClick={item.onClick}
-            open={open}
-            notifs={item.notifs}
-            notifsColor={item.notifsColor}
-            variant={item.variant}
-          />
-        ))}
+        <TitleSection
+          open={isMobile ? true : open}
+          title={title}
+          subtitle={subtitle}
+          logo={logo}
+          onTitleClick={onTitleClick}
+          isMobile={isMobile}
+          onClose={() => setOpen(false)}
+        />
 
-        {bottomItems.length > 0 && (
-          <div
-            style={{
-              marginTop: "auto",
-              paddingTop: "8px",
-              borderTop: "1px solid #f1f5f9",
-              display: "flex",
-              flexDirection: "column",
-              gap: "4px"
-            }}
-          >
-            {bottomItems.map((item) => (
-              <SidebarOption
-                key={item.id || item.title}
-                Icon={item.icon}
-                title={item.title}
-                selected={Boolean(item.selected)}
-                onClick={item.onClick}
-                open={open}
-                notifs={item.notifs}
-                notifsColor={item.notifsColor}
-                variant={item.variant}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            paddingRight: "2px"
+          }}
+        >
+          {items.map((item) => (
+            <SidebarOption
+              key={item.id || item.title}
+              Icon={item.icon}
+              title={item.title}
+              selected={Boolean(item.selected)}
+              onClick={() => handleItemClick(item)}
+              open={isMobile ? true : open}
+              notifs={item.notifs}
+              notifsColor={item.notifsColor}
+              variant={item.variant}
+            />
+          ))}
 
-      <ToggleClose open={open} setOpen={setOpen} />
-    </motion.nav>
+          {bottomItems.length > 0 && (
+            <div
+              style={{
+                marginTop: "auto",
+                paddingTop: "8px",
+                borderTop: "1px solid #f1f5f9",
+                display: "flex",
+                flexDirection: "column",
+                gap: "4px"
+              }}
+            >
+              {bottomItems.map((item) => (
+                <SidebarOption
+                  key={item.id || item.title}
+                  Icon={item.icon}
+                  title={item.title}
+                  selected={Boolean(item.selected)}
+                  onClick={() => handleItemClick(item)}
+                  open={isMobile ? true : open}
+                  notifs={item.notifs}
+                  notifsColor={item.notifsColor}
+                  variant={item.variant}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {!isMobile && <ToggleClose open={open} setOpen={setOpen} />}
+      </motion.nav>
+    </>
   );
 };
 
@@ -194,7 +279,7 @@ export const SidebarOption = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           style={{
-            fontSize: "0.82rem",
+            fontSize: "0.84rem",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -252,7 +337,7 @@ export const SidebarOption = ({
   );
 };
 
-const TitleSection = ({ open, title, subtitle, logo, onTitleClick }) => {
+const TitleSection = ({ open, title, subtitle, logo, onTitleClick, isMobile, onClose }) => {
   return (
     <div
       style={{
@@ -262,25 +347,32 @@ const TitleSection = ({ open, title, subtitle, logo, onTitleClick }) => {
       }}
     >
       <div
-        onClick={onTitleClick}
         style={{
           display: "flex",
-          cursor: onTitleClick ? "pointer" : "default",
           alignItems: "center",
           justifyContent: "space-between",
           borderRadius: "8px",
           padding: "4px",
-          transition: "background-color 0.15s ease",
           minHeight: "44px"
         }}
-        onMouseEnter={(e) => {
-          if (onTitleClick) e.currentTarget.style.backgroundColor = "#f8fafc";
-        }}
-        onMouseLeave={(e) => {
-          if (onTitleClick) e.currentTarget.style.backgroundColor = "transparent";
-        }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+        <div
+          onClick={onTitleClick}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            minWidth: 0,
+            cursor: onTitleClick ? "pointer" : "default",
+            flex: 1
+          }}
+          onMouseEnter={(e) => {
+            if (onTitleClick) e.currentTarget.style.backgroundColor = "#f8fafc";
+          }}
+          onMouseLeave={(e) => {
+            if (onTitleClick) e.currentTarget.style.backgroundColor = "transparent";
+          }}
+        >
           {logo || <DefaultLogo />}
           {open && (
             <motion.div
@@ -293,7 +385,7 @@ const TitleSection = ({ open, title, subtitle, logo, onTitleClick }) => {
               <span
                 style={{
                   display: "block",
-                  fontSize: "0.82rem",
+                  fontSize: "0.84rem",
                   fontWeight: "800",
                   color: "#0f172a",
                   whiteSpace: "nowrap",
@@ -317,8 +409,31 @@ const TitleSection = ({ open, title, subtitle, logo, onTitleClick }) => {
             </motion.div>
           )}
         </div>
-        {open && onTitleClick && (
-          <FiChevronDown style={{ color: "#94a3b8", marginRight: "4px", flexShrink: 0 }} />
+
+        {isMobile ? (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: "#f1f5f9",
+              border: "none",
+              borderRadius: "8px",
+              width: "32px",
+              height: "32px",
+              display: "grid",
+              placeContent: "center",
+              color: "#64748b",
+              cursor: "pointer",
+              flexShrink: 0
+            }}
+            aria-label="Close menu"
+          >
+            <FiX size={18} />
+          </button>
+        ) : (
+          open && onTitleClick && (
+            <FiChevronDown style={{ color: "#94a3b8", marginRight: "4px", flexShrink: 0 }} />
+          )
         )}
       </div>
     </div>

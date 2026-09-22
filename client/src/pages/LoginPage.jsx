@@ -257,15 +257,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div style={{
-      minHeight: 'calc(100vh - 160px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '40px 16px 64px',
-      position: 'relative',
-      background: 'radial-gradient(ellipse at 50% 10%, rgba(220, 38, 38, 0.05) 0%, rgba(248, 250, 252, 0.95) 70%)'
-    }}>
+    <div className="login-page-container">
       {/* Background ambient lighting */}
       <div style={{
         position: 'absolute',
@@ -282,26 +274,13 @@ export const LoginPage = () => {
         zIndex: 0
       }} />
 
-      <AnimatedContent distance={24} delay={0.05} style={{ width: '100%', maxWidth: '460px', position: 'relative', zIndex: 1 }}>
+      <AnimatedContent distance={24} delay={0.05} style={{ width: '100%', maxWidth: '440px', position: 'relative', zIndex: 1 }}>
         
         {/* Main Minimalist Auth Card */}
-        <div style={{
-          width: '100%',
-          background: '#ffffff',
-          borderRadius: '24px',
-          border: '1px solid rgba(226, 232, 240, 0.85)',
-          boxShadow: '0 20px 45px -15px rgba(15, 23, 42, 0.07), 0 0 0 1px rgba(15, 23, 42, 0.02)',
-          overflow: 'hidden',
-          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-        }}>
+        <div className="login-auth-card">
 
           {/* Top Header Section */}
-          <div style={{
-            padding: '30px 32px 22px',
-            textAlign: 'center',
-            borderBottom: '1px solid #f1f5f9',
-            background: 'linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)'
-          }}>
+          <div className="login-card-header">
             {/* Real Logo Image */}
             <div style={{ marginBottom: '14px', display: 'flex', justifyContent: 'center' }}>
               <img
@@ -386,7 +365,7 @@ export const LoginPage = () => {
           </div>
 
           {/* Form Content Area */}
-          <div style={{ padding: '24px 32px 30px' }}>
+          <div className="login-card-body">
             
             {/* Customer Mode: Sliding Segmented Control (Only in Input Step) */}
             {activeTab === 'customer' && customerStep === 'input' && (
@@ -989,12 +968,7 @@ export const LoginPage = () => {
                     Enter 6-Digit Verification Code
                   </label>
 
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    margin: '6px 0 12px'
-                  }}>
+                  <div className="otp-inputs-container">
                     {otpDigits.map((digit, idx) => (
                       <input
                         key={idx}
@@ -1006,20 +980,7 @@ export const LoginPage = () => {
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                         autoComplete="one-time-code"
-                        style={{
-                          width: '44px',
-                          height: '52px',
-                          textAlign: 'center',
-                          fontSize: '1.4rem',
-                          fontWeight: '800',
-                          color: '#0f172a',
-                          background: digit ? '#fff5f5' : '#ffffff',
-                          border: digit ? '2px solid #dc2626' : '1.5px solid #cbd5e1',
-                          borderRadius: '12px',
-                          outline: 'none',
-                          boxShadow: digit ? '0 0 0 3px rgba(220, 38, 38, 0.1)' : 'none',
-                          transition: 'all 0.15s ease'
-                        }}
+                        className={`otp-input-digit ${digit ? 'filled' : ''}`}
                       />
                     ))}
                   </div>

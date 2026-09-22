@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -164,6 +164,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
   const [activeTab, setActiveTabState] = useState(() => urlTab || 'overview');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Keep activeTab in sync with URL query param (?tab=overview, etc.)
   useEffect(() => {
@@ -1837,16 +1838,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   ];
 
   return (
-    <div
-      className="store-dashboard-shell"
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-        backgroundColor: '#f8fafc',
-        position: 'relative'
-      }}
-    >
+    <div className="store-dashboard-shell">
       <DashboardSidebar
+        open={mobileSidebarOpen}
+        setOpen={setMobileSidebarOpen}
         title="Variathu Store"
         subtitle="Store Owner Portal"
         items={sidebarNavItems}
@@ -1854,15 +1849,60 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         onTitleClick={() => navigate('/')}
       />
 
-      <div
-        className="store-dashboard-main-area"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          padding: '24px 28px',
-          overflowX: 'hidden'
-        }}
-      >
+      <div className="store-dashboard-main-area">
+        {/* Mobile Top Navigation Header */}
+        <div className="dashboard-mobile-top-bar">
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(true)}
+            className="dashboard-mobile-hamburger-btn"
+            id="btn-store-mobile-menu"
+          >
+            <Menu size={18} />
+            <span>Menu</span>
+            {(orderCounts.undispatched > 0 || pendingCancellationRequests.length > 0) && (
+              <span className="dashboard-mobile-badge">
+                {orderCounts.undispatched + pendingCancellationRequests.length}
+              </span>
+            )}
+          </button>
+
+          <div className="dashboard-mobile-brand">
+            <img
+              src="/Logo.jpeg"
+              alt="Variathu"
+              style={{ height: '20px', width: 'auto', objectFit: 'contain' }}
+            />
+            <span>Store Portal</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="dashboard-mobile-hamburger-btn"
+            title="View Storefront"
+            style={{ padding: '6px 8px' }}
+          >
+            <Globe size={16} />
+          </button>
+        </div>
+
+        {/* Mobile 1-Tap Horizontal Tabs Scroll */}
+        <div className="dashboard-mobile-tabs-scroll">
+          {sidebarNavItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={item.onClick}
+              className={`dashboard-mobile-tab-pill ${item.selected ? 'active' : ''}`}
+            >
+              <item.icon size={14} />
+              <span>{item.title.split(' (')[0]}</span>
+              {item.notifs ? <span className="tab-pill-notif">{item.notifs}</span> : null}
+            </button>
+          ))}
+        </div>
+
         <div className="store-dashboard-wrapper">
       {/* Toast Notification */}
       {notification && (

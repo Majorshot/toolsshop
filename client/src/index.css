@@ -5585,11 +5585,219 @@ header.main-site-header {
   border-radius: 4px;
 }
 
-@media (max-width: 768px) {
-  .store-dashboard-main-area,
-  .customer-dashboard-main-area {
-    padding: 16px 12px !important;
+@media (max-width: 899px) {
+  .customer-dashboard-shell,
+  .store-dashboard-shell {
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
   }
+
+  .customer-dashboard-main-area,
+  .store-dashboard-main-area {
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    padding: 12px 14px calc(var(--bottom-nav-height) + 24px) 14px !important;
+    overflow-x: hidden !important;
+    flex: 1 1 auto !important;
+  }
+
+  .dashboard-mobile-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    margin: -12px -14px 12px -14px;
+  }
+
+  .dashboard-mobile-hamburger-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #0f172a;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .dashboard-mobile-badge {
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    margin-left: 2px;
+  }
+
+  .dashboard-mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 0.92rem;
+    color: #0f172a;
+  }
+
+  .dashboard-mobile-tabs-scroll {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -14px 14px -14px;
+    padding: 2px 14px 8px 14px;
+  }
+
+  .dashboard-mobile-tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-mobile-tab-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .dashboard-mobile-tab-pill.active {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+  }
+
+  .dashboard-mobile-tab-pill.active-orange {
+    background: #ea580c;
+    color: #ffffff;
+    border-color: #ea580c;
+    box-shadow: 0 2px 8px rgba(234, 88, 12, 0.25);
+  }
+
+  .dashboard-mobile-tab-pill .tab-pill-notif {
+    background: rgba(0, 0, 0, 0.15);
+    color: inherit;
+    font-size: 0.68rem;
+    padding: 1px 5px;
+    border-radius: 10px;
+  }
+
+  .dashboard-mobile-tab-pill.active .tab-pill-notif,
+  .dashboard-mobile-tab-pill.active-orange .tab-pill-notif {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+  }
+}
+
+/* ==========================================================================
+   Mobile-First Login Page & OTP Inputs Design System
+   ========================================================================== */
+.login-page-container {
+  min-height: calc(100vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 14px calc(var(--bottom-nav-height) + 36px) 14px;
+  position: relative;
+  background: radial-gradient(ellipse at 50% 10%, rgba(220, 38, 38, 0.05) 0%, rgba(248, 250, 252, 0.95) 70%);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.login-auth-card {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 16px 35px -10px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(15, 23, 42, 0.02);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.login-card-header {
+  padding: 24px 20px 18px;
+  text-align: center;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+  box-sizing: border-box;
+}
+
+.login-card-body {
+  padding: 20px 18px 24px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .login-card-header {
+    padding: 18px 14px 14px;
+  }
+  .login-card-body {
+    padding: 16px 12px 20px;
+  }
+}
+
+/* 6-Digit OTP Container and Digits */
+.otp-inputs-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1.8vw, 8px);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 6px 0 12px;
+}
+
+.otp-input-digit {
+  width: clamp(36px, 11.5vw, 46px);
+  height: clamp(46px, 13.5vw, 54px);
+  font-size: clamp(1.2rem, 4vw, 1.45rem);
+  font-weight: 800;
+  text-align: center;
+  border-radius: 11px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.otp-input-digit:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.otp-input-digit.filled {
+  background: #fff5f5;
+  border-color: #dc2626;
 }
 
 /* ==========================================================================

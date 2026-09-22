@@ -4,7 +4,7 @@ import {
   User, Package, MapPin, Truck, CheckCircle2, Clock, MessageCircle, LogOut,
   ShoppingBag, ArrowRight, Phone, RefreshCw, FileText, Printer, Shield, QrCode,
   X, ExternalLink, Navigation, Copy, Check, XCircle, AlertCircle, Edit3, Plus, Trash2,
-  Building, Home, Briefcase, LayoutDashboard, ChevronDown, ChevronUp, ArrowLeft
+  Building, Home, Briefcase, LayoutDashboard, ChevronDown, ChevronUp, ArrowLeft, Menu
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -497,6 +497,7 @@ export const CustomerAccountPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
   const [sidebarTab, setSidebarTabState] = useState(() => urlTab || 'overview');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (urlTab && urlTab !== sidebarTab) {
@@ -1204,16 +1205,10 @@ export const CustomerAccountPage = () => {
 
 
   return (
-    <div
-      className="customer-dashboard-shell"
-      style={{
-        display: 'flex',
-        minHeight: '100vh',
-        backgroundColor: '#f8fafc',
-        position: 'relative'
-      }}
-    >
+    <div className="customer-dashboard-shell">
       <DashboardSidebar
+        open={mobileSidebarOpen}
+        setOpen={setMobileSidebarOpen}
         title={user.name || 'Valued Customer'}
         subtitle="Customer Account"
         logo={
@@ -1240,15 +1235,75 @@ export const CustomerAccountPage = () => {
         onTitleClick={() => handleOpenAddressModal()}
       />
 
-      <div
-        className="customer-dashboard-main-area"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          padding: '24px 32px',
-          overflowX: 'hidden'
-        }}
-      >
+      <div className="customer-dashboard-main-area">
+        {/* Mobile Top Navigation Header */}
+        <div className="dashboard-mobile-top-bar">
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(true)}
+            className="dashboard-mobile-hamburger-btn"
+            id="btn-customer-mobile-menu"
+          >
+            <Menu size={18} />
+            <span>Menu</span>
+          </button>
+
+          <div className="dashboard-mobile-brand">
+            <span style={{ color: '#ea580c' }}>●</span>
+            <span style={{ maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.name || 'Account'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadCustomerOrders}
+            className="dashboard-mobile-hamburger-btn"
+            title="Refresh Orders"
+            style={{ padding: '6px 8px' }}
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+
+        {/* Mobile 1-Tap Horizontal Tabs Scroll */}
+        <div className="dashboard-mobile-tabs-scroll">
+          <button
+            type="button"
+            onClick={() => setSidebarTab('overview')}
+            className={`dashboard-mobile-tab-pill ${sidebarTab === 'overview' ? 'active-orange' : ''}`}
+          >
+            <LayoutDashboard size={14} />
+            <span>Overview</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarTab('orders')}
+            className={`dashboard-mobile-tab-pill ${sidebarTab === 'orders' ? 'active-orange' : ''}`}
+          >
+            <Package size={14} />
+            <span>Ordered Products</span>
+            {orders.length > 0 && <span className="tab-pill-notif">{orders.length}</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarTab('addresses')}
+            className={`dashboard-mobile-tab-pill ${sidebarTab === 'addresses' ? 'active-orange' : ''}`}
+          >
+            <MapPin size={14} />
+            <span>Saved Addresses</span>
+            {savedAddressesList.length > 0 && <span className="tab-pill-notif">{savedAddressesList.length}</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/shop')}
+            className="dashboard-mobile-tab-pill"
+          >
+            <ShoppingBag size={14} />
+            <span>Shop Tools</span>
+          </button>
+        </div>
+
         <div className="customer-page-wrapper" style={{ margin: '0 auto', maxWidth: '1020px' }}>
       {/* TAB 1: OVERVIEW */}
       {sidebarTab === 'overview' && (
