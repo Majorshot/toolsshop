@@ -1150,6 +1150,9 @@ const db = {
     order.status = "Completed";
     order.collectedAt = new Date().toISOString();
     order.handoverVerified = true;
+    if (order.paymentStatus !== 'REFUNDED') {
+      order.paymentStatus = 'PAID';
+    }
     await order.save();
     return { success: true, order: order.toObject(), message: "Handover verified! Order marked as Completed." };
   },

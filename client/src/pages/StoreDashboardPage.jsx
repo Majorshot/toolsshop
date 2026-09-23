@@ -3521,649 +3521,455 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {filteredOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="store-order-card"
-                  id={`store-order-row-${order.id}`}
-                >
-                  {/* OTP THING AT TOP OF PRODUCT ORDER (STORE PICKUP ORDERS ONLY) */}
-                  {order.deliveryType === 'store-pickup' && (
-                    <div
-                      style={{
-                        background: order.handoverVerified 
-                          ? '#f0fdf4' 
-                          : 'linear-gradient(135deg, rgba(234, 88, 12, 0.06) 0%, rgba(234, 88, 12, 0.12) 100%)',
-                        border: order.handoverVerified ? '1.5px solid #86efac' : '1.5px dashed #ea580c',
-                        borderRadius: '10px',
-                        padding: '12px 16px',
-                        marginBottom: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px'
-                      }}
-                      id={`pickup-otp-bar-${order.id}`}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {order.handoverVerified ? (
-                          <CheckCircle2 size={20} style={{ color: '#16a34a' }} />
-                        ) : (
-                          <ShieldCheck size={20} style={{ color: '#ea580c' }} />
-                        )}
-                        <div>
-                          <div style={{ fontSize: '0.9rem', fontWeight: '800', color: order.handoverVerified ? '#166534' : '#0f172a' }}>
-                            {order.handoverVerified ? '✅ Counter Handover Verified & Completed' : 'Store Counter Pickup • OTP Verification'}
+                  {filteredOrders.map((order) => {
+                    const isPickup = order.deliveryType === 'store-pickup';
+                    const isCancelled = order.status === 'Cancelled';
+                    const isCancelRequested = order.cancellationRequested && !isCancelled;
+                    const isPaidOnline = order.paymentStatus === 'PAID' && isOnlinePayment(order);
+                    const isRefunded = order.paymentStatus === 'REFUNDED' || (isCancelled && order.paymentStatus === 'REFUNDED');
+                    const hasAwb = !!(order.awb && order.awb.trim());
+                    const courierCfg = !isPickup ? resolveCourierConfig(order.courierPartner) : null;
+                    const itemCount = (order.items || []).reduce((acc, it) => acc + (it.quantity || 1), 0);
+
+                    return (
+                      <div
+                        key={order.id}
+                        className={`store-order-card ${isCancelled ? 'order-card-cancelled' : isPickup ? 'order-card-pickup' : 'order-card-courier'}`}
+                        id={`store-order-row-${order.id}`}
+                      >
+                        {/* 1. COMPACT HEADER BAR */}
+                        <div className="store-order-header">
+                          <div className="store-order-header-left">
+                            <span className="store-order-id-badge" title="Order ID">
+                              {order.id}
+                            </span>
+
+                            <span className="store-order-time">
+                              {new Date(order.date || order.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} at {new Date(order.date || order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+
+                            {/* Delivery Type Badge */}
+                            <span className={`order-badge ${isPickup ? 'order-badge-pickup' : 'order-badge-courier'}`}>
+                              {isPickup ? '🏬 Counter Pickup' : '🚚 Courier Delivery'}
+                            </span>
+
+                            {/* Fulfillment Status Badge */}
+                            {isCancelled ? (
+                              <span className="order-badge order-badge-danger">
+                                ❌ Cancelled {isRefunded ? '• Refunded' : ''}
+                              </span>
+                            ) : isCancelRequested ? (
+                              <span className="order-badge order-badge-warning" title={order.cancellationRequestReason || 'Customer requested cancel'}>
+                                ⚠️ Cancel Requested
+                              </span>
+                            ) : isPickup ? (
+                              order.handoverVerified ? (
+                                <span className="order-badge order-badge-success">
+                                  ✅ Collected
+                                </span>
+                              ) : (
+                                <span className="order-badge order-badge-warning">
+                                  ⏳ Ready for Pickup
+                                </span>
+                              )
+                            ) : hasAwb ? (
+                              <span className="order-badge order-badge-success">
+                                🚚 Dispatched • {courierCfg?.badge || order.courierPartner}
+                              </span>
+                            ) : (
+                              <span className="order-badge order-badge-warning">
+                                ⏳ Needs Courier Dispatch
+                              </span>
+                            )}
+
+                            {/* Payment Status Badge - Accurate & Clean (NO PENDING PAYMENT ON CASH AT COUNTER!) */}
+                            {isRefunded ? (
+                              <span className="order-badge order-badge-success" title={order.refundId ? `Refund ID: ${order.refundId}` : ''}>
+                                ⚡ Refunded
+                              </span>
+                            ) : isPickup ? (
+                              order.handoverVerified ? (
+                                <span className="order-badge order-badge-success">
+                                  💵 Cash Paid at Counter
+                                </span>
+                              ) : isPaidOnline ? (
+                                <span className="order-badge order-badge-success">
+                                  ✅ Paid Online (UPI)
+                                </span>
+                              ) : (
+                                <span className="order-badge order-badge-neutral">
+                                  💵 Pay at Counter
+                                </span>
+                              )
+                            ) : isPaidOnline ? (
+                              <span className="order-badge order-badge-success">
+                                ✅ Paid Online ({order.paymentMethod || 'UPI'})
+                              </span>
+                            ) : (
+                              <span className="order-badge order-badge-neutral">
+                                💵 Cash on Delivery (COD)
+                              </span>
+                            )}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                            {order.handoverVerified 
-                              ? `Equipment collected by customer${order.collectedAt ? ` on ${new Date(order.collectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}.`
-                              : <>Ask customer for their 4-digit code: <strong style={{ color: '#ea580c', fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>{order.pickupOtp || '4819'}</strong></>}
+
+                          <div className="store-order-header-right">
+                            <span className="store-order-total-price">
+                              {formatPrice(order.totalAmount)}
+                            </span>
+                            <span className="store-order-items-count">
+                              ({itemCount} {itemCount === 1 ? 'item' : 'items'})
+                            </span>
                           </div>
                         </div>
-                      </div>
 
-                      {!order.handoverVerified && (
-                        <form
-                          onSubmit={(e) => handleVerifySingleOrderOtp(e, order.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: '260px' }}
-                        >
-                          <input
-                            type="text"
-                            maxLength={6}
-                            placeholder="4-Digit OTP"
-                            value={orderOtpInputs[order.id] || ''}
-                            onChange={(e) => setOrderOtpInputs({ ...orderOtpInputs, [order.id]: e.target.value })}
-                            style={{
-                              flex: 1,
-                              padding: '7px 10px',
-                              textAlign: 'center',
-                              fontSize: '0.92rem',
-                              fontWeight: '800',
-                              letterSpacing: '0.15em',
-                              fontFamily: 'var(--font-mono)',
-                              background: '#ffffff',
-                              border: '2px solid #cbd5e1',
-                              borderRadius: '6px',
-                              color: '#0f172a',
-                              outline: 'none'
-                            }}
-                            id={`input-order-otp-${order.id}`}
-                          />
-                          <button
-                            type="submit"
-                            disabled={verifyingOrderId === order.id}
-                            className="btn-hero-clean"
-                            style={{ padding: '7px 14px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
-                            id={`btn-verify-otp-${order.id}`}
-                          >
-                            <span>{verifyingOrderId === order.id ? 'Verifying...' : 'Verify & Handover'}</span>
-                          </button>
-                        </form>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Order Top Row: Order ID & Total Amount */}
-                  <div className="store-order-top-row">
-                    <span className="store-order-id-label">{order.id}</span>
-                    <span className="store-order-price-val">{formatPrice(order.totalAmount)}</span>
-                  </div>
-
-                  {/* Status & Fulfillment Badges Bar */}
-                  <div className="store-order-badges-wrap">
-                    {/* Order Status Badge */}
-                    {order.status === 'Cancelled' ? (
-                      <span
-                        style={{
-                          background: '#fef2f2',
-                          color: '#dc2626',
-                          border: '1px solid #fecaca',
-                          padding: '3px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                      >
-                        ❌ Cancelled {order.paymentStatus === 'REFUNDED' ? '• Refunded' : ''}
-                      </span>
-                    ) : order.deliveryType === 'store-pickup' ? (
-                      <span
-                        style={{
-                          background: order.handoverVerified ? '#ecfdf5' : '#eff6ff',
-                          color: order.handoverVerified ? '#16a34a' : '#0284c7',
-                          border: `1px solid ${order.handoverVerified ? '#bbf7d0' : '#bae6fd'}`,
-                          padding: '3px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                      >
-                        {order.handoverVerified ? '✅ Collected at Store' : '🏬 Ready for Store Pickup'}
-                      </span>
-                    ) : (order.awb && order.awb.trim()) ? (
-                      <span
-                        style={{
-                          background: '#ecfdf5',
-                          color: '#16a34a',
-                          border: '1px solid #bbf7d0',
-                          padding: '3px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                      >
-                        ✅ Dispatched via Courier
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          background: 'rgba(234, 88, 12, 0.08)',
-                          color: '#ea580c',
-                          border: '1px solid rgba(234, 88, 12, 0.25)',
-                          padding: '3px 10px',
-                          borderRadius: '9999px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                      >
-                        📦 Order Placed • Processing at Shop
-                      </span>
-                    )}
-
-                    {/* Automation: Payment Status Badge */}
-                    <span
-                      style={{
-                        background: order.paymentStatus === 'REFUNDED' ? '#f0fdf4' : order.paymentStatus === 'PAID' ? '#ecfdf5' : '#fffbeb',
-                        color: order.paymentStatus === 'REFUNDED' ? '#059669' : order.paymentStatus === 'PAID' ? '#15803d' : '#b45309',
-                        border: `1px solid ${order.paymentStatus === 'REFUNDED' ? '#a7f3d0' : order.paymentStatus === 'PAID' ? '#86efac' : '#fde68a'}`,
-                        padding: '3px 10px',
-                        borderRadius: '9999px',
-                        fontSize: '0.74rem',
-                        fontWeight: '800'
-                      }}
-                    >
-                      {order.paymentStatus === 'REFUNDED'
-                        ? `REFUNDED (${order.refundId || 'UPI'})`
-                        : order.paymentStatus === 'PAID'
-                        ? `PAID (${order.transactionId || 'UPI'})`
-                        : 'PENDING PAYMENT'}
-                    </span>
-
-                    {/* Order Stage Badge / Courier AWB */}
-                    {order.status === 'Cancelled' ? (
-                      <span
-                        style={{
-                          background: '#fef2f2',
-                          color: '#dc2626',
-                          border: '1px solid #fecaca',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: '700'
-                        }}
-                      >
-                        Cancelled by {order.cancelledBy || 'customer'}
-                      </span>
-                    ) : order.cancellationRequested ? (
-                      <span
-                        style={{
-                          background: '#fef3c7',
-                          color: '#b45309',
-                          border: '1px solid #fde68a',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: '800',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        ⏳ CANCEL REQUEST PENDING
-                      </span>
-                    ) : order.deliveryType === 'store-pickup' ? (
-                      <span
-                        style={{
-                          background: order.handoverVerified ? '#ecfdf5' : '#f1f5f9',
-                          color: order.handoverVerified ? '#16a34a' : '#ea580c',
-                          border: '1px solid #e2e8f0',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: '700'
-                        }}
-                      >
-                        {order.handoverVerified ? `✅ Handover Verified` : `Pickup OTP: ${order.pickupOtp || '4819'}`}
-                      </span>
-                    ) : (order.awb && order.awb.trim()) ? (() => {
-                      const cfg = resolveCourierConfig(order.courierPartner);
-                      return (
-                        <span
-                          style={{
-                            background: cfg.bg,
-                            color: cfg.color,
-                            border: `1px solid ${cfg.border}`,
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '0.72rem',
-                            fontWeight: '700',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <span style={{ fontWeight: '900', color: cfg.color }}>{cfg.badge}</span>
-                          • AWB: {order.awb}
-                        </span>
-                      );
-                    })() : (
-                      <span
-                        style={{
-                          background: '#fffbeb',
-                          color: '#b45309',
-                          border: '1px solid #fde68a',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: '700',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        ⏳ Needs Courier Dispatch
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Customer Info & Order Metadata Card */}
-                  <div className="store-order-meta-card">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <strong>Customer:</strong> {order.customer?.name} &bull; <a href={`tel:${order.customer?.phone}`} style={{ color: '#ea580c', fontWeight: '700', textDecoration: 'none' }}>{order.customer?.phone}</a>
-                      </div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        {new Date(order.date).toLocaleDateString()} at {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <div style={{ color: '#475569', fontSize: '0.78rem' }}>
-                      <strong>Delivery:</strong> {order.deliveryType === 'store-pickup' ? 'Counter Pickup at Poyanil Building' : `Courier Delivery (${order.customer?.district || 'Pathanamthitta'}, PIN: ${order.customer?.pincode || '689641'})`}
-                    </div>
-                  </div>
-
-                  {/* Cancelled Alert Box (if applicable) */}
-                  {order.status === 'Cancelled' && (
-                    <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.82rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: (order.cancellationReason || order.cancellationRequestReason || order.cancelReason) ? '8px' : '0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#991b1b', fontWeight: '800' }}>
-                          <XCircle size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
-                          <span>Order Cancelled by {(order.cancelledBy || 'customer').toUpperCase()}</span>
-                        </div>
-                        {order.paymentStatus === 'REFUNDED' && (
-                          <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: '4px', fontSize: '0.74rem', fontWeight: '800', fontFamily: 'var(--font-mono)' }}>
-                            ⚡ Refund Reference: {order.refundId || 'Processed'}
-                          </span>
-                        )}
-                      </div>
-                      {(order.cancellationReason || order.cancellationRequestReason || order.cancelReason) && (
-                        <div style={{ background: '#ffffff', border: '1px solid #fca5a5', borderRadius: '6px', padding: '8px 12px', fontSize: '0.8rem', color: '#7f1d1d' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase', color: '#b91c1c', display: 'block', marginBottom: '2px' }}>
-                            Cancellation Reason:
-                          </span>
-                          <strong>"{order.cancellationReason || order.cancellationRequestReason || order.cancelReason}"</strong>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Pending Cancellation Request Alert Box */}
-                  {order.cancellationRequested && order.status !== 'Cancelled' && (
-                    <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.82rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400e', fontWeight: '800' }}>
-                          <AlertTriangle size={16} style={{ color: '#b45309', flexShrink: 0 }} />
-                          <span>⚠️ CUSTOMER REQUESTED CANCELLATION</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('cancellations')}
-                          style={{
-                            background: '#f59e0b',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '4px 10px',
-                            fontSize: '0.74rem',
-                            fontWeight: '800',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Review in Cancellations Tab &rarr;
-                        </button>
-                      </div>
-                      <div style={{ background: '#ffffff', border: '1px solid #fef08a', borderRadius: '6px', padding: '8px 12px', fontSize: '0.8rem', color: '#78350f' }}>
-                        <span style={{ fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase', color: '#b45309', display: 'block', marginBottom: '2px' }}>
-                          Customer Reason:
-                        </span>
-                        <strong>"{order.cancellationRequestReason || order.cancellationReason || 'Customer requested order cancellation'}"</strong>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Rich Ordered Products Section */}
-                  <div style={{
-                    background: '#ffffff',
-                    border: '1.5px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '12px 14px',
-                    fontSize: '0.82rem',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '10px',
-                      paddingBottom: '8px',
-                      borderBottom: '1px solid #f1f5f9',
-                      flexWrap: 'wrap',
-                      gap: '8px'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Package size={15} style={{ color: '#ea580c' }} />
-                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          Ordered Equipment & Tools ({order.items?.length || 0})
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOrderForDetails(order)}
-                        style={{
-                          background: '#eff6ff',
-                          border: '1px solid #bfdbfe',
-                          borderRadius: '6px',
-                          padding: '4px 10px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: '#1d4ed8',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          transition: 'all 0.15s ease'
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = '#eff6ff'; }}
-                        title="Inspect full product specs, customer address & order breakdown"
-                      >
-                        <Eye size={13} />
-                        <span>View Order & Products Details</span>
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {order.items?.map((item, idx) => {
-                        const matchedProd = products.find(p =>
-                          (p.id && item.id && String(p.id) === String(item.id)) ||
-                          (p._id && item.id && String(p._id) === String(item.id)) ||
-                          (p.name && item.name && p.name.toLowerCase() === item.name.toLowerCase())
-                        );
-                        const displayImg = item.image || matchedProd?.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80';
-                        const brand = item.brand || matchedProd?.brand || '';
-
-                        return (
-                          <div
-                            key={idx}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: '12px',
-                              padding: '8px 10px',
-                              background: '#f8fafc',
-                              borderRadius: '8px',
-                              border: '1px solid #f1f5f9',
-                              transition: 'all 0.15s ease'
-                            }}
-                            className="order-product-item-row"
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
-                              {/* Product Thumbnail */}
-                              <div
-                                onClick={() => setSelectedOrderForDetails(order)}
-                                style={{
-                                  width: '46px',
-                                  height: '46px',
-                                  borderRadius: '6px',
-                                  background: '#ffffff',
-                                  border: '1px solid #e2e8f0',
-                                  padding: '2px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flexShrink: 0,
-                                  cursor: 'pointer',
-                                  overflow: 'hidden'
-                                }}
-                                title="Click to view details"
-                              >
-                                <img
-                                  src={displayImg}
-                                  alt={item.name}
-                                  onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80'; }}
-                                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                                />
+                        {/* 2. BODY GRID: CUSTOMER/FULFILLMENT INFO (LEFT) & PACKING LIST (RIGHT) */}
+                        <div className="store-order-body-grid">
+                          {/* LEFT COLUMN: Customer & Dispatch/Handover Info */}
+                          <div className="store-order-context-box">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                              <div>
+                                <span style={{ color: '#64748b', fontSize: '0.74rem' }}>Customer:</span>{' '}
+                                <strong style={{ color: '#0f172a' }}>{order.customer?.name || 'Customer'}</strong>
                               </div>
-
-                              {/* Title & Brand Info */}
-                              <div style={{ minWidth: 0, flex: 1 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '2px' }}>
-                                  {brand && (
-                                    <span style={{
-                                      fontSize: '0.65rem',
-                                      fontWeight: '900',
-                                      letterSpacing: '0.04em',
-                                      textTransform: 'uppercase',
-                                      color: brand.toLowerCase().includes('dewalt') ? '#b45309' : brand.toLowerCase().includes('bosch') ? '#0284c7' : '#ea580c',
-                                      background: brand.toLowerCase().includes('dewalt') ? '#fef3c7' : brand.toLowerCase().includes('bosch') ? '#eff6ff' : '#fff7ed',
-                                      padding: '1px 6px',
-                                      borderRadius: '4px',
-                                      border: `1px solid ${brand.toLowerCase().includes('dewalt') ? '#fde68a' : brand.toLowerCase().includes('bosch') ? '#bfdbfe' : '#fed7aa'}`
-                                    }}>
-                                      {brand}
-                                    </span>
-                                  )}
-                                  {matchedProd?.category && (
-                                    <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '600' }}>
-                                      • {matchedProd.category}
-                                    </span>
-                                  )}
-                                  {matchedProd?.stock !== undefined && (
-                                    <span style={{
-                                      fontSize: '0.65rem',
-                                      color: matchedProd.stock > 3 ? '#166534' : '#dc2626',
-                                      fontWeight: '700',
-                                      background: matchedProd.stock > 3 ? '#f0fdf4' : '#fef2f2',
-                                      padding: '1px 5px',
-                                      borderRadius: '4px'
-                                    }}>
-                                      {matchedProd.stock > 0 ? `${matchedProd.stock} in stock` : 'Out of stock'}
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div
-                                  onClick={() => setSelectedOrderForDetails(order)}
-                                  style={{
-                                    fontWeight: '700',
-                                    color: '#0f172a',
-                                    fontSize: '0.82rem',
-                                    cursor: 'pointer',
-                                    lineHeight: '1.3'
-                                  }}
-                                  onMouseEnter={(e) => { e.currentTarget.style.color = '#ea580c'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.color = '#0f172a'; }}
-                                  title="Click to view details"
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <a
+                                  href={`tel:${order.customer?.phone}`}
+                                  style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '700', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                  title="Call customer"
                                 >
-                                  {item.name}
+                                  <Phone size={11} />
+                                  <span>{order.customer?.phone}</span>
+                                </a>
+                                <a
+                                  href={`https://wa.me/${(order.customer?.phone || '').replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(order.customer?.name || '')},%20this%20is%20Variathu%20Power%20Tools%20regarding%20order%20${order.id}.`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ color: '#16a34a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 6px', borderRadius: '4px', background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.7rem', fontWeight: '700' }}
+                                  title="Chat on WhatsApp"
+                                  id={`btn-whatsapp-order-${order.id}`}
+                                >
+                                  <MessageCircle size={11} /> WhatsApp
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Fulfillment Destination / Handover Area */}
+                            {isPickup ? (
+                              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#475569', fontSize: '0.76rem' }}>
+                                  <MapPin size={12} style={{ color: '#0284c7', flexShrink: 0 }} />
+                                  <span><strong>Counter Pickup:</strong> Poyanil Building, Kozhencherry</span>
                                 </div>
 
-                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                  <span>Qty: <strong style={{ color: '#0f172a' }}>{item.quantity || 1}</strong></span>
-                                  <span>&bull;</span>
-                                  <span>Unit: <strong style={{ color: '#0f172a' }}>{formatPrice(item.price)}</strong></span>
-                                  {(item.product || item.id) && (
-                                    <>
-                                      <span>&bull;</span>
+                                {/* Handover OTP or Completed Status */}
+                                {order.handoverVerified ? (
+                                  <div style={{ color: '#166534', fontSize: '0.76rem', fontWeight: '700', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <CheckCircle2 size={13} style={{ color: '#16a34a' }} />
+                                    <span>Handover completed{order.collectedAt ? ` at ${new Date(order.collectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}</span>
+                                  </div>
+                                ) : !isCancelled && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }} id={`pickup-otp-bar-${order.id}`}>
+                                    <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600' }}>OTP:</span>
+                                    <span style={{ background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', fontFamily: 'var(--font-mono)', fontWeight: '900', fontSize: '0.85rem', padding: '1px 6px', borderRadius: '4px' }}>
+                                      {order.pickupOtp || '4819'}
+                                    </span>
+                                    <form
+                                      onSubmit={(e) => handleVerifySingleOrderOtp(e, order.id)}
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                                    >
+                                      <input
+                                        type="text"
+                                        maxLength={6}
+                                        placeholder="4-Digit OTP"
+                                        value={orderOtpInputs[order.id] || ''}
+                                        onChange={(e) => setOrderOtpInputs({ ...orderOtpInputs, [order.id]: e.target.value })}
+                                        style={{
+                                          width: '100px',
+                                          padding: '4px 8px',
+                                          textAlign: 'center',
+                                          fontSize: '0.82rem',
+                                          fontWeight: '800',
+                                          letterSpacing: '0.1em',
+                                          fontFamily: 'var(--font-mono)',
+                                          borderRadius: '6px',
+                                          border: '1.5px solid #cbd5e1',
+                                          background: '#ffffff',
+                                          color: '#0f172a',
+                                          outline: 'none'
+                                        }}
+                                        id={`input-order-otp-${order.id}`}
+                                      />
+                                      <button
+                                        type="submit"
+                                        disabled={verifyingOrderId === order.id}
+                                        style={{
+                                          padding: '4px 10px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: '800',
+                                          background: '#16a34a',
+                                          color: '#ffffff',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px'
+                                        }}
+                                        id={`btn-verify-otp-${order.id}`}
+                                      >
+                                        <CheckCircle2 size={12} />
+                                        <span>{verifyingOrderId === order.id ? 'Verifying...' : 'Verify & Handover'}</span>
+                                      </button>
+                                    </form>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>
+                                <div style={{ color: '#475569', fontSize: '0.76rem', display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                                  <MapPin size={12} style={{ color: '#ea580c', flexShrink: 0, marginTop: '2px' }} />
+                                  <span>
+                                    <strong>Courier Destination:</strong> {order.customer?.address ? `${order.customer.address}, ` : ''}{order.customer?.district || 'Pathanamthitta'}, PIN: {order.customer?.pincode || '689641'}
+                                  </span>
+                                </div>
+                                {hasAwb ? (
+                                  <div style={{ marginTop: '4px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <span style={{ color: courierCfg?.color || '#0284c7', fontWeight: '800' }}>
+                                      {courierCfg?.badge || order.courierPartner || 'Courier'}
+                                    </span>
+                                    <span style={{ fontFamily: 'var(--font-mono)', background: '#ffffff', border: '1px solid #cbd5e1', padding: '1px 6px', borderRadius: '4px', fontSize: '0.74rem', color: '#0f172a', fontWeight: '700' }}>
+                                      AWB: {order.awb}
+                                    </span>
+                                    {courierCfg?.portalUrl && (
                                       <a
-                                        href={`/product/${item.product || item.id}`}
+                                        href={courierCfg.portalUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        style={{ color: '#ea580c', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        title="Open store product page in new tab"
+                                        style={{ color: '#ea580c', fontSize: '0.72rem', textDecoration: 'none', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
                                       >
-                                        Live Page <ExternalLink size={10} />
+                                        Track <ExternalLink size={10} />
                                       </a>
-                                    </>
-                                  )}
-                                </div>
+                                    )}
+                                  </div>
+                                ) : !isCancelled && (
+                                  <div style={{ marginTop: '4px', fontSize: '0.74rem', color: '#b45309', fontWeight: '700' }}>
+                                    ⏳ Needs courier consignment booking & AWB dispatch
+                                  </div>
+                                )}
                               </div>
+                            )}
+                          </div>
+
+                          {/* RIGHT COLUMN: Scannable Packing List (Ordered Items) */}
+                          <div className="store-order-items-box">
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>
+                              <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Package size={12} style={{ color: '#ea580c' }} />
+                                Items to Dispatch ({order.items?.length || 0})
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOrderForDetails(order)}
+                                style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                              >
+                                Full Breakdown &rarr;
+                              </button>
                             </div>
 
-                            {/* Item Line Price */}
-                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ color: '#0f172a', fontWeight: '900', fontSize: '0.92rem', fontFamily: 'var(--font-mono)' }}>
-                                {formatPrice(item.price * (item.quantity || 1))}
-                              </div>
-                              <span style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: '600' }}>
-                                Total
-                              </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              {order.items?.map((item, idx) => {
+                                const matchedProd = products.find(p =>
+                                  (p.id && item.id && String(p.id) === String(item.id)) ||
+                                  (p._id && item.id && String(p._id) === String(item.id)) ||
+                                  (p.name && item.name && p.name.toLowerCase() === item.name.toLowerCase())
+                                );
+                                const displayImg = item.image || matchedProd?.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=100&q=80';
+                                const brand = item.brand || matchedProd?.brand || '';
+                                const qty = item.quantity || 1;
+                                const lineTotal = (item.price || 0) * qty;
+
+                                return (
+                                  <div key={idx} className="store-order-item-row">
+                                    <div className="store-order-item-left">
+                                      <img
+                                        src={displayImg}
+                                        alt=""
+                                        className="store-order-item-thumb"
+                                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=100&q=80'; }}
+                                      />
+                                      <div style={{ minWidth: 0, flex: 1 }}>
+                                        <div
+                                          className="store-order-item-name"
+                                          onClick={() => setSelectedOrderForDetails(order)}
+                                          title={item.name}
+                                        >
+                                          {brand && (
+                                            <span style={{ fontSize: '0.64rem', fontWeight: '900', color: '#ea580c', background: '#fff7ed', padding: '1px 4px', borderRadius: '3px', marginRight: '4px', border: '1px solid #fed7aa' }}>
+                                              {brand}
+                                            </span>
+                                          )}
+                                          <span>{item.name}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                                          Unit: {formatPrice(item.price)}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <span className="store-order-item-qty">
+                                      x{qty}
+                                    </span>
+
+                                    <span className="store-order-item-price">
+                                      {formatPrice(lineTotal)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        </div>
 
-                  {/* Order Actions: Invoices, Shipping Labels, Customer Contact & Cancel */}
-                  <div className="store-order-actions-grid">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForDetails(order)}
-                      className="btn-store-action"
-                      style={{
-                        background: '#eff6ff',
-                        borderColor: '#bfdbfe',
-                        color: '#1d4ed8',
-                        fontWeight: '800'
-                      }}
-                      title="Inspect complete order specifications, customer address & product details"
-                      id={`btn-view-details-${order.id}`}
-                    >
-                      <Eye size={13} style={{ color: '#1d4ed8' }} />
-                      <span>View Order & Products</span>
-                    </button>
+                        {/* 3. ALERTS (CANCELLED / CANCELLATION REQUESTED) - COMPACT */}
+                        {isCancelled && (
+                          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '6px 10px', fontSize: '0.78rem', color: '#991b1b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <XCircle size={14} style={{ color: '#dc2626' }} />
+                              <span>Order Cancelled by {(order.cancelledBy || 'customer').toUpperCase()}: "<strong>{order.cancellationReason || order.cancellationRequestReason || order.cancelReason || 'Cancelled'}</strong>"</span>
+                            </div>
+                            {isRefunded && (
+                              <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '1px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '800' }}>
+                                ⚡ Refund: {order.refundId || 'Processed'}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForInvoice(order)}
-                      className="btn-store-action"
-                      title="Generate and print A4 GST Tax Invoice for customer"
-                      id={`btn-print-invoice-${order.id}`}
-                    >
-                      <Printer size={13} style={{ color: '#0284c7' }} />
-                      <span>Print GST Invoice</span>
-                    </button>
+                        {isCancelRequested && (
+                          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '6px 10px', fontSize: '0.78rem', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <AlertTriangle size={14} style={{ color: '#b45309' }} />
+                              <span>Customer requested cancel: "<strong>{order.cancellationRequestReason || order.cancellationReason || 'Cancel requested'}</strong>"</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('cancellations')}
+                              style={{ background: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '5px', padding: '3px 8px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
+                            >
+                              Review in Cancellations &rarr;
+                            </button>
+                          </div>
+                        )}
 
-                    {order.deliveryType !== 'store-pickup' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const cfg = resolveCourierConfig(order.courierPartner);
-                          setDispatchForm({
-                            courierPartner: cfg.name,
-                            awb: order.awb || ''
-                          });
-                          setDispatchModalOrder(order);
-                        }}
-                        className="btn-store-action"
-                        style={{
-                          background: order.awb ? '#f0f9ff' : '#eff6ff',
-                          color: '#0284c7',
-                          borderColor: order.awb ? '#bae6fd' : '#bfdbfe'
-                        }}
-                        title="Assign Courier Partner & Enter Consignment AWB"
-                        id={`btn-dispatch-order-${order.id}`}
-                      >
-                        <Truck size={13} style={{ color: '#0284c7' }} />
-                        <span>{order.awb ? 'Update Courier Details' : 'Dispatch via Courier'}</span>
-                      </button>
-                    )}
+                        {/* 4. CONTEXTUAL ACTIONS BAR */}
+                        <div className="store-order-actions-bar">
+                          {/* Left helper note or quick status */}
+                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                            {isPickup 
+                              ? (order.handoverVerified ? 'Counter handover complete.' : 'Awaiting customer pickup at counter.')
+                              : (hasAwb ? `Dispatched with ${order.courierPartner}.` : 'Pending courier dispatch.')
+                            }
+                          </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrderForLabel(order)}
-                      className="btn-store-action"
-                      title="Generate and print 4x6 Courier Shipping Label with barcode"
-                      id={`btn-print-label-${order.id}`}
-                    >
-                      <Truck size={13} style={{ color: '#ea580c' }} />
-                      <span>Print Courier Label</span>
-                    </button>
+                          {/* Right actions */}
+                          <div className="store-order-actions-right">
+                            {/* Dispatch actions (COURIER ONLY) */}
+                            {!isPickup && !isCancelled && !hasAwb && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const cfg = resolveCourierConfig(order.courierPartner);
+                                  setDispatchForm({
+                                    courierPartner: cfg.name,
+                                    awb: order.awb || ''
+                                  });
+                                  setDispatchModalOrder(order);
+                                }}
+                                className="btn-store-action btn-store-primary"
+                                id={`btn-dispatch-order-${order.id}`}
+                                title="Assign Courier Partner & Enter Consignment AWB"
+                              >
+                                <Truck size={13} />
+                                <span>Dispatch via Courier</span>
+                              </button>
+                            )}
 
-                    <a
-                      href={`tel:${order.customer?.phone}`}
-                      className="btn-store-action"
-                    >
-                      <Phone size={13} style={{ color: '#ea580c' }} />
-                      <span>Call Customer</span>
-                    </a>
+                            {!isPickup && !isCancelled && hasAwb && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedOrderForLabel(order)}
+                                  className="btn-store-action"
+                                  id={`btn-print-label-${order.id}`}
+                                  title="Print 4x6 Courier Shipping Label"
+                                >
+                                  <Truck size={13} style={{ color: '#ea580c' }} />
+                                  <span>Courier Label</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cfg = resolveCourierConfig(order.courierPartner);
+                                    setDispatchForm({
+                                      courierPartner: cfg.name,
+                                      awb: order.awb || ''
+                                    });
+                                    setDispatchModalOrder(order);
+                                  }}
+                                  className="btn-store-action"
+                                  title="Edit Courier Partner / AWB"
+                                >
+                                  <Edit3 size={12} />
+                                  <span>Edit Courier</span>
+                                </button>
+                              </>
+                            )}
 
-                    <a
-                      href={`https://wa.me/${(order.customer?.phone || '').replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(order.customer?.name || '')},%20this%20is%20Variathu%20Power%20Tools%20Kozhencherry%20regarding%20your%20order%20${order.id}.`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn-store-action btn-store-whatsapp btn-span-2"
-                      id={`btn-whatsapp-order-${order.id}`}
-                    >
-                      <MessageCircle size={13} />
-                      <span>WhatsApp Customer</span>
-                    </a>
+                            {/* GST Invoice */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrderForInvoice(order)}
+                              className="btn-store-action"
+                              id={`btn-print-invoice-${order.id}`}
+                              title="Generate & print GST Tax Invoice"
+                            >
+                              <Printer size={13} style={{ color: '#0284c7' }} />
+                              <span>GST Invoice</span>
+                            </button>
 
-                    {/* Cancel Order Action */}
-                    {order.status !== 'Cancelled' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOrderToCancel(order);
-                          setCancelReasonInput('Customer requested cancellation');
-                        }}
-                        className="btn-store-action btn-store-cancel btn-span-2"
-                        title="Cancel this order and automatically issue a full refund if paid online"
-                        id={`btn-cancel-order-${order.id}`}
-                      >
-                        <XCircle size={13} style={{ color: '#dc2626' }} />
-                        <span>Cancel Order</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                            {/* Details Modal */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrderForDetails(order)}
+                              className="btn-store-action"
+                              id={`btn-view-details-${order.id}`}
+                              title="View Full Order Breakdown & Specs"
+                            >
+                              <Eye size={13} style={{ color: '#475569' }} />
+                              <span>Details</span>
+                            </button>
+
+                            {/* Cancel Order */}
+                            {!isCancelled && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOrderToCancel(order);
+                                  setCancelReasonInput('Customer requested cancellation');
+                                }}
+                                className="btn-store-action btn-store-cancel"
+                                id={`btn-cancel-order-${order.id}`}
+                                title="Cancel Order"
+                              >
+                                <XCircle size={13} />
+                                <span>Cancel</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
             </div>
           )}
         </>
@@ -7727,10 +7533,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   fontWeight: '800',
                   padding: '4px 10px',
                   borderRadius: '6px',
-                  background: selectedOrderForDetails.paymentStatus === 'PAID' ? '#166534' : selectedOrderForDetails.paymentStatus === 'REFUNDED' ? '#991b1b' : '#b45309',
+                  background: selectedOrderForDetails.paymentStatus === 'PAID' || selectedOrderForDetails.handoverVerified 
+                    ? '#166534' 
+                    : selectedOrderForDetails.paymentStatus === 'REFUNDED' 
+                    ? '#991b1b' 
+                    : '#475569',
                   color: '#ffffff'
                 }}>
-                  {selectedOrderForDetails.paymentStatus === 'PAID' ? 'PAID ONLINE' : selectedOrderForDetails.paymentStatus === 'REFUNDED' ? 'REFUNDED' : 'PENDING PAYMENT (COD)'}
+                  {selectedOrderForDetails.paymentStatus === 'REFUNDED'
+                    ? 'REFUNDED'
+                    : selectedOrderForDetails.paymentStatus === 'PAID'
+                    ? 'PAID ONLINE'
+                    : selectedOrderForDetails.deliveryType === 'store-pickup'
+                    ? (selectedOrderForDetails.handoverVerified ? 'PAID AT COUNTER' : 'PAY AT COUNTER')
+                    : 'CASH ON DELIVERY (COD)'}
                 </span>
                 <button
                   type="button"
@@ -8154,7 +7970,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </div>
 
                       <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '6px' }}>
-                        Payment Method: <strong style={{ color: '#0f172a' }}>{selectedOrderForDetails.paymentMethod || (selectedOrderForDetails.paymentStatus === 'PAID' ? 'Razorpay Online UPI' : 'Counter Cash / COD')}</strong>
+                        Payment Method: <strong style={{ color: '#0f172a' }}>{selectedOrderForDetails.paymentMethod || (selectedOrderForDetails.paymentStatus === 'PAID' ? 'Razorpay Online UPI' : (selectedOrderForDetails.deliveryType === 'store-pickup' ? 'Cash at Counter' : 'Cash on Delivery (COD)'))}</strong>
                         {selectedOrderForDetails.transactionId && (
                           <div>Txn Ref: <span style={{ fontFamily: 'var(--font-mono)' }}>{selectedOrderForDetails.transactionId}</span></div>
                         )}
