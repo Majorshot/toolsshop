@@ -8,6 +8,51 @@ import GstInvoiceModal from '../components/GstInvoiceModal';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm, SpringModal } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
+import GlideSelect from '../components/GlideSelect';
+
+const ORDER_DATE_OPTIONS = [
+  { value: 'all', label: 'All Time', tag: 'All' },
+  { value: 'today', label: 'Today', tag: 'Today' },
+  { value: 'yesterday', label: 'Yesterday', tag: 'Yday' },
+  { value: 'week', label: 'Last 7 Days', tag: '7D' },
+  { value: 'month', label: 'This Month', tag: '30D' }
+];
+
+const ORDER_DELIVERY_OPTIONS = [
+  { value: 'all', label: 'All Delivery Types', tag: 'All' },
+  { value: 'courier', label: 'Courier Express (Home)', tag: 'Courier' },
+  { value: 'pickup', label: 'Store Counter Pickup', tag: 'Pickup' }
+];
+
+const ORDER_PAYMENT_OPTIONS = [
+  { value: 'all', label: 'All Payments', tag: 'All' },
+  { value: 'paid', label: 'Paid Online (UPI/Card)', tag: 'Paid' },
+  { value: 'cod', label: 'Cash at Counter / COD', tag: 'COD' },
+  { value: 'refunded', label: 'Refunded', tag: 'Reversed' }
+];
+
+const ORDER_SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest First', tag: 'Recent' },
+  { value: 'oldest', label: 'Oldest First', tag: 'Earliest' },
+  { value: 'amount-high', label: 'Amount: High to Low', tag: 'Highest' },
+  { value: 'amount-low', label: 'Amount: Low to High', tag: 'Lowest' }
+];
+
+const INVENTORY_SORT_OPTIONS = [
+  { value: 'default', label: 'Default Order', tag: 'Standard' },
+  { value: 'price-asc', label: 'Price: Low to High', tag: '₹ Min' },
+  { value: 'price-desc', label: 'Price: High to Low', tag: '₹ Max' },
+  { value: 'stock-asc', label: 'Stock: Low to High', tag: 'Low Stock' },
+  { value: 'stock-desc', label: 'Stock: High to Low', tag: 'High Stock' },
+  { value: 'name-asc', label: 'Alphabetical: A to Z', tag: 'A-Z' }
+];
+
+const CUSTOMER_SORT_OPTIONS = [
+  { value: 'spend', label: 'Highest Lifetime Spend (₹)', tag: 'VIP' },
+  { value: 'orders', label: 'Most Orders Placed', tag: 'Frequent' },
+  { value: 'recent', label: 'Recently Active', tag: 'Recent' },
+  { value: 'name', label: 'Alphabetical (Name)', tag: 'A-Z' }
+];
 
 const STATUS_OPTIONS = [
   'Order Placed',
@@ -3024,101 +3069,85 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 {/* Date Filter */}
                 <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Date:</label>
-                  <select
-                    value={orderDateFilter}
-                    onChange={(e) => setOrderDateFilter(e.target.value)}
-                    className="store-inv-select"
-                    style={{
-                      height: '38px',
-                      padding: '0 10px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      background: orderDateFilter !== 'all' ? '#eff6ff' : '#ffffff',
-                      borderColor: orderDateFilter !== 'all' ? '#0284c7' : '#cbd5e1',
-                      color: orderDateFilter !== 'all' ? '#0369a1' : '#0f172a'
-                    }}
+                  <GlideSelect
                     id="select-order-date-filter"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="yesterday">Yesterday</option>
-                    <option value="week">Last 7 Days</option>
-                    <option value="month">This Month</option>
-                  </select>
+                    options={ORDER_DATE_OPTIONS}
+                    value={orderDateFilter}
+                    onChange={(val) => setOrderDateFilter(val)}
+                    ariaLabel="Filter orders by date"
+                    showTags
+                    accentColor="#0284c7"
+                    surfaceColor={orderDateFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                    borderColor={orderDateFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                    textColor={orderDateFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                    highlightColor="#e0f2fe"
+                    size="md"
+                    radius={8}
+                    menuWidth={180}
+                  />
                 </div>
 
                 {/* Delivery Mode Filter */}
                 <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Delivery:</label>
-                  <select
-                    value={orderDeliveryFilter}
-                    onChange={(e) => setOrderDeliveryFilter(e.target.value)}
-                    className="store-inv-select"
-                    style={{
-                      height: '38px',
-                      padding: '0 10px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      background: orderDeliveryFilter !== 'all' ? '#eff6ff' : '#ffffff',
-                      borderColor: orderDeliveryFilter !== 'all' ? '#0284c7' : '#cbd5e1',
-                      color: orderDeliveryFilter !== 'all' ? '#0369a1' : '#0f172a'
-                    }}
+                  <GlideSelect
                     id="select-order-delivery-filter"
-                  >
-                    <option value="all">All Delivery Types</option>
-                    <option value="courier">Courier Express (Home)</option>
-                    <option value="pickup">Store Counter Pickup</option>
-                  </select>
+                    options={ORDER_DELIVERY_OPTIONS}
+                    value={orderDeliveryFilter}
+                    onChange={(val) => setOrderDeliveryFilter(val)}
+                    ariaLabel="Filter orders by delivery type"
+                    showTags
+                    accentColor="#0284c7"
+                    surfaceColor={orderDeliveryFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                    borderColor={orderDeliveryFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                    textColor={orderDeliveryFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                    highlightColor="#e0f2fe"
+                    size="md"
+                    radius={8}
+                    menuWidth={210}
+                  />
                 </div>
 
                 {/* Payment Status Filter */}
                 <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Payment:</label>
-                  <select
-                    value={orderPaymentFilter}
-                    onChange={(e) => setOrderPaymentFilter(e.target.value)}
-                    className="store-inv-select"
-                    style={{
-                      height: '38px',
-                      padding: '0 10px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      background: orderPaymentFilter !== 'all' ? '#eff6ff' : '#ffffff',
-                      borderColor: orderPaymentFilter !== 'all' ? '#0284c7' : '#cbd5e1',
-                      color: orderPaymentFilter !== 'all' ? '#0369a1' : '#0f172a'
-                    }}
+                  <GlideSelect
                     id="select-order-payment-filter"
-                  >
-                    <option value="all">All Payments</option>
-                    <option value="paid">Paid Online (UPI/Card)</option>
-                    <option value="cod">Cash on Delivery / Pending</option>
-                    <option value="refunded">Refunded</option>
-                  </select>
+                    options={ORDER_PAYMENT_OPTIONS}
+                    value={orderPaymentFilter}
+                    onChange={(val) => setOrderPaymentFilter(val)}
+                    ariaLabel="Filter orders by payment status"
+                    showTags
+                    accentColor="#0284c7"
+                    surfaceColor={orderPaymentFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                    borderColor={orderPaymentFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                    textColor={orderPaymentFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                    highlightColor="#e0f2fe"
+                    size="md"
+                    radius={8}
+                    menuWidth={225}
+                  />
                 </div>
 
                 {/* Sort Order */}
                 <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Sort:</label>
-                  <select
-                    value={orderSortFilter}
-                    onChange={(e) => setOrderSortFilter(e.target.value)}
-                    className="store-inv-select"
-                    style={{
-                      height: '38px',
-                      padding: '0 10px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      background: orderSortFilter !== 'newest' ? '#fff7ed' : '#ffffff',
-                      borderColor: orderSortFilter !== 'newest' ? '#ea580c' : '#cbd5e1',
-                      color: orderSortFilter !== 'newest' ? '#c2410c' : '#0f172a'
-                    }}
+                  <GlideSelect
                     id="select-order-sort"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="amount-high">Amount: High to Low</option>
-                    <option value="amount-low">Amount: Low to High</option>
-                  </select>
+                    options={ORDER_SORT_OPTIONS}
+                    value={orderSortFilter}
+                    onChange={(val) => setOrderSortFilter(val)}
+                    ariaLabel="Sort orders"
+                    showTags
+                    accentColor="#ea580c"
+                    surfaceColor={orderSortFilter !== 'newest' ? '#fff7ed' : '#ffffff'}
+                    borderColor={orderSortFilter !== 'newest' ? '#ea580c' : '#cbd5e1'}
+                    textColor={orderSortFilter !== 'newest' ? '#c2410c' : '#0f172a'}
+                    highlightColor="#ffedd5"
+                    size="md"
+                    radius={8}
+                    menuWidth={215}
+                  />
                 </div>
 
                 {/* Reset Filters */}
@@ -4037,79 +4066,88 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             {/* 2. Filter by Company / Brand */}
-            <div className="store-inv-filter-group">
-              <label>Company:</label>
-              <select
-                value={inventoryBrandFilter}
-                onChange={(e) => handleBrandFilterChange(e.target.value)}
-                className="store-inv-select"
-                style={{
-                  background: inventoryBrandFilter !== 'all' ? '#eff6ff' : '#ffffff',
-                  borderColor: inventoryBrandFilter !== 'all' ? '#0284c7' : '#cbd5e1',
-                  color: inventoryBrandFilter !== 'all' ? '#0369a1' : '#0f172a'
-                }}
+            <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Company:</label>
+              <GlideSelect
                 id="select-filter-brand"
-              >
-                <option value="all">All Companies / Brands ({products.length})</option>
-                {uniqueBrands.map(b => {
-                  const count = products.filter(p => (p.brand || '').toLowerCase() === b.toLowerCase()).length;
-                  return (
-                    <option key={b} value={b}>
-                      {b} {count > 0 ? `(${count})` : ''}
-                    </option>
-                  );
-                })}
-              </select>
+                options={[
+                  { value: 'all', label: 'All Companies / Brands', tag: `${products.length}` },
+                  ...uniqueBrands.map(b => {
+                    const count = products.filter(p => (p.brand || '').toLowerCase() === b.toLowerCase()).length;
+                    return {
+                      value: b,
+                      label: b,
+                      tag: count > 0 ? `${count}` : undefined
+                    };
+                  })
+                ]}
+                value={inventoryBrandFilter}
+                onChange={(val) => handleBrandFilterChange(val)}
+                ariaLabel="Filter inventory by brand"
+                showTags
+                accentColor="#0284c7"
+                surfaceColor={inventoryBrandFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                borderColor={inventoryBrandFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                textColor={inventoryBrandFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                highlightColor="#e0f2fe"
+                size="md"
+                radius={8}
+                menuWidth={240}
+                maxHeight={280}
+              />
             </div>
 
             {/* 3. Filter by Category */}
-            <div className="store-inv-filter-group">
-              <label>Category:</label>
-              <select
-                value={inventoryCategoryFilter}
-                onChange={(e) => setInventoryCategoryFilter(e.target.value)}
-                className="store-inv-select"
-                style={{
-                  background: inventoryCategoryFilter !== 'all' ? '#eff6ff' : '#ffffff',
-                  borderColor: inventoryCategoryFilter !== 'all' ? '#0284c7' : '#cbd5e1',
-                  color: inventoryCategoryFilter !== 'all' ? '#0369a1' : '#0f172a'
-                }}
+            <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Category:</label>
+              <GlideSelect
                 id="select-filter-category"
-              >
-                <option value="all">
-                  All Categories ({selectedBrandProductCount})
-                </option>
-                {sortedCategoryIds.map(catId => {
-                  const count = getCategoryCountForSelectedBrand(catId);
-                  return (
-                    <option key={catId} value={catId}>
-                      {getCategoryLabel(catId)} ({count})
-                    </option>
-                  );
-                })}
-              </select>
+                options={[
+                  { value: 'all', label: 'All Categories', tag: `${selectedBrandProductCount}` },
+                  ...sortedCategoryIds.map(catId => {
+                    const count = getCategoryCountForSelectedBrand(catId);
+                    return {
+                      value: catId,
+                      label: getCategoryLabel(catId),
+                      tag: `${count}`
+                    };
+                  })
+                ]}
+                value={inventoryCategoryFilter}
+                onChange={(val) => setInventoryCategoryFilter(val)}
+                ariaLabel="Filter inventory by category"
+                showTags
+                accentColor="#0284c7"
+                surfaceColor={inventoryCategoryFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                borderColor={inventoryCategoryFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                textColor={inventoryCategoryFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                highlightColor="#e0f2fe"
+                size="md"
+                radius={8}
+                menuWidth={240}
+                maxHeight={280}
+              />
             </div>
 
             {/* 4. Sort By */}
-            <div className="store-inv-filter-group sort-group">
-              <label>Sort:</label>
-              <select
-                value={inventorySortFilter}
-                onChange={(e) => setInventorySortFilter(e.target.value)}
-                className="store-inv-select"
-                style={{
-                  background: inventorySortFilter !== 'default' ? '#fff7ed' : '#ffffff',
-                  borderColor: inventorySortFilter !== 'default' ? '#ea580c' : '#cbd5e1',
-                  color: inventorySortFilter !== 'default' ? '#c2410c' : '#0f172a'
-                }}
+            <div className="store-inv-filter-group sort-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Sort:</label>
+              <GlideSelect
                 id="select-sort-inventory"
-              >
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="stock-asc">Stock: Low to High (Low Stock First)</option>
-                <option value="stock-desc">Stock: High to Low</option>
-                <option value="name-asc">Alphabetical: A to Z</option>
-              </select>
+                options={INVENTORY_SORT_OPTIONS}
+                value={inventorySortFilter}
+                onChange={(val) => setInventorySortFilter(val)}
+                ariaLabel="Sort inventory"
+                showTags
+                accentColor="#ea580c"
+                surfaceColor={inventorySortFilter !== 'default' ? '#fff7ed' : '#ffffff'}
+                borderColor={inventorySortFilter !== 'default' ? '#ea580c' : '#cbd5e1'}
+                textColor={inventorySortFilter !== 'default' ? '#c2410c' : '#0f172a'}
+                highlightColor="#ffedd5"
+                size="md"
+                radius={8}
+                menuWidth={230}
+              />
             </div>
 
             {/* 5. Feature 3: Low Stock (<4) Filter Toggle Chip */}
@@ -6087,17 +6125,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569' }}>Sort By:</label>
-              <select
-                value={customersSort}
-                onChange={(e) => setCustomersSort(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem', fontWeight: '600', color: '#0f172a', background: '#ffffff', outline: 'none' }}
+              <GlideSelect
                 id="select-customer-sort"
-              >
-                <option value="spend">Highest Lifetime Spend (₹)</option>
-                <option value="orders">Most Orders Placed</option>
-                <option value="recent">Recently Active</option>
-                <option value="name">Alphabetical (Name)</option>
-              </select>
+                options={CUSTOMER_SORT_OPTIONS}
+                value={customersSort}
+                onChange={(val) => setCustomersSort(val)}
+                ariaLabel="Sort customers"
+                showTags
+                accentColor="#ea580c"
+                surfaceColor="#ffffff"
+                borderColor="#cbd5e1"
+                textColor="#0f172a"
+                highlightColor="#fff7ed"
+                size="md"
+                radius={8}
+                menuWidth={230}
+              />
             </div>
           </div>
 

@@ -20,7 +20,14 @@ import {
 } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
 import AnimatedContent from '../components/AnimatedContent';
+import GlideSelect from '../components/GlideSelect';
 import { api } from '../services/api';
+
+const SHOP_SORT_OPTIONS = [
+  { value: 'featured', label: 'Featured / Recommended', tag: 'Best' },
+  { value: 'price-low', label: 'Price: Low to High', tag: 'Lowest' },
+  { value: 'price-high', label: 'Price: High to Low', tag: 'Highest' }
+];
 
 const DEFAULT_CATEGORIES = [
   { id: 'all', label: 'All Categories', icon: Layers },
@@ -358,16 +365,24 @@ export const ShopPage = ({
               Showing <strong style={{ color: '#0f172a' }}>{displayedProducts.length}</strong> Tools
             </span>
 
-            <select
-              className="sort-select-clean"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+            <GlideSelect
               id="shop-sort-select"
-            >
-              <option value="featured">Featured / Recommended</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-            </select>
+              options={SHOP_SORT_OPTIONS}
+              value={sortBy}
+              onChange={(val) => setSortBy(val)}
+              ariaLabel="Sort equipment catalog"
+              showTags
+              accentColor="#ea580c"
+              surfaceColor="#ffffff"
+              highlightColor="#fff7ed"
+              textColor="#0f172a"
+              borderColor="#cbd5e1"
+              size="md"
+              radius={8}
+              menuWidth={235}
+              placement="bottom"
+              align="right"
+            />
           </div>
         </div>
       </AnimatedContent>
