@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AnimatedContent from '../components/AnimatedContent';
+import CodeSlots from '../components/CodeSlots';
 
 export const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('customer'); // 'customer' or 'store'
@@ -14,7 +15,8 @@ export const LoginPage = () => {
   
   // Customer Step: 'input' (Step 1: Phone/Details) or 'otp' (Step 2: 6-Digit OTP)
   const [customerStep, setCustomerStep] = useState('input');
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpStatus, setOtpStatus] = useState('idle'); // 'idle' | 'success' | 'error'
   const [devOtp, setDevOtp] = useState('');
   const [maskedDestination, setMaskedDestination] = useState('');
   const [resendCountdown, setResendCountdown] = useState(0);
@@ -54,7 +56,8 @@ export const LoginPage = () => {
     setSuccessMsg('');
     setShowPassword(false);
     setCustomerStep('input');
-    setOtpDigits(['', '', '', '', '', '']);
+    setOtpCode('');
+    setOtpStatus('idle');
     setDevOtp('');
     setMaskedDestination('');
     setResendCountdown(0);
@@ -63,7 +66,8 @@ export const LoginPage = () => {
   const handleModeSwitch = (mode) => {
     setAuthMode(mode);
     setCustomerStep('input');
-    setOtpDigits(['', '', '', '', '', '']);
+    setOtpCode('');
+    setOtpStatus('idle');
     setDevOtp('');
     setError('');
     setSuccessMsg('');
@@ -74,57 +78,11 @@ export const LoginPage = () => {
     resetForm();
   };
 
-  // OTP Digit Change Handler
-  const handleOtpChange = (index, value) => {
-    const clean = value.replace(/[^0-9]/g, '');
-    if (!clean) {
-      const next = [...otpDigits];
-      next[index] = '';
-      setOtpDigits(next);
-      return;
-    }
-
-    // Handle full paste
-    if (clean.length > 1) {
-      const chars = clean.slice(0, 6).split('');
-      const next = [...otpDigits];
-      chars.forEach((c, i) => {
-        if (i < 6) next[i] = c;
-      });
-      setOtpDigits(next);
-      const focusIndex = Math.min(chars.length, 5);
-      const targetEl = document.getElementById(`otp-input-${focusIndex}`);
-      if (targetEl) targetEl.focus();
-      return;
-    }
-
-    const next = [...otpDigits];
-    next[index] = clean;
-    setOtpDigits(next);
-
-    // Advance to next input
-    if (index < 5 && clean) {
-      const nextEl = document.getElementById(`otp-input-${index + 1}`);
-      if (nextEl) nextEl.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      const prevEl = document.getElementById(`otp-input-${index - 1}`);
-      if (prevEl) prevEl.focus();
-    }
-  };
-
   const handleAutoFillOtp = (code) => {
-    const chars = String(code).replace(/[^0-9]/g, '').slice(0, 6).split('');
-    const next = [...otpDigits];
-    chars.forEach((c, i) => {
-      if (i < 6) next[i] = c;
-    });
-    setOtpDigits(next);
-    const lastEl = document.getElementById('otp-input-5');
-    if (lastEl) lastEl.focus();
+    const clean = String(code).replace(/[^0-9]/g, '').slice(0, 6);
+    setOtpCode(clean);
+    setOtpStatus('idle');
+    setError('');
   };
 
   // Step 1: Send OTP to Customer
@@ -165,11 +123,8 @@ export const LoginPage = () => {
       setDevOtp(res.devOtp || '');
       setResendCountdown(30);
       setSuccessMsg(res.message || 'Verification OTP sent successfully!');
-      setOtpDigits(['', '', '', '', '', '']);
-      setTimeout(() => {
-        const first = document.getElementById('otp-input-0');
-        if (first) first.focus();
-      }, 150);
+      setOtpCode('');
+      setOtpStatus('idle');
     } catch (err) {
       setError(err.message || 'Failed to dispatch security OTP. Please try again.');
     } finally {
@@ -193,6 +148,8 @@ export const LoginPage = () => {
       setDevOtp(res.devOtp || '');
       setResendCountdown(30);
       setSuccessMsg('A new verification code has been dispatched.');
+      setOtpCode('');
+      setOtpStatus('idle');
     } catch (err) {
       setError(err.message || 'Failed to resend code.');
     } finally {
@@ -201,14 +158,15 @@ export const LoginPage = () => {
   };
 
   // Step 3: Verify OTP & Sign In / Register
-  const handleVerifyOtp = async (e) => {
-    if (e) e.preventDefault();
+  const handleVerifyOtp = async (e, directCode) => {
+    if (e && e.preventDefault) e.preventDefault();
     setError('');
     setSuccessMsg('');
 
-    const enteredOtp = otpDigits.join('').trim();
+    const enteredOtp = (typeof directCode === 'string' ? directCode : otpCode).replace(/[^0-9]/g, '').trim();
     if (enteredOtp.length !== 6) {
       setError('Please enter the complete 6-digit verification code.');
+      setOtpStatus('error');
       return;
     }
 
@@ -221,8 +179,12 @@ export const LoginPage = () => {
         otp: enteredOtp,
         purpose: authMode
       });
-      navigate('/account');
+      setOtpStatus('success');
+      setTimeout(() => {
+        navigate('/account');
+      }, 700);
     } catch (err) {
+      setOtpStatus('error');
       setError(err.message || 'Verification failed. Please check the code or request a new one.');
     } finally {
       setLoading(false);
@@ -953,8 +915,8 @@ export const LoginPage = () => {
                   </div>
                 )}
 
-                {/* 6-Digit OTP Box Grid */}
-                <div>
+                {/* 6-Digit OTP Box Grid using CodeSlots */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <label style={{
                     display: 'block',
                     fontSize: '0.74rem',
@@ -963,55 +925,76 @@ export const LoginPage = () => {
                     letterSpacing: '0.06em',
                     color: '#475569',
                     textAlign: 'center',
-                    marginBottom: '10px'
+                    marginBottom: '12px'
                   }}>
                     Enter 6-Digit Verification Code
                   </label>
 
-                  <div className="otp-inputs-container">
-                    {otpDigits.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        id={`otp-input-${idx}`}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        autoComplete="one-time-code"
-                        className={`otp-input-digit ${digit ? 'filled' : ''}`}
-                      />
-                    ))}
+                  <div style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '4px 0 14px' }}>
+                    <CodeSlots
+                      length={6}
+                      value={otpCode}
+                      status={otpStatus}
+                      onChange={(code) => {
+                        setOtpCode(code);
+                        if (otpStatus !== 'idle') setOtpStatus('idle');
+                        if (error) setError('');
+                      }}
+                      onComplete={async (code) => {
+                        await handleVerifyOtp(null, code);
+                      }}
+                      accentColor="#f5f5f5"
+                      inkColor="#f5f5f5"
+                      slotColor="#27272a"
+                      digitColor="#18181b"
+                      dangerColor="#ff3b30"
+                      slotSize={44}
+                      gap={8}
+                      radius={12}
+                      bounce={0.2}
+                      settle={0.3}
+                      rise={8}
+                      cascade={20}
+                      mask={false}
+                      caret
+                      outcome="accept"
+                      disabled={loading || otpStatus === 'success'}
+                      autoFocus
+                    />
                   </div>
                 </div>
 
                 {/* Verify Action Button */}
                 <button
                   type="submit"
-                  disabled={loading || otpDigits.join('').length !== 6}
+                  disabled={loading || otpCode.length !== 6 || otpStatus === 'success'}
                   style={{
                     width: '100%',
                     padding: '13px 20px',
-                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                    background: otpStatus === 'success' ? '#16a34a' : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '12px',
                     fontSize: '0.92rem',
                     fontWeight: '700',
-                    cursor: (loading || otpDigits.join('').length !== 6) ? 'not-allowed' : 'pointer',
+                    cursor: (loading || otpCode.length !== 6 || otpStatus === 'success') ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '8px',
                     boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
-                    opacity: (loading || otpDigits.join('').length !== 6) ? 0.6 : 1,
+                    opacity: (loading || otpCode.length !== 6) ? 0.6 : 1,
                     transition: 'all 0.2s ease'
                   }}
                   id="btn-verify-otp"
                 >
                   {loading ? (
                     <span>Verifying Code...</span>
+                  ) : otpStatus === 'success' ? (
+                    <>
+                      <CheckCircle2 size={18} />
+                      <span>Verified! Signing in...</span>
+                    </>
                   ) : (
                     <>
                       <ShieldCheck size={18} />
