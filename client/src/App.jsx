@@ -20,12 +20,18 @@ import { CheckCircle, MessageCircle } from 'lucide-react';
 import AnimatedContent from './components/AnimatedContent';
 import SlideInNotifications from './components/SlideInNotifications';
 import { ConfirmationProvider } from './components/SpringModal';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 // Scroll to top on route change
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    try {
+      setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 100);
+    } catch {}
   }, [pathname]);
   return null;
 }
@@ -246,53 +252,51 @@ const MainApp = () => {
       </a>
 
       {/* Minimal Clean Footer */}
-      <AnimatedContent distance={30} delay={0.1}>
-        <footer className="main-footer-clean">
-          <div className="container">
-            <div className="footer-clean-grid">
-              <div className="footer-clean-col">
-                <div style={{ marginBottom: '14px' }}>
-                  <img
-                    src="/Logo.jpeg"
-                    alt="Variathu Power Tools"
-                    style={{ height: '36px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
-                  />
-                </div>
-                <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '12px', maxWidth: '420px', fontSize: '0.86rem' }}>
-                  Authorized dealership and repair center for professional power tools, high pressure washers, and genuine accessories in Kozhencherry, Pathanamthitta district, Kerala.
-                </p>
-                <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                  📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
-                </p>
+      <footer className="main-footer-clean">
+        <div className="container">
+          <div className="footer-clean-grid">
+            <div className="footer-clean-col">
+              <div style={{ marginBottom: '14px' }}>
+                <img
+                  src="/Logo.jpeg"
+                  alt="Variathu Power Tools"
+                  style={{ height: '36px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
+                />
               </div>
-
-              <div className="footer-clean-col">
-                <h4>Quick Navigation</h4>
-                <ul>
-                  <li><Link to="/">Home Page</Link></li>
-                  <li><Link to="/shop">Shop Power Tools</Link></li>
-                  <li><Link to="/about">About & Workshop Clinic</Link></li>
-                  <li><a href="#shop" onClick={() => setIsStoreModalOpen(true)}>Store Hours & Location</a></li>
-                </ul>
-              </div>
-
-              <div className="footer-clean-col">
-                <h4>Direct Contact</h4>
-                <ul>
-                  <li><a href="tel:+919447123456">📞 +91 94471 23456</a></li>
-                  <li><a href="https://wa.me/919447123456" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
-                  <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
-                  <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
-                </ul>
-              </div>
+              <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '12px', maxWidth: '420px', fontSize: '0.86rem' }}>
+                Authorized dealership and repair center for professional power tools, high pressure washers, and genuine accessories in Kozhencherry, Pathanamthitta district, Kerala.
+              </p>
+              <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
+              </p>
             </div>
 
-            <div className="footer-clean-bottom">
-              © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
+            <div className="footer-clean-col">
+              <h4>Quick Navigation</h4>
+              <ul>
+                <li><Link to="/">Home Page</Link></li>
+                <li><Link to="/shop">Shop Power Tools</Link></li>
+                <li><Link to="/about">About & Workshop Clinic</Link></li>
+                <li><a href="#shop" onClick={() => setIsStoreModalOpen(true)}>Store Hours & Location</a></li>
+              </ul>
+            </div>
+
+            <div className="footer-clean-col">
+              <h4>Direct Contact</h4>
+              <ul>
+                <li><a href="tel:+919447123456">📞 +91 94471 23456</a></li>
+                <li><a href="https://wa.me/919447123456" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
+                <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
+                <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
+              </ul>
             </div>
           </div>
-        </footer>
-      </AnimatedContent>
+
+          <div className="footer-clean-bottom">
+            © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
+          </div>
+        </div>
+      </footer>
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />
