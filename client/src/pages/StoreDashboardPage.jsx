@@ -3090,7 +3090,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     highlightColor="#e0f2fe"
                     size="md"
                     radius={8}
-                    menuWidth={180}
+                    menuWidth={210}
                   />
                 </div>
 
@@ -3111,7 +3111,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     highlightColor="#e0f2fe"
                     size="md"
                     radius={8}
-                    menuWidth={210}
+                    menuWidth={275}
                   />
                 </div>
 
@@ -3132,7 +3132,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     highlightColor="#e0f2fe"
                     size="md"
                     radius={8}
-                    menuWidth={225}
+                    menuWidth={275}
                   />
                 </div>
 
@@ -3153,7 +3153,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     highlightColor="#ffedd5"
                     size="md"
                     radius={8}
-                    menuWidth={215}
+                    menuWidth={250}
                   />
                 </div>
 
@@ -4099,7 +4099,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 highlightColor="#e0f2fe"
                 size="md"
                 radius={8}
-                menuWidth={240}
+                menuWidth={260}
                 maxHeight={280}
               />
             </div>
@@ -4131,7 +4131,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 highlightColor="#e0f2fe"
                 size="md"
                 radius={8}
-                menuWidth={240}
+                menuWidth={260}
                 maxHeight={280}
               />
             </div>
@@ -4153,7 +4153,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 highlightColor="#ffedd5"
                 size="md"
                 radius={8}
-                menuWidth={230}
+                menuWidth={250}
               />
             </div>
 
@@ -6146,7 +6146,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 highlightColor="#fff7ed"
                 size="md"
                 radius={8}
-                menuWidth={230}
+                menuWidth={260}
               />
             </div>
           </div>

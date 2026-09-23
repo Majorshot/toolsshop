@@ -379,7 +379,7 @@ export const ShopPage = ({
               borderColor="#cbd5e1"
               size="md"
               radius={8}
-              menuWidth={235}
+              menuWidth={260}
               placement="bottom"
               align="right"
             />

@@ -97,12 +97,17 @@ const CSS_STYLES = `
   position: absolute;
   z-index: 9999;
   min-width: 100%;
+  width: max-content;
+  min-width: max(100%, var(--gs-menu-w, 220px));
+  max-width: min(520px, calc(100vw - 20px));
   padding: 4px;
   opacity: 0;
-  width: var(--gs-menu-w);
   max-height: var(--gs-max-h, 280px);
   overflow-y: auto;
+  overflow-x: hidden !important;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
   border-radius: var(--gs-radius);
   background: var(--gs-surface);
   border: 1px solid var(--gs-border, #e2e8f0);
@@ -113,6 +118,12 @@ const CSS_STYLES = `
 }
 .gs-menu::-webkit-scrollbar {
   width: 5px;
+  height: 0px !important;
+}
+.gs-menu::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0px !important;
+  width: 0px !important;
 }
 .gs-menu::-webkit-scrollbar-track {
   background: transparent;
@@ -142,19 +153,25 @@ const CSS_STYLES = `
 }
 .gs-menu[data-align="left"] {
   left: 0;
+  right: auto;
 }
 .gs-menu[data-align="right"] {
   right: 0;
+  left: auto;
 }
 
 /* List & Sliding Pill */
 .gs-list {
   position: relative;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   touch-action: none;
   gap: 1px;
   margin: 0;
   padding: 0;
+  min-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 .gs-pill {
   pointer-events: none;
@@ -177,9 +194,8 @@ const CSS_STYLES = `
   display: flex;
   cursor: pointer;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 8px 0 10px;
+  gap: 12px;
+  padding: 0 10px 0 12px;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   height: var(--gs-row);
@@ -188,6 +204,8 @@ const CSS_STYLES = `
   font-size: var(--gs-font);
   transition: background-color 150ms ease;
   box-sizing: border-box;
+  white-space: nowrap;
+  width: 100%;
 }
 .gs-option-row[aria-selected="true"] {
   background: color-mix(in srgb, var(--gs-highlight) 50%, transparent);
@@ -197,27 +215,31 @@ const CSS_STYLES = `
   background: transparent;
 }
 .gs-option-label {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex: 1 1 auto;
   white-space: nowrap;
   font-weight: 600;
+  text-align: left;
 }
 .gs-option-tag {
   flex-shrink: 0;
-  padding: 1px 6px;
+  padding: 2px 7px;
   font-size: 0.72rem;
   font-weight: 700;
   border-radius: 4px;
   background: color-mix(in srgb, var(--gs-text) 8%, var(--gs-surface));
   color: color-mix(in srgb, var(--gs-text) 70%, transparent);
+  white-space: nowrap;
+  line-height: 1.2;
 }
 .gs-option-check {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 14px;
   visibility: hidden;
   color: var(--gs-accent);
+  margin-left: 2px;
 }
 .gs-option-check[data-on="true"] {
   visibility: visible;
@@ -251,7 +273,7 @@ export default function GlideSelect({
   borderColor = '#cbd5e1',
   size = 'md',
   radius = 8,
-  menuWidth = 190,
+  menuWidth = 240,
   maxHeight = 280,
   placement = 'bottom',
   align = 'left',
@@ -270,6 +292,7 @@ export default function GlideSelect({
   const [phase, setPhase] = useState('closed');
   const [active, setActive] = useState(null);
   const [side, setSide] = useState(placement);
+  const [computedAlign, setComputedAlign] = useState(align);
   const rootRef = useRef(null);
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
@@ -297,6 +320,16 @@ export default function GlideSelect({
           ? 'bottom'
           : placement
     );
+
+    const menuWidthPx = el.offsetWidth || 240;
+    let nextAlign = align;
+    if (align === 'left' && r.left + menuWidthPx > window.innerWidth - 12) {
+      nextAlign = 'right';
+    } else if (align === 'right' && r.right - menuWidthPx < 12) {
+      nextAlign = 'left';
+    }
+    setComputedAlign(nextAlign);
+
     el.style.transitionDuration = instant.current ? '0ms' : '';
     el.dataset.state = 'closed';
     void el.offsetHeight;
@@ -314,7 +347,7 @@ export default function GlideSelect({
       void p.offsetHeight;
       p.style.transition = '';
     }
-  }, [phase, placement, selected, step]);
+  }, [align, phase, placement, selected, step]);
 
   useLayoutEffect(() => {
     const p = pillRef.current;
@@ -449,7 +482,7 @@ export default function GlideSelect({
     if (i !== active) setActive(i);
   };
 
-  const origin = `${side === 'bottom' ? 'top' : 'bottom'} ${align}`;
+  const origin = `${side === 'bottom' ? 'top' : 'bottom'} ${computedAlign}`;
 
   return (
     <div
@@ -519,7 +552,7 @@ export default function GlideSelect({
           className="gs-menu"
           data-state="open"
           data-side={side}
-          data-align={align}
+          data-align={computedAlign}
         >
           <div
             id={`${selectId}-list`}
