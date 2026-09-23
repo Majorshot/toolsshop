@@ -7404,7 +7404,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
 
                 {/* Origin Hub */}
-                <div style={{ borderBottom: '1px solid #000000', padding: '10px 0', fontSize: '0.74rem' }}>
+                <div style={{ padding: '10px 0 2px', fontSize: '0.74rem' }}>
                   <div style={{ fontWeight: '800', textTransform: 'uppercase', color: '#333333' }}>
                     SHIPPED BY / ORIGIN HUB:
                   </div>
@@ -7417,16 +7417,6 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   </div>
                   <div>Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala</div>
                   <div>Helpline: +91 94471 23456</div>
-                </div>
-
-                {/* Parcel Contents & Heavy Warning */}
-                <div style={{ paddingTop: '8px', fontSize: '0.72rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong>Items:</strong> {selectedOrderForLabel.items?.length} Tool(s) &bull; <strong>Wt:</strong> ~2.8 kg
-                  </div>
-                  <div style={{ fontWeight: '900', color: '#dc2626', fontSize: '0.76rem' }}>
-                    ⚠️ HEAVY / FRAGILE
-                  </div>
                 </div>
               </div>
             </div>
