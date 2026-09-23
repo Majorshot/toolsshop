@@ -9,6 +9,7 @@ import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm, SpringModal } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
 import GlideSelect from '../components/GlideSelect';
+import RubberSegment from '../components/RubberSegment';
 
 const ORDER_DATE_OPTIONS = [
   { value: 'all', label: 'All Time', tag: 'All' },
@@ -2038,25 +2039,31 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           <div className="store-analytics-actions">
-            {/* Period Selector Tabs */}
-            <div className="store-period-selector">
-              {[
-                { id: 'today', label: 'Today' },
-                { id: 'week', label: 'This Week' },
-                { id: 'month', label: 'This Month' },
-                { id: 'all', label: 'All Time' }
-              ].map(period => (
-                <button
-                  key={period.id}
-                  type="button"
-                  onClick={() => setAnalyticsPeriod(period.id)}
-                  className={`store-period-btn ${analyticsPeriod === period.id ? 'active' : ''}`}
-                  id={`btn-period-${period.id}`}
-                >
-                  {period.label}
-                </button>
-              ))}
-            </div>
+            {/* Period Selector Tabs using RubberSegment */}
+            <RubberSegment
+              items={[
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'This Week' },
+                { value: 'month', label: 'This Month' },
+                { value: 'all', label: 'All Time' }
+              ]}
+              value={analyticsPeriod}
+              onChange={(val) => setAnalyticsPeriod(val)}
+              trackColor="#27272a"
+              thumbColor="#fafafa"
+              textColor="#fafafa"
+              activeTextColor="#18181b"
+              size="md"
+              radius={10}
+              inset={3}
+              equalSlots
+              stretch={100}
+              squash={3}
+              speed={1}
+              glide={75}
+              draggable
+              preset="periods"
+            />
 
             {/* 1-Click CSV Export */}
             <button
