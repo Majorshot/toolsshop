@@ -2380,6 +2380,8 @@ header.main-site-header {
 }
 
 .shop-top-controls {
+  position: relative;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;

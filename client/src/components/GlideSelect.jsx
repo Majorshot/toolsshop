@@ -25,6 +25,9 @@ const CSS_STYLES = `
   font-family: inherit;
   vertical-align: middle;
 }
+.gs-root[data-open="true"] {
+  z-index: 1000;
+}
 .gs-root[data-disabled="true"] {
   opacity: 0.5;
   pointer-events: none;
@@ -490,6 +493,7 @@ export default function GlideSelect({
       className={`gs-root ${className}`}
       data-size={size}
       data-disabled={disabled ? 'true' : undefined}
+      data-open={phase === 'open' ? 'true' : undefined}
       style={{
         '--gs-accent': accentColor,
         '--gs-surface': surfaceColor,

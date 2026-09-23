@@ -320,7 +320,7 @@ export const ShopPage = ({
       </AnimatedContent>
 
       {/* Top Controls Bar with Filter Button (Saves screen space & opens filter modal) */}
-      <AnimatedContent distance={25} delay={0.1}>
+      <AnimatedContent distance={25} delay={0.1} style={{ position: 'relative', zIndex: 50 }}>
         <div className="shop-top-controls">
           {/* Search Input */}
           <div className="search-input-clean">
@@ -389,7 +389,7 @@ export const ShopPage = ({
 
       {/* ACTIVE FILTERS CHIPS BAR (Active filter chips under top controls) */}
       {hasActiveFilters && (
-        <div className="active-filters-chips-bar" id="active-filters-bar">
+        <div className="active-filters-chips-bar" id="active-filters-bar" style={{ position: 'relative', zIndex: 30 }}>
           <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
             <Filter size={13} /> Active Filters:
           </span>

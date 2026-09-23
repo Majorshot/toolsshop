@@ -72,7 +72,8 @@ const AnimatedContent = ({
       scale: 1,
       opacity: 1,
       duration,
-      ease
+      ease,
+      clearProps: 'transform'
     });
 
     const st = ScrollTrigger.create({
