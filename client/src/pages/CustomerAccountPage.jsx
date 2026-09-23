@@ -510,20 +510,13 @@ export const CustomerAccountPage = () => {
   const setSidebarTab = (tabId) => {
     setSidebarTabState(tabId);
     setSearchParams({ tab: tabId });
+    if (tabId === 'orders') {
+      setExpandedOrders({});
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  // Always start with all order cards collapsed
   const [expandedOrders, setExpandedOrders] = useState({});
-
-  useEffect(() => {
-    if (orders && orders.length > 0) {
-      setExpandedOrders((prev) => {
-        if (Object.keys(prev).length === 0) {
-          return { [orders[0].id]: true };
-        }
-        return prev;
-      });
-    }
-  }, [orders]);
 
   const toggleOrderExpand = (orderId) => {
     setExpandedOrders((prev) => ({
