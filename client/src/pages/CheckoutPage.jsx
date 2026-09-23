@@ -11,6 +11,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { useConfirm } from '../components/SpringModal';
+import SlideCommit from '../components/SlideCommit';
 
 const KERALA_DISTRICTS = [
   'Pathanamthitta',
@@ -821,21 +822,24 @@ export const CheckoutPage = () => {
 
     if (!isCustomerLoggedIn) {
       setStep('login');
-      setErrorMsg('Please sign in with your mobile number to complete your order.');
-      return;
+      const msg = 'Please sign in with your mobile number to complete your order.';
+      setErrorMsg(msg);
+      throw new Error(msg);
     }
 
     const cleanAccountPhone = (user?.phone || '').replace(/[^0-9]/g, '').slice(-10);
     if (cleanAccountPhone.length !== 10) {
       setStep('login');
-      setErrorMsg('Valid 10-digit mobile number is required on customer account.');
-      return;
+      const msg = 'Valid 10-digit mobile number is required on customer account.';
+      setErrorMsg(msg);
+      throw new Error(msg);
     }
 
     if (deliveryType === 'kerala-courier' && !deliveryAddress.address?.trim()) {
       setStep('address');
-      setErrorMsg('Please specify a delivery street address.');
-      return;
+      const msg = 'Please specify a delivery street address.';
+      setErrorMsg(msg);
+      throw new Error(msg);
     }
 
     // Final anti-abuse check for single-use coupon
@@ -847,8 +851,9 @@ export const CheckoutPage = () => {
       };
       const vRes = await verifyCouponWithPhone(userIdent, { silent: true });
       if (vRes && !vRes.valid) {
-        setErrorMsg(vRes.message || 'This coupon has already been redeemed by your account.');
-        return;
+        const msg = vRes.message || 'This coupon has already been redeemed by your account.';
+        setErrorMsg(msg);
+        throw new Error(msg);
       }
     }
 
@@ -906,86 +911,101 @@ export const CheckoutPage = () => {
       // LIVE RAZORPAY PAYMENT GATEWAY
       if (isPrepaid) {
         if (typeof window === 'undefined' || !window.Razorpay) {
-          setErrorMsg('Razorpay payment gateway could not be loaded. Please choose Cash / Counter Payment or check internet.');
+          const msg = 'Razorpay payment gateway could not be loaded. Please choose Cash / Counter Payment or check internet.';
+          setErrorMsg(msg);
           setIsSubmitting(false);
-          return;
+          throw new Error(msg);
         }
 
         setIsProcessingPayment(true);
 
-        const rzpOrderRes = await api.createRazorpayOrder(
-          finalTotal,
-          `rcpt_${Date.now().toString().slice(-6)}`,
-          {
-            customer_name: user?.name?.trim() || recipientName,
-            customer_phone: cleanAccountPhone,
-            delivery_type: deliveryType
-          }
-        );
+        return new Promise(async (resolve, reject) => {
+          try {
+            const rzpOrderRes = await api.createRazorpayOrder(
+              finalTotal,
+              `rcpt_${Date.now().toString().slice(-6)}`,
+              {
+                customer_name: user?.name?.trim() || recipientName,
+                customer_phone: cleanAccountPhone,
+                delivery_type: deliveryType
+              }
+            );
 
-        const rzpOrder = rzpOrderRes.order;
+            const rzpOrder = rzpOrderRes.order;
 
-        const options = {
-          key: rzpOrderRes.keyId || 'rzp_test_TZQUSp5JtcBjMs',
-          amount: rzpOrder.amount,
-          currency: rzpOrder.currency || 'INR',
-          name: 'Variathu Power Tools',
-          description: `Order #${rzpOrder.id} • ${recipientName}`,
-          image: '/Logo.jpeg',
-          order_id: rzpOrder.id,
-          prefill: {
-            name: user?.name?.trim() || recipientName,
-            contact: cleanAccountPhone,
-            email: (user?.email || '').trim()
-          },
-          notes: {
-            customerId: String(user?.id || user?._id || ''),
-            recipientName,
-            recipientPhone,
-            address: formattedDeliveryAddress,
-            district: deliveryAddress.district || 'Pathanamthitta',
-            pincode: deliveryAddress.pincode || '689641'
-          },
-          theme: { color: '#fb641b' },
-          handler: async function (response) {
-            try {
-              setIsProcessingPayment(true);
-              const verifyRes = await api.verifyRazorpayPayment({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                orderPayload
-              });
+            const options = {
+              key: rzpOrderRes.keyId || 'rzp_test_TZQUSp5JtcBjMs',
+              amount: rzpOrder.amount,
+              currency: rzpOrder.currency || 'INR',
+              name: 'Variathu Power Tools',
+              description: `Order #${rzpOrder.id} • ${recipientName}`,
+              image: '/Logo.jpeg',
+              order_id: rzpOrder.id,
+              prefill: {
+                name: user?.name?.trim() || recipientName,
+                contact: cleanAccountPhone,
+                email: (user?.email || '').trim()
+              },
+              notes: {
+                customerId: String(user?.id || user?._id || ''),
+                recipientName,
+                recipientPhone,
+                address: formattedDeliveryAddress,
+                district: deliveryAddress.district || 'Pathanamthitta',
+                pincode: deliveryAddress.pincode || '689641'
+              },
+              theme: { color: '#fb641b' },
+              handler: async function (response) {
+                try {
+                  setIsProcessingPayment(true);
+                  const verifyRes = await api.verifyRazorpayPayment({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                    orderPayload
+                  });
 
-              try {
-                confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
-              } catch {}
+                  try {
+                    confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
+                  } catch {}
 
-              setCompletedOrder(verifyRes.data);
-              clearCart();
-            } catch (vErr) {
-              setErrorMsg(vErr.message || 'Payment verification failed.');
-            } finally {
+                  setCompletedOrder(verifyRes.data);
+                  clearCart();
+                  resolve(verifyRes.data);
+                } catch (vErr) {
+                  const m = vErr.message || 'Payment verification failed.';
+                  setErrorMsg(m);
+                  reject(new Error(m));
+                } finally {
+                  setIsSubmitting(false);
+                  setIsProcessingPayment(false);
+                }
+              },
+              modal: {
+                ondismiss: function () {
+                  setIsSubmitting(false);
+                  setIsProcessingPayment(false);
+                  reject(new Error('Payment window closed.'));
+                }
+              }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (resp) {
+              const m = `Payment Failed: ${resp.error?.description || 'Transaction declined by bank'}`;
+              setErrorMsg(m);
               setIsSubmitting(false);
               setIsProcessingPayment(false);
-            }
-          },
-          modal: {
-            ondismiss: function () {
-              setIsSubmitting(false);
-              setIsProcessingPayment(false);
-            }
+              reject(new Error(m));
+            });
+            rzp.open();
+          } catch (initErr) {
+            setIsSubmitting(false);
+            setIsProcessingPayment(false);
+            setErrorMsg(initErr.message || 'Failed to initiate payment.');
+            reject(initErr);
           }
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (resp) {
-          setErrorMsg(`Payment Failed: ${resp.error?.description || 'Transaction declined by bank'}`);
-          setIsSubmitting(false);
-          setIsProcessingPayment(false);
         });
-        rzp.open();
-        return;
       }
 
       // Cash on Delivery / Counter Pickup Handover
@@ -1003,8 +1023,12 @@ export const CheckoutPage = () => {
 
       setCompletedOrder(result.data);
       clearCart();
+      return result.data;
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to place order. Please check your details and try again.');
+      if (!errorMsg) {
+        setErrorMsg(err.message || 'Failed to place order. Please check your details and try again.');
+      }
+      throw err;
     } finally {
       setIsSubmitting(false);
       setIsProcessingPayment(false);
@@ -2416,38 +2440,39 @@ export const CheckoutPage = () => {
                     📱 <strong>Account Notice:</strong> WhatsApp order receipt and live dispatch updates will be sent to primary number <strong>+91 {user?.phone}</strong>.
                   </div>
 
-                  {/* Confirm & Place Order Button (Image 1 Red Style) */}
-                  <button
-                    type="button"
-                    onClick={handleSubmitOrder}
-                    disabled={isSubmitting || isProcessingPayment}
-                    style={{
-                      background: '#dc2626',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '16px',
-                      fontSize: '1rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
-                      transition: 'all 0.15s ease'
-                    }}
-                    id="btn-checkout-place-order"
-                  >
-                    <Lock size={18} />
-                    <span>
-                      {isProcessingPayment
-                        ? 'Processing Payment...'
-                        : isSubmitting
-                          ? 'Placing Order...'
-                          : `CONFIRM & PLACE ORDER (${formatPrice(finalTotal)})`}
-                    </span>
-                  </button>
+                  {/* Slide to Confirm & Place Order (Swipe Interaction) */}
+                  <div style={{ marginTop: '8px', width: '100%' }}>
+                    <SlideCommit
+                      label={
+                        isProcessingPayment
+                          ? 'Processing Payment...'
+                          : isSubmitting
+                            ? 'Placing Order...'
+                            : deliveryType === 'store-pickup'
+                              ? `Slide to place pickup order • ${formatPrice(finalTotal)}`
+                              : paymentMethod === 'razorpay'
+                                ? `Slide to pay • ${formatPrice(finalTotal)}`
+                                : `Slide to confirm order • ${formatPrice(finalTotal)}`
+                      }
+                      doneLabel={paymentMethod === 'razorpay' ? 'Payment Verified' : 'Order Placed!'}
+                      errorLabel="Payment Failed / Retry"
+                      onConfirm={handleSubmitOrder}
+                      onDone={() => console.log('Order processed')}
+                      onError={(reason) => console.log('Order error:', reason)}
+                      trackColor="#0f172a"
+                      handleColor="#dc2626"
+                      successColor="#16a34a"
+                      dangerColor="#dc2626"
+                      width="100%"
+                      height={58}
+                      radius={29}
+                      speed={55}
+                      returnBounce={0.38}
+                      landingDip={0.026}
+                      holdMs={1500}
+                      disabled={isSubmitting || isProcessingPayment}
+                    />
+                  </div>
                 </div>
 
               </div>
