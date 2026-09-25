@@ -298,17 +298,28 @@ router.post('/login', async (req, res) => {
 
     if (role === 'store') {
       // Store Owner / Admin Login
-      const validEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
+      const configuredEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
       const validPass = process.env.STORE_ADMIN_PASSWORD || 'admin123';
       const inputEmail = String(identifier || '').trim().toLowerCase();
       const inputPass = String(password || '');
 
+      // Allow configured email, standard domain aliases, and shorthand 'admin'
+      const allowedAdminEmails = new Set([
+        configuredEmail,
+        'admin@variathupowertools.com',
+        'admin@variathutools.com',
+        'admin'
+      ]);
+
+      const isEmailValid = allowedAdminEmails.has(inputEmail);
+      const isPasswordValid = safeCompare(inputPass, validPass);
+
       // Strict constant-time credential comparison (prevents timing attacks & requires both email and password)
-      if (inputEmail === validEmail && safeCompare(inputPass, validPass)) {
+      if (isEmailValid && isPasswordValid) {
         const token = generateToken({
           id: 'admin-01',
           name: 'Store Manager',
-          email: validEmail,
+          email: configuredEmail,
           role: 'store'
         });
 
@@ -318,7 +329,7 @@ router.post('/login', async (req, res) => {
           user: {
             id: 'admin-01',
             name: 'Store Manager',
-            email: validEmail,
+            email: configuredEmail,
             role: 'store',
             shop: 'Variathu Power Tools, Kozhencherry'
           }
