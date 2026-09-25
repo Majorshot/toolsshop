@@ -2460,8 +2460,8 @@ export const CheckoutPage = () => {
                       onDone={() => console.log('Order processed')}
                       onError={(reason) => console.log('Order error:', reason)}
                       trackColor="#ffffff"
-                      trackBorder="1.5px solid #e2e8f0"
-                      trackShadow="0 2px 8px rgba(15, 23, 42, 0.05), inset 0 1px 2px rgba(15, 23, 42, 0.02)"
+                      trackBorder="2px solid #0f172a"
+                      trackShadow="0 2px 8px rgba(15, 23, 42, 0.08), inset 0 1px 2px rgba(15, 23, 42, 0.02)"
                       handleColor="#dc2626"
                       handleBorder="none"
                       handleShadow="0 4px 14px rgba(220, 38, 38, 0.38), 0 2px 4px rgba(220, 38, 38, 0.2)"

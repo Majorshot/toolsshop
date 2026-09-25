@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useTransform } from 'motion/react';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { ArrowRight02Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
+import { ArrowRight } from 'lucide-react';
 
 const PAD = 4;
 const SQUASH_MAX = 0.08;
@@ -44,8 +45,8 @@ const STYLE = `
   -webkit-tap-highlight-color: transparent;
   border-radius: var(--sc-radius);
   background: var(--sc-track);
-  border: var(--sc-border, 1.5px solid #e2e8f0);
-  box-shadow: var(--sc-shadow, 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(15, 23, 42, 0.02));
+  border: var(--sc-border, 2px solid #0f172a);
+  box-shadow: var(--sc-shadow, 0 2px 8px rgba(15, 23, 42, 0.08), inset 0 1px 2px rgba(15, 23, 42, 0.02));
   overflow: hidden;
   box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -122,19 +123,24 @@ const STYLE = `
   width: var(--sc-grip-size);
   height: var(--sc-grip-size);
   border-radius: var(--sc-grip-r);
-  background: var(--sc-handle-bg, #ffffff);
-  border: var(--sc-handle-border, 1.5px solid #e2e8f0);
-  box-shadow: var(--sc-handle-shadow, 0 3px 10px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08));
+  background: var(--sc-handle-bg, #dc2626);
+  border: var(--sc-handle-border, none);
+  box-shadow: var(--sc-handle-shadow, 0 4px 14px rgba(220, 38, 38, 0.38), 0 2px 4px rgba(220, 38, 38, 0.2));
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--sc-icon-color, #dc2626);
+  color: var(--sc-icon-color, #ffffff);
   pointer-events: none;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
   box-sizing: border-box;
 }
+.sc-thumb-knob svg {
+  display: block;
+  margin: auto;
+  flex-shrink: 0;
+}
 .sc-root[data-held="true"] .sc-thumb-knob {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 18px rgba(220, 38, 38, 0.45), 0 2px 5px rgba(220, 38, 38, 0.25);
   transform: translate(-50%, -50%) scale(1.04);
 }
 .sc-root[data-phase="done"] .sc-thumb-knob,
@@ -216,8 +222,8 @@ export default function SlideCommit({
   onDone,
   onError,
   trackColor = '#ffffff',
-  trackBorder = '1.5px solid #e2e8f0',
-  trackShadow = '0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(15, 23, 42, 0.02)',
+  trackBorder = '2px solid #0f172a',
+  trackShadow = '0 2px 8px rgba(15, 23, 42, 0.08), inset 0 1px 2px rgba(15, 23, 42, 0.02)',
   handleColor = '#dc2626',
   handleBorder = 'none',
   handleShadow = '0 4px 14px rgba(220, 38, 38, 0.38), 0 2px 4px rgba(220, 38, 38, 0.2)',
@@ -551,15 +557,33 @@ export default function SlideCommit({
           <motion.div className="sc-capsule-content absolute inset-0" style={{ transform: content }}>
             <motion.div className="sc-thumb-knob">
               <motion.span
-                className="sc-arrow pointer-events-none absolute inset-0 flex items-center justify-center font-bold leading-none [font-size:var(--sc-font)] [transition:filter_200ms_ease] group-data-[phase=pending]:blur-[2px] [&>svg]:block"
-                style={{ opacity: arrow, color: 'var(--sc-icon-color)' }}
+                className="sc-arrow"
+                style={{
+                  opacity: arrow,
+                  color: 'var(--sc-icon-color, #ffffff)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%',
+                  lineHeight: 0
+                }}
                 aria-hidden="true"
               >
-                {icon ?? <HugeiconsIcon icon={ArrowRight02Icon} size={iconSize} strokeWidth={2.4} />}
+                {icon ?? <ArrowRight size={22} strokeWidth={2.6} />}
               </motion.span>
               <motion.span
-                className="sc-spinner-wrap pointer-events-none absolute inset-0 flex items-center justify-center font-bold leading-none [font-size:var(--sc-font)] [transition:filter_200ms_ease] blur-[2px] group-data-[phase=pending]:blur-none"
-                style={{ opacity: spin, color: 'var(--sc-icon-color)' }}
+                className="sc-spinner-wrap"
+                style={{
+                  opacity: spin,
+                  color: 'var(--sc-icon-color, #ffffff)',
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 0
+                }}
                 aria-hidden="true"
               >
                 <Spinner size={iconSize} />
