@@ -44,7 +44,7 @@ export const HeroBanner = ({ onExploreClick }) => {
             </button>
 
             <a
-              href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20want%20to%20know%20about%20your%20current%20offers%20on%20power%20tools."
+              href="https://wa.me/919447559333?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20want%20to%20know%20about%20your%20current%20offers%20on%20power%20tools."
               target="_blank"
               rel="noopener noreferrer"
               className="btn-hero-whatsapp"

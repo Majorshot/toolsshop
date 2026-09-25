@@ -68,9 +68,9 @@ export const Navbar = ({
             </div>
 
             <div className="top-contact-right">
-              <a href="tel:+919447123456" className="top-contact-item" title="Call Store">
+              <a href="tel:+919447559333" className="top-contact-item" title="Call Store">
                 <Phone size={11} style={{ color: 'var(--brand-primary)' }} />
-                <span>+91 94471 23456</span>
+                <span>+91 94475 59333</span>
               </a>
               <span className="top-contact-sep">•</span>
               <a href="mailto:variathupowertools@gmail.com" className="top-contact-item" title="Email Store">
@@ -326,16 +326,16 @@ export const Navbar = ({
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <a
-                  href="tel:+919447123456"
+                  href="tel:+919447559333"
                   className="btn-hero-secondary"
                   style={{ justifyContent: 'center', fontSize: '0.84rem', padding: '9px' }}
                 >
                   <Phone size={14} style={{ color: 'var(--brand-primary)' }} />
-                  <span>Call +91 94471 23456</span>
+                  <span>Call +91 94475 59333</span>
                 </a>
 
                 <a
-                  href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20have%20an%20inquiry."
+                  href="https://wa.me/919447559333?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20have%20an%20inquiry."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-hero-clean"

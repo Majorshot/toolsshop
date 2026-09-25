@@ -12,7 +12,7 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
     const text = encodeURIComponent(
       `Hello Variathu Power Tools Service Center Kozhencherry,\nI would like to request repair/service for:\nTool Model: ${toolModel}\nIssue: ${issueText}\nPlease let me know when I can bring it to Poyanil Building.`
     );
-    window.open(`https://wa.me/919447123456?text=${text}`, '_blank');
+    window.open(`https://wa.me/919447559333?text=${text}`, '_blank');
     setServiceRequested(true);
   };
 
@@ -105,7 +105,7 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
             {/* Action Buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               <a
-                href="tel:+919447123456"
+                href="tel:+919447559333"
                 className="btn-hero-secondary"
                 style={{ fontSize: '0.86rem', padding: '10px 16px' }}
                 id="store-modal-call-btn"
@@ -115,7 +115,7 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
               </a>
 
               <a
-                href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20am%20inquiring%20about%20store%20timings."
+                href="https://wa.me/919447559333?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20am%20inquiring%20about%20store%20timings."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-hero-secondary"

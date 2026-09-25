@@ -7436,7 +7436,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     />
                   </div>
                   <div>Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala</div>
-                  <div>Helpline: +91 94471 23456</div>
+                  <div>Helpline: +91 94475 59333</div>
                 </div>
               </div>
             </div>

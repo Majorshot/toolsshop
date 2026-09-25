@@ -44,7 +44,7 @@ export const ProductCard = ({ product, onSelectProduct }) => {
       : encodeURIComponent(
           `Hello Variathu Power Tools Kozhencherry,\nI want to inquire about:\n*${product.name}*\nPrice: ${formatPrice(product.price)}\nBrand: ${product.brand}\nIs this in stock for pickup at Poyanil Building?`
         );
-    return `https://wa.me/919447123456?text=${text}`;
+    return `https://wa.me/919447559333?text=${text}`;
   };
 
   return (

@@ -1612,7 +1612,7 @@ export const CheckoutPage = () => {
                     <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: '1.5' }}>
                       Variathu Power Tools Showroom & Service Clinic<br />
                       Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641<br />
-                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Store Hours: 9:00 AM - 7:30 PM (Mon - Sat) • Phone: +91 94473 05613</span>
+                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Store Hours: 9:00 AM - 7:30 PM (Mon - Sat) • Phone: +91 94475 59333</span>
                     </p>
                     <button
                       type="button"
@@ -2139,7 +2139,7 @@ export const CheckoutPage = () => {
                     </div>
 
                     <div style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: '700' }}>
-                      {deliveryType === 'store-pickup' ? '+91 94473 05613 (Showroom Helpline)' : (deliveryAddress.phone || user?.phone)}
+                      {deliveryType === 'store-pickup' ? '+91 94475 59333 (Showroom Helpline)' : (deliveryAddress.phone || user?.phone)}
                     </div>
                   </div>
 
@@ -2946,7 +2946,7 @@ export const CheckoutPage = () => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                        Helpline: +91 94473 05613 • Direct counter collection
+                        Helpline: +91 94475 59333 • Direct counter collection
                       </span>
                       <button
                         type="button"

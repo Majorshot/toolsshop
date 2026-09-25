@@ -34,8 +34,9 @@ const storeInfo = {
   pincode: "689641",
   state: "Kerala",
   fullAddress: "Poyanil Building, Near St Thomas Higher Secondary School Ground, Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala",
-  phone: "+91 94471 23456",
-  whatsapp: "919447123456",
+  phone: "+91 94475 59333",
+  whatsapp: "919447559333",
+  gstin: "32BJEPG6328P2ZZ",
   email: "variathupowertools@gmail.com",
   timings: "Monday - Saturday: 8:30 AM - 7:30 PM | Sunday: Closed",
   geo: {

@@ -60,7 +60,7 @@ export const CartDrawer = ({ onOpenCheckout }) => {
     text += `\nDelivery: ${deliveryType === 'store-pickup' ? 'Store Pickup' : 'Courier'}`;
     text += `\n*Grand Total: ${formatPrice(finalTotal)}*\n\nPlease confirm availability for Variathu Power Tools.`;
 
-    return `https://wa.me/919447123456?text=${encodeURIComponent(text)}`;
+    return `https://wa.me/919447559333?text=${encodeURIComponent(text)}`;
   };
 
   return (

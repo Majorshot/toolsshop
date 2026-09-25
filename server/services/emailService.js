@@ -149,7 +149,7 @@ function emailWrapper(title, bodyContent) {
                     VARIATHU POWER TOOLS
                   </div>
                   Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641<br>
-                  <strong>GSTIN:</strong> 32AABCV4921E1Z8 &bull; <strong>Phone / Helpline:</strong> +91 94471 23456<br>
+                  <strong>GSTIN:</strong> 32BJEPG6328P2ZZ &bull; <strong>Phone / Helpline:</strong> +91 94475 59333<br>
                   <div style="margin-top: 10px; color: #64748b; font-size: 10px;">
                     &copy; ${new Date().getFullYear()} Variathu Power Tools. All rights reserved.
                   </div>
@@ -581,7 +581,7 @@ async function sendCancellationRequestEmail(order, reason) {
         <ul style="font-size: 13px; color: #334155; margin: 0; padding-left: 18px; line-height: 1.7;">
           <li>Our store manager will review courier transit status within 24 hours.</li>
           <li>Once approved, a confirmation email with full refund details will be sent immediately.</li>
-          <li>For urgent inquiries, call our shop helpline at <strong>+91 94471 23456</strong>.</li>
+          <li>For urgent inquiries, call our shop helpline at <strong>+91 94475 59333</strong>.</li>
         </ul>
       </div>
 

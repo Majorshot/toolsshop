@@ -193,7 +193,7 @@ export const ProductDetailPage = () => {
     const text = encodeURIComponent(
       `Hello Variathu Power Tools Kozhencherry,\nI would like to purchase:\n\n*${product.name}*\nBrand: ${product.brand}\nQuantity: ${quantity}\nTotal Amount: ${formatPrice(product.price * quantity)}\n\nPlease confirm stock availability at Poyanil Building, Kozhencherry.`
     );
-    return `https://wa.me/919447123456?text=${text}`;
+    return `https://wa.me/919447559333?text=${text}`;
   };
 
   const rawGallery = Array.isArray(product?.images) && product.images.length > 0

@@ -419,7 +419,7 @@ export const CheckoutModal = ({ onClose }) => {
     if (order.pickupOtp) text += `Pickup OTP: *${order.pickupOtp}*\n`;
     text += `\n*TOTAL: ${formatPrice(order.totalAmount)}*\n`;
     text += `Please confirm processing for Variathu Power Tools, Kozhencherry.`;
-    return `https://wa.me/919447123456?text=${encodeURIComponent(text)}`;
+    return `https://wa.me/919447559333?text=${encodeURIComponent(text)}`;
   };
 
   return (

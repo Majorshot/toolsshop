@@ -246,7 +246,7 @@ const MainApp = () => {
       {/* Floating Speed-Dial WhatsApp Button (Hidden on Admin Portal) */}
       {!isAdminRoute && (
         <a
-          href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools,%20I%20need%20assistance%20with%20power%20tools%20in%20Kozhencherry."
+          href="https://wa.me/919447559333?text=Hello%20Variathu%20Power%20Tools,%20I%20need%20assistance%20with%20power%20tools%20in%20Kozhencherry."
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -307,8 +307,8 @@ const MainApp = () => {
               <div className="footer-clean-col">
                 <h4>Direct Contact</h4>
                 <ul>
-                  <li><a href="tel:+919447123456">📞 +91 94471 23456</a></li>
-                  <li><a href="https://wa.me/919447123456" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
+                  <li><a href="tel:+919447559333">📞 +91 94475 59333</a></li>
+                  <li><a href="https://wa.me/919447559333" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
                   <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
                   <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
                 </ul>

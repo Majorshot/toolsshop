@@ -705,7 +705,7 @@ export const LoginPage = () => {
                     <input
                       type="tel"
                       maxLength={10}
-                      placeholder="94471 23456"
+                      placeholder="94475 59333"
                       value={identifier}
                       onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
@@ -1220,8 +1220,8 @@ export const LoginPage = () => {
           color: '#64748b'
         }}>
           Need help? Call our Kozhencherry workshop:{' '}
-          <a href="tel:+919447123456" style={{ color: '#0f172a', fontWeight: '700', textDecoration: 'none' }}>
-            +91 94471 23456
+          <a href="tel:+919447559333" style={{ color: '#0f172a', fontWeight: '700', textDecoration: 'none' }}>
+            +91 94475 59333
           </a>
         </div>
 

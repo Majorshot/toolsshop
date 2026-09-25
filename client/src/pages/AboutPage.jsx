@@ -12,7 +12,7 @@ export const AboutPage = () => {
     const text = encodeURIComponent(
       `Hello Variathu Power Tools Kozhencherry,\nI would like to request repair/service for:\nTool Model: ${serviceModel}\nProblem: ${serviceIssue}\nPlease let me know when I can bring it to Poyanil Building.`
     );
-    window.open(`https://wa.me/919447123456?text=${text}`, '_blank');
+    window.open(`https://wa.me/919447559333?text=${text}`, '_blank');
     setSubmitted(true);
   };
 
@@ -124,13 +124,13 @@ export const AboutPage = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Phone size={16} style={{ color: '#ea580c' }} />
-                  <span><strong>Phone:</strong> +91 94471 23456</span>
+                  <span><strong>Phone:</strong> +91 94475 59333</span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                 <a
-                  href="tel:+919447123456"
+                  href="tel:+919447559333"
                   className="btn-hero-secondary"
                   style={{ fontSize: '0.86rem', padding: '10px 18px' }}
                 >
@@ -139,7 +139,7 @@ export const AboutPage = () => {
                 </a>
 
                 <a
-                  href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20would%20like%20to%20connect%20with%20your%20team."
+                  href="https://wa.me/919447559333?text=Hello%20Variathu%20Power%20Tools%20Kozhencherry,%20I%20would%20like%20to%20connect%20with%20your%20team."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-hero-secondary"

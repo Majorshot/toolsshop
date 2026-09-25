@@ -370,10 +370,10 @@ export const GstInvoiceModal = ({
                 Poyanil Building, Near St Thomas Higher Secondary School Ground, Poyanil Junction, Kozhencherry, Pathanamthitta-689641, Kerala
               </div>
               <div style={{ fontSize: '0.76rem', color: '#0f172a', marginTop: '4px', fontWeight: '600' }}>
-                <strong>GSTIN:</strong> 32AABCV4921E1Z8 &bull; <strong>State:</strong> Kerala (32) &bull; <strong>PAN:</strong> AABCV4921E
+                <strong>GSTIN:</strong> 32BJEPG6328P2ZZ &bull; <strong>State:</strong> Kerala (32) &bull; <strong>PAN:</strong> BJEPG6328P
               </div>
               <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
-                Phone: +91 94471 23456 &bull; Email: variathupowertools@gmail.com
+                Phone: +91 94475 59333 &bull; Email: variathupowertools@gmail.com
               </div>
             </div>
 
@@ -505,7 +505,7 @@ export const GstInvoiceModal = ({
                 {order.customer?.district || 'Pathanamthitta'}, Kerala - {order.customer?.pincode || '689641'}
               </div>
               <div style={{ color: '#0f172a', marginTop: '3px' }}>
-                <strong>Phone:</strong> {order.customer?.phone || '+91 94471 23456'}
+                <strong>Phone:</strong> {order.customer?.phone || '+91 94475 59333'}
               </div>
               <div style={{ color: '#0f172a', marginTop: '1px' }}>
                 <strong>State:</strong> Kerala (Code: 32) &bull; <strong>GSTIN:</strong> {order.customer?.gstin || 'URP (Unregistered)'}

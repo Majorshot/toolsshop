@@ -56,7 +56,7 @@ export const CartPage = ({ onOpenCheckout }) => {
     text += `\nDelivery: ${deliveryType === 'store-pickup' ? 'Store Pickup' : 'Courier'}`;
     text += `\n*Grand Total: ${formatPrice(finalTotal)}*\n\nPlease confirm availability for Variathu Power Tools.`;
 
-    return `https://wa.me/919447123456?text=${encodeURIComponent(text)}`;
+    return `https://wa.me/919447559333?text=${encodeURIComponent(text)}`;
   };
 
   if (cart.length === 0) {
@@ -368,7 +368,7 @@ export const CartPage = ({ onOpenCheckout }) => {
                   <input
                     type="tel"
                     maxLength="10"
-                    placeholder="Enter 10-digit phone (e.g. 9447123456)"
+                    placeholder="Enter 10-digit phone (e.g. 9447559333)"
                     value={verifyPhoneInput}
                     onChange={(e) => setVerifyPhoneInput(e.target.value.replace(/[^0-9]/g, ''))}
                     style={{

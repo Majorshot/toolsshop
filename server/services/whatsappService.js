@@ -7,7 +7,7 @@ const getAccessToken = () => process.env.WHATSAPP_ACCESS_TOKEN;
 /**
  * Clean and format Indian phone number to international E.164 without '+'
  * e.g., '6238270613' -> '916238270613'
- * e.g., '+91 94473 05613' -> '919447305613'
+ * e.g., '+91 94475 59333' -> '919447559333'
  */
 const formatPhoneNumber = (phone) => {
   if (!phone) return null;
@@ -122,7 +122,7 @@ ${itemsList}
 
 ${deliveryNotice}
 
-📞 Need assistance? Call our showroom at *+91 94473 05613*.
+📞 Need assistance? Call our showroom at *+91 94475 59333*.
 🌐 Visit: https://variathupowertools.com`;
 
   return sendWhatsAppMessage(order.customer.phone, message);
@@ -152,7 +152,7 @@ Great news! Your order *${order.id}* has been packed and dispatched from our Koz
 
 You will receive your package soon. Thank you for choosing Variathu Power Tools!
 
-📞 Showroom Hotline: *+91 94473 05613*`;
+📞 Showroom Hotline: *+91 94475 59333*`;
 
   return sendWhatsAppMessage(order.customer.phone, message);
 };
@@ -177,7 +177,7 @@ Poyanil Building, Kozhencherry, Pathanamthitta, Kerala
 _Show this 4-digit code to our store executive to collect your tools._
 
 ⏱️ *Store Timings:* 9:00 AM - 7:30 PM (Mon - Sat)
-📞 Helpdesk: *+91 94473 05613*`;
+📞 Helpdesk: *+91 94475 59333*`;
 
   return sendWhatsAppMessage(order.customer.phone, message);
 };
@@ -199,7 +199,7 @@ Your order *${order.id}* has been cancelled.
 📝 *Reason:* ${reason || 'Customer request'}
 ${isRefunded ? `💳 *Refund Status:* *₹${order.totalAmount}* has been refunded back to your original payment account (${order.refundId || 'UPI'}). It will reflect in your bank account in 1-3 business days.` : ''}
 
-If you have any questions or this was done in error, please call our support desk at *+91 94473 05613*.`;
+If you have any questions or this was done in error, please call our support desk at *+91 94475 59333*.`;
 
   return sendWhatsAppMessage(order.customer.phone, message);
 };

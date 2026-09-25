@@ -491,7 +491,7 @@ export const CustomerAccountPage = () => {
     const text = encodeURIComponent(
       `Hello Variathu Power Tools Kozhencherry,\nI am inquiring about my Order *${order.id}* placed for *${order.customer?.name}*.\nCurrent status shows: ${order.status}.\nPlease let me know when it will be ready.`
     );
-    return `https://wa.me/919447123456?text=${text}`;
+    return `https://wa.me/919447559333?text=${text}`;
   };
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -599,7 +599,7 @@ export const CustomerAccountPage = () => {
       id: 'whatsapp',
       title: 'WhatsApp Support',
       icon: MessageCircle,
-      onClick: () => window.open('https://wa.me/919447123456', '_blank')
+      onClick: () => window.open('https://wa.me/919447559333', '_blank')
     },
     {
       id: 'view-site',
@@ -1147,7 +1147,7 @@ export const CustomerAccountPage = () => {
               </button>
 
               <a
-                href={`https://wa.me/919447123456?text=${encodeURIComponent(`Hello Variathu Power Tools, I have a query about my order ${order.id}.`)}`}
+                href={`https://wa.me/919447559333?text=${encodeURIComponent(`Hello Variathu Power Tools, I have a query about my order ${order.id}.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -1497,7 +1497,7 @@ export const CustomerAccountPage = () => {
                 subtitle="Direct chat with Poyanil Junction counter staff"
                 Icon={MessageCircle}
                 badge="Online"
-                onClick={() => window.open('https://wa.me/919447123456', '_blank')}
+                onClick={() => window.open('https://wa.me/919447559333', '_blank')}
               />
               <HoverDevCard
                 title="Refresh Status"

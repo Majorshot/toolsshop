@@ -25,7 +25,7 @@ export const ProductDetailModal = ({ product, onClose }) => {
     const text = encodeURIComponent(
       `Hello Variathu Power Tools Kozhencherry,\nI would like to order:\n\n*${product.name}*\nBrand: ${product.brand}\nQuantity: ${quantity}\nTotal: ${formatPrice(product.price * quantity)}\n\nPlease let me know availability at Poyanil Building, Kozhencherry.`
     );
-    return `https://wa.me/919447123456?text=${text}`;
+    return `https://wa.me/919447559333?text=${text}`;
   };
 
   return (
