@@ -22,6 +22,7 @@ const couponRoutes = require('./routes/couponRoutes');
 const repairRoutes = require('./routes/repairRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const { startKeepAliveService, getKeepAliveStatus } = require('./utils/keepAlive');
+const { createRateLimiter } = require('./utils/rateLimiter');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -103,6 +104,17 @@ app.post('/api/db-reconnect', requireStoreOwner, async (req, res) => {
   const connected = await db.forceReconnect();
   res.json({ success: connected, ...db.getStatus() });
 });
+
+// Global API & Authentication Rate Limiting
+const globalLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 300 });
+const authLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 35,
+  message: 'Too many authentication attempts from this IP address. Please wait a few minutes before retrying.'
+});
+
+app.use('/api', globalLimiter);
+app.use('/api/auth', authLimiter);
 
 // Mount Routes
 app.use('/api/products', productRoutes);

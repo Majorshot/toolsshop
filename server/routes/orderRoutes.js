@@ -41,13 +41,29 @@ router.get('/customer/:identifier', optionalAuth, async (req, res) => {
       }
     }
 
-    // Query safely by phone or customerId only (avoiding loose name regex matching)
-    let orders = [];
+    // Query safely by both phone and customerId so all customer orders are retrieved
+    const queryConditions = [];
     if (cleanDigits.length === 10) {
-      orders = await db.OrderModel.find({ 'customer.phone': { $regex: cleanDigits } }).sort({ createdAt: -1 }).lean();
-    } else if (isObjectId) {
-      orders = await db.OrderModel.find({ customerId: rawIdentifier }).sort({ createdAt: -1 }).lean();
+      queryConditions.push({ 'customer.phone': { $regex: cleanDigits } });
     }
+    if (isObjectId) {
+      queryConditions.push({ customerId: rawIdentifier });
+    }
+    if (req.user && req.user.phone) {
+      const uPhone = String(req.user.phone).replace(/[^0-9]/g, '').slice(-10);
+      if (uPhone.length === 10 && !queryConditions.some(c => c['customer.phone'])) {
+        queryConditions.push({ 'customer.phone': { $regex: uPhone } });
+      }
+    }
+    if (req.user && req.user.id && mongoose.isValidObjectId(req.user.id)) {
+      if (!queryConditions.some(c => c.customerId && c.customerId.toString() === req.user.id)) {
+        queryConditions.push({ customerId: req.user.id });
+      }
+    }
+
+    const orders = queryConditions.length > 0
+      ? await db.OrderModel.find({ $or: queryConditions }).sort({ createdAt: -1 }).lean()
+      : [];
 
     res.json({ success: true, count: orders.length, data: orders });
   } catch (err) {
