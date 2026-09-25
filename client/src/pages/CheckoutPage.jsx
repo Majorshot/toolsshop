@@ -2440,8 +2440,8 @@ export const CheckoutPage = () => {
                     📱 <strong>Account Notice:</strong> WhatsApp order receipt and live dispatch updates will be sent to primary number <strong>+91 {user?.phone}</strong>.
                   </div>
 
-                  {/* Slide to Confirm & Place Order (Swipe Interaction) */}
-                  <div style={{ marginTop: '8px', width: '100%' }}>
+                  {/* Slide to Confirm & Place Order (Swipe Interaction - White Theme) */}
+                  <div style={{ marginTop: '14px', width: '100%' }}>
                     <SlideCommit
                       label={
                         isProcessingPayment
@@ -2449,18 +2449,25 @@ export const CheckoutPage = () => {
                           : isSubmitting
                             ? 'Placing Order...'
                             : deliveryType === 'store-pickup'
-                              ? `Slide to place pickup order • ${formatPrice(finalTotal)}`
+                              ? `Slide to place pickup order • ${formatPrice(finalTotal)}  ›››`
                               : paymentMethod === 'razorpay'
-                                ? `Slide to pay • ${formatPrice(finalTotal)}`
-                                : `Slide to confirm order • ${formatPrice(finalTotal)}`
+                                ? `Slide to pay • ${formatPrice(finalTotal)}  ›››`
+                                : `Slide to confirm order • ${formatPrice(finalTotal)}  ›››`
                       }
                       doneLabel={paymentMethod === 'razorpay' ? 'Payment Verified' : 'Order Placed!'}
                       errorLabel="Payment Failed / Retry"
                       onConfirm={handleSubmitOrder}
                       onDone={() => console.log('Order processed')}
                       onError={(reason) => console.log('Order error:', reason)}
-                      trackColor="#0f172a"
-                      handleColor="#dc2626"
+                      trackColor="#ffffff"
+                      trackBorder="1.5px solid #e2e8f0"
+                      trackShadow="0 2px 8px rgba(15, 23, 42, 0.05), inset 0 1px 2px rgba(15, 23, 42, 0.02)"
+                      handleColor="#ffffff"
+                      handleBorder="1.5px solid #e2e8f0"
+                      handleShadow="0 3px 10px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)"
+                      textColor="#0f172a"
+                      iconColor="#dc2626"
+                      trailColor="#f8fafc"
                       successColor="#16a34a"
                       dangerColor="#dc2626"
                       width="100%"

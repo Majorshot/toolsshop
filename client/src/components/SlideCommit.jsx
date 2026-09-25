@@ -44,8 +44,11 @@ const STYLE = `
   -webkit-tap-highlight-color: transparent;
   border-radius: var(--sc-radius);
   background: var(--sc-track);
+  border: var(--sc-border, 1.5px solid #e2e8f0);
+  box-shadow: var(--sc-shadow, 0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(15, 23, 42, 0.02));
   overflow: hidden;
   box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .sc-root[data-held="true"] .sc-track {
   cursor: grabbing;
@@ -69,7 +72,7 @@ const STYLE = `
 .sc-track-label span {
   grid-area: 1 / 1;
   transition: opacity 200ms ease, filter 200ms ease;
-  color: color-mix(in srgb, var(--sc-ink) 55%, transparent);
+  color: var(--sc-text, #0f172a);
 }
 .sc-root[data-phase="error"] .sc-label-idle {
   opacity: 0;
@@ -91,18 +94,18 @@ const STYLE = `
   height: calc(100% - var(--sc-pad) * 2);
   width: calc(100% - var(--sc-pad) * 2);
   outline: none;
-  background: var(--sc-ink);
+  background: var(--sc-trail, var(--sc-ink));
   color: var(--sc-on-ink);
   transition: background-color 200ms ease, color 200ms ease;
   box-sizing: border-box;
 }
 .sc-root[data-phase="done"] .sc-capsule {
-  background: var(--sc-ok);
-  color: var(--sc-on-ok);
+  background: var(--sc-ok) !important;
+  color: var(--sc-on-ok) !important;
 }
 .sc-root[data-phase="error"] .sc-capsule {
-  background: var(--sc-no);
-  color: var(--sc-on-no);
+  background: var(--sc-no) !important;
+  color: var(--sc-on-no) !important;
 }
 .sc-capsule:focus-visible {
   box-shadow: inset 0 0 0 2px var(--sc-track);
@@ -110,6 +113,33 @@ const STYLE = `
 .sc-capsule-content {
   position: absolute;
   inset: 0;
+}
+.sc-thumb-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--sc-grip-size);
+  height: var(--sc-grip-size);
+  border-radius: var(--sc-grip-r);
+  background: var(--sc-handle-bg, #ffffff);
+  border: var(--sc-handle-border, 1.5px solid #e2e8f0);
+  box-shadow: var(--sc-handle-shadow, 0 3px 10px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sc-icon-color, #dc2626);
+  pointer-events: none;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  box-sizing: border-box;
+}
+.sc-root[data-held="true"] .sc-thumb-knob {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18), 0 2px 5px rgba(0, 0, 0, 0.1);
+  transform: translate(-50%, -50%) scale(1.04);
+}
+.sc-root[data-phase="done"] .sc-thumb-knob,
+.sc-root[data-phase="error"] .sc-thumb-knob {
+  display: none !important;
 }
 .sc-capsule-item {
   pointer-events: none;
@@ -185,13 +215,20 @@ export default function SlideCommit({
   onConfirm,
   onDone,
   onError,
-  trackColor = '#262626',
-  handleColor = '#f5f5f5',
-  successColor = '#22c55e',
-  dangerColor = '#e5484d',
+  trackColor = '#ffffff',
+  trackBorder = '1.5px solid #e2e8f0',
+  trackShadow = '0 2px 6px rgba(15, 23, 42, 0.04), inset 0 1px 2px rgba(15, 23, 42, 0.02)',
+  handleColor = '#ffffff',
+  handleBorder = '1.5px solid #e2e8f0',
+  handleShadow = '0 3px 10px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)',
+  textColor = '#0f172a',
+  iconColor,
+  trailColor = '#f1f5f9',
+  successColor = '#16a34a',
+  dangerColor = '#dc2626',
   width = '100%',
-  height = 56,
-  radius = 28,
+  height = 58,
+  radius = 29,
   speed = 50,
   returnBounce = 0.38,
   landingDip = 0.026,
@@ -452,7 +489,15 @@ export default function SlideCommit({
         height: `${height}px`,
         maxWidth: '100%',
         '--sc-track': trackColor,
+        '--sc-border': trackBorder,
+        '--sc-shadow': trackShadow,
         '--sc-ink': handleColor,
+        '--sc-handle-bg': handleColor,
+        '--sc-handle-border': handleBorder,
+        '--sc-handle-shadow': handleShadow,
+        '--sc-text': textColor,
+        '--sc-icon-color': iconColor || (handleColor === '#ffffff' ? '#dc2626' : onColor(handleColor)),
+        '--sc-trail': trailColor,
         '--sc-ok': successColor,
         '--sc-no': dangerColor,
         '--sc-on-ink': onColor(handleColor),
@@ -460,6 +505,7 @@ export default function SlideCommit({
         '--sc-on-no': onColor(dangerColor),
         '--sc-radius': `${r}px`,
         '--sc-grip-r': `${gripR}px`,
+        '--sc-grip-size': `${GRIP}px`,
         '--sc-pad': `${PAD}px`,
         '--sc-font': `${fontSize}px`,
         ...style
@@ -473,11 +519,11 @@ export default function SlideCommit({
         onPointerDown={down}
       >
         <motion.span
-          className="sc-track-label pointer-events-none absolute inset-0 grid place-items-center whitespace-nowrap font-medium leading-none tracking-[-0.006em] [font-size:var(--sc-font)]"
+          className="sc-track-label pointer-events-none absolute inset-0 grid place-items-center whitespace-nowrap font-bold leading-none tracking-[-0.01em] [font-size:var(--sc-font)]"
           style={{ opacity: say }}
           aria-hidden="true"
         >
-          <span className="sc-label-idle [grid-area:1/1] [transition:opacity_200ms_ease,filter_200ms_ease] [color:color-mix(in_srgb,var(--sc-ink)_45%,transparent)] group-data-[phase=error]:opacity-0 group-data-[phase=error]:blur-[2px]">
+          <span className="sc-label-idle [grid-area:1/1] [transition:opacity_200ms_ease,filter_200ms_ease] text-[var(--sc-text)] group-data-[phase=error]:opacity-0 group-data-[phase=error]:blur-[2px]" style={{ color: 'var(--sc-text)' }}>
             {label}
           </span>
           <span className="sc-label-error [grid-area:1/1] [transition:opacity_200ms_ease,filter_200ms_ease] [color:var(--sc-no)] opacity-0 blur-[2px] group-data-[phase=error]:opacity-100 group-data-[phase=error]:blur-none">
@@ -494,7 +540,7 @@ export default function SlideCommit({
           aria-valuenow={0}
           aria-busy={phase === 'pending' || undefined}
           aria-disabled={disabled || undefined}
-          className="sc-capsule absolute top-[var(--sc-pad)] left-[var(--sc-pad)] h-[calc(100%-var(--sc-pad)*2)] w-[calc(100%-var(--sc-pad)*2)] outline-none [background:var(--sc-ink)] [color:var(--sc-on-ink)] [transition:background-color_200ms_ease,color_200ms_ease] group-data-[phase=done]:[background:var(--sc-ok)] group-data-[phase=done]:[color:var(--sc-on-ok)] group-data-[phase=error]:[background:var(--sc-no)] group-data-[phase=error]:[color:var(--sc-on-no)] focus-visible:[box-shadow:inset_0_0_0_2px_var(--sc-track)]"
+          className="sc-capsule absolute top-[var(--sc-pad)] left-[var(--sc-pad)] h-[calc(100%-var(--sc-pad)*2)] w-[calc(100%-var(--sc-pad)*2)] outline-none [background:var(--sc-trail)] [color:var(--sc-on-ink)] [transition:background-color_200ms_ease,color_200ms_ease] group-data-[phase=done]:[background:var(--sc-ok)] group-data-[phase=done]:[color:var(--sc-on-ok)] group-data-[phase=error]:[background:var(--sc-no)] group-data-[phase=error]:[color:var(--sc-on-no)] focus-visible:[box-shadow:inset_0_0_0_2px_var(--sc-track)]"
           style={{ clipPath: clip, transform: shape, transformOrigin: origin }}
           onPointerEnter={e => {
             if (e.pointerType === 'mouse' && finePointer()) setHot(true);
@@ -503,28 +549,31 @@ export default function SlideCommit({
           onKeyDown={onKeyDown}
         >
           <motion.div className="sc-capsule-content absolute inset-0" style={{ transform: content }}>
+            <motion.div className="sc-thumb-knob">
+              <motion.span
+                className="sc-arrow pointer-events-none absolute inset-0 flex items-center justify-center font-bold leading-none [font-size:var(--sc-font)] [transition:filter_200ms_ease] group-data-[phase=pending]:blur-[2px] [&>svg]:block"
+                style={{ opacity: arrow, color: 'var(--sc-icon-color)' }}
+                aria-hidden="true"
+              >
+                {icon ?? <HugeiconsIcon icon={ArrowRight02Icon} size={iconSize} strokeWidth={2.4} />}
+              </motion.span>
+              <motion.span
+                className="sc-spinner-wrap pointer-events-none absolute inset-0 flex items-center justify-center font-bold leading-none [font-size:var(--sc-font)] [transition:filter_200ms_ease] blur-[2px] group-data-[phase=pending]:blur-none"
+                style={{ opacity: spin, color: 'var(--sc-icon-color)' }}
+                aria-hidden="true"
+              >
+                <Spinner size={iconSize} />
+              </motion.span>
+            </motion.div>
             <motion.span
-              className="sc-capsule-item sc-arrow pointer-events-none absolute inset-0 flex items-center justify-center gap-2 whitespace-nowrap font-semibold leading-none tracking-[-0.006em] [font-size:var(--sc-font)] [transition:filter_200ms_ease] group-data-[phase=pending]:blur-[2px] [&>svg]:block"
-              style={{ opacity: arrow }}
-              aria-hidden="true"
-            >
-              {icon ?? <HugeiconsIcon icon={ArrowRight02Icon} size={iconSize} strokeWidth={2} />}
-            </motion.span>
-            <motion.span
-              className="sc-capsule-item sc-spinner-wrap pointer-events-none absolute inset-0 flex items-center justify-center gap-2 whitespace-nowrap font-semibold leading-none tracking-[-0.006em] [font-size:var(--sc-font)] [transition:filter_200ms_ease] blur-[2px] group-data-[phase=pending]:blur-none"
-              style={{ opacity: spin }}
-              aria-hidden="true"
-            >
-              <Spinner size={iconSize} />
-            </motion.span>
-            <motion.span
-              className="sc-capsule-item sc-done pointer-events-none absolute inset-0 flex items-center justify-center gap-2 whitespace-nowrap font-semibold leading-none tracking-[-0.006em] [font-size:var(--sc-font)] [&>svg]:block"
+              className="sc-capsule-item sc-done pointer-events-none absolute inset-0 flex items-center justify-center gap-2 whitespace-nowrap font-bold leading-none tracking-[-0.01em] [font-size:var(--sc-font)] [&>svg]:block text-white"
               aria-hidden="true"
               initial={false}
               animate={{ opacity: done ? 1 : 0, scale: done || reduce ? 1 : 0.95 }}
               transition={{ duration: 0.2, ease: EASE_OUT }}
+              style={{ color: '#ffffff' }}
             >
-              <HugeiconsIcon icon={Tick02Icon} size={Math.round(GRIP * 0.38)} strokeWidth={2.5} />
+              <HugeiconsIcon icon={Tick02Icon} size={Math.round(GRIP * 0.42)} strokeWidth={2.5} />
               {doneLabel}
             </motion.span>
           </motion.div>
