@@ -124,8 +124,8 @@ const STYLE = `
   height: var(--sc-grip-size);
   border-radius: var(--sc-grip-r);
   background: var(--sc-handle-bg, #dc2626);
-  border: var(--sc-handle-border, none);
-  box-shadow: var(--sc-handle-shadow, 0 4px 14px rgba(220, 38, 38, 0.38), 0 2px 4px rgba(220, 38, 38, 0.2));
+  border: var(--sc-handle-border, 2.5px solid #ffffff);
+  box-shadow: var(--sc-handle-shadow, 0 4px 14px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(220, 38, 38, 0.4));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -225,11 +225,11 @@ export default function SlideCommit({
   trackBorder = '2px solid #0f172a',
   trackShadow = '0 2px 8px rgba(15, 23, 42, 0.08), inset 0 1px 2px rgba(15, 23, 42, 0.02)',
   handleColor = '#dc2626',
-  handleBorder = 'none',
-  handleShadow = '0 4px 14px rgba(220, 38, 38, 0.38), 0 2px 4px rgba(220, 38, 38, 0.2)',
+  handleBorder = '2.5px solid #ffffff',
+  handleShadow = '0 4px 14px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(220, 38, 38, 0.4)',
   textColor = '#0f172a',
   iconColor = '#ffffff',
-  trailColor = 'rgba(220, 38, 38, 0.08)',
+  trailColor = 'linear-gradient(90deg, #f87171 0%, #dc2626 100%)',
   successColor = '#16a34a',
   dangerColor = '#dc2626',
   width = '100%',
@@ -547,7 +547,7 @@ export default function SlideCommit({
           aria-busy={phase === 'pending' || undefined}
           aria-disabled={disabled || undefined}
           className="sc-capsule absolute top-[var(--sc-pad)] left-[var(--sc-pad)] h-[calc(100%-var(--sc-pad)*2)] w-[calc(100%-var(--sc-pad)*2)] outline-none [background:var(--sc-trail)] [color:var(--sc-on-ink)] [transition:background-color_200ms_ease,color_200ms_ease] group-data-[phase=done]:[background:var(--sc-ok)] group-data-[phase=done]:[color:var(--sc-on-ok)] group-data-[phase=error]:[background:var(--sc-no)] group-data-[phase=error]:[color:var(--sc-on-no)] focus-visible:[box-shadow:inset_0_0_0_2px_var(--sc-track)]"
-          style={{ clipPath: clip, transform: shape, transformOrigin: origin }}
+          style={{ clipPath: clip, transform: shape, transformOrigin: origin, background: 'var(--sc-trail)' }}
           onPointerEnter={e => {
             if (e.pointerType === 'mouse' && finePointer()) setHot(true);
           }}
