@@ -1,5 +1,22 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
+export function getAuthHeaders() {
+  try {
+    const token = localStorage.getItem('vpt_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
+function authFetch(url, options = {}) {
+  const headers = {
+    ...getAuthHeaders(),
+    ...(options.headers || {})
+  };
+  return fetch(url, { ...options, headers });
+}
+
 export const api = {
   // Auth: Dual Login
   async login(credentials) {
@@ -8,7 +25,11 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
     });
-    return await res.json();
+    const data = await res.json();
+    if (data.token) {
+      try { localStorage.setItem('vpt_token', data.token); } catch {}
+    }
+    return data;
   },
 
   // Auth: Register new customer account
@@ -18,7 +39,22 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return await res.json();
+    const result = await res.json();
+    if (result.token) {
+      try { localStorage.setItem('vpt_token', result.token); } catch {}
+    }
+    return result;
+  },
+
+  // Auth: Session Verification (Get current authenticated profile)
+  async getMe() {
+    try {
+      const res = await authFetch(`${API_BASE}/auth/me`);
+      if (!res.ok) return { success: false };
+      return await res.json();
+    } catch {
+      return { success: false };
+    }
   },
 
   // Auth: Quick Phone Existence Check (Blinkit/Zepto-style)
@@ -49,6 +85,9 @@ export const api = {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
+    if (data.token) {
+      try { localStorage.setItem('vpt_token', data.token); } catch {}
+    }
     if (!res.ok) throw new Error(data.message || 'Verification failed');
     return data;
   },
@@ -64,7 +103,6 @@ export const api = {
     if (!res.ok) throw new Error(data.message || 'Failed to resend verification code');
     return data;
   },
-
 
   // Fetch products with search & filters (supports optional pagination)
   async getProducts(params = {}) {
@@ -91,7 +129,7 @@ export const api = {
 
   // Admin: Create product
   async createProduct(data) {
-    const res = await fetch(`${API_BASE}/products`, {
+    const res = await authFetch(`${API_BASE}/products`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -102,7 +140,7 @@ export const api = {
 
   // Admin: Update product
   async updateProduct(id, data) {
-    const res = await fetch(`${API_BASE}/products/${id}`, {
+    const res = await authFetch(`${API_BASE}/products/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -113,7 +151,7 @@ export const api = {
 
   // Admin: Delete product
   async deleteProduct(id) {
-    const res = await fetch(`${API_BASE}/products/${id}`, {
+    const res = await authFetch(`${API_BASE}/products/${id}`, {
       method: 'DELETE',
     });
     if (!res.ok) {
@@ -133,7 +171,7 @@ export const api = {
   },
 
   async addBrand(name) {
-    const res = await fetch(`${API_BASE}/products/meta/brands`, {
+    const res = await authFetch(`${API_BASE}/products/meta/brands`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
@@ -144,7 +182,7 @@ export const api = {
   },
 
   async addCategory(catData) {
-    const res = await fetch(`${API_BASE}/products/meta/categories`, {
+    const res = await authFetch(`${API_BASE}/products/meta/categories`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(catData),
@@ -155,7 +193,7 @@ export const api = {
   },
 
   async deleteBrand(name, deleteProducts = false) {
-    const res = await fetch(`${API_BASE}/products/meta/brands/${encodeURIComponent(name)}?deleteProducts=${deleteProducts}`, {
+    const res = await authFetch(`${API_BASE}/products/meta/brands/${encodeURIComponent(name)}?deleteProducts=${deleteProducts}`, {
       method: 'DELETE',
     });
     const data = await res.json();
@@ -164,7 +202,7 @@ export const api = {
   },
 
   async deleteCategory(id, deleteProducts = false) {
-    const res = await fetch(`${API_BASE}/products/meta/categories/${encodeURIComponent(id)}?deleteProducts=${deleteProducts}`, {
+    const res = await authFetch(`${API_BASE}/products/meta/categories/${encodeURIComponent(id)}?deleteProducts=${deleteProducts}`, {
       method: 'DELETE',
     });
     const data = await res.json();
@@ -174,32 +212,35 @@ export const api = {
 
   // Place order
   async createOrder(orderData) {
-    const res = await fetch(`${API_BASE}/orders`, {
+    const res = await authFetch(`${API_BASE}/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(orderData),
     });
-    if (!res.ok) throw new Error('Failed to place order');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to place order');
+    }
     return await res.json();
   },
 
   // Admin: Get all orders
   async getOrders() {
-    const res = await fetch(`${API_BASE}/orders`);
+    const res = await authFetch(`${API_BASE}/orders`);
     if (!res.ok) throw new Error('Failed to fetch orders');
     return await res.json();
   },
 
   // Customer: Get orders by phone/name
   async getCustomerOrders(identifier) {
-    const res = await fetch(`${API_BASE}/orders/customer/${encodeURIComponent(identifier)}`);
+    const res = await authFetch(`${API_BASE}/orders/customer/${encodeURIComponent(identifier)}`);
     if (!res.ok) throw new Error('Failed to fetch customer orders');
     return await res.json();
   },
 
   // Admin: Update order status (with optional courier partner & AWB consignment)
   async updateOrderStatus(orderId, status, extra = {}) {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, ...extra }),
@@ -210,7 +251,7 @@ export const api = {
 
   // Cancel order with automatic online refund
   async cancelOrder(orderId, options = {}) {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/cancel`, {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options),
@@ -222,7 +263,7 @@ export const api = {
 
   // Request cancellation for dispatched orders (customer)
   async requestCancellation(orderId, options = {}) {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/request-cancel`, {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/request-cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(options),
@@ -234,7 +275,7 @@ export const api = {
 
   // Reject cancellation request (store manager)
   async rejectCancellation(orderId) {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/reject-cancel`, {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/reject-cancel`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -259,7 +300,7 @@ export const api = {
 
   // Counter staff: Verify pickup 4-digit OTP
   async verifyPickupOtp(orderId, otp) {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/verify-otp`, {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ otp }),
@@ -271,7 +312,7 @@ export const api = {
 
   // Process Instant Payment / Webhook simulation
   async payOrder(orderId, paymentData = {}) {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/pay`, {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/pay`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(paymentData),
@@ -282,11 +323,11 @@ export const api = {
   },
 
   // Razorpay Live Order Creation
-  async createRazorpayOrder(amount, receipt, notes) {
-    const res = await fetch(`${API_BASE}/payment/create-order`, {
+  async createRazorpayOrder(amount, receipt, notes, extraOrderData = {}) {
+    const res = await authFetch(`${API_BASE}/payment/create-order`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount, receipt, notes }),
+      body: JSON.stringify({ amount, receipt, notes, ...extraOrderData }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to initialize Razorpay checkout');
@@ -295,7 +336,7 @@ export const api = {
 
   // Razorpay HMAC Verification
   async verifyRazorpayPayment(verificationData) {
-    const res = await fetch(`${API_BASE}/payment/verify`, {
+    const res = await authFetch(`${API_BASE}/payment/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(verificationData),
@@ -313,12 +354,12 @@ export const api = {
   },
 
   async reconnectDb() {
-    const res = await fetch(`${API_BASE}/db-reconnect`, { method: 'POST' });
+    const res = await authFetch(`${API_BASE}/db-reconnect`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to trigger DB reconnect');
     return await res.json();
   },
 
-  // Logistics & Courier Partner APIs (DTDC Express & The Professional Couriers)
+  // Logistics & Courier Partner APIs
   async checkShippingPincode(pincode) {
     const res = await fetch(`${API_BASE}/shipping/check-pincode/${encodeURIComponent(pincode)}`);
     if (!res.ok) throw new Error('Failed to check pincode serviceability');
@@ -352,7 +393,7 @@ export const api = {
   },
 
   async createCoupon(data) {
-    const res = await fetch(`${API_BASE}/coupons`, {
+    const res = await authFetch(`${API_BASE}/coupons`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -363,7 +404,7 @@ export const api = {
   },
 
   async updateCoupon(id, data) {
-    const res = await fetch(`${API_BASE}/coupons/${id}`, {
+    const res = await authFetch(`${API_BASE}/coupons/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -374,7 +415,7 @@ export const api = {
   },
 
   async deleteCoupon(id) {
-    const res = await fetch(`${API_BASE}/coupons/${id}`, { method: 'DELETE' });
+    const res = await authFetch(`${API_BASE}/coupons/${id}`, { method: 'DELETE' });
     const result = await res.json();
     if (!res.ok) throw new Error(result.message || 'Failed to delete coupon');
     return result;
@@ -384,7 +425,7 @@ export const api = {
     const payload = typeof userIdent === 'object'
       ? { code, subtotal, ...userIdent }
       : { code, subtotal, phone: userIdent };
-    const res = await fetch(`${API_BASE}/coupons/validate`, {
+    const res = await authFetch(`${API_BASE}/coupons/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -394,19 +435,19 @@ export const api = {
 
   // Workshop & Repair Job Cards
   async getRepairJobs() {
-    const res = await fetch(`${API_BASE}/repairs`);
+    const res = await authFetch(`${API_BASE}/repairs`);
     if (!res.ok) throw new Error('Failed to fetch repair jobs');
     return await res.json();
   },
 
   async getRepairJob(id) {
-    const res = await fetch(`${API_BASE}/repairs/${id}`);
+    const res = await authFetch(`${API_BASE}/repairs/${id}`);
     if (!res.ok) throw new Error('Failed to fetch repair job');
     return await res.json();
   },
 
   async createRepairJob(data) {
-    const res = await fetch(`${API_BASE}/repairs`, {
+    const res = await authFetch(`${API_BASE}/repairs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -417,7 +458,7 @@ export const api = {
   },
 
   async updateRepairJob(id, data) {
-    const res = await fetch(`${API_BASE}/repairs/${id}`, {
+    const res = await authFetch(`${API_BASE}/repairs/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -428,14 +469,14 @@ export const api = {
   },
 
   async deleteRepairJob(id) {
-    const res = await fetch(`${API_BASE}/repairs/${id}`, { method: 'DELETE' });
+    const res = await authFetch(`${API_BASE}/repairs/${id}`, { method: 'DELETE' });
     const result = await res.json();
     if (!res.ok) throw new Error(result.message || 'Failed to delete repair job');
     return result;
   },
 
   async verifyRepairOtp(id, otp) {
-    const res = await fetch(`${API_BASE}/repairs/${id}/verify-otp`, {
+    const res = await authFetch(`${API_BASE}/repairs/${id}/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ otp })
@@ -445,7 +486,7 @@ export const api = {
     return result;
   },
 
-  // Customer Directory & CRM (500+ Customers)
+  // Customer Directory & CRM
   async getCustomers(params = {}) {
     const query = new URLSearchParams();
     if (params.search) query.append('search', params.search);
@@ -453,19 +494,19 @@ export const api = {
     if (params.page) query.append('page', params.page);
     if (params.limit) query.append('limit', params.limit);
 
-    const res = await fetch(`${API_BASE}/customers?${query.toString()}`);
+    const res = await authFetch(`${API_BASE}/customers?${query.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch customers');
     return await res.json();
   },
 
   async getCustomer(id) {
-    const res = await fetch(`${API_BASE}/customers/${id}`);
+    const res = await authFetch(`${API_BASE}/customers/${id}`);
     if (!res.ok) throw new Error('Failed to fetch customer profile');
     return await res.json();
   },
 
   async updateCustomer(id, data) {
-    const res = await fetch(`${API_BASE}/customers/${id}`, {
+    const res = await authFetch(`${API_BASE}/customers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -476,7 +517,7 @@ export const api = {
   },
 
   async createCustomer(data) {
-    const res = await fetch(`${API_BASE}/customers`, {
+    const res = await authFetch(`${API_BASE}/customers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
@@ -486,9 +527,9 @@ export const api = {
     return result;
   },
 
-  // Customer: Add new delivery address (Flipkart style)
+  // Customer: Add new delivery address
   async addCustomerAddress(customerId, addressData) {
-    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses`, {
+    const res = await authFetch(`${API_BASE}/customers/${customerId}/addresses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(addressData)
@@ -500,7 +541,7 @@ export const api = {
 
   // Customer: Update a saved address
   async updateCustomerAddress(customerId, addressId, addressData) {
-    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}`, {
+    const res = await authFetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(addressData)
@@ -512,7 +553,7 @@ export const api = {
 
   // Customer: Set default address
   async setDefaultCustomerAddress(customerId, addressId) {
-    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}/default`, {
+    const res = await authFetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}/default`, {
       method: 'PUT'
     });
     const result = await res.json();
@@ -522,7 +563,7 @@ export const api = {
 
   // Customer: Delete a saved address
   async deleteCustomerAddress(customerId, addressId) {
-    const res = await fetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}`, {
+    const res = await authFetch(`${API_BASE}/customers/${customerId}/addresses/${addressId}`, {
       method: 'DELETE'
     });
     const result = await res.json();
@@ -532,7 +573,7 @@ export const api = {
 
   // Trigger WhatsApp notification for order
   async sendOrderWhatsApp(orderId, messageType = 'confirmed') {
-    const res = await fetch(`${API_BASE}/orders/${orderId}/send-whatsapp`, {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/send-whatsapp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messageType })

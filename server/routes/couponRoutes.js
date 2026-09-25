@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
+const { requireStoreOwner } = require('../utils/auth');
 
 // GET /api/coupons - List all coupons
 router.get('/', async (req, res) => {
@@ -8,12 +9,12 @@ router.get('/', async (req, res) => {
     const coupons = await db.getCoupons();
     res.json(coupons);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch coupons' });
   }
 });
 
-// POST /api/coupons - Create coupon
-router.post('/', async (req, res) => {
+// POST /api/coupons - Create coupon (Admin only)
+router.post('/', requireStoreOwner, async (req, res) => {
   try {
     const { code, description, discountType, discountValue, minOrderAmount, active, usageLimitPerUser, maxTotalUses } = req.body;
     if (!code || !discountValue) {
@@ -51,12 +52,12 @@ router.post('/validate', async (req, res) => {
     }
     res.json(result);
   } catch (err) {
-    res.status(500).json({ valid: false, message: err.message });
+    res.status(500).json({ valid: false, message: 'Coupon validation failed' });
   }
 });
 
-// PUT /api/coupons/:id - Update coupon
-router.put('/:id', async (req, res) => {
+// PUT /api/coupons/:id - Update coupon (Admin only)
+router.put('/:id', requireStoreOwner, async (req, res) => {
   try {
     const updated = await db.updateCoupon(req.params.id, req.body);
     if (!updated) {
@@ -68,8 +69,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/coupons/:id - Delete coupon
-router.delete('/:id', async (req, res) => {
+// DELETE /api/coupons/:id - Delete coupon (Admin only)
+router.delete('/:id', requireStoreOwner, async (req, res) => {
   try {
     await db.deleteCoupon(req.params.id);
     res.json({ success: true, message: 'Coupon deleted successfully' });

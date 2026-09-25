@@ -769,7 +769,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   }, [autoRefresh, soundEnabled]);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || user.role !== 'store') {
       navigate('/login');
       return;
     }
@@ -1800,7 +1800,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setShowLowStockOnly(false);
   };
 
-  if (!user) return null;
+  if (!user || user.role !== 'store') return null;
 
   const sidebarNavItems = [
     {

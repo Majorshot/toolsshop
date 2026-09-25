@@ -4,6 +4,14 @@ import { api } from '../services/api';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(() => {
+    try {
+      return localStorage.getItem('vpt_token') || null;
+    } catch {
+      return null;
+    }
+  });
+
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('vpt_user');
@@ -13,11 +21,35 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
+  // Verify session on startup if token exists
+  useEffect(() => {
+    if (token) {
+      api.getMe().then(res => {
+        if (res.success && res.user) {
+          setUser(res.user);
+          try {
+            localStorage.setItem('vpt_user', JSON.stringify(res.user));
+          } catch {}
+        } else {
+          // Token invalid or expired
+          logout();
+        }
+      }).catch(() => {
+        // Network failure; keep offline optimistic state
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
-      localStorage.setItem('vpt_user', JSON.stringify(user));
+      try {
+        localStorage.setItem('vpt_user', JSON.stringify(user));
+      } catch {}
     } else {
-      localStorage.removeItem('vpt_user');
+      try {
+        localStorage.removeItem('vpt_user');
+        localStorage.removeItem('vpt_token');
+      } catch {}
     }
   }, [user]);
 
@@ -25,6 +57,10 @@ export const AuthProvider = ({ children }) => {
     const payload = typeof role === 'object' ? role : { role, identifier, password, name, ...extra };
     const res = await api.login(payload);
     if (res.success && res.user) {
+      if (res.token) {
+        setToken(res.token);
+        try { localStorage.setItem('vpt_token', res.token); } catch {}
+      }
       setUser(res.user);
       return res.user;
     } else {
@@ -35,6 +71,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     const res = await api.register(data);
     if (res.success && res.user) {
+      if (res.token) {
+        setToken(res.token);
+        try { localStorage.setItem('vpt_token', res.token); } catch {}
+      }
       setUser(res.user);
       return res.user;
     } else {
@@ -49,6 +89,10 @@ export const AuthProvider = ({ children }) => {
   const verifyOtp = async (payload) => {
     const res = await api.verifyOtp(payload);
     if (res.success && res.user) {
+      if (res.token) {
+        setToken(res.token);
+        try { localStorage.setItem('vpt_token', res.token); } catch {}
+      }
       setUser(res.user);
       return res;
     } else {
@@ -62,6 +106,11 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setToken(null);
+    try {
+      localStorage.removeItem('vpt_user');
+      localStorage.removeItem('vpt_token');
+    } catch {}
   };
 
   const updateUser = (updates) => {
@@ -82,6 +131,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        token,
         isLoggedIn: !!user,
         isStoreOwner,
         isCustomer,
@@ -101,6 +151,7 @@ export const AuthProvider = ({ children }) => {
 
 const defaultAuthContext = {
   user: null,
+  token: null,
   isLoggedIn: false,
   isStoreOwner: false,
   isCustomer: false,

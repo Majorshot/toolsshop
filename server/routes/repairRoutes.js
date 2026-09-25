@@ -1,30 +1,36 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
+const { requireStoreOwner, optionalAuth } = require('../utils/auth');
 
-// GET /api/repairs - Get all repair jobs
-router.get('/', async (req, res) => {
+// GET /api/repairs - Get all repair jobs (Admin only)
+router.get('/', requireStoreOwner, async (req, res) => {
   try {
     const jobs = await db.getRepairJobs();
     res.json(jobs);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to retrieve repair jobs' });
   }
 });
 
-// GET /api/repairs/:id - Get single repair job
-router.get('/:id', async (req, res) => {
+// GET /api/repairs/:id - Get single repair job (Public tracking, but OTP hidden for non-admin)
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const job = await db.getRepairJobById(req.params.id);
     if (!job) return res.status(404).json({ success: false, message: 'Repair job not found' });
-    res.json(job);
+
+    // Hide secret handoverOtp unless authenticated as store owner
+    const isOwner = req.user && req.user.role === 'store';
+    const sanitizedJob = isOwner ? job : { ...job, handoverOtp: undefined };
+
+    res.json(sanitizedJob);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to retrieve repair job' });
   }
 });
 
-// POST /api/repairs - Log a new incoming tool for repair
-router.post('/', async (req, res) => {
+// POST /api/repairs - Log a new incoming tool for repair (Admin only)
+router.post('/', requireStoreOwner, async (req, res) => {
   try {
     const { customerName, customerPhone, toolModel, issueDescription } = req.body;
     if (!customerName || !customerPhone || !toolModel || !issueDescription) {
@@ -40,8 +46,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// PUT /api/repairs/:id - Update status / diagnosis / cost
-router.put('/:id', async (req, res) => {
+// PUT /api/repairs/:id - Update status / diagnosis / cost (Admin only)
+router.put('/:id', requireStoreOwner, async (req, res) => {
   try {
     const updated = await db.updateRepairJob(req.params.id, req.body);
     if (!updated) {
@@ -53,8 +59,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// POST /api/repairs/:id/verify-otp - Verify counter OTP for customer pickup
-router.post('/:id/verify-otp', async (req, res) => {
+// POST /api/repairs/:id/verify-otp - Verify counter OTP for customer pickup (Admin only)
+router.post('/:id/verify-otp', requireStoreOwner, async (req, res) => {
   try {
     const { otp } = req.body;
     if (!otp) return res.status(400).json({ success: false, message: 'OTP is required' });
@@ -68,8 +74,8 @@ router.post('/:id/verify-otp', async (req, res) => {
   }
 });
 
-// DELETE /api/repairs/:id - Delete repair job
-router.delete('/:id', async (req, res) => {
+// DELETE /api/repairs/:id - Delete repair job (Admin only)
+router.delete('/:id', requireStoreOwner, async (req, res) => {
   try {
     await db.deleteRepairJob(req.params.id);
     res.json({ success: true, message: 'Repair job deleted successfully' });

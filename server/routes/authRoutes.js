@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const db = require('../utils/db');
 const emailService = require('../services/emailService');
 const whatsappService = require('../services/whatsappService');
+const { generateToken, requireAuth, safeCompare } = require('../utils/auth');
 
 // In-memory OTP storage with automatic TTL cleanup
-// Key: cleanPhone -> { otp, expiresAt, purpose, customerDoc, registerData, lastSentAt }
+// Key: cleanPhone -> { otp, expiresAt, purpose, customerDoc, registerData, lastSentAt, attempts }
 const otpStore = new Map();
 
 // Periodic cleanup of expired OTPs every minute
@@ -18,6 +20,13 @@ const cleanupTimer = setInterval(() => {
   }
 }, 60000);
 if (cleanupTimer.unref) cleanupTimer.unref();
+
+/**
+ * Generate cryptographically secure 6-digit numeric OTP
+ */
+function generateSecureOtp() {
+  return String(crypto.randomInt(100000, 1000000));
+}
 
 // POST /api/auth/send-otp - Dispatch 6-digit OTP via Email/WhatsApp
 router.post('/send-otp', async (req, res) => {
@@ -72,8 +81,8 @@ router.post('/send-otp', async (req, res) => {
       }
     }
 
-    // Generate secure 6-digit numeric OTP
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    // Generate secure 6-digit numeric OTP with crypto.randomInt
+    const otp = generateSecureOtp();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     otpStore.set(cleanPhone, {
@@ -82,10 +91,11 @@ router.post('/send-otp', async (req, res) => {
       purpose,
       customerDoc,
       registerData: purpose === 'register' ? { name: customerName, phone: cleanPhone, email: targetEmail } : null,
-      lastSentAt: Date.now()
+      lastSentAt: Date.now(),
+      attempts: 0
     });
 
-    console.log(`[Auth OTP] Generated OTP for +91 ${cleanPhone} (${purpose}): ${otp}`);
+    console.log(`[Auth OTP] Generated OTP for +91 ${cleanPhone} (${purpose})`);
 
     // Dispatch email if target email available
     if (targetEmail && targetEmail.includes('@')) {
@@ -113,16 +123,19 @@ router.post('/send-otp', async (req, res) => {
       ? `${targetEmail.slice(0, 2)}••••@${targetEmail.split('@')[1]}`
       : null;
 
+    // Secure: Only expose devOtp if explicitly configured in non-production environment
+    const isLocalDevOtp = process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEV_OTP === 'true';
+
     return res.json({
       success: true,
       message: `Verification code sent to ${maskedPhone}${maskedEmail ? ` and ${maskedEmail}` : ''}.`,
       maskedDestination: maskedEmail ? `${maskedPhone} & ${maskedEmail}` : maskedPhone,
-      devOtp: otp, // Returned for instant developer/sandbox validation and 1-click test fill
+      ...(isLocalDevOtp ? { devOtp: otp } : {}),
       expiresAt
     });
   } catch (err) {
     console.error('[Auth OTP] Error in /send-otp:', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to dispatch verification code' });
   }
 });
 
@@ -156,10 +169,21 @@ router.post('/verify-otp', async (req, res) => {
       });
     }
 
+    // Brute-force check: Limit invalid OTP attempts to 5
+    if (record.attempts >= 5) {
+      otpStore.delete(cleanPhone);
+      return res.status(429).json({
+        success: false,
+        message: 'Too many failed verification attempts. For your security, this code was invalidated. Please request a new code.'
+      });
+    }
+
     if (record.otp !== submittedOtp) {
+      record.attempts = (record.attempts || 0) + 1;
+      const remaining = 5 - record.attempts;
       return res.status(400).json({
         success: false,
-        message: 'Invalid 6-digit OTP. Please re-check the code sent to your mobile or email.'
+        message: `Invalid 6-digit OTP. ${remaining} attempt(s) remaining.`
       });
     }
 
@@ -181,24 +205,33 @@ router.post('/verify-otp', async (req, res) => {
         console.warn(`[Resend Email] Welcome email error:`, err.message);
       });
 
+      const userObj = {
+        id: newCust._id,
+        name: newCust.name,
+        phone: newCust.phone,
+        email: newCust.email || '',
+        address: newCust.address || '',
+        landmark: newCust.landmark || '',
+        district: newCust.district || 'Pathanamthitta',
+        state: newCust.state || 'Kerala',
+        pincode: newCust.pincode || '689641',
+        savedAddresses: newCust.savedAddresses || [],
+        role: 'customer',
+        location: `${newCust.district || 'Pathanamthitta'}, Kerala`
+      };
+
+      const token = generateToken({
+        id: String(newCust._id),
+        phone: newCust.phone,
+        role: 'customer'
+      });
+
       return res.json({
         success: true,
         isNewAccount: true,
+        token,
         message: 'Account verified and registered successfully!',
-        user: {
-          id: newCust._id,
-          name: newCust.name,
-          phone: newCust.phone,
-          email: newCust.email || '',
-          address: newCust.address || '',
-          landmark: newCust.landmark || '',
-          district: newCust.district || 'Pathanamthitta',
-          state: newCust.state || 'Kerala',
-          pincode: newCust.pincode || '689641',
-          savedAddresses: newCust.savedAddresses || [],
-          role: 'customer',
-          location: `${newCust.district || 'Pathanamthitta'}, Kerala`
-        }
+        user: userObj
       });
     } else {
       // Login flow
@@ -207,28 +240,37 @@ router.post('/verify-otp', async (req, res) => {
         return res.status(404).json({ success: false, message: 'Customer record not found.' });
       }
 
+      const userObj = {
+        id: customerDoc._id,
+        name: customerDoc.name,
+        phone: customerDoc.phone,
+        email: customerDoc.email || '',
+        address: customerDoc.address || '',
+        landmark: customerDoc.landmark || '',
+        district: customerDoc.district || 'Pathanamthitta',
+        state: customerDoc.state || 'Kerala',
+        pincode: customerDoc.pincode || '689641',
+        savedAddresses: customerDoc.savedAddresses || [],
+        role: 'customer',
+        location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
+      };
+
+      const token = generateToken({
+        id: String(customerDoc._id),
+        phone: customerDoc.phone,
+        role: 'customer'
+      });
+
       return res.json({
         success: true,
+        token,
         message: 'Successfully verified and signed in!',
-        user: {
-          id: customerDoc._id,
-          name: customerDoc.name,
-          phone: customerDoc.phone,
-          email: customerDoc.email || '',
-          address: customerDoc.address || '',
-          landmark: customerDoc.landmark || '',
-          district: customerDoc.district || 'Pathanamthitta',
-          state: customerDoc.state || 'Kerala',
-          pincode: customerDoc.pincode || '689641',
-          savedAddresses: customerDoc.savedAddresses || [],
-          role: 'customer',
-          location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
-        }
+        user: userObj
       });
     }
   } catch (err) {
     console.error('[Auth OTP] Error in /verify-otp:', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: 'Authentication verification error' });
   }
 });
 
@@ -246,23 +288,33 @@ router.post('/resend-otp', async (req, res) => {
   };
 
   req.body = payload;
-  // Invoke send-otp handler
   return router.handle({ ...req, url: '/send-otp', originalUrl: '/api/auth/send-otp' }, res);
 });
 
-// POST login endpoint - Customer (lookup only) & Store Owner
+// POST login endpoint - Secured Store Owner & Customer Authentication
 router.post('/login', async (req, res) => {
   try {
     const { role, identifier, password } = req.body;
 
     if (role === 'store') {
       // Store Owner / Admin Login
-      const validEmail = process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com';
+      const validEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
       const validPass = process.env.STORE_ADMIN_PASSWORD || 'admin123';
+      const inputEmail = String(identifier || '').trim().toLowerCase();
+      const inputPass = String(password || '');
 
-      if ((identifier === validEmail && password === validPass) || password === validPass) {
+      // Strict constant-time credential comparison (prevents timing attacks & requires both email and password)
+      if (inputEmail === validEmail && safeCompare(inputPass, validPass)) {
+        const token = generateToken({
+          id: 'admin-01',
+          name: 'Store Manager',
+          email: validEmail,
+          role: 'store'
+        });
+
         return res.json({
           success: true,
+          token,
           user: {
             id: 'admin-01',
             name: 'Store Manager',
@@ -278,10 +330,10 @@ router.post('/login', async (req, res) => {
         });
       }
     } else {
-      // Customer Login - LOOKUP ONLY (no auto-creation)
-      const phone = (identifier || '').trim();
-      if (!phone || phone.length < 7) {
-        return res.status(400).json({ success: false, message: 'Please enter a valid mobile number.' });
+      // Customer Login Flow
+      const phone = String(identifier || '').replace(/[^0-9]/g, '').slice(-10);
+      if (!phone || phone.length !== 10) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number.' });
       }
 
       const customerDoc = await db.lookupCustomerByPhone(phone);
@@ -292,33 +344,89 @@ router.post('/login', async (req, res) => {
         });
       }
 
+      const userObj = {
+        id: customerDoc._id,
+        name: customerDoc.name,
+        phone: customerDoc.phone,
+        email: customerDoc.email || '',
+        address: customerDoc.address || '',
+        landmark: customerDoc.landmark || '',
+        district: customerDoc.district || 'Pathanamthitta',
+        state: customerDoc.state || 'Kerala',
+        pincode: customerDoc.pincode || '689641',
+        savedAddresses: customerDoc.savedAddresses || [],
+        role: 'customer',
+        location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
+      };
+
+      const token = generateToken({
+        id: String(customerDoc._id),
+        phone: customerDoc.phone,
+        role: 'customer'
+      });
+
       return res.json({
         success: true,
-        user: {
-          id: customerDoc._id,
-          name: customerDoc.name,
-          phone: customerDoc.phone,
-          email: customerDoc.email || '',
-          address: customerDoc.address || '',
-          landmark: customerDoc.landmark || '',
-          district: customerDoc.district || 'Pathanamthitta',
-          state: customerDoc.state || 'Kerala',
-          pincode: customerDoc.pincode || '689641',
-          savedAddresses: customerDoc.savedAddresses || [],
-          role: 'customer',
-          location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
-        }
+        token,
+        user: userObj
       });
     }
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Authentication processing error' });
+  }
+});
+
+// GET /api/auth/me - Verify active session and return authenticated user profile
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    if (req.user.role === 'store') {
+      const validEmail = process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com';
+      return res.json({
+        success: true,
+        user: {
+          id: 'admin-01',
+          name: 'Store Manager',
+          email: validEmail,
+          role: 'store',
+          shop: 'Variathu Power Tools, Kozhencherry'
+        }
+      });
+    }
+
+    const customerDoc = await db.lookupCustomerByPhone(req.user.phone);
+    if (!customerDoc) {
+      return res.status(404).json({ success: false, message: 'Customer account not found' });
+    }
+
+    return res.json({
+      success: true,
+      user: {
+        id: customerDoc._id,
+        name: customerDoc.name,
+        phone: customerDoc.phone,
+        email: customerDoc.email || '',
+        address: customerDoc.address || '',
+        landmark: customerDoc.landmark || '',
+        district: customerDoc.district || 'Pathanamthitta',
+        state: customerDoc.state || 'Kerala',
+        pincode: customerDoc.pincode || '689641',
+        savedAddresses: customerDoc.savedAddresses || [],
+        role: 'customer',
+        location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Session verification error' });
   }
 });
 
 // GET check customer phone existence (Instant Blinkit/Zepto-style account check)
 router.get('/check-phone/:phone', async (req, res) => {
   try {
-    const rawPhone = req.params.phone;
+    const rawPhone = String(req.params.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (!rawPhone || rawPhone.length !== 10) {
+      return res.json({ success: true, exists: false });
+    }
     const customerDoc = await db.lookupCustomerByPhone(rawPhone);
     if (customerDoc) {
       return res.json({
@@ -334,7 +442,7 @@ router.get('/check-phone/:phone', async (req, res) => {
       exists: false
     });
   } catch (err) {
-    res.status(500).json({ success: false, exists: false, message: err.message });
+    res.status(500).json({ success: false, exists: false, message: 'Check phone error' });
   }
 });
 
@@ -346,14 +454,14 @@ router.post('/register', async (req, res) => {
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Full name is required.' });
     }
-    if (!phone || phone.trim().length < 7) {
-      return res.status(400).json({ success: false, message: 'Valid mobile number is required.' });
+    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number is required.' });
     }
 
-    const cleanPhone = phone.trim();
     const cleanEmail = (email && email.trim().includes('@'))
       ? email.trim().toLowerCase()
-      : `${cleanPhone.replace(/[^0-9]/g, '').slice(-10)}@customer.variathupowertools.com`;
+      : `${cleanPhone}@customer.variathupowertools.com`;
 
     // Check if phone already registered
     const existingByPhone = await db.lookupCustomerByPhone(cleanPhone);
@@ -392,26 +500,35 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    const userObj = {
+      id: customerDoc._id,
+      name: customerDoc.name,
+      phone: customerDoc.phone,
+      email: customerDoc.email || '',
+      address: customerDoc.address || '',
+      landmark: customerDoc.landmark || '',
+      district: customerDoc.district || 'Pathanamthitta',
+      state: customerDoc.state || 'Kerala',
+      pincode: customerDoc.pincode || '689641',
+      savedAddresses: customerDoc.savedAddresses || [],
+      role: 'customer',
+      location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
+    };
+
+    const token = generateToken({
+      id: String(customerDoc._id),
+      phone: customerDoc.phone,
+      role: 'customer'
+    });
+
     return res.status(201).json({
       success: true,
       isNewAccount: true,
-      user: {
-        id: customerDoc._id,
-        name: customerDoc.name,
-        phone: customerDoc.phone,
-        email: customerDoc.email || '',
-        address: customerDoc.address || '',
-        landmark: customerDoc.landmark || '',
-        district: customerDoc.district || 'Pathanamthitta',
-        state: customerDoc.state || 'Kerala',
-        pincode: customerDoc.pincode || '689641',
-        savedAddresses: customerDoc.savedAddresses || [],
-        role: 'customer',
-        location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
-      }
+      token,
+      user: userObj
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Registration processing error' });
   }
 });
 

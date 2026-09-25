@@ -1,31 +1,62 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const db = require('../utils/db');
 const emailService = require('../services/emailService');
 const whatsappService = require('../services/whatsappService');
+const { requireStoreOwner, requireAuth, optionalAuth } = require('../utils/auth');
 
-// GET all orders (Admin / Store Owner)
-router.get('/', async (req, res) => {
+// GET all orders (Strict Admin / Store Owner)
+router.get('/', requireStoreOwner, async (req, res) => {
   try {
     const orders = await db.getOrders();
     res.json({ success: true, count: orders.length, data: orders });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to retrieve orders' });
   }
 });
 
-// GET customer orders by phone/email/name/customerId
-router.get('/customer/:identifier', async (req, res) => {
+// GET customer orders by phone or customerId (Admin or Authenticated Customer)
+router.get('/customer/:identifier', optionalAuth, async (req, res) => {
   try {
-    const orders = await db.getCustomerOrders(req.params.identifier);
+    const rawIdentifier = String(req.params.identifier || '').trim();
+    const cleanDigits = rawIdentifier.replace(/[^0-9]/g, '').slice(-10);
+    const isObjectId = mongoose.isValidObjectId(rawIdentifier);
+
+    // Require authentication
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required to view orders.' });
+    }
+
+    // If not store owner, ensure caller only queries their own orders
+    if (req.user.role !== 'store') {
+      const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      const userId = String(req.user.id || '');
+
+      const isMatchingPhone = cleanDigits.length === 10 && userPhone === cleanDigits;
+      const isMatchingId = isObjectId && userId === rawIdentifier;
+
+      if (!isMatchingPhone && !isMatchingId) {
+        return res.status(403).json({ success: false, message: 'Access denied to these orders.' });
+      }
+    }
+
+    // Query safely by phone or customerId only (avoiding loose name regex matching)
+    let orders = [];
+    if (cleanDigits.length === 10) {
+      orders = await db.OrderModel.find({ 'customer.phone': { $regex: cleanDigits } }).sort({ createdAt: -1 }).lean();
+    } else if (isObjectId) {
+      orders = await db.OrderModel.find({ customerId: rawIdentifier }).sort({ createdAt: -1 }).lean();
+    }
+
     res.json({ success: true, count: orders.length, data: orders });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to retrieve customer orders' });
   }
 });
 
-// PUT update order status (Store Owner)
-router.put('/:id/status', async (req, res) => {
+// PUT update order status (Strict Admin / Store Owner)
+router.put('/:id/status', requireStoreOwner, async (req, res) => {
   try {
     const { status, courierPartner, awb } = req.body;
     if (!status) {
@@ -74,41 +105,97 @@ router.put('/:id/status', async (req, res) => {
 
     res.json({ success: true, message: "Order status updated successfully", data: updated });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to update order status' });
   }
 });
 
-// POST place new order (Account-Based Checkout Flow)
-router.post('/', async (req, res) => {
+// POST place new order (Account-Based Checkout Flow with Server-Side Price Calculation)
+router.post('/', optionalAuth, async (req, res) => {
   try {
-    const { customer, customerId, items, totalAmount, deliveryType, paymentMethod, couponCode, discountAmount } = req.body;
-    if (!customer || !items || !items.length) {
-      return res.status(400).json({ success: false, message: "Invalid order data" });
+    const { customer, customerId, items, deliveryType, paymentMethod, couponCode } = req.body;
+    if (!customer || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "Invalid order items" });
+    }
+
+    const cleanCustomerPhone = String(customer.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    if (!cleanCustomerPhone || cleanCustomerPhone.length !== 10) {
+      return res.status(400).json({ success: false, message: "A valid 10-digit mobile number is required" });
     }
 
     const userIdent = {
-      customerId: customerId || customer?.id || customer?._id,
-      phone: customer?.phone,
-      email: customer?.email
+      customerId: (req.user && req.user.role === 'customer' ? req.user.id : customerId) || customer?.id || customer?._id,
+      phone: cleanCustomerPhone,
+      email: (customer?.email || '').trim()
     };
 
-    // Anti-Abuse Check: If coupon is used, validate against account ID, email, phone & global caps
+    // Server-side authoritative price verification against ProductModel
+    const itemIds = items.map(i => i.id).filter(Boolean);
+    const dbProducts = await db.ProductModel.find({ id: { $in: itemIds } }).lean();
+    const productMap = new Map(dbProducts.map(p => [p.id, p]));
+
+    let calculatedSubtotal = 0;
+    let calculatedDeliveryFee = 0;
+    const verifiedItems = [];
+
+    for (const item of items) {
+      const dbProduct = productMap.get(item.id);
+      if (!dbProduct) {
+        return res.status(400).json({
+          success: false,
+          message: `Product "${item.name || item.id}" is currently unavailable.`
+        });
+      }
+      const qty = Math.max(1, Math.min(50, Number(item.quantity) || 1));
+      const price = Number(dbProduct.price) || 0;
+      calculatedSubtotal += price * qty;
+
+      const itemDelivery = typeof dbProduct.deliveryCost === 'number' ? dbProduct.deliveryCost : 120;
+      calculatedDeliveryFee += itemDelivery * qty;
+
+      verifiedItems.push({
+        id: dbProduct.id,
+        name: dbProduct.name,
+        brand: dbProduct.brand,
+        price: price,
+        quantity: qty,
+        image: dbProduct.image || item.image || ''
+      });
+    }
+
+    const isStorePickup = (deliveryType || '').toLowerCase().includes('pickup') || deliveryType === 'store-pickup';
+    const authoritativeDeliveryFee = isStorePickup ? 0 : calculatedDeliveryFee;
+
+    // Validate coupon against verified subtotal
+    let verifiedDiscount = 0;
     if (couponCode) {
-      const couponCheck = await db.validateCoupon(couponCode, totalAmount, userIdent);
+      const couponCheck = await db.validateCoupon(couponCode, calculatedSubtotal, userIdent);
       if (!couponCheck.valid) {
         return res.status(400).json({ success: false, message: couponCheck.message });
       }
+      verifiedDiscount = Number(couponCheck.discountAmount) || 0;
     }
 
+    const authoritativeTotal = Math.max(0, calculatedSubtotal - verifiedDiscount + authoritativeDeliveryFee);
+
+    // Prevent client from setting paymentStatus to PAID on normal COD/Pickup orders
+    const normalizedMethod = (paymentMethod || 'COD').toUpperCase();
+    const isCashOrPickup = normalizedMethod === 'COD' || normalizedMethod === 'PAY_AT_STORE';
+
     const order = await db.createOrder({
-      customer,
+      customer: {
+        ...customer,
+        phone: cleanCustomerPhone
+      },
       customerId: userIdent.customerId || null,
-      items,
-      totalAmount,
-      deliveryType: deliveryType || 'store-pickup',
-      paymentMethod: paymentMethod || 'cod',
+      items: verifiedItems,
+      totalAmount: authoritativeTotal,
+      deliveryType: isStorePickup ? 'store-pickup' : 'kerala-courier',
+      deliveryFee: authoritativeDeliveryFee,
+      paymentMethod: isCashOrPickup ? normalizedMethod : 'PENDING_ONLINE',
+      paymentStatus: 'PENDING',
+      transactionId: null,
       couponCode: couponCode || null,
-      discountAmount: Number(discountAmount) || 0
+      discountAmount: verifiedDiscount
     });
 
     // Record coupon usage in DB with account ID, email, and phone
@@ -132,11 +219,11 @@ router.post('/', async (req, res) => {
       data: order
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to place order' });
   }
 });
 
-// GET live courier or pickup tracking details
+// GET live courier or pickup tracking details (Public)
 router.get('/:id/tracking', async (req, res) => {
   try {
     const tracking = await db.getOrderTracking(req.params.id);
@@ -145,12 +232,12 @@ router.get('/:id/tracking', async (req, res) => {
     }
     res.json({ success: true, data: tracking });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to retrieve tracking info' });
   }
 });
 
-// POST verify 4-digit pickup OTP by store counter staff
-router.post('/:id/verify-otp', async (req, res) => {
+// POST verify 4-digit pickup OTP by store counter staff (Strict Admin / Store Owner)
+router.post('/:id/verify-otp', requireStoreOwner, async (req, res) => {
   try {
     const { otp } = req.body;
     if (!otp) {
@@ -162,12 +249,12 @@ router.post('/:id/verify-otp', async (req, res) => {
     }
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Pickup verification error' });
   }
 });
 
-// POST mark order as PAID (Webhook / Instant Payment Simulator)
-router.post('/:id/pay', async (req, res) => {
+// POST mark order as PAID (Strict Admin / Store Owner)
+router.post('/:id/pay', requireStoreOwner, async (req, res) => {
   try {
     const { transactionId, method } = req.body;
     const order = await db.processOrderPayment(req.params.id, { transactionId, method });
@@ -180,20 +267,36 @@ router.post('/:id/pay', async (req, res) => {
       data: order
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to process payment status' });
   }
 });
 
-// POST cancel order with automatic refund (Customer or Store Owner)
-router.post('/:id/cancel', async (req, res) => {
+// POST cancel order with automatic refund (Customer Owner or Store Owner)
+router.post('/:id/cancel', optionalAuth, async (req, res) => {
   try {
+    const order = await db.getOrderById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Authorization: User must be store owner or the customer who placed the order
+    if (req.user) {
+      const isStoreOwner = req.user.role === 'store';
+      const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      const orderPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      const isOwner = String(req.user.id || '') === String(order.customerId) || (userPhone && userPhone === orderPhone);
+
+      if (!isStoreOwner && !isOwner) {
+        return res.status(403).json({ success: false, message: "You are not authorized to cancel this order." });
+      }
+    }
+
     const { reason, cancelledBy } = req.body || {};
     const result = await db.cancelOrder(req.params.id, { reason, cancelledBy });
     if (!result.success) {
       return res.status(400).json(result);
     }
 
-    // Trigger order cancelled email & WhatsApp (result.order or result.data)
     const orderData = result.order || result.data;
     if (orderData) {
       emailService.sendOrderCancelledEmail(orderData, reason, cancelledBy).catch(err => {
@@ -206,20 +309,33 @@ router.post('/:id/cancel', async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to cancel order' });
   }
 });
 
-// POST request cancellation for dispatched orders (Customer)
-router.post('/:id/request-cancel', async (req, res) => {
+// POST request cancellation for dispatched orders (Customer or Store Owner)
+router.post('/:id/request-cancel', optionalAuth, async (req, res) => {
   try {
+    const order = await db.getOrderById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (req.user && req.user.role !== 'store') {
+      const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      const orderPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      const isOwner = String(req.user.id || '') === String(order.customerId) || (userPhone && userPhone === orderPhone);
+      if (!isOwner) {
+        return res.status(403).json({ success: false, message: "You are not authorized to request cancellation for this order." });
+      }
+    }
+
     const { reason } = req.body || {};
     const result = await db.requestCancellation(req.params.id, { reason });
     if (!result.success) {
       return res.status(400).json(result);
     }
 
-    // Trigger cancellation request email (result.order or result.data)
     const orderData = result.order || result.data;
     if (orderData) {
       emailService.sendCancellationRequestEmail(orderData, reason).catch(err => {
@@ -229,12 +345,12 @@ router.post('/:id/request-cancel', async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to submit cancellation request' });
   }
 });
 
-// POST reject cancellation request (Store Owner)
-router.post('/:id/reject-cancel', async (req, res) => {
+// POST reject cancellation request (Strict Admin / Store Owner)
+router.post('/:id/reject-cancel', requireStoreOwner, async (req, res) => {
   try {
     const result = await db.rejectCancellationRequest(req.params.id);
     if (!result.success) {
@@ -242,12 +358,12 @@ router.post('/:id/reject-cancel', async (req, res) => {
     }
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to reject cancellation' });
   }
 });
 
-// POST on-demand WhatsApp notification trigger (Store Owner)
-router.post('/:id/send-whatsapp', async (req, res) => {
+// POST on-demand WhatsApp notification trigger (Strict Admin / Store Owner)
+router.post('/:id/send-whatsapp', requireStoreOwner, async (req, res) => {
   try {
     const order = await db.getOrderById(req.params.id);
     if (!order) {
@@ -266,9 +382,8 @@ router.post('/:id/send-whatsapp', async (req, res) => {
     }
     res.json({ success: true, message: "WhatsApp message dispatched successfully", result });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to send notification' });
   }
 });
 
 module.exports = router;
-

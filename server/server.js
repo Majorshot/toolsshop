@@ -11,6 +11,7 @@ const express = require('express');
 const compression = require('compression');
 const cors = require('cors');
 const db = require('./utils/db');
+const { requireStoreOwner } = require('./utils/auth');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const storeRoutes = require('./routes/storeRoutes');
@@ -19,42 +20,51 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const shippingRoutes = require('./routes/shippingRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const repairRoutes = require('./routes/repairRoutes');
-
 const customerRoutes = require('./routes/customerRoutes');
 const { startKeepAliveService, getKeepAliveStatus } = require('./utils/keepAlive');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middlewares
+// Security Headers Middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// Middlewares: Secure CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : [];
+  : [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5000',
+      'https://variathupowertools.vercel.app',
+      'https://toolsshop.vercel.app'
+    ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, server-to-server)
+    // Allow server-to-server, mobile app or curl with no origin
     if (!origin) return callback(null, true);
-    // In dev (no ALLOWED_ORIGINS set), allow everything
-    if (allowedOrigins.length === 0) return callback(null, true);
-    // Check exact match
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    // Check wildcard patterns (e.g. *.vercel.app)
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed.startsWith('*.')) {
-        const domain = allowed.slice(1); // ".vercel.app"
-        return origin.endsWith(domain);
-      }
-      return false;
-    });
-    if (isAllowed) return callback(null, true);
-    console.log(`CORS blocked origin: ${origin}`);
-    callback(null, false);
+    // In local development with no ALLOWED_ORIGINS configured, allow local hosts
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true);
+
+    // Validate preview branch deployments of this repository specifically
+    const isApprovedVercelApp = /^https:\/\/(variathupowertools|toolsshop|variathu)(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);
+    if (isApprovedVercelApp) return callback(null, true);
+
+    console.warn(`[CORS Blocked] Origin: ${origin}`);
+    callback(new Error('Not allowed by CORS policy'));
   },
   credentials: true
 }));
+
 app.use(compression({ threshold: 1024 }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Request logger for debugging
 app.use((req, res, next) => {
@@ -88,7 +98,8 @@ app.get('/api/db-status', (req, res) => {
   res.json(db.getStatus());
 });
 
-app.post('/api/db-reconnect', async (req, res) => {
+// Protected: Only store owner can trigger database reconnect
+app.post('/api/db-reconnect', requireStoreOwner, async (req, res) => {
   const connected = await db.forceReconnect();
   res.json({ success: connected, ...db.getStatus() });
 });
@@ -128,10 +139,14 @@ app.post('/api/webhook', (req, res) => {
   res.status(200).send('EVENT_RECEIVED');
 });
 
-// Global Error Handler
+// Global Error Handler (Sanitizes stack traces in production)
 app.use((err, req, res, next) => {
   console.error("Internal Server Error:", err);
-  res.status(500).json({ success: false, message: "Internal server error", error: err.message });
+  const isDev = process.env.NODE_ENV !== 'production';
+  res.status(500).json({
+    success: false,
+    message: isDev ? err.message : "Internal server error"
+  });
 });
 
 // Initialize DB and start server
@@ -139,7 +154,7 @@ async function startServer() {
   await db.initDB();
   app.listen(PORT, () => {
     console.log(`====================================================`);
-    console.log(`  VARIATHU POWER TOOLS - BACKEND SERVER RUNNING`);
+    console.log(`  VARIATHU POWER TOOLS - SECURED BACKEND SERVER`);
     console.log(`  URL: http://localhost:${PORT}`);
     console.log(`  Health Check: http://localhost:${PORT}/api/health`);
     console.log(`  Keep-Alive: http://localhost:${PORT}/api/keep-alive`);

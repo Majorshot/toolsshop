@@ -7,6 +7,7 @@ try {
   console.warn("DNS server setup notice:", e.message);
 }
 
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const seedProducts = require('../data/seedProducts');
 
@@ -191,7 +192,7 @@ const repairSchema = new mongoose.Schema({
     default: 'Received'
   },
   technicianNotes: String,
-  handoverOtp: { type: String, default: () => String(Math.floor(1000 + Math.random() * 9000)) },
+  handoverOtp: { type: String, default: () => String(crypto.randomInt(1000, 10000)) },
   handoverVerified: { type: Boolean, default: false },
   completedAt: String,
   createdAt: { type: String, default: () => new Date().toISOString() }
@@ -906,11 +907,12 @@ const db = {
     const isStorePickup = (orderData.deliveryType || '').toLowerCase().includes('pickup') || orderData.deliveryType === 'store-pickup';
     const isPrepaid = ['UPI', 'RAZORPAY', 'CARD', 'NETBANKING'].includes((orderData.paymentMethod || '').toUpperCase());
 
-    const pickupOtp = isStorePickup ? String(Math.floor(1000 + Math.random() * 9000)) : null;
+    const pickupOtp = isStorePickup ? String(crypto.randomInt(1000, 10000)) : null;
     const preferredCourier = !isStorePickup ? (orderData.courierPartner || null) : null;
     const awb = orderData.awb || null;
-    const transactionId = orderData.transactionId || (isPrepaid ? `TXN-VPT-${Date.now().toString().slice(-8)}` : null);
-    const paymentStatus = orderData.paymentStatus || (isPrepaid ? 'PAID' : 'PENDING');
+    const isRazorpayVerified = orderData.paymentStatus === 'PAID' && orderData.transactionId && String(orderData.transactionId).startsWith('pay_');
+    const paymentStatus = isRazorpayVerified ? 'PAID' : (orderData.paymentStatus || 'PENDING');
+    const transactionId = orderData.transactionId || null;
 
     // Link customer account from CustomerModel
     let customerDoc = null;
@@ -1401,7 +1403,7 @@ const db = {
   async createRepairJob(jobData) {
     ensureMongoConnected();
     const jobId = `VPT-REP-${Date.now().toString().slice(-4)}`;
-    const handoverOtp = String(Math.floor(1000 + Math.random() * 9000));
+    const handoverOtp = String(crypto.randomInt(1000, 10000));
 
     const newJob = {
       id: `rep-${Date.now().toString().slice(-6)}`,

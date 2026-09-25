@@ -11,7 +11,7 @@ import { CheckoutPage } from './pages/CheckoutPage';
 import { StoreInfoModal } from './components/StoreInfoModal';
 import { AdminModal } from './components/AdminModal';
 import { CartProvider, useCart } from './context/CartContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { CustomerAccountPage } from './pages/CustomerAccountPage';
 import { StoreDashboardPage } from './pages/StoreDashboardPage';
@@ -34,6 +34,15 @@ function ScrollToTop() {
     } catch {}
   }, [pathname]);
   return null;
+}
+
+// Protected Route Guard for Store Dashboard (/admin)
+function ProtectedAdminRoute({ children }) {
+  const { isLoggedIn, isStoreOwner } = useAuth();
+  if (!isLoggedIn || !isStoreOwner) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
 }
 
 const MainApp = () => {
@@ -220,7 +229,11 @@ const MainApp = () => {
           />
           <Route
             path="/admin"
-            element={<StoreDashboardPage onProductUpdated={loadProducts} />}
+            element={
+              <ProtectedAdminRoute>
+                <StoreDashboardPage onProductUpdated={loadProducts} />
+              </ProtectedAdminRoute>
+            }
           />
         </Routes>
       </main>

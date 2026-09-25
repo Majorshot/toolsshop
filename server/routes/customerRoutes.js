@@ -1,9 +1,36 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
+const { requireAuth, requireStoreOwner, optionalAuth } = require('../utils/auth');
 
-// GET all customers with search, filter, and pagination
-router.get('/', async (req, res) => {
+/**
+ * Access Control Helper: Allows access if caller is Store Owner OR the customer themselves
+ */
+function authorizeCustomerOrAdmin(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required. Please sign in.' });
+  }
+
+  // Store owners have full access to customer records
+  if (req.user.role === 'store') {
+    return next();
+  }
+
+  const target = String(req.params.id || '').trim();
+  const cleanTargetPhone = target.replace(/[^0-9]/g, '').slice(-10);
+  const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
+  const userId = String(req.user.id || '');
+
+  // Permit if customer ID matches or phone number matches
+  if (userId === target || (cleanTargetPhone.length === 10 && userPhone === cleanTargetPhone)) {
+    return next();
+  }
+
+  return res.status(403).json({ success: false, message: 'Access denied to this customer profile.' });
+}
+
+// GET all customers with search, filter, and pagination (Strict Admin only)
+router.get('/', requireStoreOwner, async (req, res) => {
   try {
     const { search, sortBy, page, limit } = req.query;
     const result = await db.getCustomers({ search, sortBy, page, limit });
@@ -16,27 +43,50 @@ router.get('/', async (req, res) => {
       data: result.customers
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to retrieve customers' });
   }
 });
 
-// GET single customer by ID or phone with purchase history
-router.get('/:id', async (req, res) => {
+// GET single customer by ID or phone with purchase history (Admin or Profile Owner)
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
+    // If not authenticated, require auth
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+    // Check permission
+    if (req.user.role !== 'store') {
+      const target = String(req.params.id || '').trim();
+      const cleanTargetPhone = target.replace(/[^0-9]/g, '').slice(-10);
+      const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      const userId = String(req.user.id || '');
+      if (userId !== target && (!cleanTargetPhone || userPhone !== cleanTargetPhone)) {
+        return res.status(403).json({ success: false, message: 'Access denied' });
+      }
+    }
+
     const customer = await db.getCustomerById(req.params.id);
     if (!customer) {
       return res.status(404).json({ success: false, message: "Customer not found" });
     }
     res.json({ success: true, data: customer });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Failed to retrieve customer' });
   }
 });
 
-// PUT update customer profile
-router.put('/:id', async (req, res) => {
+// PUT update customer profile (Admin or Profile Owner)
+router.put('/:id', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
   try {
-    const updated = await db.updateCustomer(req.params.id, req.body);
+    // Prevent unprivileged customers from modifying admin/CRM flags directly
+    const allowedUpdates = { ...req.body };
+    if (req.user.role !== 'store') {
+      delete allowedUpdates.totalSpent;
+      delete allowedUpdates.totalOrders;
+      delete allowedUpdates.role;
+    }
+
+    const updated = await db.updateCustomer(req.params.id, allowedUpdates);
     if (!updated) {
       return res.status(404).json({ success: false, message: "Customer not found" });
     }
@@ -46,9 +96,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// POST add new delivery address (Flipkart style)
-// POST add new delivery address (or update existing if matching address)
-router.post('/:id/addresses', async (req, res) => {
+// POST add new delivery address (Admin or Profile Owner)
+router.post('/:id/addresses', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
   try {
     const {
       name,
@@ -92,7 +141,6 @@ router.post('/:id/addresses', async (req, res) => {
     let savedAddress;
 
     if (existingIdx !== -1) {
-      // Update the existing address in place so it never duplicates
       const curr = customer.savedAddresses[existingIdx];
       curr.name = name ? name.trim() : curr.name;
       curr.phone = phone ? phone.trim() : curr.phone;
@@ -158,8 +206,8 @@ router.post('/:id/addresses', async (req, res) => {
   }
 });
 
-// PUT update an existing saved address
-router.put('/:id/addresses/:addressId', async (req, res) => {
+// PUT update an existing saved address (Admin or Profile Owner)
+router.put('/:id/addresses/:addressId', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
   try {
     const { name, phone, pincode, locality, address, city, district, state, landmark, alternatePhone, addressType, isDefault } = req.body;
     const mongoose = require('mongoose');
@@ -174,12 +222,10 @@ router.put('/:id/addresses/:addressId', async (req, res) => {
 
     const normAddressType = (addressType || 'HOME').toUpperCase() === 'WORK' ? 'WORK' : 'HOME';
 
-    // Find target address by id or _id
     let addrIdx = customer.savedAddresses.findIndex(
       a => (a.id === req.params.addressId || a._id?.toString() === req.params.addressId)
     );
 
-    // If addressId is a placeholder ('default-acc-addr', 'default-1') or only 1 address exists
     if (addrIdx === -1 && (req.params.addressId.startsWith('default') || customer.savedAddresses.length <= 1)) {
       if (customer.savedAddresses.length > 0) {
         addrIdx = 0;
@@ -189,7 +235,6 @@ router.put('/:id/addresses/:addressId', async (req, res) => {
     let updated;
 
     if (addrIdx === -1) {
-      // No address exists yet: insert this updated address as the first/default address
       updated = {
         id: 'addr_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
         name: (name || customer.name || '').trim(),
@@ -260,8 +305,8 @@ router.put('/:id/addresses/:addressId', async (req, res) => {
   }
 });
 
-// PUT mark address as default
-router.put('/:id/addresses/:addressId/default', async (req, res) => {
+// PUT mark address as default (Admin or Profile Owner)
+router.put('/:id/addresses/:addressId/default', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
   try {
     const mongoose = require('mongoose');
     const customer = await db.CustomerModel.findOne(
@@ -308,8 +353,8 @@ router.put('/:id/addresses/:addressId/default', async (req, res) => {
   }
 });
 
-// DELETE remove a saved address
-router.delete('/:id/addresses/:addressId', async (req, res) => {
+// DELETE remove a saved address (Admin or Profile Owner)
+router.delete('/:id/addresses/:addressId', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
   try {
     const updated = await db.updateCustomer(req.params.id, {
       $pull: {
