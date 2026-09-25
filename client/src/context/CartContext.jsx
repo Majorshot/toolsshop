@@ -17,9 +17,10 @@ export const CartProvider = ({ children }) => {
     }
   });
 
-  const isInitialSyncDoneRef = useRef(false);
-  const syncedUserRef = useRef(null);
-  const saveDebounceTimerRef = useRef(null);
+  // Track whether the page was initially loaded while already authenticated
+  const wasLoggedInAtMount = useRef(Boolean(token));
+  const isInitialMountRef = useRef(true);
+  const activeUserKeyRef = useRef(null);
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [deliveryType, setDeliveryType] = useState(() => {
@@ -42,19 +43,41 @@ export const CartProvider = ({ children }) => {
     } catch {}
   }, [deliveryType]);
 
-  // Sync Cart with Backend on Customer Login / Session Load (Flipkart / Amazon style)
+  // Sync Cart with Backend on Customer Login vs Session Resume (Flipkart / Amazon style)
   useEffect(() => {
     let isCancelled = false;
 
-    async function handleAuthCartSync() {
+    async function initializeOrSyncCart() {
       if (token && isCustomer) {
         const userKey = String(user?.id || user?.phone || '');
-        if (syncedUserRef.current === userKey) return;
-        syncedUserRef.current = userKey;
+        if (activeUserKeyRef.current === userKey) return;
+        activeUserKeyRef.current = userKey;
 
+        // CASE 1: Page Refresh / Session Resume
+        // If the user was ALREADY logged in when this page mounted, DO NOT merge guest cart!
+        // Simply fetch their cloud cart from MongoDB Atlas so it is guaranteed 100% in sync.
+        if (wasLoggedInAtMount.current && isInitialMountRef.current) {
+          isInitialMountRef.current = false;
+          try {
+            const cloudRes = await api.getCustomerCart();
+            if (!isCancelled && cloudRes && cloudRes.success && Array.isArray(cloudRes.cart)) {
+              setCart(cloudRes.cart);
+              try {
+                localStorage.setItem('vpt_cart', JSON.stringify(cloudRes.cart));
+              } catch {}
+            }
+          } catch (err) {
+            console.warn('Could not fetch cloud cart on session resume:', err);
+          }
+          return;
+        }
+
+        // CASE 2: Fresh Login Transition (Guest -> Logged In)
+        // User was browsing as a guest without a token and just signed in / verified OTP.
+        isInitialMountRef.current = false;
         try {
-          // If we have local guest items in cart, sync/merge them into customer cloud account
           if (cart && cart.length > 0) {
+            // Merge guest cart with account cart
             const syncRes = await api.syncCustomerCart(cart);
             if (!isCancelled && syncRes && syncRes.success && Array.isArray(syncRes.cart)) {
               setCart(syncRes.cart);
@@ -62,18 +85,10 @@ export const CartProvider = ({ children }) => {
                 localStorage.setItem('vpt_cart', JSON.stringify(syncRes.cart));
               } catch {}
             }
-          } else if (user?.cart && Array.isArray(user.cart) && user.cart.length > 0) {
-            // Adopt account cart from login payload
-            if (!isCancelled) {
-              setCart(user.cart);
-              try {
-                localStorage.setItem('vpt_cart', JSON.stringify(user.cart));
-              } catch {}
-            }
           } else {
-            // Check cloud cart from server endpoint
+            // Guest had no items, retrieve whatever account already has
             const cloudRes = await api.getCustomerCart();
-            if (!isCancelled && cloudRes && cloudRes.success && Array.isArray(cloudRes.cart) && cloudRes.cart.length > 0) {
+            if (!isCancelled && cloudRes && cloudRes.success && Array.isArray(cloudRes.cart)) {
               setCart(cloudRes.cart);
               try {
                 localStorage.setItem('vpt_cart', JSON.stringify(cloudRes.cart));
@@ -81,52 +96,29 @@ export const CartProvider = ({ children }) => {
             }
           }
         } catch (err) {
-          console.warn('Customer cart sync notice:', err);
-        } finally {
-          if (!isCancelled) {
-            isInitialSyncDoneRef.current = true;
-          }
+          console.warn('Customer cart sync error on login:', err);
         }
       } else if (!token) {
-        // Reset sync tracker when user logs out
-        if (syncedUserRef.current) {
-          syncedUserRef.current = null;
-          isInitialSyncDoneRef.current = false;
-        } else {
-          isInitialSyncDoneRef.current = true;
-        }
+        // User is logged out
+        activeUserKeyRef.current = null;
+        wasLoggedInAtMount.current = false;
+        isInitialMountRef.current = false;
       }
     }
 
-    handleAuthCartSync();
+    initializeOrSyncCart();
 
     return () => {
       isCancelled = true;
     };
   }, [token, isCustomer, user?.id, user?.phone]);
 
-  // Persist cart to localStorage and save to MongoDB Atlas if customer is logged in
+  // Keep localStorage continuously updated
   useEffect(() => {
     try {
       localStorage.setItem('vpt_cart', JSON.stringify(cart));
     } catch {}
-
-    // Only save to server once initial sync is complete to avoid wiping server cart
-    if (token && isCustomer && isInitialSyncDoneRef.current) {
-      if (saveDebounceTimerRef.current) {
-        clearTimeout(saveDebounceTimerRef.current);
-      }
-      saveDebounceTimerRef.current = setTimeout(() => {
-        api.saveCustomerCart(cart).catch(() => {});
-      }, 300);
-    }
-
-    return () => {
-      if (saveDebounceTimerRef.current) {
-        clearTimeout(saveDebounceTimerRef.current);
-      }
-    };
-  }, [cart, token, isCustomer]);
+  }, [cart]);
 
   useEffect(() => {
     try {
@@ -176,30 +168,43 @@ export const CartProvider = ({ children }) => {
     }
 
     let cappedNotice = false;
+    let computedCart = [];
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
         const currentQty = existing.quantity || 0;
         if (currentQty >= availableStock) {
           cappedNotice = true;
+          computedCart = prev;
           return prev;
         }
         const nextQty = Math.min(currentQty + quantity, availableStock);
         if (currentQty + quantity > availableStock) {
           cappedNotice = true;
         }
-        return prev.map(item =>
+        computedCart = prev.map(item =>
           item.id === product.id
             ? { ...item, quantity: nextQty, stock: availableStock }
             : item
         );
+        return computedCart;
       }
       const initialQty = Math.min(quantity, availableStock);
       if (quantity > availableStock) {
         cappedNotice = true;
       }
-      return [...prev, { ...product, quantity: initialQty, stock: availableStock }];
+      computedCart = [...prev, { ...product, quantity: initialQty, stock: availableStock }];
+      return computedCart;
     });
+
+    try {
+      localStorage.setItem('vpt_cart', JSON.stringify(computedCart));
+    } catch {}
+
+    if (token && isCustomer) {
+      api.saveCustomerCart(computedCart).catch(() => {});
+    }
 
     if (cappedNotice) {
       showToast(`Stock limit reached! Max ${availableStock} unit(s) available.`);
@@ -214,8 +219,9 @@ export const CartProvider = ({ children }) => {
       removeFromCart(productId);
       return;
     }
-    setCart(prev =>
-      prev.map(item => {
+    let computedCart = [];
+    setCart(prev => {
+      computedCart = prev.map(item => {
         if (item.id !== productId) return item;
         const availableStock = typeof item.stock === 'number' ? item.stock : 999;
         if (quantity > availableStock) {
@@ -223,13 +229,35 @@ export const CartProvider = ({ children }) => {
           return { ...item, quantity: availableStock };
         }
         return { ...item, quantity };
-      })
-    );
+      });
+      return computedCart;
+    });
+
+    try {
+      localStorage.setItem('vpt_cart', JSON.stringify(computedCart));
+    } catch {}
+
+    if (token && isCustomer) {
+      api.saveCustomerCart(computedCart).catch(() => {});
+    }
   };
 
   const removeFromCart = (productId) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
+    let computedCart = [];
+    setCart(prev => {
+      computedCart = prev.filter(item => item.id !== productId);
+      return computedCart;
+    });
+
+    try {
+      localStorage.setItem('vpt_cart', JSON.stringify(computedCart));
+    } catch {}
+
     showToast("Item removed from cart");
+
+    if (token && isCustomer) {
+      api.saveCustomerCart(computedCart).catch(() => {});
+    }
   };
 
   const clearCart = () => {

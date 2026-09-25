@@ -162,7 +162,7 @@ router.post('/cart/sync', requireAuth, async (req, res) => {
       if (itemMap.has(guestItem.id)) {
         const existing = itemMap.get(guestItem.id);
         const maxStock = typeof existing.stock === 'number' ? existing.stock : (typeof guestItem.stock === 'number' ? guestItem.stock : 999);
-        const combinedQty = Math.min((existing.quantity || 1) + (guestItem.quantity || 1), maxStock);
+        const combinedQty = Math.min(Math.max(existing.quantity || 1, guestItem.quantity || 1), maxStock);
         itemMap.set(guestItem.id, {
           ...existing,
           ...guestItem,
