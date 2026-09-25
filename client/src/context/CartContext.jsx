@@ -1,9 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
+  const { user, token, isLoggedIn } = useAuth();
+  const isCustomer = user?.role === 'customer';
+
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem('vpt_cart');
@@ -12,6 +16,10 @@ export const CartProvider = ({ children }) => {
       return [];
     }
   });
+
+  const isInitialSyncDoneRef = useRef(false);
+  const syncedUserRef = useRef(null);
+  const saveDebounceTimerRef = useRef(null);
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [deliveryType, setDeliveryType] = useState(() => {
@@ -34,9 +42,91 @@ export const CartProvider = ({ children }) => {
     } catch {}
   }, [deliveryType]);
 
+  // Sync Cart with Backend on Customer Login / Session Load (Flipkart / Amazon style)
   useEffect(() => {
-    localStorage.setItem('vpt_cart', JSON.stringify(cart));
-  }, [cart]);
+    let isCancelled = false;
+
+    async function handleAuthCartSync() {
+      if (token && isCustomer) {
+        const userKey = String(user?.id || user?.phone || '');
+        if (syncedUserRef.current === userKey) return;
+        syncedUserRef.current = userKey;
+
+        try {
+          // If we have local guest items in cart, sync/merge them into customer cloud account
+          if (cart && cart.length > 0) {
+            const syncRes = await api.syncCustomerCart(cart);
+            if (!isCancelled && syncRes && syncRes.success && Array.isArray(syncRes.cart)) {
+              setCart(syncRes.cart);
+              try {
+                localStorage.setItem('vpt_cart', JSON.stringify(syncRes.cart));
+              } catch {}
+            }
+          } else if (user?.cart && Array.isArray(user.cart) && user.cart.length > 0) {
+            // Adopt account cart from login payload
+            if (!isCancelled) {
+              setCart(user.cart);
+              try {
+                localStorage.setItem('vpt_cart', JSON.stringify(user.cart));
+              } catch {}
+            }
+          } else {
+            // Check cloud cart from server endpoint
+            const cloudRes = await api.getCustomerCart();
+            if (!isCancelled && cloudRes && cloudRes.success && Array.isArray(cloudRes.cart) && cloudRes.cart.length > 0) {
+              setCart(cloudRes.cart);
+              try {
+                localStorage.setItem('vpt_cart', JSON.stringify(cloudRes.cart));
+              } catch {}
+            }
+          }
+        } catch (err) {
+          console.warn('Customer cart sync notice:', err);
+        } finally {
+          if (!isCancelled) {
+            isInitialSyncDoneRef.current = true;
+          }
+        }
+      } else if (!token) {
+        // Reset sync tracker when user logs out
+        if (syncedUserRef.current) {
+          syncedUserRef.current = null;
+          isInitialSyncDoneRef.current = false;
+        } else {
+          isInitialSyncDoneRef.current = true;
+        }
+      }
+    }
+
+    handleAuthCartSync();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [token, isCustomer, user?.id, user?.phone]);
+
+  // Persist cart to localStorage and save to MongoDB Atlas if customer is logged in
+  useEffect(() => {
+    try {
+      localStorage.setItem('vpt_cart', JSON.stringify(cart));
+    } catch {}
+
+    // Only save to server once initial sync is complete to avoid wiping server cart
+    if (token && isCustomer && isInitialSyncDoneRef.current) {
+      if (saveDebounceTimerRef.current) {
+        clearTimeout(saveDebounceTimerRef.current);
+      }
+      saveDebounceTimerRef.current = setTimeout(() => {
+        api.saveCustomerCart(cart).catch(() => {});
+      }, 300);
+    }
+
+    return () => {
+      if (saveDebounceTimerRef.current) {
+        clearTimeout(saveDebounceTimerRef.current);
+      }
+    };
+  }, [cart, token, isCustomer]);
 
   useEffect(() => {
     try {
@@ -144,9 +234,15 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     setCart([]);
+    try {
+      localStorage.removeItem('vpt_cart');
+    } catch {}
     setCouponCode('');
     setAppliedDiscount(0);
     setActiveCoupon(null);
+    if (token && isCustomer) {
+      api.clearCustomerCart().catch(() => {});
+    }
   };
 
   const applyCoupon = async (code, userIdent = '') => {

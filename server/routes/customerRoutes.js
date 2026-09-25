@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const db = require('../utils/db');
 const { requireAuth, requireStoreOwner, optionalAuth } = require('../utils/auth');
 
@@ -44,6 +45,161 @@ router.get('/', requireStoreOwner, async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to retrieve customers' });
+  }
+});
+
+// ==========================================
+// PERSISTENT CART ROUTES (Flipkart/Amazon Sync)
+// ==========================================
+
+// Helper: Sanitize cart item fields
+function sanitizeCartItem(item) {
+  if (!item || typeof item !== 'object') return null;
+  const id = item.id || item._id;
+  if (!id) return null;
+  const qty = Math.max(1, Math.min(99, Number(item.quantity) || 1));
+  const price = Math.max(0, Number(item.price) || 0);
+  return {
+    id: String(id),
+    name: String(item.name || 'Equipment').trim(),
+    brand: item.brand ? String(item.brand).trim() : '',
+    price,
+    originalPrice: item.originalPrice ? Number(item.originalPrice) : null,
+    discount: item.discount ? String(item.discount).trim() : null,
+    image: item.image ? String(item.image).trim() : '',
+    quantity: qty,
+    stock: typeof item.stock === 'number' ? item.stock : 999,
+    deliveryCost: typeof item.deliveryCost === 'number' ? item.deliveryCost : 120,
+    cordless: Boolean(item.cordless)
+  };
+}
+
+// Helper: Find customer by authenticated user token
+async function getAuthCustomer(user) {
+  if (!user) return null;
+  const cleanPhone = String(user.phone || '').replace(/[^0-9]/g, '').slice(-10);
+  const conditions = [];
+  if (user.id && mongoose.isValidObjectId(user.id)) {
+    conditions.push({ _id: user.id });
+  }
+  if (cleanPhone && cleanPhone.length === 10) {
+    conditions.push({ phone: cleanPhone });
+    conditions.push({ phone: `+91${cleanPhone}` });
+  }
+  if (conditions.length === 0) return null;
+  return await db.CustomerModel.findOne({ $or: conditions });
+}
+
+// GET /api/customers/cart - Retrieve authenticated customer's cloud cart
+router.get('/cart', requireAuth, async (req, res) => {
+  try {
+    const customer = await getAuthCustomer(req.user);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer account not found' });
+    }
+    return res.json({
+      success: true,
+      cart: Array.isArray(customer.cart) ? customer.cart : []
+    });
+  } catch (err) {
+    console.error('Error fetching customer cart:', err);
+    return res.status(500).json({ success: false, message: 'Failed to retrieve cart' });
+  }
+});
+
+// PUT /api/customers/cart - Replace/update customer's cloud cart
+router.put('/cart', requireAuth, async (req, res) => {
+  try {
+    const customer = await getAuthCustomer(req.user);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer account not found' });
+    }
+    const incomingCart = Array.isArray(req.body.cart) ? req.body.cart : [];
+    const sanitizedCart = incomingCart
+      .map(sanitizeCartItem)
+      .filter(Boolean);
+
+    customer.cart = sanitizedCart;
+    await customer.save();
+
+    return res.json({
+      success: true,
+      message: 'Cart updated successfully',
+      cart: sanitizedCart
+    });
+  } catch (err) {
+    console.error('Error updating customer cart:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update cart' });
+  }
+});
+
+// POST /api/customers/cart/sync - Merge guest cart with cloud cart on login
+router.post('/cart/sync', requireAuth, async (req, res) => {
+  try {
+    const customer = await getAuthCustomer(req.user);
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer account not found' });
+    }
+
+    const existingCart = (Array.isArray(customer.cart) ? customer.cart : [])
+      .map(sanitizeCartItem)
+      .filter(Boolean);
+
+    const guestCart = (Array.isArray(req.body.cart) ? req.body.cart : [])
+      .map(sanitizeCartItem)
+      .filter(Boolean);
+
+    // Merge carts Flipkart/Amazon style
+    const itemMap = new Map();
+
+    // 1. Load server saved items first
+    for (const item of existingCart) {
+      itemMap.set(item.id, { ...item });
+    }
+
+    // 2. Merge guest items into map
+    for (const guestItem of guestCart) {
+      if (itemMap.has(guestItem.id)) {
+        const existing = itemMap.get(guestItem.id);
+        const maxStock = typeof existing.stock === 'number' ? existing.stock : (typeof guestItem.stock === 'number' ? guestItem.stock : 999);
+        const combinedQty = Math.min((existing.quantity || 1) + (guestItem.quantity || 1), maxStock);
+        itemMap.set(guestItem.id, {
+          ...existing,
+          ...guestItem,
+          quantity: combinedQty
+        });
+      } else {
+        itemMap.set(guestItem.id, { ...guestItem });
+      }
+    }
+
+    const mergedCart = Array.from(itemMap.values());
+    customer.cart = mergedCart;
+    await customer.save();
+
+    return res.json({
+      success: true,
+      message: 'Cart synchronized successfully',
+      cart: mergedCart
+    });
+  } catch (err) {
+    console.error('Error syncing customer cart:', err);
+    return res.status(500).json({ success: false, message: 'Failed to sync cart' });
+  }
+});
+
+// DELETE /api/customers/cart - Clear customer's cloud cart
+router.delete('/cart', requireAuth, async (req, res) => {
+  try {
+    const customer = await getAuthCustomer(req.user);
+    if (customer) {
+      customer.cart = [];
+      await customer.save();
+    }
+    return res.json({ success: true, message: 'Cart cleared successfully', cart: [] });
+  } catch (err) {
+    console.error('Error clearing customer cart:', err);
+    return res.status(500).json({ success: false, message: 'Failed to clear cart' });
   }
 });
 

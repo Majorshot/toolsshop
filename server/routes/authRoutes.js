@@ -216,6 +216,7 @@ router.post('/verify-otp', async (req, res) => {
         state: newCust.state || 'Kerala',
         pincode: newCust.pincode || '689641',
         savedAddresses: newCust.savedAddresses || [],
+        cart: [],
         role: 'customer',
         location: `${newCust.district || 'Pathanamthitta'}, Kerala`
       };
@@ -251,6 +252,7 @@ router.post('/verify-otp', async (req, res) => {
         state: customerDoc.state || 'Kerala',
         pincode: customerDoc.pincode || '689641',
         savedAddresses: customerDoc.savedAddresses || [],
+        cart: Array.isArray(customerDoc.cart) ? customerDoc.cart : [],
         role: 'customer',
         location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
       };
@@ -366,6 +368,7 @@ router.post('/login', async (req, res) => {
         state: customerDoc.state || 'Kerala',
         pincode: customerDoc.pincode || '689641',
         savedAddresses: customerDoc.savedAddresses || [],
+        cart: Array.isArray(customerDoc.cart) ? customerDoc.cart : [],
         role: 'customer',
         location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
       };
@@ -422,6 +425,7 @@ router.get('/me', requireAuth, async (req, res) => {
         state: customerDoc.state || 'Kerala',
         pincode: customerDoc.pincode || '689641',
         savedAddresses: customerDoc.savedAddresses || [],
+        cart: Array.isArray(customerDoc.cart) ? customerDoc.cart : [],
         role: 'customer',
         location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
       }

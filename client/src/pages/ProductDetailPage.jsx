@@ -68,12 +68,46 @@ export const ProductDetailPage = () => {
     }
 
     loadData();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
 
     return () => {
       isMounted = false;
     };
   }, [id]);
+
+  // Guaranteed scroll-to-top whenever product details finish loading and DOM expands
+  useEffect(() => {
+    if (!loading && product) {
+      if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+
+      const rAF = requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      });
+
+      const tId = setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }, 50);
+
+      return () => {
+        cancelAnimationFrame(rAF);
+        clearTimeout(tId);
+      };
+    }
+  }, [id, loading, Boolean(product)]);
 
   const formatPrice = (num) => '₹' + Number(num || 0).toLocaleString('en-IN');
   const maxStock = typeof product?.stock === 'number' ? product.stock : 999;

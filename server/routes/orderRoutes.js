@@ -219,6 +219,14 @@ router.post('/', optionalAuth, async (req, res) => {
       await db.recordCouponUsage(couponCode, userIdent);
     }
 
+    // Clear customer cloud cart in DB after successful order placement
+    if (cleanCustomerPhone) {
+      db.CustomerModel.updateOne(
+        { phone: cleanCustomerPhone },
+        { $set: { cart: [] } }
+      ).catch(() => {});
+    }
+
     // Trigger automated Resend Order Confirmation Email asynchronously
     emailService.sendOrderConfirmationEmail(order).catch(err => {
       console.warn(`[Resend Email] Async dispatch notice for order #${order.id}:`, err.message);

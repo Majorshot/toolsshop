@@ -143,6 +143,7 @@ const customerSchema = new mongoose.Schema({
   addressType: { type: String, default: 'HOME' },
   locality: { type: String, default: '' },
   notes: { type: String, default: '' },
+  cart: [{ type: Object, default: () => [] }],
   totalOrders: { type: Number, default: 0 },
   totalSpent: { type: Number, default: 0 },
   lastOrderAt: { type: Date, default: null },

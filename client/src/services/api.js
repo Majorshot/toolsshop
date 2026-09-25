@@ -583,6 +583,57 @@ export const api = {
     return data;
   },
 
+  // Persistent Cloud Cart (Flipkart/Amazon Cross-device & Account Sync)
+  async getCustomerCart() {
+    try {
+      const res = await authFetch(`${API_BASE}/customers/cart`);
+      if (!res.ok) return { success: false, cart: [] };
+      return await res.json();
+    } catch {
+      return { success: false, cart: [] };
+    }
+  },
+
+  async saveCustomerCart(cart) {
+    try {
+      const res = await authFetch(`${API_BASE}/customers/cart`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart })
+      });
+      if (!res.ok) return { success: false };
+      return await res.json();
+    } catch {
+      return { success: false };
+    }
+  },
+
+  async syncCustomerCart(guestCart) {
+    try {
+      const res = await authFetch(`${API_BASE}/customers/cart/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart: guestCart })
+      });
+      if (!res.ok) return { success: false, cart: guestCart };
+      return await res.json();
+    } catch {
+      return { success: false, cart: guestCart };
+    }
+  },
+
+  async clearCustomerCart() {
+    try {
+      const res = await authFetch(`${API_BASE}/customers/cart`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) return { success: false };
+      return await res.json();
+    } catch {
+      return { success: false };
+    }
+  },
+
   // 24/7 Render Keep-Alive Ping
   async pingKeepAlive() {
     try {
