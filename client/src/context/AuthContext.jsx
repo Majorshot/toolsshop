@@ -37,6 +37,9 @@ export const AuthProvider = ({ children }) => {
       }).catch(() => {
         // Network failure; keep offline optimistic state
       });
+    } else if (user) {
+      // Legacy session without token: clear stale session so fresh token is issued on login
+      logout();
     }
   }, []);
 
