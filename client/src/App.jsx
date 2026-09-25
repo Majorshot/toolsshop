@@ -124,12 +124,14 @@ const MainApp = () => {
       {/* Animated Slide-In Notifications */}
       <SlideInNotifications />
 
-      {/* Navbar */}
-      <Navbar
-        onOpenStoreModal={() => setIsStoreModalOpen(true)}
-        onOpenAdminModal={() => setIsAdminModalOpen(true)}
-        storeInfo={storeInfo}
-      />
+      {/* Navbar (Hidden on Admin Portal) */}
+      {!isAdminRoute && (
+        <Navbar
+          onOpenStoreModal={() => setIsStoreModalOpen(true)}
+          onOpenAdminModal={() => setIsAdminModalOpen(true)}
+          storeInfo={storeInfo}
+        />
+      )}
 
       {/* Backend Disconnection Banner */}
       {error && !loading && (
@@ -146,7 +148,7 @@ const MainApp = () => {
             justifyContent: 'center',
             gap: '12px',
             position: 'sticky',
-            top: '72px',
+            top: isAdminRoute ? '0px' : '72px',
             zIndex: 90
           }}
         >
@@ -322,8 +324,8 @@ const MainApp = () => {
         </footer>
       )}
 
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
+      {/* Mobile Bottom Navigation (Hidden on Admin Portal) */}
+      {!isAdminRoute && <MobileBottomNav />}
 
 
 

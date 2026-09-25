@@ -4015,6 +4015,182 @@ header.main-site-header {
   box-sizing: border-box;
 }
 
+/* Customer Orders Filter Toolbar (Desktop Base) */
+.store-orders-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  background: #ffffff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.store-orders-search-wrap {
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 380px;
+  height: 38px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.store-orders-search-input {
+  width: 100%;
+  max-width: 100%;
+  height: 38px;
+  padding: 0 32px 0 34px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a;
+  font-size: 0.84rem;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.store-orders-search-input:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.store-orders-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.store-orders-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.store-orders-search-clear:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.store-orders-fast-otp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 38px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.store-orders-fast-otp-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.store-orders-fast-otp label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #c2410c;
+  white-space: nowrap;
+}
+
+.store-orders-fast-otp input {
+  width: 76px;
+  height: 26px;
+  border: 1px solid #fdba74;
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+  background: #ffffff;
+  color: #9a3412;
+  outline: none;
+  font-family: var(--font-mono, monospace);
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.store-orders-fast-otp input:focus {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+}
+
+.store-orders-filter-grid {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.store-orders-filter-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.store-orders-filter-cell label {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.store-orders-filter-cell .gs-trigger {
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.store-orders-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.store-orders-reset-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
 @media (max-width: 640px) {
   .store-inventory-toolbar,
   .store-orders-toolbar {
