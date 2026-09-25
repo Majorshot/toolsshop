@@ -39,6 +39,8 @@ function ScrollToTop() {
 const MainApp = () => {
   const { toastMessage } = useCart() || {};
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
 
   // All Catalog Products (Unfiltered base for HomePage, Catalog counts and Shop)
   const [allProducts, setAllProducts] = useState([]);
@@ -223,80 +225,84 @@ const MainApp = () => {
         </Routes>
       </main>
 
-      {/* Floating Speed-Dial WhatsApp Button */}
-      <a
-        href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools,%20I%20need%20assistance%20with%20power%20tools%20in%20Kozhencherry."
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          position: 'fixed',
-          bottom: '80px',
-          right: '20px',
-          zIndex: 140,
-          background: '#16a34a',
-          color: '#ffffff',
-          width: '52px',
-          height: '52px',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 6px 20px rgba(22, 163, 74, 0.4)',
-          textDecoration: 'none',
-          transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
-        }}
-        title="Chat on WhatsApp with Variathu Power Tools"
-        id="floating-whatsapp-btn"
-      >
-        <MessageCircle size={28} />
-      </a>
+      {/* Floating Speed-Dial WhatsApp Button (Hidden on Admin Portal) */}
+      {!isAdminRoute && (
+        <a
+          href="https://wa.me/919447123456?text=Hello%20Variathu%20Power%20Tools,%20I%20need%20assistance%20with%20power%20tools%20in%20Kozhencherry."
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            position: 'fixed',
+            bottom: '80px',
+            right: '20px',
+            zIndex: 140,
+            background: '#16a34a',
+            color: '#ffffff',
+            width: '52px',
+            height: '52px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 6px 20px rgba(22, 163, 74, 0.4)',
+            textDecoration: 'none',
+            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+          title="Chat on WhatsApp with Variathu Power Tools"
+          id="floating-whatsapp-btn"
+        >
+          <MessageCircle size={28} />
+        </a>
+      )}
 
-      {/* Minimal Clean Footer */}
-      <footer className="main-footer-clean">
-        <div className="container">
-          <div className="footer-clean-grid">
-            <div className="footer-clean-col">
-              <div style={{ marginBottom: '14px' }}>
-                <img
-                  src="/Logo.jpeg"
-                  alt="Variathu Power Tools"
-                  style={{ height: '36px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
-                />
+      {/* Minimal Clean Footer (Hidden on Admin Portal) */}
+      {!isAdminRoute && (
+        <footer className="main-footer-clean">
+          <div className="container">
+            <div className="footer-clean-grid">
+              <div className="footer-clean-col">
+                <div style={{ marginBottom: '14px' }}>
+                  <img
+                    src="/Logo.jpeg"
+                    alt="Variathu Power Tools"
+                    style={{ height: '36px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
+                  />
+                </div>
+                <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '12px', maxWidth: '420px', fontSize: '0.86rem' }}>
+                  Authorized dealership and repair center for professional power tools, high pressure washers, and genuine accessories in Kozhencherry, Pathanamthitta district, Kerala.
+                </p>
+                <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                  📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
+                </p>
               </div>
-              <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: '12px', maxWidth: '420px', fontSize: '0.86rem' }}>
-                Authorized dealership and repair center for professional power tools, high pressure washers, and genuine accessories in Kozhencherry, Pathanamthitta district, Kerala.
-              </p>
-              <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
-              </p>
+
+              <div className="footer-clean-col">
+                <h4>Quick Navigation</h4>
+                <ul>
+                  <li><Link to="/">Home Page</Link></li>
+                  <li><Link to="/shop">Shop Power Tools</Link></li>
+                  <li><Link to="/about">About & Workshop Clinic</Link></li>
+                  <li><a href="#shop" onClick={() => setIsStoreModalOpen(true)}>Store Hours & Location</a></li>
+                </ul>
+              </div>
+
+              <div className="footer-clean-col">
+                <h4>Direct Contact</h4>
+                <ul>
+                  <li><a href="tel:+919447123456">📞 +91 94471 23456</a></li>
+                  <li><a href="https://wa.me/919447123456" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
+                  <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
+                  <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
+                </ul>
+              </div>
             </div>
 
-            <div className="footer-clean-col">
-              <h4>Quick Navigation</h4>
-              <ul>
-                <li><Link to="/">Home Page</Link></li>
-                <li><Link to="/shop">Shop Power Tools</Link></li>
-                <li><Link to="/about">About & Workshop Clinic</Link></li>
-                <li><a href="#shop" onClick={() => setIsStoreModalOpen(true)}>Store Hours & Location</a></li>
-              </ul>
-            </div>
-
-            <div className="footer-clean-col">
-              <h4>Direct Contact</h4>
-              <ul>
-                <li><a href="tel:+919447123456">📞 +91 94471 23456</a></li>
-                <li><a href="https://wa.me/919447123456" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
-                <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
-                <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
-              </ul>
+            <div className="footer-clean-bottom">
+              © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
             </div>
           </div>
-
-          <div className="footer-clean-bottom">
-            © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />

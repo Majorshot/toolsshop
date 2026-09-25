@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -2860,10 +2860,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               )}
 
               {/* Status Filter Chips (Horizontal Scrollable Strip with Arrows & Mouse Drag) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', width: '100%' }}>
+              <div className="store-order-status-chips-wrap" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', width: '100%', minWidth: 0 }}>
                 <button
                   type="button"
                   onClick={() => scrollStatusChips('left')}
+                  className="store-order-status-scroll-btn"
                   style={{
                     flexShrink: 0,
                     width: '30px',
@@ -2907,6 +2908,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     WebkitOverflowScrolling: 'touch',
                     cursor: isDraggingChips ? 'grabbing' : 'grab',
                     flex: 1,
+                    minWidth: 0,
                     userSelect: 'none'
                   }}
                   className="store-order-status-chips"
@@ -2978,6 +2980,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <button
                   type="button"
                   onClick={() => scrollStatusChips('right')}
+                  className="store-order-status-scroll-btn"
                   style={{
                     flexShrink: 0,
                     width: '30px',
@@ -3001,36 +3004,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </div>
 
               {/* Filter Toolbar (Search + Fast OTP + Date + Delivery + Payment + Sort) */}
-              <div className="store-inventory-toolbar" style={{ marginBottom: '16px', background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+              <div className="store-orders-toolbar">
                 {/* Search Box */}
-                <div className="store-inv-search-wrap" style={{ flex: '1 1 240px', minWidth: '200px', position: 'relative' }}>
-                  <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <div className="store-orders-search-wrap">
+                  <Search size={15} className="store-orders-search-icon" />
                   <input
                     type="text"
                     placeholder="Search by Order ID, name, phone, city, AWB, item..."
                     value={orderSearchQuery}
                     onChange={(e) => setOrderSearchQuery(e.target.value)}
-                    className="store-inv-search-input"
-                    style={{ paddingLeft: '34px', paddingRight: '28px', width: '100%', height: '38px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem' }}
+                    className="store-orders-search-input"
                     id="input-order-search"
                   />
                   {orderSearchQuery && (
                     <button
                       type="button"
                       onClick={() => setOrderSearchQuery('')}
-                      style={{
-                        position: 'absolute',
-                        right: 8,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#94a3b8',
-                        cursor: 'pointer',
-                        padding: '2px',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
+                      className="store-orders-search-clear"
                       title="Clear search text"
                     >
                       <X size={14} />
@@ -3039,29 +3029,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
 
                 {/* Fast Pickup OTP Verification Input */}
-                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fff7ed', border: '1.5px solid #fdba74', borderRadius: '8px', padding: '0 10px', height: '38px' }}>
-                  <ShieldCheck size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
-                  <label style={{ fontSize: '0.76rem', color: '#9a3412', fontWeight: '800', whiteSpace: 'nowrap' }}>Fast OTP:</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="4-digit..."
-                    value={quickOtpInput}
-                    onChange={(e) => handleQuickOtpChange(e.target.value)}
-                    style={{
-                      width: '75px',
-                      border: 'none',
-                      background: 'transparent',
-                      outline: 'none',
-                      fontSize: '0.86rem',
-                      fontWeight: '800',
-                      letterSpacing: '0.08em',
-                      fontFamily: 'var(--font-mono)',
-                      color: '#0f172a'
-                    }}
-                    title="Enter 4-digit OTP to instantly locate and verify customer pickup"
-                    id="input-fast-otp-lookup"
-                  />
+                <div className="store-orders-fast-otp">
+                  <div className="store-orders-fast-otp-left">
+                    <ShieldCheck size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
+                    <label>Fast OTP:</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="4-digit..."
+                      value={quickOtpInput}
+                      onChange={(e) => handleQuickOtpChange(e.target.value)}
+                      title="Enter 4-digit OTP to instantly locate and verify customer pickup"
+                      id="input-fast-otp-lookup"
+                    />
+                  </div>
                   {quickOtpInput && (
                     <button
                       type="button"
@@ -3073,88 +3054,91 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   )}
                 </div>
 
-                {/* Date Filter */}
-                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Date:</label>
-                  <GlideSelect
-                    id="select-order-date-filter"
-                    options={ORDER_DATE_OPTIONS}
-                    value={orderDateFilter}
-                    onChange={(val) => setOrderDateFilter(val)}
-                    ariaLabel="Filter orders by date"
-                    showTags
-                    accentColor="#0284c7"
-                    surfaceColor={orderDateFilter !== 'all' ? '#eff6ff' : '#ffffff'}
-                    borderColor={orderDateFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
-                    textColor={orderDateFilter !== 'all' ? '#0369a1' : '#0f172a'}
-                    highlightColor="#e0f2fe"
-                    size="md"
-                    radius={8}
-                    menuWidth={210}
-                  />
-                </div>
+                {/* Filters Grid (2x2 on Mobile, Flex Row on Desktop) */}
+                <div className="store-orders-filter-grid">
+                  {/* Date Filter */}
+                  <div className="store-orders-filter-cell">
+                    <label>Date:</label>
+                    <GlideSelect
+                      id="select-order-date-filter"
+                      options={ORDER_DATE_OPTIONS}
+                      value={orderDateFilter}
+                      onChange={(val) => setOrderDateFilter(val)}
+                      ariaLabel="Filter orders by date"
+                      showTags
+                      accentColor="#0284c7"
+                      surfaceColor={orderDateFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                      borderColor={orderDateFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                      textColor={orderDateFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                      highlightColor="#e0f2fe"
+                      size="md"
+                      radius={8}
+                      menuWidth={210}
+                    />
+                  </div>
 
-                {/* Delivery Mode Filter */}
-                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Delivery:</label>
-                  <GlideSelect
-                    id="select-order-delivery-filter"
-                    options={ORDER_DELIVERY_OPTIONS}
-                    value={orderDeliveryFilter}
-                    onChange={(val) => setOrderDeliveryFilter(val)}
-                    ariaLabel="Filter orders by delivery type"
-                    showTags
-                    accentColor="#0284c7"
-                    surfaceColor={orderDeliveryFilter !== 'all' ? '#eff6ff' : '#ffffff'}
-                    borderColor={orderDeliveryFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
-                    textColor={orderDeliveryFilter !== 'all' ? '#0369a1' : '#0f172a'}
-                    highlightColor="#e0f2fe"
-                    size="md"
-                    radius={8}
-                    menuWidth={275}
-                  />
-                </div>
+                  {/* Delivery Mode Filter */}
+                  <div className="store-orders-filter-cell">
+                    <label>Delivery:</label>
+                    <GlideSelect
+                      id="select-order-delivery-filter"
+                      options={ORDER_DELIVERY_OPTIONS}
+                      value={orderDeliveryFilter}
+                      onChange={(val) => setOrderDeliveryFilter(val)}
+                      ariaLabel="Filter orders by delivery type"
+                      showTags
+                      accentColor="#0284c7"
+                      surfaceColor={orderDeliveryFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                      borderColor={orderDeliveryFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                      textColor={orderDeliveryFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                      highlightColor="#e0f2fe"
+                      size="md"
+                      radius={8}
+                      menuWidth={275}
+                    />
+                  </div>
 
-                {/* Payment Status Filter */}
-                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Payment:</label>
-                  <GlideSelect
-                    id="select-order-payment-filter"
-                    options={ORDER_PAYMENT_OPTIONS}
-                    value={orderPaymentFilter}
-                    onChange={(val) => setOrderPaymentFilter(val)}
-                    ariaLabel="Filter orders by payment status"
-                    showTags
-                    accentColor="#0284c7"
-                    surfaceColor={orderPaymentFilter !== 'all' ? '#eff6ff' : '#ffffff'}
-                    borderColor={orderPaymentFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
-                    textColor={orderPaymentFilter !== 'all' ? '#0369a1' : '#0f172a'}
-                    highlightColor="#e0f2fe"
-                    size="md"
-                    radius={8}
-                    menuWidth={275}
-                  />
-                </div>
+                  {/* Payment Status Filter */}
+                  <div className="store-orders-filter-cell">
+                    <label>Payment:</label>
+                    <GlideSelect
+                      id="select-order-payment-filter"
+                      options={ORDER_PAYMENT_OPTIONS}
+                      value={orderPaymentFilter}
+                      onChange={(val) => setOrderPaymentFilter(val)}
+                      ariaLabel="Filter orders by payment status"
+                      showTags
+                      accentColor="#0284c7"
+                      surfaceColor={orderPaymentFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                      borderColor={orderPaymentFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                      textColor={orderPaymentFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                      highlightColor="#e0f2fe"
+                      size="md"
+                      radius={8}
+                      menuWidth={275}
+                    />
+                  </div>
 
-                {/* Sort Order */}
-                <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Sort:</label>
-                  <GlideSelect
-                    id="select-order-sort"
-                    options={ORDER_SORT_OPTIONS}
-                    value={orderSortFilter}
-                    onChange={(val) => setOrderSortFilter(val)}
-                    ariaLabel="Sort orders"
-                    showTags
-                    accentColor="#ea580c"
-                    surfaceColor={orderSortFilter !== 'newest' ? '#fff7ed' : '#ffffff'}
-                    borderColor={orderSortFilter !== 'newest' ? '#ea580c' : '#cbd5e1'}
-                    textColor={orderSortFilter !== 'newest' ? '#c2410c' : '#0f172a'}
-                    highlightColor="#ffedd5"
-                    size="md"
-                    radius={8}
-                    menuWidth={250}
-                  />
+                  {/* Sort Order */}
+                  <div className="store-orders-filter-cell">
+                    <label>Sort:</label>
+                    <GlideSelect
+                      id="select-order-sort"
+                      options={ORDER_SORT_OPTIONS}
+                      value={orderSortFilter}
+                      onChange={(val) => setOrderSortFilter(val)}
+                      ariaLabel="Sort orders"
+                      showTags
+                      accentColor="#ea580c"
+                      surfaceColor={orderSortFilter !== 'newest' ? '#fff7ed' : '#ffffff'}
+                      borderColor={orderSortFilter !== 'newest' ? '#ea580c' : '#cbd5e1'}
+                      textColor={orderSortFilter !== 'newest' ? '#c2410c' : '#0f172a'}
+                      highlightColor="#ffedd5"
+                      size="md"
+                      radius={8}
+                      menuWidth={250}
+                    />
+                  </div>
                 </div>
 
                 {/* Reset Filters */}
@@ -3162,25 +3146,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   <button
                     type="button"
                     onClick={handleResetOrderFilters}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '0 12px',
-                      height: '38px',
-                      fontSize: '0.8rem',
-                      fontWeight: '700',
-                      color: '#ea580c',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      whiteSpace: 'nowrap'
-                    }}
+                    className="store-orders-reset-btn"
                     title="Clear all active filters and searches"
                     id="btn-reset-order-filters"
                   >
-                    <X size={14} />
+                    <RotateCcw size={13} />
                     <span>Reset</span>
                   </button>
                 )}
@@ -6061,7 +6031,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           {/* CRM KPI Metrics Strip */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '12px', margin: '16px 0 20px' }}>
+          <div className="store-crm-kpi-grid">
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
               <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
                 Total Registered Clients
@@ -6100,8 +6070,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           {/* Search and Sort Toolbar */}
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '18px' }}>
-            <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+          <div className="store-customer-toolbar">
+            <div className="store-customer-search-wrap">
               <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
@@ -6130,8 +6100,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569' }}>Sort By:</label>
+            <div className="store-customer-sort-group">
+              <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', whiteSpace: 'nowrap' }}>Sort By:</label>
               <GlideSelect
                 id="select-customer-sort"
                 options={CUSTOMER_SORT_OPTIONS}

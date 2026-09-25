@@ -101,7 +101,7 @@ const CSS_STYLES = `
   z-index: 9999;
   min-width: 100%;
   width: max-content;
-  min-width: max(100%, var(--gs-menu-w, 220px));
+  min-width: min(max(100%, var(--gs-menu-w, 220px)), calc(100vw - 20px));
   max-width: min(520px, calc(100vw - 20px));
   padding: 4px;
   opacity: 0;
