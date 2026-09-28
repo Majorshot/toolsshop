@@ -64,11 +64,11 @@ router.post('/send-otp', async (req, res) => {
       customerName = customerDoc.name || 'Valued Customer';
     } else {
       // Registration validation
-      if (!customerName) {
+      if (!customerName || !customerName.trim()) {
         return res.status(400).json({ success: false, message: 'Full name is required for registration.' });
       }
-      if (!targetEmail || !targetEmail.includes('@')) {
-        targetEmail = `${cleanPhone}@customer.variathupowertools.com`;
+      if (!targetEmail || !targetEmail.trim() || !targetEmail.includes('@') || !targetEmail.includes('.')) {
+        return res.status(400).json({ success: false, message: 'A valid email address is required for registration.' });
       }
 
       // Check if already registered

@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { useConfirm } from '../components/SpringModal';
 import SlideCommit from '../components/SlideCommit';
+import CodeSlots from '../components/CodeSlots';
 
 const KERALA_DISTRICTS = [
   'Pathanamthitta',
@@ -683,9 +684,15 @@ export const CheckoutPage = () => {
       return;
     }
 
-    if (phoneLookup.exists === false && !loginForm.name.trim()) {
-      setErrorMsg('Please enter your full name to create your account.');
-      return;
+    if (phoneLookup.exists === false) {
+      if (!loginForm.name.trim()) {
+        setErrorMsg('Please enter your full name to create your account.');
+        return;
+      }
+      if (!loginForm.email.trim() || !loginForm.email.includes('@') || !loginForm.email.includes('.')) {
+        setErrorMsg('Please enter a valid email address for tax invoices and security OTP.');
+        return;
+      }
     }
 
     setLoginLoading(true);
@@ -1782,10 +1789,11 @@ export const CheckoutPage = () => {
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                            Email Address (Optional - For Tax Invoices & Order Receipts)
+                            Email Address <span style={{ color: '#dc2626' }}>*</span> (For Tax Invoices & Order Receipts)
                           </label>
                           <input
                             type="email"
+                            required
                             placeholder="e.g. midhun@gmail.com"
                             value={loginForm.email}
                             onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
@@ -1797,7 +1805,15 @@ export const CheckoutPage = () => {
 
                     <button
                       type="submit"
-                      disabled={loginLoading || (phoneLookup.exists === false && !loginForm.name.trim()) || loginForm.phone.length !== 10}
+                      disabled={
+                        loginLoading ||
+                        loginForm.phone.length !== 10 ||
+                        (phoneLookup.exists === false && (
+                          !loginForm.name.trim() ||
+                          !loginForm.email.trim() ||
+                          !loginForm.email.includes('@')
+                        ))
+                      }
                       style={{
                         background: '#dc2626',
                         color: '#ffffff',
@@ -1806,13 +1822,13 @@ export const CheckoutPage = () => {
                         padding: '14px',
                         fontSize: '0.94rem',
                         fontWeight: '800',
-                        cursor: 'pointer',
+                        cursor: (loginLoading || loginForm.phone.length !== 10 || (phoneLookup.exists === false && (!loginForm.name.trim() || !loginForm.email.trim() || !loginForm.email.includes('@')))) ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '8px',
                         boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
-                        opacity: (loginForm.phone.length === 10) ? 1 : 0.6,
+                        opacity: (loginForm.phone.length === 10 && (phoneLookup.exists !== false || (loginForm.name.trim() && loginForm.email.trim() && loginForm.email.includes('@')))) ? 1 : 0.6,
                         transition: 'all 0.15s ease'
                       }}
                       id="btn-checkout-login-continue"
@@ -1845,45 +1861,53 @@ export const CheckoutPage = () => {
                       Enter the 6-digit code dispatched to <strong>{checkoutOtpMasked || `+91 ${loginForm.phone}`}</strong> to authenticate your account.
                     </p>
 
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
-                        6-Digit Security OTP *
+                    {/* 6-Digit OTP Animated Grid using CodeSlots */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.74rem',
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: '#475569',
+                        textAlign: 'center',
+                        marginBottom: '12px'
+                      }}>
+                        Enter 6-Digit Verification Code <span style={{ color: '#dc2626' }}>*</span>
                       </label>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        maxLength={6}
-                        placeholder="••••••"
-                        value={checkoutOtp}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
-                          setCheckoutOtp(val);
-                          setCheckoutOtpStatus('idle');
-                          setErrorMsg('');
-                          if (val.length === 6) {
-                            handleVerifyCheckoutOtp(null, val);
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '14px 16px',
-                          borderRadius: '8px',
-                          border: checkoutOtpStatus === 'error' ? '2px solid #ef4444' : checkoutOtpStatus === 'success' ? '2px solid #22c55e' : '2px solid #0284c7',
-                          fontSize: '1.4rem',
-                          fontWeight: '900',
-                          letterSpacing: '0.35em',
-                          textAlign: 'center',
-                          fontFamily: 'monospace',
-                          color: '#0f172a',
-                          background: '#ffffff',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)'
-                        }}
-                        autoFocus
-                        id="input-checkout-otp"
-                      />
+
+                      <div style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '4px 0 14px' }}>
+                        <CodeSlots
+                          length={6}
+                          value={checkoutOtp}
+                          status={checkoutOtpStatus}
+                          onChange={(code) => {
+                            setCheckoutOtp(code);
+                            if (checkoutOtpStatus !== 'idle') setCheckoutOtpStatus('idle');
+                            if (errorMsg) setErrorMsg('');
+                          }}
+                          onComplete={async (code) => {
+                            await handleVerifyCheckoutOtp(null, code);
+                          }}
+                          accentColor="#f5f5f5"
+                          inkColor="#f5f5f5"
+                          slotColor="#27272a"
+                          digitColor="#18181b"
+                          dangerColor="#ff3b30"
+                          slotSize={44}
+                          gap={8}
+                          radius={12}
+                          bounce={0.2}
+                          settle={0.3}
+                          rise={8}
+                          cascade={20}
+                          mask={false}
+                          caret
+                          outcome="accept"
+                          disabled={loginLoading || checkoutOtpStatus === 'success'}
+                          autoFocus
+                        />
+                      </div>
                     </div>
 
                     {checkoutDevOtp && (
@@ -1922,16 +1946,16 @@ export const CheckoutPage = () => {
 
                     <button
                       type="submit"
-                      disabled={loginLoading || checkoutOtp.length !== 6}
+                      disabled={loginLoading || checkoutOtp.length !== 6 || checkoutOtpStatus === 'success'}
                       style={{
-                        background: '#dc2626',
+                        background: checkoutOtpStatus === 'success' ? '#16a34a' : '#dc2626',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '10px',
                         padding: '14px',
                         fontSize: '0.94rem',
                         fontWeight: '800',
-                        cursor: 'pointer',
+                        cursor: (loginLoading || checkoutOtp.length !== 6 || checkoutOtpStatus === 'success') ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1943,9 +1967,13 @@ export const CheckoutPage = () => {
                       id="btn-checkout-verify-otp"
                     >
                       <span>
-                        {loginLoading ? 'Verifying OTP...' : 'VERIFY & CONTINUE'}
+                        {checkoutOtpStatus === 'success'
+                          ? 'OTP Verified! Redirecting...'
+                          : loginLoading
+                            ? 'Verifying OTP...'
+                            : 'VERIFY & CONTINUE'}
                       </span>
-                      {!loginLoading && <ArrowRight size={16} />}
+                      {!loginLoading && checkoutOtpStatus !== 'success' && <ArrowRight size={16} />}
                     </button>
                   </form>
                 )}
