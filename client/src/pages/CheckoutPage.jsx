@@ -1379,7 +1379,292 @@ export const CheckoutPage = () => {
         {/* 2-COLUMN MAIN GRID */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', alignItems: 'flex-start' }}>
 
-          {/* LEFT COLUMN: ACTIVE STEP VIEWS */}
+          {/* LEFT COLUMN: PRODUCT DETAILS & PRICE DETAILS SIDEBAR (ORDER ITEMS & SUMMARY) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '80px' }}>
+
+            {/* 1. PRODUCT DETAILS (MOVED DIRECTLY ABOVE PRICE DETAILS) */}
+            <div style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1.5px solid #e2e8f0',
+              padding: '18px 20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}>
+              <div style={{
+                fontSize: '0.82rem',
+                fontWeight: '800',
+                color: '#475569',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                paddingBottom: '10px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ color: '#0f172a', fontSize: '0.94rem' }}>Order Items ({cart.length})</span>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>
+                  {cart.reduce((s, i) => s + i.quantity, 0)} total unit(s)
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {cart.map((item, idx) => {
+                  const itemMrp = item.mrp || Math.round(item.price * 1.35);
+                  const discountPct = Math.round(((itemMrp - item.price) / itemMrp) * 100);
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        paddingBottom: idx < cart.length - 1 ? '14px' : '0',
+                        borderBottom: idx < cart.length - 1 ? '1px dashed #e2e8f0' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px'
+                      }}
+                    >
+                      {/* Product Details Row */}
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                        {/* Thumbnail */}
+                        <div style={{
+                          width: '76px',
+                          height: '76px',
+                          borderRadius: '10px',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px'
+                        }}>
+                          <img
+                            src={item.image || '/Logo.jpeg'}
+                            alt={item.name}
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            onError={(e) => { e.target.src = '/Logo.jpeg'; }}
+                          />
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          {item.brand && (
+                            <span style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {item.brand}
+                            </span>
+                          )}
+
+                          <h4 style={{
+                            fontSize: '0.9rem',
+                            fontWeight: '700',
+                            color: '#0f172a',
+                            margin: 0,
+                            lineHeight: '1.35'
+                          }}>
+                            {item.name}
+                          </h4>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
+                            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                              Unit Price: <strong style={{ color: '#0f172a' }}>{formatPrice(item.price)}</strong>
+                            </span>
+                            <span style={{
+                              fontSize: '0.72rem',
+                              color: '#0284c7',
+                              fontWeight: '700',
+                              background: '#f0f9ff',
+                              border: '1px solid #bae6fd',
+                              padding: '1px 6px',
+                              borderRadius: '4px'
+                            }}>
+                              🚚 Courier: {item.deliveryCost === 0 ? <strong style={{ color: '#16a34a' }}>FREE</strong> : `₹${item.deliveryCost ?? 120}/unit`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Stepper, Remove & Line Total */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            background: '#f8fafc',
+                            border: '1.5px solid #cbd5e1',
+                            borderRadius: '8px',
+                            overflow: 'hidden'
+                          }}>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                padding: '4px 8px',
+                                cursor: 'pointer',
+                                color: '#334155',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Decrease quantity"
+                            >
+                              <Minus size={12} />
+                            </button>
+                            <span style={{ padding: '0 8px', fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                padding: '4px 8px',
+                                cursor: 'pointer',
+                                color: '#334155',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              title="Increase quantity"
+                            >
+                              <Plus size={12} />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(item.id)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '5px 10px',
+                              background: '#fef2f2',
+                              border: '1px solid #fee2e2',
+                              borderRadius: '8px',
+                              color: '#dc2626',
+                              fontSize: '0.76rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                            title="Remove item"
+                          >
+                            <Trash2 size={13} />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+
+                        {/* Price Line */}
+                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {discountPct > 0 && (
+                            <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#16a34a' }}>
+                              ↓ {discountPct}%
+                            </span>
+                          )}
+                          {itemMrp > item.price && (
+                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', textDecoration: 'line-through' }}>
+                              {formatPrice(itemMrp * item.quantity)}
+                            </span>
+                          )}
+                          <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>
+                            {formatPrice(item.price * item.quantity)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. PRICE DETAILS CARD (IMAGE 1 STYLE) */}
+            <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
+                Price Details
+              </div>
+
+              {/* Breakdown Rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.88rem', color: '#475569' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>MRP (incl. of all taxes)</span>
+                  <span style={{ fontWeight: '700', color: '#0f172a' }}>{formatPrice(totalMrp)}</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Fees</span>
+                  <span style={{ color: deliveryType === 'store-pickup' ? '#16a34a' : '#0f172a', fontWeight: '700' }}>
+                    {deliveryType === 'store-pickup' ? 'FREE' : formatPrice(deliveryFee || 120)}
+                  </span>
+                </div>
+
+                {mrpDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+                    <span>Discount on MRP</span>
+                    <span style={{ fontWeight: '700' }}>- {formatPrice(mrpDiscount)}</span>
+                  </div>
+                )}
+
+                {discountAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
+                    <span>Coupons Applied ({activeCoupon?.code})</span>
+                    <span style={{ fontWeight: '700' }}>- {formatPrice(discountAmount)}</span>
+                  </div>
+                )}
+
+                {/* Total Amount */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', borderTop: '2px solid #0f172a', paddingTop: '14px', marginTop: '4px' }}>
+                  <span>Total Amount</span>
+                  <span style={{ color: '#ea580c', fontFamily: 'monospace', fontSize: '1.25rem' }}>{formatPrice(finalTotal)}</span>
+                </div>
+
+                {/* Green Savings Highlight */}
+                {totalSavings > 0 && (
+                  <div style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    color: '#16a34a',
+                    fontWeight: '700',
+                    fontSize: '0.84rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span>🌱</span>
+                    <span>You'll save {formatPrice(totalSavings)} on this order!</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 3. STORE GUARANTEES */}
+            <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
+                <ShieldCheck size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
+                <span>100% Genuine Tools from Authorized Dealers</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
+                <FileText size={16} style={{ color: '#0284c7', flexShrink: 0 }} />
+                <span>Official GST Tax Invoice & Warranty Card</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
+                <Mail size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                <span>Instant WhatsApp & Email Order Receipts</span>
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: ACTIVE STEP VIEWS */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
             {/* ============================================================ */}
@@ -2484,291 +2769,6 @@ export const CheckoutPage = () => {
 
               </div>
             )}
-
-          </div>
-
-          {/* RIGHT COLUMN: PRODUCT DETAILS & PRICE DETAILS SIDEBAR (MATCHING SCREENSHOT 1 STYLE) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '80px' }}>
-
-            {/* 1. PRODUCT DETAILS (MOVED DIRECTLY ABOVE PRICE DETAILS) */}
-            <div style={{
-              background: '#ffffff',
-              borderRadius: '12px',
-              border: '1.5px solid #e2e8f0',
-              padding: '18px 20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px'
-            }}>
-              <div style={{
-                fontSize: '0.82rem',
-                fontWeight: '800',
-                color: '#475569',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                paddingBottom: '10px',
-                borderBottom: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <span style={{ color: '#0f172a', fontSize: '0.94rem' }}>Order Items ({cart.length})</span>
-                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>
-                  {cart.reduce((s, i) => s + i.quantity, 0)} total unit(s)
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {cart.map((item, idx) => {
-                  const itemMrp = item.mrp || Math.round(item.price * 1.35);
-                  const discountPct = Math.round(((itemMrp - item.price) / itemMrp) * 100);
-
-                  return (
-                    <div
-                      key={item.id}
-                      style={{
-                        paddingBottom: idx < cart.length - 1 ? '14px' : '0',
-                        borderBottom: idx < cart.length - 1 ? '1px dashed #e2e8f0' : 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '10px'
-                      }}
-                    >
-                      {/* Product Details Row */}
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                        {/* Thumbnail */}
-                        <div style={{
-                          width: '76px',
-                          height: '76px',
-                          borderRadius: '10px',
-                          background: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          overflow: 'hidden',
-                          flexShrink: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          padding: '4px'
-                        }}>
-                          <img
-                            src={item.image || '/Logo.jpeg'}
-                            alt={item.name}
-                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                            onError={(e) => { e.target.src = '/Logo.jpeg'; }}
-                          />
-                        </div>
-
-                        {/* Info */}
-                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                          {item.brand && (
-                            <span style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                              {item.brand}
-                            </span>
-                          )}
-
-                          <h4 style={{
-                            fontSize: '0.9rem',
-                            fontWeight: '700',
-                            color: '#0f172a',
-                            margin: 0,
-                            lineHeight: '1.35'
-                          }}>
-                            {item.name}
-                          </h4>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '2px' }}>
-                            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                              Unit Price: <strong style={{ color: '#0f172a' }}>{formatPrice(item.price)}</strong>
-                            </span>
-                            <span style={{
-                              fontSize: '0.72rem',
-                              color: '#0284c7',
-                              fontWeight: '700',
-                              background: '#f0f9ff',
-                              border: '1px solid #bae6fd',
-                              padding: '1px 6px',
-                              borderRadius: '4px'
-                            }}>
-                              🚚 Courier: {item.deliveryCost === 0 ? <strong style={{ color: '#16a34a' }}>FREE</strong> : `₹${item.deliveryCost ?? 120}/unit`}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Bottom Stepper, Remove & Line Total */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            background: '#f8fafc',
-                            border: '1.5px solid #cbd5e1',
-                            borderRadius: '8px',
-                            overflow: 'hidden'
-                          }}>
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              style={{
-                                border: 'none',
-                                background: 'transparent',
-                                padding: '4px 8px',
-                                cursor: 'pointer',
-                                color: '#334155',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                              title="Decrease quantity"
-                            >
-                              <Minus size={12} />
-                            </button>
-                            <span style={{ padding: '0 8px', fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              style={{
-                                border: 'none',
-                                background: 'transparent',
-                                padding: '4px 8px',
-                                cursor: 'pointer',
-                                color: '#334155',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                              title="Increase quantity"
-                            >
-                              <Plus size={12} />
-                            </button>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(item.id)}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '5px 10px',
-                              background: '#fef2f2',
-                              border: '1px solid #fee2e2',
-                              borderRadius: '8px',
-                              color: '#dc2626',
-                              fontSize: '0.76rem',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                            title="Remove item"
-                          >
-                            <Trash2 size={13} />
-                            <span>Remove</span>
-                          </button>
-                        </div>
-
-                        {/* Price Line */}
-                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {discountPct > 0 && (
-                            <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#16a34a' }}>
-                              ↓ {discountPct}%
-                            </span>
-                          )}
-                          {itemMrp > item.price && (
-                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', textDecoration: 'line-through' }}>
-                              {formatPrice(itemMrp * item.quantity)}
-                            </span>
-                          )}
-                          <span style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', fontFamily: 'monospace' }}>
-                            {formatPrice(item.price * item.quantity)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 2. PRICE DETAILS CARD (IMAGE 1 STYLE) */}
-            <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <div style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #f1f5f9' }}>
-                Price Details
-              </div>
-
-              {/* Breakdown Rows */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.88rem', color: '#475569' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>MRP (incl. of all taxes)</span>
-                  <span style={{ fontWeight: '700', color: '#0f172a' }}>{formatPrice(totalMrp)}</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Fees</span>
-                  <span style={{ color: deliveryType === 'store-pickup' ? '#16a34a' : '#0f172a', fontWeight: '700' }}>
-                    {deliveryType === 'store-pickup' ? 'FREE' : formatPrice(deliveryFee || 120)}
-                  </span>
-                </div>
-
-                {mrpDiscount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
-                    <span>Discount on MRP</span>
-                    <span style={{ fontWeight: '700' }}>- {formatPrice(mrpDiscount)}</span>
-                  </div>
-                )}
-
-                {discountAmount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}>
-                    <span>Coupons Applied ({activeCoupon?.code})</span>
-                    <span style={{ fontWeight: '700' }}>- {formatPrice(discountAmount)}</span>
-                  </div>
-                )}
-
-                {/* Total Amount */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', borderTop: '2px solid #0f172a', paddingTop: '14px', marginTop: '4px' }}>
-                  <span>Total Amount</span>
-                  <span style={{ color: '#ea580c', fontFamily: 'monospace', fontSize: '1.25rem' }}>{formatPrice(finalTotal)}</span>
-                </div>
-
-                {/* Green Savings Highlight */}
-                {totalSavings > 0 && (
-                  <div style={{
-                    background: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    borderRadius: '8px',
-                    padding: '10px 12px',
-                    color: '#16a34a',
-                    fontWeight: '700',
-                    fontSize: '0.84rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <span>🌱</span>
-                    <span>You'll save {formatPrice(totalSavings)} on this order!</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 3. STORE GUARANTEES */}
-            <div style={{ background: '#ffffff', borderRadius: '12px', border: '1.5px solid #e2e8f0', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
-                <ShieldCheck size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
-                <span>100% Genuine Tools from Authorized Dealers</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
-                <FileText size={16} style={{ color: '#0284c7', flexShrink: 0 }} />
-                <span>Official GST Tax Invoice & Warranty Card</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
-                <Mail size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
-                <span>Instant WhatsApp & Email Order Receipts</span>
-              </div>
-            </div>
 
           </div>
 
