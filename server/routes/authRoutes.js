@@ -425,90 +425,12 @@ router.get('/check-phone/:phone', async (req, res) => {
   }
 });
 
-// POST register endpoint - Create new customer account
+// POST register endpoint - Block OTP-less direct registration
 router.post('/register', async (req, res) => {
-  try {
-    const { name, phone, email } = req.body;
-
-    if (!name || !name.trim()) {
-      return res.status(400).json({ success: false, message: 'Full name is required.' });
-    }
-    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
-    if (!cleanPhone || cleanPhone.length !== 10) {
-      return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number is required.' });
-    }
-
-    const cleanEmail = (email && email.trim().includes('@'))
-      ? email.trim().toLowerCase()
-      : `${cleanPhone}@customer.variathupowertools.com`;
-
-    // Check if phone already registered
-    const existingByPhone = await db.lookupCustomerByPhone(cleanPhone);
-    if (existingByPhone) {
-      return res.status(409).json({
-        success: false,
-        message: 'An account with this mobile number already exists. Please login instead.'
-      });
-    }
-
-    // Check if email already registered (only for user-provided real emails)
-    if (email && email.trim().includes('@')) {
-      const existingByEmail = await db.lookupCustomerByEmail(email.trim());
-      if (existingByEmail) {
-        return res.status(409).json({
-          success: false,
-          message: 'An account with this email already exists. Please login with your mobile number.'
-        });
-      }
-    }
-
-    // Create new customer
-    const customerDoc = await db.findOrCreateCustomer({
-      phone: cleanPhone,
-      name: name.trim(),
-      email: cleanEmail,
-      address: req.body.address || '',
-      district: req.body.district || 'Pathanamthitta',
-      pincode: req.body.pincode || '689641'
-    });
-
-    // Send welcome email if valid customer email provided
-    if (email && email.trim().includes('@')) {
-      emailService.sendWelcomeEmail(customerDoc).catch(err => {
-        console.warn(`[Resend Email] Welcome email error:`, err.message);
-      });
-    }
-
-    const userObj = {
-      id: customerDoc._id,
-      name: customerDoc.name,
-      phone: customerDoc.phone,
-      email: customerDoc.email || '',
-      address: customerDoc.address || '',
-      landmark: customerDoc.landmark || '',
-      district: customerDoc.district || 'Pathanamthitta',
-      state: customerDoc.state || 'Kerala',
-      pincode: customerDoc.pincode || '689641',
-      savedAddresses: customerDoc.savedAddresses || [],
-      role: 'customer',
-      location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
-    };
-
-    const token = generateToken({
-      id: String(customerDoc._id),
-      phone: customerDoc.phone,
-      role: 'customer'
-    });
-
-    return res.status(201).json({
-      success: true,
-      isNewAccount: true,
-      token,
-      user: userObj
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Registration processing error' });
-  }
+  return res.status(403).json({
+    success: false,
+    message: 'Customer registration strictly requires OTP verification. Please use /api/auth/send-otp and /api/auth/verify-otp.'
+  });
 });
 
 module.exports = router;
