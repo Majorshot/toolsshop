@@ -7112,11 +7112,15 @@ header.main-site-header {
 }
 
 @media (max-width: 640px) {
-  .checkout-summary-column > div,
-  .checkout-steps-column > div {
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-    box-sizing: border-box !important;
+  .checkout-page-root {
+    padding: 12px 10px 100px;
+  }
+  .checkout-main-grid {
+    gap: 12px;
+  }
+  .checkout-summary-column,
+  .checkout-steps-column {
+    gap: 12px;
   }
 }
 

@@ -2236,61 +2236,71 @@ export const CheckoutPage = () => {
             {/* VIEW C: STEP === 'summary' (ORDER SUMMARY - IMAGE 1 STYLE)   */}
             {/* ============================================================ */}
             {step === 'summary' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
                 {/* 1. DELIVERY MODE SELECTOR (DOORSTEP COURIER VS STORE PICKUP) */}
                 <div style={{
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1.5px solid #e2e8f0',
-                  padding: '18px 20px',
+                  padding: '16px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px'
                 }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    Select Delivery Method:
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Truck size={15} style={{ color: '#ea580c' }} />
+                      <span>Select Delivery Method:</span>
+                    </div>
+                    <span style={{ fontSize: '0.74rem', color: deliveryType === 'kerala-courier' ? '#ea580c' : '#16a34a', fontWeight: '700' }}>
+                      {deliveryType === 'kerala-courier' ? 'Doorstep Courier' : 'Store Pickup'}
+                    </span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {/* Option 1: Doorstep Courier Delivery */}
                     <div
                       onClick={() => setDeliveryType('kerala-courier')}
                       style={{
                         border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
                         borderRadius: '10px',
-                        padding: '14px 16px',
+                        padding: '12px 14px',
                         cursor: 'pointer',
                         background: deliveryType === 'kerala-courier' ? '#fff7ed' : '#ffffff',
                         transition: 'all 0.15s ease',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '8px',
+                        gap: '10px',
                         boxShadow: deliveryType === 'kerala-courier' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                       }}
                       id="opt-checkout-courier"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="radio"
-                          name="summaryDeliveryType"
-                          checked={deliveryType === 'kerala-courier'}
-                          onChange={() => setDeliveryType('kerala-courier')}
-                          style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
-                        />
-                        <div>
-                          <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Truck size={16} style={{ color: '#0284c7' }} />
-                            Doorstep Courier Delivery
-                          </span>
-                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                            Fast parcel dispatch to your address across Kerala
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: deliveryType === 'kerala-courier' ? '5px solid #ea580c' : '2px solid #cbd5e1',
+                          background: '#ffffff',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span>Doorstep Courier Delivery</span>
+                            <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#0284c7', background: '#f0f9ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                              Kerala
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                            Fast parcel dispatch to your address
                           </span>
                         </div>
                       </div>
-                      <span style={{ color: '#ea580c', fontSize: '0.88rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: '#ea580c', fontSize: '0.92rem', fontWeight: '800', flexShrink: 0 }}>
                         ₹120
                       </span>
                     </div>
@@ -2301,37 +2311,41 @@ export const CheckoutPage = () => {
                       style={{
                         border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
                         borderRadius: '10px',
-                        padding: '14px 16px',
+                        padding: '12px 14px',
                         cursor: 'pointer',
                         background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
                         transition: 'all 0.15s ease',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: '8px',
+                        gap: '10px',
                         boxShadow: deliveryType === 'store-pickup' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                       }}
                       id="opt-checkout-pickup"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input
-                          type="radio"
-                          name="summaryDeliveryType"
-                          checked={deliveryType === 'store-pickup'}
-                          onChange={() => setDeliveryType('store-pickup')}
-                          style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
-                        />
-                        <div>
-                          <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Building size={16} style={{ color: '#16a34a' }} />
-                            Store Pickup (Kozhencherry)
-                          </span>
-                          <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: deliveryType === 'store-pickup' ? '5px solid #ea580c' : '2px solid #cbd5e1',
+                          background: '#ffffff',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }} />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span>Store Pickup</span>
+                            <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
+                              Kozhencherry
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
                             Direct handover at Poyanil Building Showroom
                           </span>
                         </div>
                       </div>
-                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.74rem', fontWeight: '800', padding: '3px 10px', borderRadius: '9999px', whiteSpace: 'nowrap' }}>
+                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.74rem', fontWeight: '800', padding: '3px 10px', borderRadius: '9999px', flexShrink: 0 }}>
                         FREE
                       </span>
                     </div>
@@ -2343,145 +2357,177 @@ export const CheckoutPage = () => {
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1.5px solid #e2e8f0',
-                  padding: '18px 20px',
+                  padding: '16px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  gap: '16px'
+                  flexDirection: 'column',
+                  gap: '8px'
                 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {deliveryType === 'store-pickup' ? 'Collect From:' : 'Deliver to:'}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: '0.98rem', color: '#0f172a', fontWeight: '800' }}>
-                        {deliveryType === 'store-pickup' ? (user?.name || 'Customer') : (deliveryAddress.name || user?.name || 'Customer')}
-                      </strong>
-                      <span style={{
-                        background: deliveryType === 'store-pickup' ? '#ecfdf5' : '#f1f5f9',
-                        color: deliveryType === 'store-pickup' ? '#16a34a' : '#475569',
-                        fontSize: '0.72rem',
-                        fontWeight: '800',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em'
-                      }}>
-                        {deliveryType === 'store-pickup' ? 'STORE PICKUP' : (deliveryAddress.addressType || 'HOME')}
+                  {/* Header Row: Label & Change Button */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MapPin size={15} style={{ color: '#ea580c' }} />
+                      <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        {deliveryType === 'store-pickup' ? 'Collect From:' : 'Deliver To:'}
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.5', maxWidth: '640px' }}>
-                      {deliveryType === 'store-pickup' ? (
-                        'Variathu Power Tools Showroom, Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641'
-                      ) : (
-                        <>
-                          {deliveryAddress.address}
-                          {deliveryAddress.locality ? `, ${deliveryAddress.locality}` : ''}
-                          {deliveryAddress.landmark ? `, Near ${deliveryAddress.landmark}` : ''}, {deliveryAddress.city || deliveryAddress.district || 'Pathanamthitta'}, {deliveryAddress.state || 'Kerala'} - <strong>{deliveryAddress.pincode}</strong>
-                        </>
-                      )}
-                    </div>
-
-                    <div style={{ fontSize: '0.88rem', color: '#0f172a', fontWeight: '700' }}>
-                      {deliveryType === 'store-pickup' ? '+91 94475 59333 (Showroom Helpline)' : (deliveryAddress.phone || user?.phone)}
-                    </div>
+                    {deliveryType === 'kerala-courier' ? (
+                      <button
+                        type="button"
+                        onClick={handleOpenAddressModal}
+                        id="btn-checkout-change-address"
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          color: '#0f172a',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <Edit3 size={12} style={{ color: '#ea580c' }} />
+                        <span>Change</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeliveryType('kerala-courier');
+                          handleOpenAddressModal();
+                        }}
+                        style={{
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          color: '#0f172a',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        Switch to Courier
+                      </button>
+                    )}
                   </div>
 
-                  {deliveryType === 'kerala-courier' ? (
-                    <button
-                      type="button"
-                      onClick={handleOpenAddressModal}
-                      id="btn-checkout-change-address"
-                      style={{
-                        background: '#ffffff',
-                        border: '1.5px solid #cbd5e1',
-                        color: '#0f172a',
-                        fontSize: '0.84rem',
-                        fontWeight: '700',
-                        padding: '8px 20px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      Change
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDeliveryType('kerala-courier');
-                        handleOpenAddressModal();
-                      }}
-                      style={{
-                        background: '#ffffff',
-                        border: '1.5px solid #cbd5e1',
-                        color: '#0f172a',
-                        fontSize: '0.84rem',
-                        fontWeight: '700',
-                        padding: '8px 18px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      Switch to Courier
-                    </button>
-                  )}
+                  {/* Customer Name & Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <strong style={{ fontSize: '0.96rem', color: '#0f172a', fontWeight: '800' }}>
+                      {deliveryType === 'store-pickup' ? (user?.name || 'Customer') : (deliveryAddress.name || user?.name || 'Customer')}
+                    </strong>
+                    <span style={{
+                      background: deliveryType === 'store-pickup' ? '#ecfdf5' : '#f1f5f9',
+                      color: deliveryType === 'store-pickup' ? '#16a34a' : '#475569',
+                      fontSize: '0.68rem',
+                      fontWeight: '800',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em'
+                    }}>
+                      {deliveryType === 'store-pickup' ? 'STORE PICKUP' : (deliveryAddress.addressType || 'HOME')}
+                    </span>
+                  </div>
+
+                  {/* Address Body */}
+                  <div style={{ fontSize: '0.84rem', color: '#334155', lineHeight: '1.45' }}>
+                    {deliveryType === 'store-pickup' ? (
+                      'Variathu Power Tools Showroom, Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641'
+                    ) : (
+                      <>
+                        {deliveryAddress.address}
+                        {deliveryAddress.locality ? `, ${deliveryAddress.locality}` : ''}
+                        {deliveryAddress.landmark ? `, Near ${deliveryAddress.landmark}` : ''}, {deliveryAddress.city || deliveryAddress.district || 'Pathanamthitta'}, {deliveryAddress.state || 'Kerala'} - <strong>{deliveryAddress.pincode}</strong>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Contact Phone */}
+                  <div style={{ fontSize: '0.84rem', color: '#0f172a', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Phone size={13} style={{ color: '#64748b' }} />
+                    <span>{deliveryType === 'store-pickup' ? '+91 94475 59333 (Showroom Helpline)' : (deliveryAddress.phone || user?.phone)}</span>
+                  </div>
                 </div>
 
-                {/* 3. BOTTOM BAR: TERMS & CONTINUE BUTTON (IMAGE 1 STYLE) */}
+                {/* 3. BOTTOM BAR: TERMS, TOTAL & CONTINUE BUTTON */}
                 <div style={{
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1.5px solid #e2e8f0',
-                  padding: '18px 20px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  padding: '16px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '14px'
+                  flexDirection: 'column',
+                  gap: '12px'
                 }}>
-                  <p style={{
-                    fontSize: '0.78rem',
-                    color: '#64748b',
-                    margin: 0,
-                    lineHeight: '1.5',
-                    maxWidth: '480px'
-                  }}>
-                    By continuing with the order, you confirm that you are above 18 years of age, and you agree to the Variathu Power Tools Terms of Use and Privacy Policy.
-                  </p>
+                  {/* Price & Summary Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                    <div>
+                      <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Total Amount:
+                      </span>
+                      <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.02em', lineHeight: '1.2' }}>
+                        {formatPrice(finalTotal)}
+                      </div>
+                    </div>
 
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700', display: 'block' }}>
+                        {deliveryType === 'store-pickup' ? 'Free Store Pickup' : 'Includes ₹120 Courier'}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        {cart.reduce((s, i) => s + i.quantity, 0)} Item(s)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Full Width Continue Button */}
                   <button
                     type="button"
                     onClick={handleContinueFromSummary}
                     style={{
+                      width: '100%',
                       background: '#dc2626',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '10px',
-                      padding: '14px 40px',
-                      fontSize: '0.96rem',
+                      padding: '14px 20px',
+                      fontSize: '0.95rem',
                       fontWeight: '800',
                       letterSpacing: '0.02em',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                      boxShadow: '0 4px 14px rgba(220, 38, 38, 0.28)',
                       display: 'flex',
                       alignItems: 'center',
+                      justifyContent: 'center',
                       gap: '8px',
                       transition: 'all 0.15s ease'
                     }}
                     id="btn-flipkart-continue-to-payment"
                   >
-                    <span>CONTINUE</span>
+                    <span>CONTINUE TO PAYMENT</span>
                     <ArrowRight size={18} />
                   </button>
+
+                  {/* Terms disclaimer */}
+                  <p style={{
+                    fontSize: '0.72rem',
+                    color: '#94a3b8',
+                    margin: 0,
+                    lineHeight: '1.4',
+                    textAlign: 'center'
+                  }}>
+                    By continuing with the order, you confirm that you are above 18 years of age, and you agree to the Variathu Power Tools Terms of Use and Privacy Policy.
+                  </p>
                 </div>
 
               </div>
@@ -2491,28 +2537,49 @@ export const CheckoutPage = () => {
             {/* VIEW D: STEP === 'payment' (PAYMENT METHOD & CONFIRMATION)   */}
             {/* ============================================================ */}
             {step === 'payment' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
                 {/* Collapsed Step 1 Address Bar */}
                 <div style={{
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1.5px solid #e2e8f0',
-                  padding: '16px 20px',
+                  padding: '14px 16px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  gap: '12px'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#16a34a', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                    <span style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: '#16a34a',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      flexShrink: 0
+                    }}>
                       ✓
                     </span>
-                    <div>
-                      <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
                         1. DELIVERY ADDRESS
                       </span>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a', marginTop: '2px' }}>
+                      <div style={{
+                        fontSize: '0.86rem',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        marginTop: '2px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
                         {deliveryType === 'store-pickup' ? 'Poyanil Building Store Pickup' : `${deliveryAddress.name}, ${deliveryAddress.city || deliveryAddress.district} - ${deliveryAddress.pincode}`}
                       </div>
                     </div>
@@ -2521,7 +2588,18 @@ export const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={handleOpenAddressModal}
-                    style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#0f172a', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #cbd5e1',
+                      color: '#0f172a',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease'
+                    }}
                   >
                     Change
                   </button>
@@ -2532,21 +2610,42 @@ export const CheckoutPage = () => {
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1.5px solid #e2e8f0',
-                  padding: '16px 20px',
+                  padding: '14px 16px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
+                  justifyContent: 'space-between',
+                  gap: '12px'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#16a34a', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.74rem', fontWeight: '800' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+                    <span style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      background: '#16a34a',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      flexShrink: 0
+                    }}>
                       ✓
                     </span>
-                    <div>
-                      <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
                         2. ORDER SUMMARY
                       </span>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0f172a', marginTop: '2px' }}>
+                      <div style={{
+                        fontSize: '0.86rem',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        marginTop: '2px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
                         {cart.reduce((s, i) => s + i.quantity, 0)} Item(s) • Total {formatPrice(finalTotal)}
                       </div>
                     </div>
@@ -2555,7 +2654,18 @@ export const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={() => setStep('summary')}
-                    style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', color: '#0f172a', fontSize: '0.82rem', fontWeight: '700', padding: '6px 16px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1.5px solid #cbd5e1',
+                      color: '#0f172a',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      transition: 'all 0.15s ease'
+                    }}
                   >
                     Change
                   </button>
@@ -2566,51 +2676,77 @@ export const CheckoutPage = () => {
                   background: '#ffffff',
                   borderRadius: '12px',
                   border: '1.5px solid #e2e8f0',
-                  padding: '22px 24px',
+                  padding: '18px 16px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '18px'
+                  gap: '16px'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ea580c', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.84rem' }}>
+                    <div style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      background: '#ea580c',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      flexShrink: 0
+                    }}>
                       3
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>
                         PAYMENT OPTIONS
                       </h3>
-                      <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
+                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '2px 0 0' }}>
                         Select your preferred payment mode
                       </p>
                     </div>
                   </div>
 
                   {/* Payment Options Radio Cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
                     {/* Razorpay Online */}
                     <div
                       onClick={() => setPaymentMethod('razorpay')}
                       style={{
                         border: paymentMethod === 'razorpay' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
-                        borderRadius: '10px',
-                        padding: '16px',
+                        borderRadius: '12px',
+                        padding: '14px 16px',
                         cursor: 'pointer',
-                        background: paymentMethod === 'razorpay' ? '#fff7ed' : '#ffffff',
+                        background: paymentMethod === 'razorpay' ? '#fffaf5' : '#ffffff',
                         transition: 'all 0.15s ease',
-                        boxShadow: paymentMethod === 'razorpay' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
+                        boxShadow: paymentMethod === 'razorpay' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
-                          ⚡ Razorpay Online
-                        </span>
-                        <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: paymentMethod === 'razorpay' ? '5px solid #ea580c' : '2px solid #cbd5e1',
+                            background: '#ffffff',
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease'
+                          }} />
+                          <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
+                            ⚡ Razorpay Online
+                          </span>
+                        </div>
+                        <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.68rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px', flexShrink: 0 }}>
                           Recommended
                         </span>
                       </div>
-                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
-                        UPI (GPay, PhonePe, Paytm), Debit / Credit Cards, NetBanking. Instant digital receipt.
+                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, paddingLeft: '28px', lineHeight: '1.4' }}>
+                        UPI (GPay, PhonePe, Paytm), Cards, NetBanking. Instant digital receipt.
                       </p>
                     </div>
 
@@ -2619,28 +2755,42 @@ export const CheckoutPage = () => {
                       onClick={() => setPaymentMethod('cash')}
                       style={{
                         border: paymentMethod === 'cash' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
-                        borderRadius: '10px',
-                        padding: '16px',
+                        borderRadius: '12px',
+                        padding: '14px 16px',
                         cursor: 'pointer',
-                        background: paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
+                        background: paymentMethod === 'cash' ? '#fffaf5' : '#ffffff',
                         transition: 'all 0.15s ease',
-                        boxShadow: paymentMethod === 'cash' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
+                        boxShadow: paymentMethod === 'cash' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
-                          💵 {deliveryType === 'store-pickup' ? 'Pay at Counter' : 'Cash on Delivery (COD)'}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: paymentMethod === 'cash' ? '5px solid #ea580c' : '2px solid #cbd5e1',
+                            background: '#ffffff',
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease'
+                          }} />
+                          <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
+                            💵 {deliveryType === 'store-pickup' ? 'Pay at Counter' : 'Cash on Delivery (COD)'}
+                          </span>
+                        </div>
                       </div>
-                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
+                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, paddingLeft: '28px', lineHeight: '1.4' }}>
                         {deliveryType === 'store-pickup' ? 'Pay at Poyanil Building during equipment pickup.' : 'Pay cash to courier partner upon delivery.'}
                       </p>
                     </div>
                   </div>
 
                   {/* Promo Coupon Box */}
-                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '14px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px' }}>
+                  <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ display: 'block', fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', color: '#64748b', marginBottom: '8px', letterSpacing: '0.04em' }}>
                       Have a Promo Coupon?
                     </span>
 
@@ -2669,12 +2819,12 @@ export const CheckoutPage = () => {
                           placeholder="ENTER COUPON CODE"
                           value={couponInput}
                           onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                          style={{ flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
+                          style={{ flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.84rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
                         />
                         <button
                           type="submit"
                           disabled={couponLoading || !couponInput.trim()}
-                          style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
+                          style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
                         >
                           {couponLoading ? '...' : 'Apply'}
                         </button>
@@ -2683,12 +2833,12 @@ export const CheckoutPage = () => {
                   </div>
 
                   {/* Primary Account Notification Reminder */}
-                  <div style={{ fontSize: '0.78rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                  <div style={{ fontSize: '0.76rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd', lineHeight: '1.45' }}>
                     📱 <strong>Account Notice:</strong> WhatsApp order receipt and live dispatch updates will be sent to primary number <strong>+91 {user?.phone}</strong>.
                   </div>
 
                   {/* Slide to Confirm & Place Order (Swipe Interaction - White Theme) */}
-                  <div style={{ marginTop: '14px', width: '100%' }}>
+                  <div style={{ marginTop: '4px', width: '100%' }}>
                     <SlideCommit
                       label={
                         isProcessingPayment
@@ -2696,10 +2846,10 @@ export const CheckoutPage = () => {
                           : isSubmitting
                             ? 'Placing Order...'
                             : deliveryType === 'store-pickup'
-                              ? `Slide to place pickup order • ${formatPrice(finalTotal)}  ›››`
+                              ? `Slide to Confirm • ${formatPrice(finalTotal)}  ›››`
                               : paymentMethod === 'razorpay'
-                                ? `Slide to pay • ${formatPrice(finalTotal)}  ›››`
-                                : `Slide to confirm order • ${formatPrice(finalTotal)}  ›››`
+                                ? `Slide to Pay • ${formatPrice(finalTotal)}  ›››`
+                                : `Slide to Confirm Order • ${formatPrice(finalTotal)}  ›››`
                       }
                       doneLabel={paymentMethod === 'razorpay' ? 'Payment Verified' : 'Order Placed!'}
                       errorLabel="Payment Failed / Retry"
@@ -2718,8 +2868,8 @@ export const CheckoutPage = () => {
                       successColor="#16a34a"
                       dangerColor="#dc2626"
                       width="100%"
-                      height={58}
-                      radius={29}
+                      height={54}
+                      radius={27}
                       speed={55}
                       returnBounce={0.38}
                       landingDip={0.026}
