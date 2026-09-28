@@ -22,6 +22,14 @@ try {
   console.warn("Razorpay instance init notice in db.js:", err.message);
 }
 
+/**
+ * Safely escape regular expression special characters to prevent ReDoS and regex injection
+ */
+function escapeRegex(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Store Info for Variathu Power Tools
 const storeInfo = {
   name: "Variathu Power Tools",
@@ -665,13 +673,14 @@ const db = {
       query.category = filters.category;
     }
     if (filters.brand && filters.brand !== 'all') {
-      query.brand = { $regex: new RegExp(`^${filters.brand}$`, 'i') };
+      const escapedBrand = escapeRegex(filters.brand.trim());
+      query.brand = { $regex: new RegExp(`^${escapedBrand}$`, 'i') };
     }
     if (filters.cordless !== undefined && filters.cordless !== null) {
       query.cordless = filters.cordless === 'true' || filters.cordless === true;
     }
     if (filters.search) {
-      const q = filters.search.trim();
+      const q = escapeRegex(filters.search.trim());
       query.$or = [
         { name: { $regex: q, $options: 'i' } },
         { brand: { $regex: q, $options: 'i' } },
@@ -834,7 +843,8 @@ const db = {
 
     let deletedProductsCount = 0;
     if (deleteProducts) {
-      const res = await ProductModel.deleteMany({ brand: { $regex: new RegExp(`^${clean}$`, 'i') } });
+      const escaped = escapeRegex(clean);
+      const res = await ProductModel.deleteMany({ brand: { $regex: new RegExp(`^${escaped}$`, 'i') } });
       deletedProductsCount = res.deletedCount || 0;
       invalidateCatalogCache();
     }
@@ -867,8 +877,9 @@ const db = {
   async getCustomerOrders(query) {
     ensureMongoConnected();
     if (!query) return await OrderModel.find().sort({ createdAt: -1 }).lean();
-    const cleanQ = String(query).trim();
-    const digitsOnly = cleanQ.replace(/[^0-9]/g, '').slice(-10);
+    const rawQ = String(query).trim();
+    const cleanQ = escapeRegex(rawQ);
+    const digitsOnly = rawQ.replace(/[^0-9]/g, '').slice(-10);
 
     const conditions = [
       { 'customer.phone': { $regex: cleanQ, $options: 'i' } },
@@ -876,10 +887,10 @@ const db = {
       { 'customer.name': { $regex: cleanQ, $options: 'i' } }
     ];
 
-    if (mongoose.isValidObjectId(cleanQ)) {
-      conditions.push({ customerId: cleanQ });
+    if (mongoose.isValidObjectId(rawQ)) {
+      conditions.push({ customerId: rawQ });
       try {
-        const custDoc = await CustomerModel.findById(cleanQ).lean();
+        const custDoc = await CustomerModel.findById(rawQ).lean();
         if (custDoc) {
           if (custDoc.phone) {
             const custDigits = custDoc.phone.replace(/[^0-9]/g, '').slice(-10);
@@ -1485,15 +1496,16 @@ const db = {
     ensureMongoConnected();
     let query = {};
     if (search && search.trim()) {
-      const q = search.trim();
-      const cleanDigits = q.replace(/[^0-9]/g, '');
+      const raw = search.trim();
+      const q = escapeRegex(raw);
+      const cleanDigits = raw.replace(/[^0-9]/g, '');
       const conditions = [
         { name: { $regex: q, $options: 'i' } },
         { district: { $regex: q, $options: 'i' } },
         { email: { $regex: q, $options: 'i' } }
       ];
       if (cleanDigits.length >= 4) {
-        conditions.push({ phone: { $regex: cleanDigits } });
+        conditions.push({ phone: { $regex: escapeRegex(cleanDigits) } });
       }
       query.$or = conditions;
     }

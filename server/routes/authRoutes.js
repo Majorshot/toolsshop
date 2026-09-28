@@ -408,10 +408,21 @@ router.get('/check-phone/:phone', async (req, res) => {
     }
     const customerDoc = await db.lookupCustomerByPhone(rawPhone);
     if (customerDoc) {
+      // Privacy Protection: Mask customer name to prevent scraping and PII enumeration (e.g. "Midhun Mohan" -> "M••••• M••••")
+      const rawName = String(customerDoc.name || 'Customer').trim();
+      const maskedName = rawName
+        .split(/\s+/)
+        .map(word => {
+          if (word.length <= 1) return word;
+          if (word.length === 2) return word[0] + '•';
+          return word[0] + '•'.repeat(Math.min(word.length - 1, 4));
+        })
+        .join(' ');
+
       return res.json({
         success: true,
         exists: true,
-        name: customerDoc.name,
+        name: maskedName,
         hasAddress: !!(customerDoc.address && customerDoc.pincode),
         district: customerDoc.district || 'Pathanamthitta'
       });
