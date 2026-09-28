@@ -1531,44 +1531,6 @@ export const CheckoutPage = () => {
               flexDirection: 'column',
               gap: '14px'
             }}>
-              {isBuyNow && (
-                <div style={{
-                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
-                  border: '1.5px solid #fcd34d',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  marginBottom: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  flexWrap: 'wrap'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ background: '#d97706', color: '#ffffff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Zap size={13} />
-                    </div>
-                    <span style={{ fontSize: '0.82rem', color: '#92400e', fontWeight: '700' }}>
-                      <strong>Direct Buy Now:</strong> Only this single product is billed. Your saved cart items remain untouched.
-                    </span>
-                  </div>
-                  {cart && cart.length > 0 && (
-                    <Link
-                      to="/cart"
-                      style={{
-                        fontSize: '0.78rem',
-                        fontWeight: '800',
-                        color: '#b45309',
-                        textDecoration: 'underline',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      View Saved Cart ({cart.length}) →
-                    </Link>
-                  )}
-                </div>
-              )}
-
               <div style={{
                 fontSize: '0.84rem',
                 fontWeight: '800',
@@ -1581,9 +1543,7 @@ export const CheckoutPage = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}>
-                <span style={{ color: '#0f172a', fontSize: '0.94rem' }}>
-                  {isBuyNow ? 'Single Product Checkout' : `Order Items (${checkoutItems.length})`}
-                </span>
+                <span style={{ color: '#0f172a', fontSize: '0.94rem' }}>Order Items ({checkoutItems.length})</span>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>
                   {checkoutItems.reduce((s, i) => s + i.quantity, 0)} total unit(s)
                 </span>
