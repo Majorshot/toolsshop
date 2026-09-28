@@ -4054,181 +4054,196 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
           {/* Search, Filter & Sort Bar */}
           <div className="store-inventory-toolbar">
-            {/* 1. Search Box */}
-            <div className="store-inv-search-wrap">
-              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-              <input
-                type="text"
-                placeholder="Search tools by name, brand, SKU..."
-                value={inventorySearch}
-                onChange={(e) => setInventorySearch(e.target.value)}
-                className="store-inv-search-input"
-                id="input-inventory-search"
-              />
-              {inventorySearch && (
+            {/* Top Row: Search & Selection Filters */}
+            <div className="store-inv-toolbar-top">
+              {/* 1. Search Box */}
+              <div className="store-inv-search-wrap">
+                <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  placeholder="Search tools by name, brand, SKU..."
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                  className="store-inv-search-input"
+                  id="input-inventory-search"
+                />
+                {inventorySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setInventorySearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Clear search text"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* 2. Filter by Company / Brand (Fixed width trigger) */}
+              <div className="store-inv-filter-group">
+                <label>Company:</label>
+                <div className="store-inv-filter-dropdown-wrap store-inv-filter-brand-wrap">
+                  <GlideSelect
+                    id="select-filter-brand"
+                    fullWidth
+                    options={[
+                      { value: 'all', label: 'All Companies / Brands', tag: `${products.length}` },
+                      ...uniqueBrands.map(b => {
+                        const count = products.filter(p => (p.brand || '').toLowerCase() === b.toLowerCase()).length;
+                        return {
+                          value: b,
+                          label: b,
+                          tag: count > 0 ? `${count}` : undefined
+                        };
+                      })
+                    ]}
+                    value={inventoryBrandFilter}
+                    onChange={(val) => handleBrandFilterChange(val)}
+                    ariaLabel="Filter inventory by brand"
+                    showTags
+                    accentColor="#0284c7"
+                    surfaceColor={inventoryBrandFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                    borderColor={inventoryBrandFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                    textColor={inventoryBrandFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                    highlightColor="#e0f2fe"
+                    size="md"
+                    radius={8}
+                    menuWidth={260}
+                    maxHeight={280}
+                  />
+                </div>
+              </div>
+
+              {/* 3. Filter by Category (Fixed width trigger) */}
+              <div className="store-inv-filter-group">
+                <label>Category:</label>
+                <div className="store-inv-filter-dropdown-wrap store-inv-filter-category-wrap">
+                  <GlideSelect
+                    id="select-filter-category"
+                    fullWidth
+                    options={[
+                      { value: 'all', label: 'All Categories', tag: `${selectedBrandProductCount}` },
+                      ...sortedCategoryIds.map(catId => {
+                        const count = getCategoryCountForSelectedBrand(catId);
+                        return {
+                          value: catId,
+                          label: getCategoryLabel(catId),
+                          tag: `${count}`
+                        };
+                      })
+                    ]}
+                    value={inventoryCategoryFilter}
+                    onChange={(val) => setInventoryCategoryFilter(val)}
+                    ariaLabel="Filter inventory by category"
+                    showTags
+                    accentColor="#0284c7"
+                    surfaceColor={inventoryCategoryFilter !== 'all' ? '#eff6ff' : '#ffffff'}
+                    borderColor={inventoryCategoryFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
+                    textColor={inventoryCategoryFilter !== 'all' ? '#0369a1' : '#0f172a'}
+                    highlightColor="#e0f2fe"
+                    size="md"
+                    radius={8}
+                    menuWidth={260}
+                    maxHeight={280}
+                  />
+                </div>
+              </div>
+
+              {/* 4. Sort By (Fixed width trigger) */}
+              <div className="store-inv-filter-group sort-group">
+                <label>Sort:</label>
+                <div className="store-inv-filter-dropdown-wrap store-inv-filter-sort-wrap">
+                  <GlideSelect
+                    id="select-sort-inventory"
+                    fullWidth
+                    options={INVENTORY_SORT_OPTIONS}
+                    value={inventorySortFilter}
+                    onChange={(val) => setInventorySortFilter(val)}
+                    ariaLabel="Sort inventory"
+                    showTags
+                    accentColor="#ea580c"
+                    surfaceColor={inventorySortFilter !== 'default' ? '#fff7ed' : '#ffffff'}
+                    borderColor={inventorySortFilter !== 'default' ? '#ea580c' : '#cbd5e1'}
+                    textColor={inventorySortFilter !== 'default' ? '#c2410c' : '#0f172a'}
+                    highlightColor="#ffedd5"
+                    size="md"
+                    radius={8}
+                    menuWidth={250}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Row: Actions & Filter Chips */}
+            <div className="store-inv-toolbar-bottom">
+              {/* 5. Feature 3: Low Stock (<4) Filter Toggle Chip */}
+              <button
+                type="button"
+                onClick={() => setShowLowStockOnly(prev => !prev)}
+                className="store-inv-chip-btn"
+                style={{
+                  background: showLowStockOnly ? '#dc2626' : '#fffbeb',
+                  border: showLowStockOnly ? '1.5px solid #b91c1c' : '1px solid #fde68a',
+                  color: showLowStockOnly ? '#ffffff' : '#b45309'
+                }}
+                title="Show tools with 3 or fewer units in inventory"
+                id="btn-filter-low-stock"
+              >
+                <AlertTriangle size={14} />
+                <span>Low Stock (≤3) {lowStockCount > 0 ? `(${lowStockCount})` : ''}</span>
+              </button>
+
+              {/* Feature 3: 1-Click WhatsApp Distributor Reorder PO */}
+              <button
+                type="button"
+                onClick={handleDistributorWhatsAppReorder}
+                className="store-inv-chip-btn"
+                style={{
+                  background: '#f0fdf4',
+                  border: '1.5px solid #86efac',
+                  color: '#16a34a'
+                }}
+                title="Generate a grouped purchase order text and send to distributor rep on WhatsApp"
+                id="btn-reorder-whatsapp"
+              >
+                <MessageCircle size={14} />
+                <span>Reorder via WhatsApp</span>
+              </button>
+
+              {/* 6. Clear / Reset Filters if active */}
+              {hasActiveInventoryFilters && (
                 <button
                   type="button"
-                  onClick={() => setInventorySearch('')}
+                  onClick={handleResetInventoryFilters}
+                  className="store-inv-chip-btn store-inv-reset-btn"
                   style={{
-                    position: 'absolute',
-                    right: 8,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#94a3b8',
-                    cursor: 'pointer',
-                    padding: '2px',
-                    display: 'flex',
-                    alignItems: 'center'
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626'
                   }}
-                  title="Clear search text"
+                  id="btn-reset-inventory-filters"
                 >
                   <X size={14} />
+                  <span>Reset Filters</span>
                 </button>
               )}
             </div>
-
-            {/* 2. Filter by Company / Brand */}
-            <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Company:</label>
-              <GlideSelect
-                id="select-filter-brand"
-                options={[
-                  { value: 'all', label: 'All Companies / Brands', tag: `${products.length}` },
-                  ...uniqueBrands.map(b => {
-                    const count = products.filter(p => (p.brand || '').toLowerCase() === b.toLowerCase()).length;
-                    return {
-                      value: b,
-                      label: b,
-                      tag: count > 0 ? `${count}` : undefined
-                    };
-                  })
-                ]}
-                value={inventoryBrandFilter}
-                onChange={(val) => handleBrandFilterChange(val)}
-                ariaLabel="Filter inventory by brand"
-                showTags
-                accentColor="#0284c7"
-                surfaceColor={inventoryBrandFilter !== 'all' ? '#eff6ff' : '#ffffff'}
-                borderColor={inventoryBrandFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
-                textColor={inventoryBrandFilter !== 'all' ? '#0369a1' : '#0f172a'}
-                highlightColor="#e0f2fe"
-                size="md"
-                radius={8}
-                menuWidth={260}
-                maxHeight={280}
-              />
-            </div>
-
-            {/* 3. Filter by Category */}
-            <div className="store-inv-filter-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Category:</label>
-              <GlideSelect
-                id="select-filter-category"
-                options={[
-                  { value: 'all', label: 'All Categories', tag: `${selectedBrandProductCount}` },
-                  ...sortedCategoryIds.map(catId => {
-                    const count = getCategoryCountForSelectedBrand(catId);
-                    return {
-                      value: catId,
-                      label: getCategoryLabel(catId),
-                      tag: `${count}`
-                    };
-                  })
-                ]}
-                value={inventoryCategoryFilter}
-                onChange={(val) => setInventoryCategoryFilter(val)}
-                ariaLabel="Filter inventory by category"
-                showTags
-                accentColor="#0284c7"
-                surfaceColor={inventoryCategoryFilter !== 'all' ? '#eff6ff' : '#ffffff'}
-                borderColor={inventoryCategoryFilter !== 'all' ? '#0284c7' : '#cbd5e1'}
-                textColor={inventoryCategoryFilter !== 'all' ? '#0369a1' : '#0f172a'}
-                highlightColor="#e0f2fe"
-                size="md"
-                radius={8}
-                menuWidth={260}
-                maxHeight={280}
-              />
-            </div>
-
-            {/* 4. Sort By */}
-            <div className="store-inv-filter-group sort-group" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', whiteSpace: 'nowrap' }}>Sort:</label>
-              <GlideSelect
-                id="select-sort-inventory"
-                options={INVENTORY_SORT_OPTIONS}
-                value={inventorySortFilter}
-                onChange={(val) => setInventorySortFilter(val)}
-                ariaLabel="Sort inventory"
-                showTags
-                accentColor="#ea580c"
-                surfaceColor={inventorySortFilter !== 'default' ? '#fff7ed' : '#ffffff'}
-                borderColor={inventorySortFilter !== 'default' ? '#ea580c' : '#cbd5e1'}
-                textColor={inventorySortFilter !== 'default' ? '#c2410c' : '#0f172a'}
-                highlightColor="#ffedd5"
-                size="md"
-                radius={8}
-                menuWidth={250}
-              />
-            </div>
-
-            {/* 5. Feature 3: Low Stock (<4) Filter Toggle Chip */}
-            <button
-              type="button"
-              onClick={() => setShowLowStockOnly(prev => !prev)}
-              className="store-inv-chip-btn"
-              style={{
-                background: showLowStockOnly ? '#dc2626' : '#fffbeb',
-                border: showLowStockOnly ? '1.5px solid #b91c1c' : '1px solid #fde68a',
-                color: showLowStockOnly ? '#ffffff' : '#b45309'
-              }}
-              title="Show tools with 3 or fewer units in inventory"
-              id="btn-filter-low-stock"
-            >
-              <AlertTriangle size={14} />
-              <span>Low Stock (≤3) {lowStockCount > 0 ? `(${lowStockCount})` : ''}</span>
-            </button>
-
-            {/* Feature 3: 1-Click WhatsApp Distributor Reorder PO */}
-            <button
-              type="button"
-              onClick={handleDistributorWhatsAppReorder}
-              className="store-inv-chip-btn"
-              style={{
-                background: '#f0fdf4',
-                border: '1.5px solid #86efac',
-                color: '#16a34a'
-              }}
-              title="Generate a grouped purchase order text and send to distributor rep on WhatsApp"
-              id="btn-reorder-whatsapp"
-            >
-              <MessageCircle size={14} />
-              <span>Reorder via WhatsApp</span>
-            </button>
-
-            {/* 6. Clear / Reset Filters if active */}
-            {hasActiveInventoryFilters && (
-              <button
-                type="button"
-                onClick={handleResetInventoryFilters}
-                className="store-inv-chip-btn store-inv-reset-btn"
-                style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#dc2626'
-                }}
-                id="btn-reset-inventory-filters"
-              >
-                <X size={14} />
-                <span>Reset Filters</span>
-              </button>
-            )}
           </div>
 
           {/* Catalog Count Summary */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', fontSize: '0.82rem', color: '#64748b' }}>
+          <div className="store-inv-count-bar">
             <span>
               Showing <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> equipment models
               {inventoryBrandFilter !== 'all' && <span> for <strong>{inventoryBrandFilter}</strong></span>}
