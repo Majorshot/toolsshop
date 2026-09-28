@@ -7218,6 +7218,247 @@ header.main-site-header {
   }
 }
 
+/* Checkout Address Selection Modal & Cards (Responsive) */
+.checkout-addr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  box-sizing: border-box;
+}
 
+.checkout-addr-modal-content {
+  background: #ffffff;
+  border-radius: 14px;
+  max-width: 620px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
 
+.checkout-addr-modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-sizing: border-box;
+}
 
+.checkout-addr-modal-body {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.checkout-addr-subbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Saved Address Card */
+.checkout-addr-card {
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+}
+
+.checkout-addr-card:hover {
+  border-color: #cbd5e1;
+}
+
+.checkout-addr-card.selected {
+  border: 2px solid #ea580c;
+  background: #fffbf5;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.08);
+}
+
+.checkout-addr-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.checkout-addr-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.checkout-addr-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.checkout-addr-recipient-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-left: 26px;
+}
+
+.checkout-addr-text-row {
+  font-size: 0.84rem;
+  color: #334155;
+  line-height: 1.5;
+  padding-left: 26px;
+}
+
+.checkout-addr-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 26px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+/* Store Pickup Card */
+.checkout-pickup-card {
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+}
+
+.checkout-pickup-card:hover {
+  border-color: #cbd5e1;
+}
+
+.checkout-pickup-card.selected {
+  border: 2px solid #ea580c;
+  background: #fffbf5;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.08);
+}
+
+.checkout-pickup-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.checkout-pickup-card-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkout-pickup-title {
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: #0f172a;
+  padding-left: 26px;
+}
+
+.checkout-pickup-address {
+  font-size: 0.84rem;
+  color: #334155;
+  line-height: 1.5;
+  padding-left: 26px;
+}
+
+.checkout-pickup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 26px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .checkout-addr-modal-overlay {
+    padding: 10px !important;
+  }
+  .checkout-addr-modal-content {
+    border-radius: 12px !important;
+    max-height: 94vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .checkout-addr-modal-header {
+    padding: 14px 14px !important;
+  }
+  .checkout-addr-modal-body {
+    padding: 14px 12px !important;
+    gap: 12px !important;
+  }
+  .checkout-addr-card,
+  .checkout-pickup-card {
+    padding: 12px 12px !important;
+  }
+  .checkout-addr-recipient-row,
+  .checkout-addr-text-row,
+  .checkout-addr-card-footer,
+  .checkout-pickup-title,
+  .checkout-pickup-address,
+  .checkout-pickup-footer {
+    padding-left: 0 !important;
+  }
+  .checkout-addr-card-footer,
+  .checkout-pickup-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .checkout-addr-card-footer .checkout-addr-btn-deliver,
+  .checkout-pickup-footer button {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 10px 16px !important;
+  }
+  .checkout-addr-btn-default {
+    text-align: center !important;
+    width: 100% !important;
+    padding: 4px 0 !important;
+  }
+}

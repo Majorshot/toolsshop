@@ -2898,38 +2898,17 @@ export const CheckoutPage = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 9999,
-            padding: '16px'
+            zIndex: 9999
           }}
+          className="checkout-addr-modal-overlay"
           onClick={() => setShowAddressModal(false)}
         >
           <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '12px',
-              maxWidth: '640px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              border: '1px solid #e2e8f0',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
+            className="checkout-addr-modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div style={{
-              padding: '18px 24px',
-              borderBottom: '1px solid #f1f5f9',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#ffffff',
-              position: 'sticky',
-              top: 0,
-              zIndex: 10
-            }}>
+            <div className="checkout-addr-modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>
                   {addressModalView === 'form'
@@ -2955,7 +2934,8 @@ export const CheckoutPage = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: '#64748b'
+                  color: '#64748b',
+                  flexShrink: 0
                 }}
                 title="Close modal"
               >
@@ -2965,7 +2945,7 @@ export const CheckoutPage = () => {
 
             {/* Modal Error Banner */}
             {modalError && (
-              <div style={{ margin: '16px 24px 0', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '10px 14px', color: '#991b1b', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ margin: '14px 18px 0', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '10px 14px', color: '#991b1b', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertCircle size={16} />
                 <span>{modalError}</span>
               </div>
@@ -2973,9 +2953,9 @@ export const CheckoutPage = () => {
 
             {/* Modal Body: LIST VIEW */}
             {addressModalView === 'list' && (
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div className="checkout-addr-modal-body">
+                <div className="checkout-addr-subbar">
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     Saved Addresses ({user?.savedAddresses?.length || (user?.address ? 1 : 0)})
                   </span>
                   <button
@@ -2985,19 +2965,20 @@ export const CheckoutPage = () => {
                       background: '#fff7ed',
                       border: '1px solid #fed7aa',
                       color: '#c2410c',
-                      fontSize: '0.8rem',
+                      fontSize: '0.78rem',
                       fontWeight: '700',
-                      padding: '6px 14px',
+                      padding: '6px 12px',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      flexShrink: 0
                     }}
                     id="btn-modal-add-new-address"
                   >
                     <Plus size={14} />
-                    <span>+ Add New Address</span>
+                    <span>Add New Address</span>
                   </button>
                 </div>
 
@@ -3007,80 +2988,70 @@ export const CheckoutPage = () => {
                     setDeliveryType('store-pickup');
                     setShowAddressModal(false);
                   }}
-                  style={{
-                    border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
-                    background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
-                    borderRadius: '10px',
-                    padding: '16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '12px',
-                    boxShadow: deliveryType === 'store-pickup' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
-                  }}
+                  className={`checkout-pickup-card ${deliveryType === 'store-pickup' ? 'selected' : ''}`}
                 >
-                  <input
-                    type="radio"
-                    name="modalSelectedAddressOrPickup"
-                    checked={deliveryType === 'store-pickup'}
-                    onChange={() => {
-                      setDeliveryType('store-pickup');
-                      setShowAddressModal(false);
-                    }}
-                    style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px', marginTop: '3px' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{
-                          background: '#ecfdf5',
-                          color: '#059669',
-                          fontSize: '0.7rem',
-                          fontWeight: '800',
-                          padding: '2px 8px',
-                          borderRadius: '6px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em'
-                        }}>
-                          STORE PICKUP
-                        </span>
-                        <strong style={{ fontSize: '0.94rem', color: '#0f172a' }}>
-                          Direct Pickup at Kozhencherry Showroom
-                        </strong>
-                      </div>
-                      <span style={{ background: '#ecfdf5', color: '#059669', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px' }}>
-                        FREE
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.86rem', color: '#334155', marginTop: '6px', lineHeight: '1.5' }}>
-                      Variathu Power Tools Showroom, Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - <strong>689641</strong>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                        Helpline: +91 94475 59333 • Direct counter collection
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                  <div className="checkout-pickup-card-top">
+                    <div className="checkout-pickup-card-tags">
+                      <input
+                        type="radio"
+                        name="modalSelectedAddressOrPickup"
+                        checked={deliveryType === 'store-pickup'}
+                        onChange={() => {
                           setDeliveryType('store-pickup');
                           setShowAddressModal(false);
                         }}
-                        style={{
-                          background: deliveryType === 'store-pickup' ? '#dc2626' : '#0f172a',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '7px 16px',
-                          fontSize: '0.82rem',
-                          fontWeight: '800',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {deliveryType === 'store-pickup' ? 'PICKUP HERE ➔' : 'Select Store Pickup'}
-                      </button>
+                        style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
+                      />
+                      <span style={{
+                        background: '#ecfdf5',
+                        color: '#059669',
+                        fontSize: '0.7rem',
+                        fontWeight: '800',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em'
+                      }}>
+                        STORE PICKUP
+                      </span>
                     </div>
+                    <span style={{ background: '#ecfdf5', color: '#059669', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '4px' }}>
+                      FREE
+                    </span>
+                  </div>
+
+                  <div className="checkout-pickup-title">
+                    Direct Pickup at Kozhencherry Showroom
+                  </div>
+
+                  <div className="checkout-pickup-address">
+                    Variathu Power Tools Showroom, Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - <strong>689641</strong>
+                  </div>
+
+                  <div className="checkout-pickup-footer">
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                      Helpline: +91 94475 59333 • Direct counter collection
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeliveryType('store-pickup');
+                        setShowAddressModal(false);
+                      }}
+                      style={{
+                        background: deliveryType === 'store-pickup' ? '#dc2626' : '#0f172a',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        fontSize: '0.82rem',
+                        fontWeight: '800',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {deliveryType === 'store-pickup' ? 'PICKUP HERE ➔' : 'Select Store Pickup'}
+                    </button>
                   </div>
                 </div>
 
@@ -3141,28 +3112,17 @@ export const CheckoutPage = () => {
                           <div
                             key={addrId}
                             onClick={() => setSelectedAddressId(addrId)}
-                            style={{
-                              border: isSelected ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
-                              background: isSelected ? '#fff7ed' : '#ffffff',
-                              borderRadius: '10px',
-                              padding: '16px',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '10px',
-                              boxShadow: isSelected ? '0 2px 8px rgba(234, 88, 12, 0.08)' : '0 1px 2px rgba(0,0,0,0.03)'
-                            }}
+                            className={`checkout-addr-card ${isSelected ? 'selected' : ''}`}
                           >
-                            {/* Card Header */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {/* Row 1: Badges on Left, Action buttons on Right */}
+                            <div className="checkout-addr-card-top">
+                              <div className="checkout-addr-card-tags">
                                 <input
                                   type="radio"
                                   name="modalSelectedAddress"
                                   checked={isSelected}
                                   onChange={() => setSelectedAddressId(addrId)}
-                                  style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px' }}
+                                  style={{ accentColor: '#ea580c', cursor: 'pointer', width: '16px', height: '16px', flexShrink: 0 }}
                                 />
                                 <span style={{
                                   background: '#f1f5f9',
@@ -3176,12 +3136,6 @@ export const CheckoutPage = () => {
                                 }}>
                                   {addr.addressType || 'HOME'}
                                 </span>
-                                <strong style={{ fontSize: '0.94rem', color: '#0f172a' }}>
-                                  {addr.name}
-                                </strong>
-                                <span style={{ fontSize: '0.86rem', color: '#475569', fontWeight: '700' }}>
-                                  +91 {addr.phone}
-                                </span>
                                 {isDefault && (
                                   <span style={{
                                     background: '#ecfdf5',
@@ -3189,16 +3143,17 @@ export const CheckoutPage = () => {
                                     border: '1px solid #a7f3d0',
                                     fontSize: '0.68rem',
                                     fontWeight: '800',
-                                    padding: '2px 8px',
-                                    borderRadius: '4px'
+                                    padding: '2px 7px',
+                                    borderRadius: '4px',
+                                    whiteSpace: 'nowrap'
                                   }}>
                                     ✓ DEFAULT
                                   </span>
                                 )}
                               </div>
 
-                              {/* Card Action Buttons (Edit / Delete) */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                              {/* Action Buttons: Edit / Delete */}
+                              <div className="checkout-addr-card-actions" onClick={(e) => e.stopPropagation()}>
                                 <button
                                   type="button"
                                   onClick={() => handleStartEditAddressInModal(addr)}
@@ -3217,7 +3172,7 @@ export const CheckoutPage = () => {
                                   }}
                                   title="Edit address"
                                 >
-                                  <Edit3 size={13} />
+                                  <Edit3 size={12} />
                                   <span>Edit</span>
                                 </button>
 
@@ -3229,22 +3184,35 @@ export const CheckoutPage = () => {
                                     border: 'none',
                                     color: '#94a3b8',
                                     cursor: 'pointer',
-                                    padding: '4px'
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center'
                                   }}
                                   title="Delete address"
                                 >
-                                  <Trash2 size={16} />
+                                  <Trash2 size={15} />
                                 </button>
                               </div>
                             </div>
 
-                            {/* Address Details */}
-                            <div style={{ fontSize: '0.86rem', color: '#334155', paddingLeft: '26px', lineHeight: '1.5' }}>
+                            {/* Row 2: Customer Name & Phone */}
+                            <div className="checkout-addr-recipient-row">
+                              <strong style={{ fontSize: '0.94rem', color: '#0f172a' }}>
+                                {addr.name}
+                              </strong>
+                              <span style={{ color: '#cbd5e1' }}>•</span>
+                              <span style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '700' }}>
+                                +91 {addr.phone}
+                              </span>
+                            </div>
+
+                            {/* Row 3: Address Text */}
+                            <div className="checkout-addr-text-row">
                               {addr.address}{addr.locality ? `, ${addr.locality}` : ''}{addr.landmark ? `, Near ${addr.landmark}` : ''}, {addr.city || addr.district}, {addr.state || 'Kerala'} - <strong>{addr.pincode}</strong>
                             </div>
 
-                            {/* Card Footer: Set Default & Deliver Button */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '26px', marginTop: '4px' }}>
+                            {/* Row 4: Card Footer (Mark as Default on Left, Deliver Here on Right) */}
+                            <div className="checkout-addr-card-footer">
                               <div>
                                 {!isDefault && (
                                   <button
@@ -3253,6 +3221,7 @@ export const CheckoutPage = () => {
                                       e.stopPropagation();
                                       handleModalSetDefault(addrId);
                                     }}
+                                    className="checkout-addr-btn-default"
                                     style={{
                                       background: 'transparent',
                                       border: 'none',
@@ -3274,6 +3243,7 @@ export const CheckoutPage = () => {
                                   e.stopPropagation();
                                   handleSelectAndDeliverFromModal(addr);
                                 }}
+                                className={`checkout-addr-btn-deliver ${isSelected ? 'selected' : ''}`}
                                 style={{
                                   background: '#dc2626',
                                   color: '#ffffff',
