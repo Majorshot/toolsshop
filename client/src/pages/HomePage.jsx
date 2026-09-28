@@ -184,11 +184,6 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
                     <span>View • ₹{currentProduct.price?.toLocaleString('en-IN')}</span>
                     <ArrowRight size={18} />
                   </Link>
-
-                  <Link to="/shop" className="hero-inspect-product-btn" id="home-widescreen-open-shop-btn">
-                    <span>Open Shop Page</span>
-                    <ArrowRight size={15} />
-                  </Link>
                 </div>
               </AnimatedContent>
             </div>
@@ -327,29 +322,6 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
           </AnimatedContent>
         </section>
 
-        {/* Dynamic Brand Partners from Backend (Curated subset + View All button) */}
-        {displayBrands.length > 0 && (
-          <AnimatedContent distance={30} delay={0.1}>
-            <section className="brand-strip-clean">
-              <span className="brand-strip-title">Authorized Brand Partners</span>
-              <div className="brand-names-row">
-                {displayBrands.slice(0, 6).map((brand) => (
-                  <Link
-                    key={brand}
-                    to={`/shop?brand=${encodeURIComponent(brand.toLowerCase())}`}
-                    className="brand-name-item"
-                  >
-                    {brand.toUpperCase()}
-                  </Link>
-                ))}
-                <Link to="/shop" className="brand-name-item brand-view-all-pill" id="home-brands-view-all-btn">
-                  <span>VIEW ALL</span>
-                  <ArrowRight size={13} />
-                </Link>
-              </div>
-            </section>
-          </AnimatedContent>
-        )}
 
         {/* Featured Bestsellers Section */}
         <section style={{ marginBottom: '48px' }}>
