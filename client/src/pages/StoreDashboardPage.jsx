@@ -2027,6 +2027,139 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
           </div>
 
+      {/* Daily Action Center Banner */}
+      {(() => {
+        const readyRepairsCount = repairs.filter(r => r.status === 'Repaired & Ready').length;
+        const lowStockCount = products.filter(p => (Number(p.stock) || 0) <= 3).length;
+        const hasUrgentActions = orderCounts.undispatched > 0 || orderCounts.pickupPending > 0 || orderCounts.cancelPending > 0 || readyRepairsCount > 0 || lowStockCount > 0;
+
+        return (
+          <div
+            style={{
+              marginBottom: '18px',
+              padding: '12px 16px',
+              background: hasUrgentActions ? 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' : '#f0fdf4',
+              border: hasUrgentActions ? '1.5px solid #fed7aa' : '1.5px solid #bbf7d0',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+            }}
+            id="store-daily-action-banner"
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ⚡ Daily Action Center:
+              </span>
+
+              {orderCounts.undispatched > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('orders'); setOrderStatusFilter('undispatched'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#ea580c', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(234,88,12,0.3)' }}
+                >
+                  📦 {orderCounts.undispatched} to Dispatch
+                </button>
+              )}
+
+              {orderCounts.pickupPending > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('orders'); setOrderStatusFilter('pickup-pending'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#0284c7', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(2,132,199,0.3)' }}
+                >
+                  🏬 {orderCounts.pickupPending} Waiting Pickup
+                </button>
+              )}
+
+              {orderCounts.cancelPending > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('cancellations'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#dc2626', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(220,38,38,0.3)' }}
+                >
+                  ⚠️ {orderCounts.cancelPending} Cancel Request{orderCounts.cancelPending > 1 ? 's' : ''}
+                </button>
+              )}
+
+              {readyRepairsCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('repairs'); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#16a34a', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(22,163,74,0.3)' }}
+                >
+                  🔧 {readyRepairsCount} Tool{readyRepairsCount > 1 ? 's' : ''} Repaired & Ready
+                </button>
+              )}
+
+              {lowStockCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('inventory'); setShowLowStockOnly(true); }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#b45309', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' }}
+                >
+                  📉 {lowStockCount} Items Low Stock
+                </button>
+              )}
+
+              {!hasUrgentActions && (
+                <span style={{ fontSize: '0.8rem', color: '#166534', fontWeight: '700' }}>
+                  ✅ All caught up! No urgent store dispatches or handovers pending.
+                </span>
+              )}
+            </div>
+
+            {/* Sound Mute/Unmute & Auto-Refresh State */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setSoundEnabled(prev => !prev)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.74rem',
+                  color: soundEnabled ? '#15803d' : '#94a3b8',
+                  fontWeight: '700'
+                }}
+                title={soundEnabled ? 'Order sound alert enabled' : 'Order sound alert muted'}
+                id="btn-toggle-sound"
+              >
+                {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+                <span>{soundEnabled ? 'Chime: ON' : 'Chime: Muted'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAutoRefresh(prev => !prev)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.74rem',
+                  color: autoRefresh ? '#0284c7' : '#94a3b8',
+                  fontWeight: '700'
+                }}
+                title={autoRefresh ? 'Auto-refreshing every 30s' : 'Auto-refresh paused'}
+                id="btn-toggle-auto-refresh"
+              >
+                <RefreshCw size={13} className={autoRefresh ? 'spin-slow' : ''} />
+                <span>{autoRefresh ? 'Live Sync (30s)' : 'Sync Paused'}</span>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Feature 6: Revenue Analytics & CSV Export Toolbar */}
       <div className="store-analytics-card">
         <div className="store-analytics-header">
@@ -2217,140 +2350,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         )}
       </div>
 
-      {/* Daily Action Center Banner */}
-      {(() => {
-        const readyRepairsCount = repairs.filter(r => r.status === 'Repaired & Ready').length;
-        const lowStockCount = products.filter(p => (Number(p.stock) || 0) <= 3).length;
-        const hasUrgentActions = orderCounts.undispatched > 0 || orderCounts.pickupPending > 0 || orderCounts.cancelPending > 0 || readyRepairsCount > 0 || lowStockCount > 0;
-
-        return (
-          <div
-            style={{
-              marginBottom: '18px',
-              padding: '12px 16px',
-              background: hasUrgentActions ? 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' : '#f0fdf4',
-              border: hasUrgentActions ? '1.5px solid #fed7aa' : '1.5px solid #bbf7d0',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '10px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
-            }}
-            id="store-daily-action-banner"
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                ⚡ Daily Action Center:
-              </span>
-
-              {orderCounts.undispatched > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab('orders'); setOrderStatusFilter('undispatched'); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#ea580c', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(234,88,12,0.3)' }}
-                >
-                  📦 {orderCounts.undispatched} to Dispatch
-                </button>
-              )}
-
-              {orderCounts.pickupPending > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab('orders'); setOrderStatusFilter('pickup-pending'); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#0284c7', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(2,132,199,0.3)' }}
-                >
-                  🏬 {orderCounts.pickupPending} Waiting Pickup
-                </button>
-              )}
-
-              {orderCounts.cancelPending > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab('cancellations'); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#dc2626', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(220,38,38,0.3)' }}
-                >
-                  ⚠️ {orderCounts.cancelPending} Cancel Request{orderCounts.cancelPending > 1 ? 's' : ''}
-                </button>
-              )}
-
-              {readyRepairsCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab('repairs'); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#16a34a', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(22,163,74,0.3)' }}
-                >
-                  🔧 {readyRepairsCount} Tool{readyRepairsCount > 1 ? 's' : ''} Repaired & Ready
-                </button>
-              )}
-
-              {lowStockCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab('inventory'); setShowLowStockOnly(true); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#b45309', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(180,83,9,0.3)' }}
-                >
-                  📉 {lowStockCount} Items Low Stock
-                </button>
-              )}
-
-              {!hasUrgentActions && (
-                <span style={{ fontSize: '0.8rem', color: '#166534', fontWeight: '700' }}>
-                  ✅ All caught up! No urgent store dispatches or handovers pending.
-                </span>
-              )}
-            </div>
-
-            {/* Sound Mute/Unmute & Auto-Refresh State */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={() => setSoundEnabled(prev => !prev)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.74rem',
-                  color: soundEnabled ? '#15803d' : '#94a3b8',
-                  fontWeight: '700'
-                }}
-                title={soundEnabled ? 'Order sound alert enabled' : 'Order sound alert muted'}
-                id="btn-toggle-sound"
-              >
-                {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
-                <span>{soundEnabled ? 'Chime: ON' : 'Chime: Muted'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAutoRefresh(prev => !prev)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.74rem',
-                  color: autoRefresh ? '#0284c7' : '#94a3b8',
-                  fontWeight: '700'
-                }}
-                title={autoRefresh ? 'Auto-refreshing every 30s' : 'Auto-refresh paused'}
-                id="btn-toggle-auto-refresh"
-              >
-                <RefreshCw size={13} className={autoRefresh ? 'spin-slow' : ''} />
-                <span>{autoRefresh ? 'Live Sync (30s)' : 'Sync Paused'}</span>
-              </button>
-            </div>
-          </div>
-        );
-      })()}
-
-          {/* Quick Navigation Hub Cards for Department Sections */}
+      {/* Quick Navigation Hub Cards for Department Sections */}
           <div style={{ marginTop: '24px', marginBottom: '24px' }}>
             <div style={{ marginBottom: '14px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 3px' }}>
