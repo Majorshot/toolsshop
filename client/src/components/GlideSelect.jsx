@@ -176,7 +176,7 @@ const CSS_STYLES = `
   position: relative;
   display: flex;
   flex-direction: column;
-  touch-action: none;
+  touch-action: pan-y;
   gap: 1px;
   margin: 0;
   padding: 0;
@@ -311,7 +311,6 @@ export default function GlideSelect({
   const pillRef = useRef(null);
   const instant = useRef(false);
   const closeTimer = useRef(undefined);
-  const scrub = useRef(null);
   const generatedId = useId();
   const selectId = idProp || generatedId;
   const S = SIZES[size] ?? SIZES.md;
@@ -403,6 +402,7 @@ export default function GlideSelect({
       close('instant');
       return;
     }
+    setActive(i);
     if (it.value !== current) {
       if (value === undefined) setInner(it.value);
       onChange?.(it.value, it);
@@ -454,44 +454,34 @@ export default function GlideSelect({
 
   useEffect(() => () => clearTimeout(closeTimer.current), []);
 
-  const rowAt = y => {
-    const s = scrub.current;
-    if (!s) return null;
-    const scrollOffset = menuRef.current ? menuRef.current.scrollTop : 0;
-    const i = Math.floor((y - s.top + scrollOffset - PAD) / step);
-    return i >= 0 && i < items.length ? i : null;
-  };
-
-  const onListDown = e => {
-    if (scrub.current) return;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {}
-    scrub.current = { id: e.pointerId, top: e.currentTarget.getBoundingClientRect().top };
-    instant.current = true;
-    setActive(rowAt(e.clientY));
-  };
-
-  const onListMove = e => {
-    if (!scrub.current || scrub.current.id !== e.pointerId) return;
-    const i = rowAt(e.clientY);
-    if (i !== active) setActive(i);
-  };
-
-  const onListUp = e => {
-    if (!scrub.current || scrub.current.id !== e.pointerId) return;
-    const i = e.type === 'pointerup' ? rowAt(e.clientY) : null;
-    scrub.current = null;
-    if (i !== null) pick(i, false);
-    else if (!rememberPosition) setActive(null);
-  };
+  // Keep active option in view when navigating via keyboard
+  useEffect(() => {
+    if (phase !== 'open' || active === null || !menuRef.current) return;
+    const menu = menuRef.current;
+    const rowTop = active * step;
+    const rowBottom = rowTop + step;
+    if (rowTop < menu.scrollTop) {
+      menu.scrollTop = rowTop;
+    } else if (rowBottom > menu.scrollTop + menu.clientHeight) {
+      menu.scrollTop = rowBottom - menu.clientHeight;
+    }
+  }, [active, phase, step]);
 
   const onListOver = e => {
-    if (e.pointerType === 'touch' || scrub.current) return;
+    if (e.pointerType === 'touch') return;
     const row = e.target.closest('[data-index]');
     if (!row) return;
     const i = Number(row.dataset.index);
-    if (i !== active) setActive(i);
+    if (!isNaN(i) && i !== active) setActive(i);
+  };
+
+  const onListClick = e => {
+    const row = e.target.closest('[data-index]');
+    if (!row) return;
+    const i = Number(row.dataset.index);
+    if (!isNaN(i) && i >= 0 && i < items.length) {
+      pick(i, false);
+    }
   };
 
   const origin = `${side === 'bottom' ? 'top' : 'bottom'} ${computedAlign}`;
@@ -575,14 +565,11 @@ export default function GlideSelect({
             className="gs-list"
             data-live={active !== null ? 'true' : undefined}
             onPointerOver={onListOver}
+            onPointerMove={onListOver}
             onPointerLeave={() => {
-              if (!scrub.current && !rememberPosition) setActive(null);
+              if (!rememberPosition) setActive(null);
             }}
-            onPointerDown={onListDown}
-            onPointerMove={onListMove}
-            onPointerUp={onListUp}
-            onPointerCancel={onListUp}
-            onLostPointerCapture={onListUp}
+            onClick={onListClick}
           >
             <span
               ref={pillRef}
@@ -597,6 +584,10 @@ export default function GlideSelect({
                 aria-selected={i === selected}
                 data-index={i}
                 className="gs-option-row"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  pick(i, false);
+                }}
               >
                 <span className="gs-option-label">{it.label}</span>
                 {showTags && it.tag ? (
