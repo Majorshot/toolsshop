@@ -25,6 +25,14 @@ const CSS_STYLES = `
   font-family: inherit;
   vertical-align: middle;
 }
+.gs-root[data-full-width="true"] {
+  display: block;
+  width: 100%;
+}
+.gs-root[data-full-width="true"] .gs-trigger {
+  display: flex;
+  width: 100%;
+}
 .gs-root[data-open="true"] {
   z-index: 1000;
 }
@@ -286,7 +294,8 @@ export default function GlideSelect({
   disabled = false,
   ariaLabel = 'Select',
   className = '',
-  style = {}
+  style = {},
+  fullWidth = false
 }) {
   const items = options.map(norm);
   const [inner, setInner] = useState(defaultValue ?? '');
@@ -494,6 +503,7 @@ export default function GlideSelect({
       data-size={size}
       data-disabled={disabled ? 'true' : undefined}
       data-open={phase === 'open' ? 'true' : undefined}
+      data-full-width={fullWidth || style?.width === '100%' ? 'true' : undefined}
       style={{
         '--gs-accent': accentColor,
         '--gs-surface': surfaceColor,

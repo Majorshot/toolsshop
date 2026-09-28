@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, ShieldCheck, ShoppingBag, Wrench, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { api } from '../services/api';
+import GlideSelect from './GlideSelect';
 
 export const AdminModal = ({ onClose, onProductUpdated }) => {
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'new-product'
@@ -277,39 +278,55 @@ export const AdminModal = ({ onClose, onProductUpdated }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Brand</label>
-                  <select
+                  <GlideSelect
+                    id="select-admin-brand"
+                    options={(taxonomy.brands || []).map(b => ({ value: b, label: b }))}
                     value={form.brand}
-                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.84rem' }}
-                  >
-                    {(taxonomy.brands || []).map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setForm({ ...form, brand: val })}
+                    ariaLabel="Select tool brand"
+                    size="lg"
+                    radius={8}
+                    fullWidth
+                    menuWidth="100%"
+                    maxHeight={260}
+                    align="left"
+                    accentColor="#ea580c"
+                    surfaceColor="#ffffff"
+                    borderColor="#cbd5e1"
+                    textColor="#0f172a"
+                    highlightColor="#fff7ed"
+                  />
                 </div>
 
                 <div>
                   <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Category</label>
-                  <select
+                  <GlideSelect
+                    id="select-admin-category"
+                    options={taxonomy.categories && taxonomy.categories.length > 0 ? (
+                      taxonomy.categories.map(c => ({ value: c.id, label: c.name }))
+                    ) : [
+                      { value: 'cordless', label: 'Cordless Tools' },
+                      { value: 'grinders-cutters', label: 'Grinders & Cutters' },
+                      { value: 'hammers', label: 'Hammer Drills' },
+                      { value: 'woodworking', label: 'Woodworking' },
+                      { value: 'washers-blowers', label: 'Washers & Blowers' },
+                      { value: 'accessories', label: 'Accessories & Bits' }
+                    ]}
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.84rem' }}
-                  >
-                    {taxonomy.categories && taxonomy.categories.length > 0 ? (
-                      taxonomy.categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="cordless">Cordless Tools</option>
-                        <option value="grinders-cutters">Grinders & Cutters</option>
-                        <option value="hammers">Hammer Drills</option>
-                        <option value="woodworking">Woodworking</option>
-                        <option value="washers-blowers">Washers & Blowers</option>
-                        <option value="accessories">Accessories & Bits</option>
-                      </>
-                    )}
-                  </select>
+                    onChange={(val) => setForm({ ...form, category: val })}
+                    ariaLabel="Select tool category"
+                    size="lg"
+                    radius={8}
+                    fullWidth
+                    menuWidth="100%"
+                    maxHeight={260}
+                    align="right"
+                    accentColor="#ea580c"
+                    surfaceColor="#ffffff"
+                    borderColor="#cbd5e1"
+                    textColor="#0f172a"
+                    highlightColor="#fff7ed"
+                  />
                 </div>
               </div>
 

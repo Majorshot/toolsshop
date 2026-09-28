@@ -5354,19 +5354,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   )}
 
-                  <select
-                    value={productForm.brand}
-                    onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
+                  <GlideSelect
                     id="select-tool-brand"
-                  >
-                    {taxonomy.brands.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                    {productForm.brand && !(taxonomy.brands || []).includes(productForm.brand) && (
-                      <option value={productForm.brand}>{productForm.brand}</option>
-                    )}
-                  </select>
+                    options={[
+                      ...(taxonomy.brands || []).map(b => ({ value: b, label: b })),
+                      ...(productForm.brand && !(taxonomy.brands || []).includes(productForm.brand)
+                        ? [{ value: productForm.brand, label: productForm.brand }]
+                        : [])
+                    ]}
+                    value={productForm.brand || (taxonomy.brands?.[0] || 'Bosch')}
+                    onChange={(val) => setProductForm({ ...productForm, brand: val })}
+                    ariaLabel="Select tool brand"
+                    placeholder="Select Brand…"
+                    size="lg"
+                    radius={8}
+                    fullWidth
+                    menuWidth="100%"
+                    maxHeight={260}
+                    align="left"
+                    accentColor="#ea580c"
+                    surfaceColor="#ffffff"
+                    borderColor="#cbd5e1"
+                    textColor="#0f172a"
+                    highlightColor="#fff7ed"
+                  />
                 </div>
 
                 {/* CATEGORY SELECTION & INLINE ADD */}
@@ -5417,19 +5428,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   )}
 
-                  <select
-                    value={productForm.category}
-                    onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
+                  <GlideSelect
                     id="select-tool-category"
-                  >
-                    {taxonomy.categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                    {productForm.category && !(taxonomy.categories || []).some(c => c.id === productForm.category) && (
-                      <option value={productForm.category}>{productForm.category}</option>
-                    )}
-                  </select>
+                    options={[
+                      ...(taxonomy.categories || []).map(c => ({ value: c.id, label: c.name })),
+                      ...(productForm.category && !(taxonomy.categories || []).some(c => c.id === productForm.category)
+                        ? [{ value: productForm.category, label: productForm.category }]
+                        : [])
+                    ]}
+                    value={productForm.category || (taxonomy.categories?.[0]?.id || '')}
+                    onChange={(val) => setProductForm({ ...productForm, category: val })}
+                    ariaLabel="Select tool category"
+                    placeholder="Select Category…"
+                    size="lg"
+                    radius={8}
+                    fullWidth
+                    menuWidth="100%"
+                    maxHeight={260}
+                    align="right"
+                    accentColor="#ea580c"
+                    surfaceColor="#ffffff"
+                    borderColor="#cbd5e1"
+                    textColor="#0f172a"
+                    highlightColor="#fff7ed"
+                  />
                 </div>
               </div>
 
@@ -7151,21 +7173,33 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
                     Tool Brand
                   </label>
-                  <select
-                    value={repairForm.toolBrand}
-                    onChange={(e) => setRepairForm({ ...repairForm, toolBrand: e.target.value })}
-                    style={{ width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700' }}
-                  >
-                    {taxonomy.brands.map(b => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                    <option value="Other">Other Brand</option>
-                  </select>
+                  <GlideSelect
+                    id="select-repair-tool-brand"
+                    options={[
+                      ...(taxonomy.brands || []).map(b => ({ value: b, label: b })),
+                      { value: 'Other', label: 'Other Brand' }
+                    ]}
+                    value={repairForm.toolBrand || 'Bosch'}
+                    onChange={(val) => setRepairForm({ ...repairForm, toolBrand: val })}
+                    ariaLabel="Select tool brand for repair"
+                    placeholder="Select Brand…"
+                    size="lg"
+                    radius={8}
+                    fullWidth
+                    menuWidth="100%"
+                    maxHeight={260}
+                    align="left"
+                    accentColor="#ea580c"
+                    surfaceColor="#ffffff"
+                    borderColor="#cbd5e1"
+                    textColor="#0f172a"
+                    highlightColor="#fff7ed"
+                  />
                 </div>
 
                 <div>
