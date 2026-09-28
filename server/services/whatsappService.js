@@ -204,10 +204,36 @@ If you have any questions or this was done in error, please call our support des
   return sendWhatsAppMessage(order.customer.phone, message);
 };
 
+/**
+ * 5. Send Order Delivered / Completed WhatsApp
+ */
+const sendOrderCompletedWhatsApp = async (order) => {
+  if (!order || !order.customer?.phone) return;
+
+  const isPickup = order.deliveryType === 'store-pickup';
+  const message = `✅ *VARIATHU POWER TOOLS*
+*Order Completed* 📦
+
+Dear *${order.customer?.name || 'Customer'}*,
+Your order *${order.id}* has been successfully ${isPickup ? 'collected from our showroom counter' : `delivered to your destination address via ${order.courierPartner || 'Courier'}`}.
+
+💼 *Order Details:*
+• Total Amount: *₹${order.totalAmount}*
+${order.awb ? `• Courier AWB: *${order.awb}* (${order.courierPartner || 'Courier'})\n` : ''}
+Your official GST tax invoice and manufacturer warranty records are saved in your account. Thank you for choosing Variathu Power Tools!
+
+📞 Showroom Support: *+91 94475 59333*
+🌐 Store: https://toolsshop-pied.vercel.app`;
+
+  return sendWhatsAppMessage(order.customer.phone, message);
+};
+
 module.exports = {
   sendWhatsAppMessage,
   sendOrderConfirmationWhatsApp,
   sendOrderDispatchedWhatsApp,
   sendPickupReadyWhatsApp,
-  sendOrderCancelledWhatsApp
+  sendOrderCancelledWhatsApp,
+  sendOrderCompletedWhatsApp
 };
+

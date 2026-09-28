@@ -619,7 +619,8 @@ export const CustomerAccountPage = () => {
   const renderOrderProductCard = (order) => {
     const isCancelled = (order.status || '').toLowerCase().includes('cancel') || order.paymentStatus === 'REFUNDED';
     const isPickup = order.deliveryType === 'store-pickup';
-    const isDispatched = Boolean(order.awb && String(order.awb).trim() !== '') || (order.status || '').toLowerCase().includes('dispatch');
+    const isCompleted = ['delivered', 'completed'].some(w => (order.status || '').toLowerCase().includes(w)) || (isPickup && order.handoverVerified);
+    const isDispatched = !isCompleted && (Boolean(order.awb && String(order.awb).trim() !== '') || (order.status || '').toLowerCase().includes('dispatch'));
     const courierCfg = resolveCourierPartner(order.courierPartner);
     const hasPendingCancelRequest = Boolean(order.cancellationRequested && order.status !== 'Cancelled');
     const isExpanded = Boolean(expandedOrders[order.id]);
@@ -642,13 +643,13 @@ export const CustomerAccountPage = () => {
       statusBadgeBg = '#fffbeb';
       statusBadgeColor = '#b45309';
       statusBadgeBorder = '#fde68a';
+    } else if (isCompleted) {
+      statusBadgeText = isPickup ? 'Handover Completed' : 'Order Delivered';
+      statusBadgeBg = '#ecfdf5';
+      statusBadgeColor = '#16a34a';
+      statusBadgeBorder = '#bbf7d0';
     } else if (isPickup) {
-      if (order.handoverVerified || (order.status || '').toLowerCase().includes('completed')) {
-        statusBadgeText = 'Handover Completed';
-        statusBadgeBg = '#ecfdf5';
-        statusBadgeColor = '#16a34a';
-        statusBadgeBorder = '#bbf7d0';
-      } else if ((order.status || '').toLowerCase().includes('ready')) {
+      if ((order.status || '').toLowerCase().includes('ready')) {
         statusBadgeText = 'Ready for Store Pickup';
         statusBadgeBg = '#eff6ff';
         statusBadgeColor = '#0284c7';
@@ -861,6 +862,92 @@ export const CustomerAccountPage = () => {
                     }}
                   >
                     {order.pickupOtp}
+                  </div>
+                </div>
+              </div>
+            ) : isCompleted ? (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, rgba(22, 163, 74, 0.05) 0%, rgba(22, 163, 74, 0.12) 100%)',
+                  border: '1.5px solid #86efac',
+                  borderRadius: '12px',
+                  padding: '18px 20px',
+                  marginBottom: '18px'
+                }}
+                id={`order-completed-box-${order.id}`}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: '#16a34a',
+                        color: '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)',
+                        flexShrink: 0
+                      }}
+                    >
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Order Completed • Delivered
+                      </span>
+                      <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block' }}>
+                        Successfully Delivered via {courierCfg.name}
+                      </strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        Consignment handed over to recipient. Thank you for shopping with Variathu Power Tools!
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {order.awb && (
+                      <div style={{ fontSize: '0.86rem', color: '#166534', fontFamily: 'var(--font-mono)', fontWeight: '800', background: '#ffffff', padding: '6px 12px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                        AWB: {order.awb}
+                      </div>
+                    )}
+                    {courierCfg.portalUrl && order.awb && (
+                      <a
+                        href={courierCfg.portalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          background: '#0f172a',
+                          color: '#ffffff',
+                          padding: '7px 14px',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span>Track on {courierCfg.badge} Website</span>
+                        <ExternalLink size={13} />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ background: '#ffffff', borderRadius: '8px', padding: '10px 14px', border: '1px solid #dcfce7', fontSize: '0.78rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803d', fontWeight: '700' }}>
+                    <CheckCircle2 size={14} />
+                    <span>Official delivery completed. Your official GST Tax Invoice and manufacturer warranty are available below.</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b' }}>
+                    <MapPin size={14} style={{ color: '#ea580c', flexShrink: 0 }} />
+                    <span>
+                      Delivered To: <strong>{order.customer?.address || 'Customer Address'}, {order.customer?.district || 'Pathanamthitta'}, Kerala {order.customer?.pincode ? `• PIN: ${order.customer.pincode}` : ''}</strong>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1098,7 +1185,7 @@ export const CustomerAccountPage = () => {
 
             {/* Action Buttons: Cancel, GST Invoice, WhatsApp & Collapse */}
             <div className="customer-order-actions-bar">
-              {!isCancelled && !hasPendingCancelRequest && (
+              {!isCancelled && !hasPendingCancelRequest && !isCompleted && (
                 <button
                   type="button"
                   onClick={() => handleOpenCustomerCancelModal(order)}

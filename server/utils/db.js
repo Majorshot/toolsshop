@@ -982,8 +982,17 @@ const db = {
     const updateFields = { status };
     if (extra.courierPartner !== undefined) updateFields.courierPartner = extra.courierPartner;
     if (extra.awb !== undefined) updateFields.awb = extra.awb;
+    const sLower = (status || '').toLowerCase();
+    if (sLower.includes('complet') || sLower.includes('deliver')) {
+      updateFields.deliveredAt = new Date().toISOString();
+      updateFields.completedAt = new Date().toISOString();
+    }
 
-    return await OrderModel.findOneAndUpdate({ id: orderId }, updateFields, { new: true }).lean();
+    const query = (orderId && mongoose.isValidObjectId(orderId))
+      ? { $or: [{ id: orderId }, { _id: orderId }] }
+      : { id: orderId };
+
+    return await OrderModel.findOneAndUpdate(query, updateFields, { new: true }).lean();
   },
 
   async cancelOrder(orderId, { reason = 'Order cancelled by user', cancelledBy = 'customer' } = {}) {

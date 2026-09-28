@@ -102,10 +102,13 @@ router.put('/:id/status', requireStoreOwner, async (req, res) => {
       });
     }
 
-    // Trigger completed / delivered email when status changes to delivered or completed
+    // Trigger completed / delivered email & WhatsApp when status changes to delivered or completed
     if (sLower.includes('deliver') || sLower.includes('complet')) {
       emailService.sendOrderCompletedEmail(updated).catch(err => {
         console.warn(`[Resend Email] Async completed/delivered email error for order #${updated.id}:`, err.message);
+      });
+      whatsappService.sendOrderCompletedWhatsApp(updated).catch(err => {
+        console.warn(`[WhatsApp API] Async completed WhatsApp error for order #${updated.id}:`, err.message);
       });
     }
 

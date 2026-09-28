@@ -348,12 +348,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   };
 
+  const isOrderCompleted = (order) => {
+    if (!order) return false;
+    const s = (order.status || '').toLowerCase();
+    if (s === 'cancelled') return false;
+    if (['delivered', 'completed'].some(w => s.includes(w))) return true;
+    if (order.deliveryType === 'store-pickup' && order.handoverVerified) return true;
+    return false;
+  };
+
   const isOrderDispatched = (order) => {
     if (!order) return false;
     if (order.deliveryType === 'store-pickup') return false;
+    if (isOrderCompleted(order)) return false;
     if ((order.status || '').toLowerCase() === 'cancelled') return false;
     const hasAwb = Boolean(order.awb && order.awb.trim());
-    const isDisp = ['dispatched', 'shipped', 'in transit', 'out for delivery'].includes((order.status || '').toLowerCase());
+    const isDisp = ['dispatched', 'shipped', 'in transit', 'out for delivery'].some(w => (order.status || '').toLowerCase().includes(w));
     return hasAwb || isDisp;
   };
 
@@ -361,21 +371,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (!order) return false;
     if (order.deliveryType === 'store-pickup') return false;
     if ((order.status || '').toLowerCase() === 'cancelled') return false;
-    if (['delivered', 'completed'].includes((order.status || '').toLowerCase())) return false;
+    if (isOrderCompleted(order)) return false;
     return !isOrderDispatched(order);
   };
 
   const isOrderPickupPending = (order) => {
     if (!order) return false;
+    if (isOrderCompleted(order)) return false;
     return order.deliveryType === 'store-pickup' && !order.handoverVerified && (order.status || '').toLowerCase() !== 'cancelled';
-  };
-
-  const isOrderCompleted = (order) => {
-    if (!order) return false;
-    if ((order.status || '').toLowerCase() === 'cancelled') return false;
-    if (['delivered', 'completed'].includes((order.status || '').toLowerCase())) return true;
-    if (order.deliveryType === 'store-pickup' && order.handoverVerified) return true;
-    return false;
   };
 
   const orderCounts = useMemo(() => {
@@ -1501,6 +1504,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     try {
       await api.updateOrderStatus(orderId, newStatus);
       showNotification(`Order ${orderId} updated to "${newStatus}"`);
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      setSelectedOrderForDetails(prev => prev && prev.id === orderId ? { ...prev, status: newStatus } : prev);
       loadOrders();
     } catch (err) {
       alert(err.message);
@@ -3383,9 +3388,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                 </div>
                               ) : (
                                 <div>
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: '800', color: (order.awb && order.awb.trim()) ? '#166534' : '#ea580c', background: (order.awb && order.awb.trim()) ? '#ecfdf5' : '#fff7ed', padding: '2px 8px', borderRadius: '6px' }}>
-                                    <Truck size={12} />
-                                    {(order.awb && order.awb.trim()) ? (order.courierPartner || 'Dispatched') : 'Needs Dispatch'}
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', fontWeight: '800', color: isOrderCompleted(order) ? '#166534' : (order.awb && order.awb.trim()) ? '#166534' : '#ea580c', background: isOrderCompleted(order) ? '#ecfdf5' : (order.awb && order.awb.trim()) ? '#ecfdf5' : '#fff7ed', padding: '2px 8px', borderRadius: '6px' }}>
+                                    {isOrderCompleted(order) ? <CheckCircle2 size={12} /> : <Truck size={12} />}
+                                    {isOrderCompleted(order) ? `✅ Delivered • ${order.courierPartner || 'Courier'}` : (order.awb && order.awb.trim()) ? (order.courierPartner || 'Dispatched') : 'Needs Dispatch'}
                                   </span>
                                   {order.awb && (
                                     <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
@@ -3568,6 +3573,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                               <span className="order-badge order-badge-warning" title={order.cancellationRequestReason || 'Customer requested cancel'}>
                                 ⚠️ Cancel Requested
                               </span>
+                            ) : isOrderCompleted(order) ? (
+                              <span className="order-badge order-badge-success" style={{ background: '#ecfdf5', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                                ✅ {isPickup ? 'Collected & Completed' : `Delivered • ${courierCfg?.badge || order.courierPartner || 'Courier'}`}
+                              </span>
                             ) : isPickup ? (
                               order.handoverVerified ? (
                                 <span className="order-badge order-badge-success">
@@ -3738,7 +3747,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                     <strong>Courier Destination:</strong> {order.customer?.address ? `${order.customer.address}, ` : ''}{order.customer?.district || 'Pathanamthitta'}, PIN: {order.customer?.pincode || '689641'}
                                   </span>
                                 </div>
-                                {hasAwb ? (
+                                {isOrderCompleted(order) ? (
+                                  <div style={{ marginTop: '4px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    <span style={{ color: '#16a34a', fontWeight: '800', background: '#ecfdf5', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                                      ✅ Delivered
+                                    </span>
+                                    {order.awb && (
+                                      <span style={{ fontFamily: 'var(--font-mono)', background: '#ffffff', border: '1px solid #cbd5e1', padding: '1px 6px', borderRadius: '4px', fontSize: '0.74rem', color: '#0f172a', fontWeight: '700' }}>
+                                        AWB: {order.awb} ({courierCfg?.badge || order.courierPartner})
+                                      </span>
+                                    )}
+                                    {courierCfg?.portalUrl && (
+                                      <a
+                                        href={courierCfg.portalUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: '#ea580c', fontSize: '0.72rem', textDecoration: 'none', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                                      >
+                                        Track <ExternalLink size={10} />
+                                      </a>
+                                    )}
+                                  </div>
+                                ) : hasAwb ? (
                                   <div style={{ marginTop: '4px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                     <span style={{ color: courierCfg?.color || '#0284c7', fontWeight: '800' }}>
                                       {courierCfg?.badge || order.courierPartner || 'Courier'}
@@ -3872,15 +3902,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           {/* Left helper note or quick status */}
                           <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                             {isPickup 
-                              ? (order.handoverVerified ? 'Counter handover complete.' : 'Awaiting customer pickup at counter.')
-                              : (hasAwb ? `Dispatched with ${order.courierPartner}.` : 'Pending courier dispatch.')
+                              ? (order.handoverVerified ? '✅ Counter handover complete.' : 'Awaiting customer pickup at counter.')
+                              : (isOrderCompleted(order)
+                                  ? `✅ Order marked as Completed (Delivered with ${order.courierPartner || 'Courier'}).`
+                                  : (hasAwb ? `Dispatched with ${order.courierPartner}.` : 'Pending courier dispatch.')
+                                )
                             }
                           </div>
 
                           {/* Right actions */}
                           <div className="store-order-actions-right">
                             {/* Dispatch actions (COURIER ONLY) */}
-                            {!isPickup && !isCancelled && !hasAwb && (
+                            {!isPickup && !isCancelled && !hasAwb && !isOrderCompleted(order) && (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -3897,6 +3930,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                               >
                                 <Truck size={13} />
                                 <span>Dispatch via Courier</span>
+                              </button>
+                            )}
+
+                            {!isPickup && !isCancelled && hasAwb && !isOrderCompleted(order) && (
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateOrderStatus(order.id, 'Completed')}
+                                className="btn-store-action"
+                                style={{ background: '#ecfdf5', color: '#15803d', border: '1px solid #86efac', fontWeight: '800' }}
+                                id={`btn-complete-order-${order.id}`}
+                                title="Mark order as Delivered & Completed"
+                              >
+                                <CheckCircle2 size={13} style={{ color: '#16a34a' }} />
+                                <span>Mark Delivered</span>
                               </button>
                             )}
 
