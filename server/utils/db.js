@@ -30,6 +30,17 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Flexible order query matching either custom business order ID (e.g. VPT-ORD-xxxxxx) or MongoDB _id
+ */
+function buildOrderQuery(orderId) {
+  if (!orderId) return { _id: null };
+  const cleanId = String(orderId).trim();
+  return mongoose.isValidObjectId(cleanId)
+    ? { $or: [{ id: cleanId }, { _id: cleanId }] }
+    : { id: cleanId };
+}
+
 // Store Info for Variathu Power Tools
 const storeInfo = {
   name: "Variathu Power Tools",
@@ -874,6 +885,12 @@ const db = {
     return await OrderModel.find().sort({ createdAt: -1 }).lean();
   },
 
+  async getOrderById(orderId) {
+    ensureMongoConnected();
+    if (!orderId) return null;
+    return await OrderModel.findOne(buildOrderQuery(orderId)).lean();
+  },
+
   async getCustomerOrders(query) {
     ensureMongoConnected();
     if (!query) return await OrderModel.find().sort({ createdAt: -1 }).lean();
@@ -999,16 +1016,18 @@ const db = {
       updateFields.completedAt = new Date().toISOString();
     }
 
-    const query = (orderId && mongoose.isValidObjectId(orderId))
-      ? { $or: [{ id: orderId }, { _id: orderId }] }
-      : { id: orderId };
+    const query = buildOrderQuery(orderId);
 
     return await OrderModel.findOneAndUpdate(query, updateFields, { new: true }).lean();
   },
 
   async cancelOrder(orderId, { reason = 'Order cancelled by user', cancelledBy = 'customer' } = {}) {
     ensureMongoConnected();
-    const order = await OrderModel.findOne({ id: orderId });
+    if (!orderId) {
+      return { success: false, message: "Order ID is required" };
+    }
+    const query = buildOrderQuery(orderId);
+    const order = await OrderModel.findOne(query);
     if (!order) {
       return { success: false, message: "Order not found" };
     }
@@ -1075,7 +1094,7 @@ const db = {
     }
 
     const updatedOrder = await OrderModel.findOneAndUpdate(
-      { id: orderId },
+      query,
       { $set: cancellationUpdate },
       { new: true }
     ).lean();
@@ -1097,7 +1116,11 @@ const db = {
 
   async requestCancellation(orderId, { reason = 'Customer requested cancellation' } = {}) {
     ensureMongoConnected();
-    const order = await OrderModel.findOne({ id: orderId });
+    if (!orderId) {
+      return { success: false, message: 'Order ID is required' };
+    }
+    const query = buildOrderQuery(orderId);
+    const order = await OrderModel.findOne(query);
     if (!order) {
       return { success: false, message: 'Order not found' };
     }
@@ -1109,7 +1132,7 @@ const db = {
     }
 
     const updated = await OrderModel.findOneAndUpdate(
-      { id: orderId },
+      query,
       {
         $set: {
           cancellationRequested: true,
@@ -1122,14 +1145,18 @@ const db = {
 
     return {
       success: true,
-      message: `Cancellation request submitted for order ${orderId}. The store manager will review and approve it shortly.`,
+      message: `Cancellation request submitted for order ${order.id || orderId}. The store manager will review and approve it shortly.`,
       order: updated
     };
   },
 
   async rejectCancellationRequest(orderId) {
     ensureMongoConnected();
-    const order = await OrderModel.findOne({ id: orderId });
+    if (!orderId) {
+      return { success: false, message: 'Order ID is required' };
+    }
+    const query = buildOrderQuery(orderId);
+    const order = await OrderModel.findOne(query);
     if (!order) {
       return { success: false, message: 'Order not found' };
     }
@@ -1138,7 +1165,7 @@ const db = {
     }
 
     const updated = await OrderModel.findOneAndUpdate(
-      { id: orderId },
+      query,
       {
         $set: {
           cancellationRequested: false,
@@ -1153,14 +1180,15 @@ const db = {
 
     return {
       success: true,
-      message: `Cancellation request for order ${orderId} has been rejected by the store manager.`,
+      message: `Cancellation request for order ${order.id || orderId} has been rejected by the store manager.`,
       order: updated
     };
   },
 
   async verifyPickupOtp(orderId, otp) {
     ensureMongoConnected();
-    const order = await OrderModel.findOne({ id: orderId });
+    const query = buildOrderQuery(orderId);
+    const order = await OrderModel.findOne(query);
     if (!order) {
       return { success: false, message: "Order not found" };
     }
@@ -1183,8 +1211,9 @@ const db = {
 
   async processOrderPayment(orderId, { transactionId = null, method = 'UPI' } = {}) {
     ensureMongoConnected();
+    const query = buildOrderQuery(orderId);
     return await OrderModel.findOneAndUpdate(
-      { id: orderId },
+      query,
       {
         paymentStatus: "PAID",
         paymentMethod: (method || 'UPI').toUpperCase(),
@@ -1197,7 +1226,8 @@ const db = {
 
   async getOrderTracking(orderId) {
     ensureMongoConnected();
-    const order = await OrderModel.findOne({ id: orderId }).lean();
+    const query = buildOrderQuery(orderId);
+    const order = await OrderModel.findOne(query).lean();
     if (!order) return null;
     return {
       orderId: order.id,

@@ -393,9 +393,10 @@ export const CustomerAccountPage = () => {
 
     setCancellingOrder(true);
     try {
+      const targetOrderId = customerCancelOrder.id || customerCancelOrder._id;
       if (isCancelOrderDispatched(customerCancelOrder)) {
         // Dispatched order → submit cancellation request
-        const res = await api.requestCancellation(customerCancelOrder.id, {
+        const res = await api.requestCancellation(targetOrderId, {
           reason: finalReason
         });
         setCustomerCancelOrder(null);
@@ -405,7 +406,7 @@ export const CustomerAccountPage = () => {
         setTimeout(() => setCancelFeedback(null), 8000);
       } else {
         // Non-dispatched order → instant cancel
-        const res = await api.cancelOrder(customerCancelOrder.id, {
+        const res = await api.cancelOrder(targetOrderId, {
           reason: finalReason,
           cancelledBy: 'customer'
         });
@@ -2032,7 +2033,7 @@ export const CustomerAccountPage = () => {
                     </div>
                     <div>
                       <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                        {isDispatchedModal ? 'Request Cancellation' : 'Cancel Order'} {customerCancelOrder.id}?
+                        {isDispatchedModal ? 'Request Cancellation' : 'Cancel Order'} {customerCancelOrder.id || customerCancelOrder._id}?
                       </h3>
                       <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
                         Total Amount: {formatPrice(customerCancelOrder.totalAmount)}

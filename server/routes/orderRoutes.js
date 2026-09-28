@@ -311,7 +311,7 @@ router.post('/:id/cancel', optionalAuth, async (req, res) => {
       const isStoreOwner = req.user.role === 'store';
       const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
       const orderPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '').slice(-10);
-      const isOwner = String(req.user.id || '') === String(order.customerId) || (userPhone && userPhone === orderPhone);
+      const isOwner = String(req.user.id || req.user._id || '') === String(order.customerId || '') || (Boolean(userPhone) && userPhone === orderPhone);
 
       if (!isStoreOwner && !isOwner) {
         return res.status(403).json({ success: false, message: "You are not authorized to cancel this order." });
@@ -336,7 +336,8 @@ router.post('/:id/cancel', optionalAuth, async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to cancel order' });
+    console.error('[Order Cancel Error]:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to cancel order' });
   }
 });
 
@@ -351,7 +352,7 @@ router.post('/:id/request-cancel', optionalAuth, async (req, res) => {
     if (req.user && req.user.role !== 'store') {
       const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
       const orderPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '').slice(-10);
-      const isOwner = String(req.user.id || '') === String(order.customerId) || (userPhone && userPhone === orderPhone);
+      const isOwner = String(req.user.id || req.user._id || '') === String(order.customerId || '') || (Boolean(userPhone) && userPhone === orderPhone);
       if (!isOwner) {
         return res.status(403).json({ success: false, message: "You are not authorized to request cancellation for this order." });
       }
@@ -372,7 +373,8 @@ router.post('/:id/request-cancel', optionalAuth, async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to submit cancellation request' });
+    console.error('[Order Request-Cancel Error]:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to submit cancellation request' });
   }
 });
 
@@ -385,7 +387,8 @@ router.post('/:id/reject-cancel', requireStoreOwner, async (req, res) => {
     }
     res.json(result);
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to reject cancellation' });
+    console.error('[Order Reject-Cancel Error]:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to reject cancellation' });
   }
 });
 
@@ -409,7 +412,8 @@ router.post('/:id/send-whatsapp', requireStoreOwner, async (req, res) => {
     }
     res.json({ success: true, message: "WhatsApp message dispatched successfully", result });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to send notification' });
+    console.error('[Order Send-WhatsApp Error]:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to send notification' });
   }
 });
 
