@@ -173,11 +173,25 @@ export const ProductDetailPage = () => {
 
   const handleBuyNow = () => {
     if (!product || isOutOfStock) return;
-    if (inCartQty === 0) {
-      const safeQty = Math.max(1, Math.min(quantity, maxStock));
-      addToCart(product, safeQty);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(35);
     }
-    navigate('/checkout');
+    const safeQty = Math.max(1, Math.min(quantity, maxStock));
+    const buyNowProduct = {
+      id: product.id || id,
+      name: product.name,
+      brand: product.brand,
+      price: product.price,
+      mrp: product.mrp,
+      quantity: safeQty,
+      image: product.image || (product.images && product.images[0]) || '',
+      stock: maxStock,
+      deliveryCost: product.deliveryCost
+    };
+    try {
+      sessionStorage.setItem('vpt_buy_now', JSON.stringify(buyNowProduct));
+    } catch {}
+    navigate('/checkout', { state: { buyNow: true, item: buyNowProduct } });
   };
 
   const handleShare = () => {

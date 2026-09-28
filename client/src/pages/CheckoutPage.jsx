@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   CheckCircle, MapPin, Truck, ShieldCheck, AlertCircle, ArrowRight,
   User, Lock, Mail, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, Edit3,
   ShoppingBag, Shield, Check, Package, Building, Plus, Navigation, Home, Briefcase, Trash2,
-  Minus, X
+  Minus, X, Zap
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -33,24 +33,123 @@ const KERALA_DISTRICTS = [
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Buy Now vs Saved Cart Separation:
+  // When a user clicks "Buy Now" on a product, ONLY that single product is billed.
+  // Their saved cart items in CartContext remain completely intact and untouched!
+  const [buyNowItem, setBuyNowItem] = useState(() => {
+    if (location.state?.buyNow === false) {
+      try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
+      return null;
+    }
+    if (location.state?.buyNow && location.state?.item) {
+      return location.state.item;
+    }
+    try {
+      const saved = sessionStorage.getItem('vpt_buy_now');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const isBuyNow = Boolean(buyNowItem);
+
   const { user, isLoggedIn, login, register, sendOtp, verifyOtp, resendOtp, logout, updateUser } = useAuth();
   const {
     cart,
     clearCart,
-    subtotal,
-    discountAmount,
+    subtotal: cartSubtotal,
+    discountAmount: cartDiscountAmount,
     activeCoupon,
     applyCoupon,
     removeCoupon,
     verifyCouponWithPhone,
-    deliveryFee,
+    deliveryFee: cartDeliveryFee,
     deliveryType,
     setDeliveryType,
-    finalTotal,
-    updateQuantity,
-    removeFromCart
+    finalTotal: cartFinalTotal,
+    updateQuantity: updateCartQuantity,
+    removeFromCart: removeCartItem
   } = useCart();
   const { confirm } = useConfirm();
+
+  // The actual items being billed for this checkout
+  const checkoutItems = useMemo(() => {
+    if (isBuyNow && buyNowItem) {
+      return [buyNowItem];
+    }
+    return cart || [];
+  }, [isBuyNow, buyNowItem, cart]);
+
+  // Calculations scoped strictly to checkoutItems (single product if Buy Now, full cart otherwise)
+  const subtotal = useMemo(() => {
+    if (isBuyNow) {
+      return checkoutItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+    }
+    return cartSubtotal;
+  }, [isBuyNow, checkoutItems, cartSubtotal]);
+
+  const totalCourierFee = useMemo(() => {
+    if (isBuyNow) {
+      return checkoutItems.reduce((sum, item) => {
+        const itemFee = typeof item.deliveryCost === 'number' ? item.deliveryCost : 120;
+        return sum + (itemFee * (item.quantity || 1));
+      }, 0);
+    }
+    return cartDeliveryFee;
+  }, [isBuyNow, checkoutItems, cartDeliveryFee]);
+
+  const deliveryFee = deliveryType === 'store-pickup' ? 0 : totalCourierFee;
+
+  const discountAmount = useMemo(() => {
+    if (!activeCoupon) return 0;
+    if (isBuyNow) {
+      if (activeCoupon.discountType === 'flat') {
+        return Math.min(subtotal, Number(activeCoupon.discountValue) || 0);
+      }
+      return Math.round((subtotal * (Number(activeCoupon.discountValue) || 0)) / 100);
+    }
+    return cartDiscountAmount;
+  }, [activeCoupon, isBuyNow, subtotal, cartDiscountAmount]);
+
+  const finalTotal = useMemo(() => {
+    if (isBuyNow) {
+      return Math.max(0, subtotal - discountAmount + deliveryFee);
+    }
+    return cartFinalTotal;
+  }, [isBuyNow, subtotal, discountAmount, deliveryFee, cartFinalTotal]);
+
+  const updateQuantity = (itemId, newQty) => {
+    if (isBuyNow && buyNowItem) {
+      if (newQty <= 0) {
+        removeFromCart(itemId);
+        return;
+      }
+      const maxStock = typeof buyNowItem.stock === 'number' ? buyNowItem.stock : 999;
+      const safeQty = Math.min(newQty, maxStock);
+      const updated = { ...buyNowItem, quantity: safeQty };
+      setBuyNowItem(updated);
+      try {
+        sessionStorage.setItem('vpt_buy_now', JSON.stringify(updated));
+      } catch {}
+    } else {
+      updateCartQuantity(itemId, newQty);
+    }
+  };
+
+  const removeFromCart = (itemId) => {
+    if (isBuyNow) {
+      setBuyNowItem(null);
+      try {
+        sessionStorage.removeItem('vpt_buy_now');
+      } catch {}
+      navigate('/shop');
+    } else {
+      removeCartItem(itemId);
+    }
+  };
 
   const isCustomerLoggedIn = isLoggedIn && user && user.role === 'customer';
 
@@ -961,7 +1060,7 @@ export const CheckoutPage = () => {
           alternatePhone: deliveryAddress.alternatePhone || '',
           addressType: deliveryAddress.addressType || 'HOME'
         },
-        items: cart.map(item => ({
+        items: checkoutItems.map(item => ({
           id: item.id,
           name: item.name,
           brand: item.brand,
@@ -1039,7 +1138,11 @@ export const CheckoutPage = () => {
                   } catch {}
 
                   setCompletedOrder(verifyRes.data);
-                  clearCart();
+                  if (isBuyNow) {
+                    try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
+                  } else {
+                    clearCart();
+                  }
                   resolve(verifyRes.data);
                 } catch (vErr) {
                   const m = vErr.message || 'Payment verification failed.';
@@ -1091,7 +1194,11 @@ export const CheckoutPage = () => {
       } catch {}
 
       setCompletedOrder(result.data);
-      clearCart();
+      if (isBuyNow) {
+        try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
+      } else {
+        clearCart();
+      }
       return result.data;
     } catch (err) {
       if (!errorMsg) {
@@ -1105,7 +1212,7 @@ export const CheckoutPage = () => {
   };
 
   // Calculations for Price Details Sidebar (Matches Flipkart exactly)
-  const totalMrp = cart.reduce((sum, item) => {
+  const totalMrp = checkoutItems.reduce((sum, item) => {
     const itemMrp = item.mrp || Math.round(item.price * 1.35);
     return sum + (itemMrp * item.quantity);
   }, 0);
@@ -1212,8 +1319,8 @@ export const CheckoutPage = () => {
     );
   }
 
-  // CART EMPTY VIEW
-  if (!cart || cart.length === 0) {
+  // CHECKOUT ITEMS EMPTY VIEW
+  if (!checkoutItems || checkoutItems.length === 0) {
     return (
       <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px 16px', background: '#f1f3f6' }}>
         <div style={{ maxWidth: '480px', width: '100%', textAlign: 'center', background: '#ffffff', borderRadius: '12px', padding: '40px 24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
@@ -1424,8 +1531,46 @@ export const CheckoutPage = () => {
               flexDirection: 'column',
               gap: '14px'
             }}>
+              {isBuyNow && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                  border: '1.5px solid #fcd34d',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  marginBottom: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ background: '#d97706', color: '#ffffff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Zap size={13} />
+                    </div>
+                    <span style={{ fontSize: '0.82rem', color: '#92400e', fontWeight: '700' }}>
+                      <strong>Direct Buy Now:</strong> Only this single product is billed. Your saved cart items remain untouched.
+                    </span>
+                  </div>
+                  {cart && cart.length > 0 && (
+                    <Link
+                      to="/cart"
+                      style={{
+                        fontSize: '0.78rem',
+                        fontWeight: '800',
+                        color: '#b45309',
+                        textDecoration: 'underline',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      View Saved Cart ({cart.length}) →
+                    </Link>
+                  )}
+                </div>
+              )}
+
               <div style={{
-                fontSize: '0.82rem',
+                fontSize: '0.84rem',
                 fontWeight: '800',
                 color: '#475569',
                 textTransform: 'uppercase',
@@ -1436,14 +1581,16 @@ export const CheckoutPage = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}>
-                <span style={{ color: '#0f172a', fontSize: '0.94rem' }}>Order Items ({cart.length})</span>
+                <span style={{ color: '#0f172a', fontSize: '0.94rem' }}>
+                  {isBuyNow ? 'Single Product Checkout' : `Order Items (${checkoutItems.length})`}
+                </span>
                 <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>
-                  {cart.reduce((s, i) => s + i.quantity, 0)} total unit(s)
+                  {checkoutItems.reduce((s, i) => s + i.quantity, 0)} total unit(s)
                 </span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {cart.map((item, idx) => {
+                {checkoutItems.map((item, idx) => {
                   const itemMrp = item.mrp || Math.round(item.price * 1.35);
                   const discountPct = Math.round(((itemMrp - item.price) / itemMrp) * 100);
 
@@ -1451,8 +1598,8 @@ export const CheckoutPage = () => {
                     <div
                       key={item.id}
                       style={{
-                        paddingBottom: idx < cart.length - 1 ? '14px' : '0',
-                        borderBottom: idx < cart.length - 1 ? '1px dashed #e2e8f0' : 'none',
+                        paddingBottom: idx < checkoutItems.length - 1 ? '14px' : '0',
+                        borderBottom: idx < checkoutItems.length - 1 ? '1px dashed #e2e8f0' : 'none',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '10px'
@@ -2700,7 +2847,7 @@ export const CheckoutPage = () => {
                         {deliveryType === 'store-pickup' ? 'Free Store Pickup' : 'Includes ₹120 Courier'}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                        {cart.reduce((s, i) => s + i.quantity, 0)} Item(s)
+                        {checkoutItems.reduce((s, i) => s + i.quantity, 0)} Item(s)
                       </span>
                     </div>
                   </div>
@@ -2861,7 +3008,7 @@ export const CheckoutPage = () => {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
                       }}>
-                        {cart.reduce((s, i) => s + i.quantity, 0)} Item(s) • Total {formatPrice(finalTotal)}
+                        {checkoutItems.reduce((s, i) => s + i.quantity, 0)} Item(s) • Total {formatPrice(finalTotal)}
                       </div>
                     </div>
                   </div>

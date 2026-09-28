@@ -511,7 +511,12 @@ export const CartPage = ({ onOpenCheckout }) => {
             )}
             <button
               className="btn-hero-clean"
-              onClick={() => navigate('/checkout')}
+              onClick={() => {
+                try {
+                  sessionStorage.removeItem('vpt_buy_now');
+                } catch {}
+                navigate('/checkout', { state: { buyNow: false } });
+              }}
               disabled={hasOutOfStockItems}
               style={{
                 justifyContent: 'center',
