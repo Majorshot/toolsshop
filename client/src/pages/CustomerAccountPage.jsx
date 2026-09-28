@@ -399,6 +399,11 @@ export const CustomerAccountPage = () => {
         const res = await api.requestCancellation(targetOrderId, {
           reason: finalReason
         });
+        try {
+          const bc = new BroadcastChannel('vpt_orders_channel');
+          bc.postMessage({ type: 'CANCEL_REQUESTED', orderId: targetOrderId });
+          bc.close();
+        } catch (e) {}
         setCustomerCancelOrder(null);
         setCancelReasonPreset('');
         setCancelReasonCustom('');
@@ -410,6 +415,11 @@ export const CustomerAccountPage = () => {
           reason: finalReason,
           cancelledBy: 'customer'
         });
+        try {
+          const bc = new BroadcastChannel('vpt_orders_channel');
+          bc.postMessage({ type: 'ORDER_UPDATED', orderId: targetOrderId });
+          bc.close();
+        } catch (e) {}
         setCustomerCancelOrder(null);
         setCancelReasonPreset('');
         setCancelReasonCustom('');
@@ -432,10 +442,28 @@ export const CustomerAccountPage = () => {
       return;
     }
     loadCustomerOrders();
+
+    // Live sync: silent auto-refresh every 12 seconds so status updates (approval/rejection) reflect live
+    const interval = setInterval(() => {
+      loadCustomerOrders(true);
+    }, 12000);
+
+    let bc = null;
+    try {
+      bc = new BroadcastChannel('vpt_orders_channel');
+      bc.onmessage = () => {
+        loadCustomerOrders(true);
+      };
+    } catch (e) {}
+
+    return () => {
+      clearInterval(interval);
+      if (bc) bc.close();
+    };
   }, [userIdentifier]);
 
-  const loadCustomerOrders = async () => {
-    setLoading(true);
+  const loadCustomerOrders = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Sync fresh profile data from MongoDB Atlas if available
       if (user?.id || user?.phone) {
@@ -482,7 +510,7 @@ export const CustomerAccountPage = () => {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

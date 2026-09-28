@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -510,6 +510,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         cancelledBy: 'store'
       });
       showNotification(res.message || `Order ${order.id} cancelled & refund processed!`);
+      try {
+        const bc = new BroadcastChannel('vpt_orders_channel');
+        bc.postMessage({ type: 'ORDER_UPDATED', orderId: order.id });
+        bc.close();
+      } catch (e) {}
       loadOrders();
       loadProducts();
       if (onProductUpdated) onProductUpdated();
@@ -525,6 +530,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     try {
       const res = await api.rejectCancellation(order.id);
       showNotification(res.message || `Cancellation request for ${order.id} rejected.`);
+      try {
+        const bc = new BroadcastChannel('vpt_orders_channel');
+        bc.postMessage({ type: 'ORDER_UPDATED', orderId: order.id });
+        bc.close();
+      } catch (e) {}
       loadOrders();
     } catch (err) {
       showNotification(`Failed: ${err.message}`);
@@ -721,6 +731,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const prevOrdersCountRef = useRef(null);
+  const prevCancelRequestsCountRef = useRef(null);
+  const [revealedOtps, setRevealedOtps] = useState({});
+
+  const toggleRevealOtp = (orderId) => {
+    setRevealedOtps(prev => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
 
   // Quick Counter Pickup OTP Lookup
   const [quickOtpInput, setQuickOtpInput] = useState('');
@@ -748,6 +764,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   }, []);
 
+  const playCancelChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(493.88, now); // B4
+      osc.frequency.setValueAtTime(369.99, now + 0.14); // F#4
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    } catch (e) {
+      console.warn('Cancel chime notice:', e);
+    }
+  }, []);
+
   const handleQuickOtpChange = (val) => {
     setQuickOtpInput(val);
     const clean = val.trim();
@@ -767,8 +805,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       loadOrders({ silent: true });
-    }, 30000);
-    return () => clearInterval(interval);
+    }, 10000); // Live sync: polling every 10s
+
+    let bc = null;
+    try {
+      bc = new BroadcastChannel('vpt_orders_channel');
+      bc.onmessage = (event) => {
+        if (event.data?.type === 'CANCEL_REQUESTED' || event.data?.type === 'ORDER_UPDATED') {
+          loadOrders({ silent: true });
+        }
+      };
+    } catch (e) {}
+
+    return () => {
+      clearInterval(interval);
+      if (bc) bc.close();
+    };
   }, [autoRefresh, soundEnabled]);
 
   useEffect(() => {
@@ -1039,11 +1091,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     try {
       const res = await api.getOrders();
       const list = Array.isArray(res) ? res : (res.data || []);
+      
+      // Check for incoming new orders
       if (prevOrdersCountRef.current !== null && list.length > prevOrdersCountRef.current && soundEnabled) {
         playOrderChime();
         showNotification('🔔 New customer order received!');
       }
       prevOrdersCountRef.current = list.length;
+
+      // Check for incoming cancellation requests live
+      const currentCancelReqs = list.filter(o => o.cancellationRequested && (o.status || '').toLowerCase() !== 'cancelled');
+      if (prevCancelRequestsCountRef.current !== null && currentCancelReqs.length > prevCancelRequestsCountRef.current && soundEnabled) {
+        playCancelChime();
+        showNotification(`⚠️ New cancellation request for order ${currentCancelReqs[0]?.id || ''}!`);
+      }
+      prevCancelRequestsCountRef.current = currentCancelReqs.length;
+
       setOrders(list);
     } catch (err) {
       console.error(err);
@@ -3381,8 +3444,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                     {order.handoverVerified ? '✅ Collected' : '🏬 Counter Pickup'}
                                   </span>
                                   {!order.handoverVerified && !isCancelled && (
-                                    <div style={{ fontSize: '0.72rem', color: '#ea580c', fontWeight: '800', marginTop: '3px' }}>
-                                      OTP: <span style={{ fontFamily: 'var(--font-mono)' }}>{order.pickupOtp || '4819'}</span>
+                                    <div style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: '700', marginTop: '3px' }}>
+                                      🔒 Code Required
                                     </div>
                                   )}
                                 </div>
@@ -3684,10 +3747,52 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                   </div>
                                 ) : !isCancelled && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }} id={`pickup-otp-bar-${order.id}`}>
-                                    <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '600' }}>OTP:</span>
-                                    <span style={{ background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', fontFamily: 'var(--font-mono)', fontWeight: '900', fontSize: '0.85rem', padding: '1px 6px', borderRadius: '4px' }}>
-                                      {order.pickupOtp || '4819'}
-                                    </span>
+                                    <span style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '700' }}>Customer Code:</span>
+                                    {revealedOtps[order.id] ? (
+                                      <span
+                                        onClick={() => toggleRevealOtp(order.id)}
+                                        style={{
+                                          background: '#fff7ed',
+                                          border: '1px solid #fed7aa',
+                                          color: '#ea580c',
+                                          fontFamily: 'var(--font-mono)',
+                                          fontWeight: '900',
+                                          fontSize: '0.82rem',
+                                          padding: '2px 7px',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}
+                                        title="Click to hide"
+                                      >
+                                        <span>{order.pickupOtp || '4819'}</span>
+                                        <EyeOff size={12} style={{ color: '#ea580c' }} />
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleRevealOtp(order.id)}
+                                        style={{
+                                          background: '#f8fafc',
+                                          border: '1px solid #cbd5e1',
+                                          color: '#64748b',
+                                          fontSize: '0.72rem',
+                                          fontWeight: '700',
+                                          padding: '2px 7px',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}
+                                        title="Ask customer for their 4-digit code. Use reveal only if customer phone battery died."
+                                      >
+                                        <Eye size={12} />
+                                        <span>•••• (Reveal)</span>
+                                      </button>
+                                    )}
                                     <form
                                       onSubmit={(e) => handleVerifySingleOrderOtp(e, order.id)}
                                       style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
@@ -7706,12 +7811,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                     <div>
                       <div style={{ fontSize: '0.92rem', fontWeight: '800', color: selectedOrderForDetails.handoverVerified ? '#166534' : '#9a3412' }}>
-                        {selectedOrderForDetails.handoverVerified ? '✅ Equipment Handed Over & Verified' : 'Store Pickup Code: ' + (selectedOrderForDetails.pickupOtp || '4819')}
+                        {selectedOrderForDetails.handoverVerified ? '✅ Equipment Handed Over & Verified' : 'Store Pickup Code Verification'}
                       </div>
                       <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
                         {selectedOrderForDetails.handoverVerified
                           ? `Completed on ${new Date(selectedOrderForDetails.collectedAt || Date.now()).toLocaleString()}`
-                          : 'Verify this 4-digit code provided by customer before handing over tools.'}
+                          : 'Verify the 4-digit code provided by customer from their account/WhatsApp before handing over equipment.'}
                       </div>
                     </div>
                   </div>
@@ -7995,8 +8100,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         <strong>Variathu Power Tools</strong><br />
                         Poyanil Building, Near St Thomas HSS Ground<br />
                         Poyanil Junction, Kozhencherry - 689641, Kerala<br />
-                        <span style={{ color: '#ea580c', fontWeight: '700', marginTop: '4px', display: 'inline-block' }}>
-                          Customer Pickup OTP: <strong>{selectedOrderForDetails.pickupOtp || '4819'}</strong>
+                        <span style={{ color: '#0369a1', fontWeight: '700', marginTop: '4px', display: 'inline-block' }}>
+                          🔒 Handover Code: <strong>Customer Verification Required</strong>
                         </span>
                       </div>
                     ) : (
