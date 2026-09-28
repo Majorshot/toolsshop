@@ -1166,12 +1166,12 @@ export const CheckoutPage = () => {
 
   // MAIN CHECKOUT 2-COLUMN VIEW WITH TOP FLIPKART STEPPER
   return (
-    <div style={{ minHeight: '85vh', background: '#f1f3f6', padding: '24px 16px 64px' }}>
-      <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
+    <div className="checkout-page-root">
+      <div className="checkout-page-container">
 
         {/* Top Branding Bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div className="checkout-top-branding">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
             <img
               src="/Logo.jpeg"
               alt="Variathu Power Tools"
@@ -1187,81 +1187,60 @@ export const CheckoutPage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontSize: '0.8rem', fontWeight: '700', background: '#ecfdf5', padding: '5px 12px', borderRadius: '9999px', border: '1px solid #a7f3d0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontSize: '0.78rem', fontWeight: '700', background: '#ecfdf5', padding: '5px 12px', borderRadius: '9999px', border: '1px solid #a7f3d0', flexShrink: 0 }}>
             <ShieldCheck size={16} />
             <span>100% Safe & Secure Payments</span>
           </div>
         </div>
 
-        {/* HORIZONTAL STEPPER BAR (MATCHES IMAGE 1 STYLING) */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '12px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-          border: '1.5px solid #e2e8f0',
-          padding: '16px 20px',
-          marginBottom: '20px'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            maxWidth: '680px',
-            margin: '0 auto'
-          }}>
+        {/* HORIZONTAL STEPPER BAR (RESPONSIVE FLUID STEPPER) */}
+        <div className="checkout-stepper-card">
+          <div className="checkout-stepper-inner">
             {/* STEP 1: ADDRESS (OR LOGIN IF NOT LOGGED IN) */}
             <div
               onClick={() => {
                 if (isCustomerLoggedIn) setStep('address');
               }}
+              className="checkout-step-item"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: isCustomerLoggedIn ? 'pointer' : 'default',
-                background: '#ffffff',
-                padding: '0 6px'
+                cursor: isCustomerLoggedIn ? 'pointer' : 'default'
               }}
             >
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                background: (step === 'summary' || step === 'payment')
-                  ? '#ea580c'
-                  : (step === 'address' || step === 'login' ? '#ea580c' : '#e0e0e0'),
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.78rem',
-                fontWeight: '800'
-              }}>
+              <div
+                className="checkout-step-circle"
+                style={{
+                  background: (step === 'summary' || step === 'payment')
+                    ? '#ea580c'
+                    : (step === 'address' || step === 'login' ? '#ea580c' : '#e0e0e0'),
+                  color: '#ffffff'
+                }}
+              >
                 {(step === 'summary' || step === 'payment') ? (
-                  <Check size={14} strokeWidth={3} />
+                  <Check size={13} strokeWidth={3} />
                 ) : (
                   '1'
                 )}
               </div>
-              <span style={{
-                fontSize: '0.88rem',
-                fontWeight: (step === 'address' || step === 'login') ? '800' : '600',
-                color: (step === 'summary' || step === 'payment')
-                  ? '#0f172a'
-                  : (step === 'address' || step === 'login' ? '#ea580c' : '#878787')
-              }}>
+              <span
+                className="checkout-step-label"
+                style={{
+                  fontWeight: (step === 'address' || step === 'login') ? '800' : '600',
+                  color: (step === 'summary' || step === 'payment')
+                    ? '#0f172a'
+                    : (step === 'address' || step === 'login' ? '#ea580c' : '#878787')
+                }}
+              >
                 {!isCustomerLoggedIn ? 'Login' : 'Address'}
               </span>
             </div>
 
             {/* CONNECTING LINE 1 */}
-            <div style={{
-              flex: 1,
-              height: '2px',
-              background: (step === 'summary' || step === 'payment') ? '#ea580c' : '#e2e8f0',
-              margin: '0 10px',
-              transition: 'background 0.2s ease'
-            }} />
+            <div
+              className="checkout-step-line"
+              style={{
+                background: (step === 'summary' || step === 'payment') ? '#ea580c' : '#e2e8f0'
+              }}
+            />
 
             {/* STEP 2: ORDER SUMMARY */}
             <div
@@ -1270,84 +1249,67 @@ export const CheckoutPage = () => {
                   setStep('summary');
                 }
               }}
+              className="checkout-step-item"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: (isCustomerLoggedIn && step === 'payment') ? 'pointer' : 'default',
-                background: '#ffffff',
-                padding: '0 6px'
+                cursor: (isCustomerLoggedIn && step === 'payment') ? 'pointer' : 'default'
               }}
             >
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                background: step === 'payment'
-                  ? '#ea580c'
-                  : (step === 'summary' ? '#ea580c' : '#f1f5f9'),
-                color: (step === 'summary' || step === 'payment') ? '#ffffff' : '#878787',
-                border: (step === 'summary' || step === 'payment') ? 'none' : '1.5px solid #cbd5e1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.78rem',
-                fontWeight: '800'
-              }}>
+              <div
+                className="checkout-step-circle"
+                style={{
+                  background: step === 'payment'
+                    ? '#ea580c'
+                    : (step === 'summary' ? '#ea580c' : '#f1f5f9'),
+                  color: (step === 'summary' || step === 'payment') ? '#ffffff' : '#878787',
+                  border: (step === 'summary' || step === 'payment') ? 'none' : '1.5px solid #cbd5e1'
+                }}
+              >
                 {step === 'payment' ? (
-                  <Check size={14} strokeWidth={3} />
+                  <Check size={13} strokeWidth={3} />
                 ) : (
                   '2'
                 )}
               </div>
-              <span style={{
-                fontSize: '0.88rem',
-                fontWeight: step === 'summary' ? '800' : '600',
-                color: step === 'summary'
-                  ? '#ea580c'
-                  : (step === 'payment' ? '#0f172a' : '#878787')
-              }}>
-                Order Summary
+              <span
+                className="checkout-step-label"
+                style={{
+                  fontWeight: step === 'summary' ? '800' : '600',
+                  color: step === 'summary'
+                    ? '#ea580c'
+                    : (step === 'payment' ? '#0f172a' : '#878787')
+                }}
+              >
+                <span className="hide-on-xs">Order </span>Summary
               </span>
             </div>
 
             {/* CONNECTING LINE 2 */}
-            <div style={{
-              flex: 1,
-              height: '2px',
-              background: step === 'payment' ? '#ea580c' : '#e2e8f0',
-              margin: '0 10px',
-              transition: 'background 0.2s ease'
-            }} />
+            <div
+              className="checkout-step-line"
+              style={{
+                background: step === 'payment' ? '#ea580c' : '#e2e8f0'
+              }}
+            />
 
             {/* STEP 3: PAYMENT */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: '#ffffff',
-              padding: '0 6px'
-            }}>
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                background: step === 'payment' ? '#ea580c' : '#f1f5f9',
-                color: step === 'payment' ? '#ffffff' : '#878787',
-                border: step === 'payment' ? 'none' : '1.5px solid #cbd5e1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.78rem',
-                fontWeight: '800'
-              }}>
+            <div className="checkout-step-item">
+              <div
+                className="checkout-step-circle"
+                style={{
+                  background: step === 'payment' ? '#ea580c' : '#f1f5f9',
+                  color: step === 'payment' ? '#ffffff' : '#878787',
+                  border: step === 'payment' ? 'none' : '1.5px solid #cbd5e1'
+                }}
+              >
                 3
               </div>
-              <span style={{
-                fontSize: '0.88rem',
-                fontWeight: step === 'payment' ? '800' : '600',
-                color: step === 'payment' ? '#ea580c' : '#878787'
-              }}>
+              <span
+                className="checkout-step-label"
+                style={{
+                  fontWeight: step === 'payment' ? '800' : '600',
+                  color: step === 'payment' ? '#ea580c' : '#878787'
+                }}
+              >
                 Payment
               </span>
             </div>
@@ -1377,10 +1339,10 @@ export const CheckoutPage = () => {
         )}
 
         {/* 2-COLUMN MAIN GRID */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', alignItems: 'flex-start' }}>
+        <div className="checkout-main-grid">
 
           {/* LEFT COLUMN: PRODUCT DETAILS & PRICE DETAILS SIDEBAR (ORDER ITEMS & SUMMARY) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '80px' }}>
+          <div className="checkout-summary-column">
 
             {/* 1. PRODUCT DETAILS (MOVED DIRECTLY ABOVE PRICE DETAILS) */}
             <div style={{
@@ -1665,7 +1627,7 @@ export const CheckoutPage = () => {
           </div>
 
           {/* RIGHT COLUMN: ACTIVE STEP VIEWS */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="checkout-steps-column">
 
             {/* ============================================================ */}
             {/* VIEW A: STEP === 'login' (UNAUTHENTICATED)                     */}
@@ -1835,7 +1797,7 @@ export const CheckoutPage = () => {
                 </div>
 
                 {/* Delivery Mode: Store Pickup vs Courier */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px' }}>
                   <div
                     onClick={() => setDeliveryType('store-pickup')}
                     style={{
@@ -2707,7 +2669,7 @@ export const CheckoutPage = () => {
                           placeholder="ENTER COUPON CODE"
                           value={couponInput}
                           onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                          style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
+                          style={{ flex: 1, minWidth: 0, padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.84rem', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.05em', outline: 'none' }}
                         />
                         <button
                           type="submit"

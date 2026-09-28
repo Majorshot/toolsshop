@@ -6896,4 +6896,230 @@ header.main-site-header {
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.03) !important;
 }
 
+/* ==========================================================================
+   Checkout Page Mobile Responsive Layout & Fluid Stepper
+   ========================================================================== */
+
+.checkout-page-root {
+  min-height: 85vh;
+  background: #f1f3f6;
+  padding: 16px 12px 90px;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+@media (min-width: 640px) {
+  .checkout-page-root {
+    padding: 24px 16px 64px;
+  }
+}
+
+.checkout-page-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.checkout-top-branding {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .checkout-top-branding {
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+  }
+}
+
+.checkout-stepper-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1.5px solid #e2e8f0;
+  padding: 10px 8px;
+  margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 480px) {
+  .checkout-stepper-card {
+    padding: 12px 14px;
+  }
+}
+
+@media (min-width: 640px) {
+  .checkout-stepper-card {
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+}
+
+.checkout-stepper-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.checkout-step-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+@media (min-width: 480px) {
+  .checkout-step-item {
+    gap: 6px;
+  }
+}
+
+@media (min-width: 640px) {
+  .checkout-step-item {
+    gap: 8px;
+    padding: 0 6px;
+  }
+}
+
+.checkout-step-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .checkout-step-circle {
+    width: 24px;
+    height: 24px;
+    font-size: 0.78rem;
+  }
+}
+
+.checkout-step-label {
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+@media (min-width: 480px) {
+  .checkout-step-label {
+    font-size: 0.8rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .checkout-step-label {
+    font-size: 0.88rem;
+  }
+}
+
+.checkout-step-line {
+  flex: 1;
+  height: 2px;
+  margin: 0 4px;
+  min-width: 6px;
+  transition: background 0.2s ease;
+}
+
+@media (min-width: 480px) {
+  .checkout-step-line {
+    margin: 0 6px;
+    min-width: 12px;
+  }
+}
+
+@media (min-width: 640px) {
+  .checkout-step-line {
+    margin: 0 10px;
+    min-width: 20px;
+  }
+}
+
+@media (max-width: 420px) {
+  .hide-on-xs {
+    display: none !important;
+  }
+}
+
+/* 2-Column Main Layout Grid */
+.checkout-main-grid {
+  display: grid;
+  grid-template-columns: 100%;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .checkout-main-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
+/* Product & Price Column: ONLY sticky on desktop (>=1024px) */
+.checkout-summary-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: static; /* Mobile: natural scroll, nothing goes behind! */
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .checkout-summary-column {
+    position: sticky;
+    top: 80px;
+  }
+}
+
+/* Active Steps Column */
+.checkout-steps-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .checkout-summary-column > div,
+  .checkout-steps-column > div {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    box-sizing: border-box !important;
+  }
+}
+
+
+
 
