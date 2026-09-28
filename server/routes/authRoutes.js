@@ -68,7 +68,7 @@ router.post('/send-otp', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Full name is required for registration.' });
       }
       if (!targetEmail || !targetEmail.includes('@')) {
-        return res.status(400).json({ success: false, message: 'A valid email address is required.' });
+        targetEmail = `${cleanPhone}@customer.variathupowertools.com`;
       }
 
       // Check if already registered
@@ -343,46 +343,10 @@ router.post('/login', async (req, res) => {
         });
       }
     } else {
-      // Customer Login Flow
-      const phone = String(identifier || '').replace(/[^0-9]/g, '').slice(-10);
-      if (!phone || phone.length !== 10) {
-        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number.' });
-      }
-
-      const customerDoc = await db.lookupCustomerByPhone(phone);
-      if (!customerDoc) {
-        return res.status(404).json({
-          success: false,
-          message: 'No account found with this mobile number. Please register first.'
-        });
-      }
-
-      const userObj = {
-        id: customerDoc._id,
-        name: customerDoc.name,
-        phone: customerDoc.phone,
-        email: customerDoc.email || '',
-        address: customerDoc.address || '',
-        landmark: customerDoc.landmark || '',
-        district: customerDoc.district || 'Pathanamthitta',
-        state: customerDoc.state || 'Kerala',
-        pincode: customerDoc.pincode || '689641',
-        savedAddresses: customerDoc.savedAddresses || [],
-        cart: Array.isArray(customerDoc.cart) ? customerDoc.cart : [],
-        role: 'customer',
-        location: `${customerDoc.district || 'Pathanamthitta'}, Kerala`
-      };
-
-      const token = generateToken({
-        id: String(customerDoc._id),
-        phone: customerDoc.phone,
-        role: 'customer'
-      });
-
-      return res.json({
-        success: true,
-        token,
-        user: userObj
+      // Customer sign-in strictly requires OTP verification
+      return res.status(403).json({
+        success: false,
+        message: 'Customer sign-in requires OTP verification. Please use /api/auth/send-otp and /api/auth/verify-otp.'
       });
     }
   } catch (err) {

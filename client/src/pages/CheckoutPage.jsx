@@ -32,7 +32,7 @@ const KERALA_DISTRICTS = [
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { user, isLoggedIn, login, register, logout, updateUser } = useAuth();
+  const { user, isLoggedIn, login, register, sendOtp, verifyOtp, resendOtp, logout, updateUser } = useAuth();
   const {
     cart,
     clearCart,
@@ -85,6 +85,25 @@ export const CheckoutPage = () => {
     hasAddress: false
   });
   const [accountNotice, setAccountNotice] = useState(null);
+
+  // Step 1 Checkout Login & OTP Verification State
+  const [checkoutAuthStep, setCheckoutAuthStep] = useState('input'); // 'input' | 'otp'
+  const [checkoutOtp, setCheckoutOtp] = useState('');
+  const [checkoutOtpStatus, setCheckoutOtpStatus] = useState('idle'); // 'idle' | 'success' | 'error'
+  const [checkoutOtpMasked, setCheckoutOtpMasked] = useState('');
+  const [checkoutDevOtp, setCheckoutDevOtp] = useState('');
+  const [checkoutResendTimer, setCheckoutResendTimer] = useState(0);
+
+  // Resend Countdown Timer
+  useEffect(() => {
+    let timer;
+    if (checkoutResendTimer > 0) {
+      timer = setInterval(() => {
+        setCheckoutResendTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [checkoutResendTimer]);
 
   // Flipkart-Style Delivery Address State
   const [deliveryAddress, setDeliveryAddress] = useState({
@@ -653,11 +672,10 @@ export const CheckoutPage = () => {
     });
   };
 
-  // Customer Account Sign-In / Register (Main Account Identifier)
-  const handleAccountLogin = async (e) => {
+  // Step 1: Send OTP to Customer (Phone & Email/WhatsApp)
+  const handleSendCheckoutOtp = async (e) => {
     if (e) e.preventDefault();
     setErrorMsg('');
-    setAccountNotice(null);
 
     const cleanPhone = loginForm.phone.replace(/[^0-9]/g, '').slice(-10);
     if (cleanPhone.length !== 10) {
@@ -665,56 +683,100 @@ export const CheckoutPage = () => {
       return;
     }
 
+    if (phoneLookup.exists === false && !loginForm.name.trim()) {
+      setErrorMsg('Please enter your full name to create your account.');
+      return;
+    }
+
     setLoginLoading(true);
     try {
-      let loggedUser;
-      try {
-        loggedUser = await login(
-          'customer',
-          cleanPhone,
-          null,
-          loginForm.name.trim() || phoneLookup.customerName || 'Valued Customer',
-          { email: loginForm.email.trim() }
-        );
-        setAccountNotice({
-          type: 'existing',
-          message: `Welcome back, ${loggedUser.name || phoneLookup.customerName || 'Customer'}!`
-        });
-      } catch (loginErr) {
-        const errMsg = (loginErr.message || '').toLowerCase();
-        const isNotFound = errMsg.includes('no account') || errMsg.includes('register first') || errMsg.includes('not found') || errMsg.includes('404');
+      const purpose = phoneLookup.exists === false ? 'register' : 'login';
+      const res = await sendOtp({
+        phone: cleanPhone,
+        purpose,
+        name: loginForm.name.trim() || phoneLookup.customerName || '',
+        email: loginForm.email.trim()
+      });
 
-        if (isNotFound) {
-          if (!loginForm.name.trim()) {
-            setErrorMsg('Please enter your full customer name to create your account.');
-            setLoginLoading(false);
-            return;
-          }
-          const fallbackEmail = loginForm.email.trim() || `${cleanPhone}@customer.variathupowertools.com`;
-          loggedUser = await register({
-            name: loginForm.name.trim(),
-            phone: cleanPhone,
-            email: fallbackEmail
-          });
+      setCheckoutAuthStep('otp');
+      setCheckoutOtpMasked(res.maskedDestination || `+91 ${cleanPhone}`);
+      setCheckoutDevOtp(res.devOtp || '');
+      setCheckoutResendTimer(30);
+      setCheckoutOtp('');
+      setCheckoutOtpStatus('idle');
+      setErrorMsg('');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to dispatch verification code. Please try again.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
-          setAccountNotice({
-            type: 'created',
-            message: `🎉 Welcome to Variathu Power Tools! Your verified account has been created for +91 ${cleanPhone}.`
-          });
-        } else {
-          throw loginErr;
-        }
-      }
+  // Step 1: Resend OTP
+  const handleResendCheckoutOtp = async () => {
+    if (checkoutResendTimer > 0 || loginLoading) return;
+    setErrorMsg('');
+    setLoginLoading(true);
+    try {
+      const cleanPhone = loginForm.phone.replace(/[^0-9]/g, '').slice(-10);
+      const purpose = phoneLookup.exists === false ? 'register' : 'login';
+      const res = await resendOtp({
+        phone: cleanPhone,
+        purpose
+      });
+      setCheckoutDevOtp(res.devOtp || '');
+      setCheckoutResendTimer(30);
+      setCheckoutOtp('');
+      setCheckoutOtpStatus('idle');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to resend code.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
-      // If user has saved addresses, skip directly to Step 2 Order Summary!
-      const saved = loggedUser?.savedAddresses || [];
-      if (saved.length > 0 || loggedUser?.address) {
+  // Step 1: Verify 6-digit OTP & Authenticate Customer
+  const handleVerifyCheckoutOtp = async (e, directCode) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setErrorMsg('');
+
+    const code = String(directCode || checkoutOtp).replace(/[^0-9]/g, '').trim();
+    if (code.length !== 6) {
+      setErrorMsg('Please enter the complete 6-digit verification code.');
+      setCheckoutOtpStatus('error');
+      return;
+    }
+
+    setLoginLoading(true);
+    try {
+      const cleanPhone = loginForm.phone.replace(/[^0-9]/g, '').slice(-10);
+      const purpose = phoneLookup.exists === false ? 'register' : 'login';
+      const res = await verifyOtp({
+        phone: cleanPhone,
+        otp: code,
+        purpose
+      });
+
+      setCheckoutOtpStatus('success');
+      const verifiedUser = res.user;
+
+      setAccountNotice({
+        type: res.isNewAccount ? 'created' : 'existing',
+        message: res.isNewAccount
+          ? `🎉 Welcome to Variathu Power Tools, ${verifiedUser?.name || 'Customer'}! Your verified account has been created.`
+          : `Welcome back, ${verifiedUser?.name || 'Customer'}!`
+      });
+
+      // User authenticated! Advance step based on saved addresses
+      const saved = verifiedUser?.savedAddresses || [];
+      if (saved.length > 0 || verifiedUser?.address) {
         setStep('summary');
       } else {
         setStep('address');
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to authenticate customer account.');
+      setCheckoutOtpStatus('error');
+      setErrorMsg(err.message || 'Verification failed. Please check the OTP code and try again.');
     } finally {
       setLoginLoading(false);
     }
@@ -1643,125 +1705,250 @@ export const CheckoutPage = () => {
                       1. LOGIN OR SIGNUP
                     </h3>
                     <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
-                      Enter your mobile number to view saved addresses and order history
+                      {checkoutAuthStep === 'otp'
+                        ? 'Verify your mobile number with the one-time password (OTP)'
+                        : 'Enter your mobile number to receive a secure verification OTP'}
                     </p>
                   </div>
                 </div>
 
-                <form onSubmit={handleAccountLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ background: '#fff7ed', borderRadius: '8px', padding: '10px 14px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.8rem', lineHeight: '1.4' }}>
-                    Orders, payment receipts, and delivery tracking are tied to your primary mobile account.
-                  </div>
+                {checkoutAuthStep === 'input' ? (
+                  <form onSubmit={handleSendCheckoutOtp} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ background: '#fff7ed', borderRadius: '8px', padding: '10px 14px', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '0.8rem', lineHeight: '1.4' }}>
+                      Orders, payment receipts, and delivery tracking are tied to your primary mobile account.
+                    </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
-                      10-Digit Mobile Number *
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', border: phoneLookup.exists === true ? '2px solid #22c55e' : phoneLookup.exists === false ? '2px solid #f59e0b' : '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', background: '#ffffff' }}>
-                      <span style={{ padding: '10px 14px', background: '#f8fafc', color: '#475569', fontWeight: '800', fontSize: '0.9rem', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        🇮🇳 +91
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
+                        10-Digit Mobile Number *
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', border: phoneLookup.exists === true ? '2px solid #22c55e' : phoneLookup.exists === false ? '2px solid #f59e0b' : '1.5px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', background: '#ffffff' }}>
+                        <span style={{ padding: '10px 14px', background: '#f8fafc', color: '#475569', fontWeight: '800', fontSize: '0.9rem', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          🇮🇳 +91
+                        </span>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          placeholder="Enter 10-digit mobile number"
+                          value={loginForm.phone}
+                          onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
+                          style={{ flex: 1, padding: '10px 14px', border: 'none', fontSize: '0.95rem', fontWeight: '700', outline: 'none', color: '#0f172a' }}
+                          id="input-account-phone"
+                        />
+                      </div>
+                    </div>
+
+                    {phoneLookup.checking && (
+                      <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 4px' }}>
+                        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ea580c', animation: 'pulse 1s infinite' }} />
+                        <span>Checking customer profile for +91 {phoneLookup.checkedPhone}...</span>
+                      </div>
+                    )}
+
+                    {phoneLookup.exists === true && !phoneLookup.checking && (
+                      <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', fontWeight: '800', fontSize: '0.86rem' }}>
+                          <CheckCircle2 size={16} />
+                          <span>Existing Customer Account Found</span>
+                        </div>
+                        <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>
+                          {phoneLookup.customerName || 'Customer'} (+91 {phoneLookup.checkedPhone})
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: '#166534', margin: 0 }}>
+                          We will send a 6-digit verification OTP to authenticate and protect your account.
+                        </p>
+                      </div>
+                    )}
+
+                    {phoneLookup.exists === false && !phoneLookup.checking && (
+                      <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: '800', fontSize: '0.86rem' }}>
+                          <AlertCircle size={16} />
+                          <span>New Customer Account for +91 {phoneLookup.checkedPhone}</span>
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                            Your Full Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Midhun Mohan"
+                            value={loginForm.name}
+                            onChange={(e) => setLoginForm({ ...loginForm, name: e.target.value })}
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                            Email Address (Optional - For Tax Invoices & Order Receipts)
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="e.g. midhun@gmail.com"
+                            value={loginForm.email}
+                            onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                            style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={loginLoading || (phoneLookup.exists === false && !loginForm.name.trim()) || loginForm.phone.length !== 10}
+                      style={{
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        fontSize: '0.94rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                        opacity: (loginForm.phone.length === 10) ? 1 : 0.6,
+                        transition: 'all 0.15s ease'
+                      }}
+                      id="btn-checkout-login-continue"
+                    >
+                      <span>
+                        {loginLoading ? 'Sending Verification OTP...' : 'SEND VERIFICATION OTP'}
                       </span>
+                      {!loginLoading && <ArrowRight size={16} />}
+                    </button>
+                  </form>
+                ) : (
+                  /* Step 1.2: Enter 6-digit OTP */
+                  <form onSubmit={handleVerifyCheckoutOtp} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontSize: '0.84rem', fontWeight: '700' }}>
+                        <ShieldCheck size={18} style={{ color: '#0284c7' }} />
+                        <span>Security OTP Verification</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setCheckoutAuthStep('input'); setCheckoutOtp(''); setErrorMsg(''); }}
+                        style={{ background: 'transparent', border: 'none', color: '#ea580c', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Edit3 size={13} />
+                        <span>Change Number</span>
+                      </button>
+                    </div>
+
+                    <p style={{ margin: '0', fontSize: '0.82rem', color: '#475569', lineHeight: '1.45' }}>
+                      Enter the 6-digit code dispatched to <strong>{checkoutOtpMasked || `+91 ${loginForm.phone}`}</strong> to authenticate your account.
+                    </p>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginBottom: '6px' }}>
+                        6-Digit Security OTP *
+                      </label>
                       <input
-                        type="tel"
-                        required
-                        maxLength={10}
-                        placeholder="Enter 10-digit mobile number"
-                        value={loginForm.phone}
-                        onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
-                        style={{ flex: 1, padding: '10px 14px', border: 'none', fontSize: '0.95rem', fontWeight: '700', outline: 'none', color: '#0f172a' }}
-                        id="input-account-phone"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        placeholder="••••••"
+                        value={checkoutOtp}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                          setCheckoutOtp(val);
+                          setCheckoutOtpStatus('idle');
+                          setErrorMsg('');
+                          if (val.length === 6) {
+                            handleVerifyCheckoutOtp(null, val);
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '14px 16px',
+                          borderRadius: '8px',
+                          border: checkoutOtpStatus === 'error' ? '2px solid #ef4444' : checkoutOtpStatus === 'success' ? '2px solid #22c55e' : '2px solid #0284c7',
+                          fontSize: '1.4rem',
+                          fontWeight: '900',
+                          letterSpacing: '0.35em',
+                          textAlign: 'center',
+                          fontFamily: 'monospace',
+                          color: '#0f172a',
+                          background: '#ffffff',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)'
+                        }}
+                        autoFocus
+                        id="input-checkout-otp"
                       />
                     </div>
-                  </div>
 
-                  {phoneLookup.checking && (
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', padding: '2px 4px' }}>
-                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#ea580c', animation: 'pulse 1s infinite' }} />
-                      <span>Checking customer profile for +91 {phoneLookup.checkedPhone}...</span>
+                    {checkoutDevOtp && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '8px 12px', borderRadius: '8px', fontSize: '0.78rem', color: '#047857' }}>
+                        <span>⚡ Quick Test Code: <strong style={{ letterSpacing: '0.1em' }}>{checkoutDevOtp}</strong></span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCheckoutOtp(checkoutDevOtp);
+                            handleVerifyCheckoutOtp(null, checkoutDevOtp);
+                          }}
+                          style={{ background: '#059669', color: '#ffffff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
+                        >
+                          Auto Fill & Verify
+                        </button>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b' }}>
+                      <span>Didn't receive code?</span>
+                      {checkoutResendTimer > 0 ? (
+                        <span style={{ fontWeight: '700', color: '#94a3b8' }}>
+                          Resend code in {checkoutResendTimer}s
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleResendCheckoutOtp}
+                          disabled={loginLoading}
+                          style={{ background: 'transparent', border: 'none', color: '#ea580c', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                        >
+                          Resend OTP Code
+                        </button>
+                      )}
                     </div>
-                  )}
 
-                  {phoneLookup.exists === true && !phoneLookup.checking && (
-                    <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#15803d', fontWeight: '800', fontSize: '0.86rem' }}>
-                        <CheckCircle2 size={16} />
-                        <span>Existing Customer Account Found</span>
-                      </div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0f172a' }}>
-                        {phoneLookup.customerName || 'Customer'} (+91 {phoneLookup.checkedPhone})
-                      </div>
-                      <p style={{ fontSize: '0.78rem', color: '#166534', margin: 0 }}>
-                        Welcome back! Your verified profile and saved addresses will load automatically.
-                      </p>
-                    </div>
-                  )}
-
-                  {phoneLookup.exists === false && !phoneLookup.checking && (
-                    <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b45309', fontWeight: '800', fontSize: '0.86rem' }}>
-                        <AlertCircle size={16} />
-                        <span>New Customer Account for +91 {phoneLookup.checkedPhone}</span>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                          Your Full Name *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Midhun Mohan"
-                          value={loginForm.name}
-                          onChange={(e) => setLoginForm({ ...loginForm, name: e.target.value })}
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                          Email Address (Optional)
-                        </label>
-                        <input
-                          type="email"
-                          placeholder="e.g. midhun@gmail.com"
-                          value={loginForm.email}
-                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                          style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loginLoading || (phoneLookup.exists === false && !loginForm.name.trim()) || loginForm.phone.length !== 10}
-                    style={{
-                      background: '#dc2626',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '10px',
-                      padding: '14px',
-                      fontSize: '0.94rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
-                      opacity: (loginForm.phone.length === 10) ? 1 : 0.6,
-                      transition: 'all 0.15s ease'
-                    }}
-                    id="btn-checkout-login-continue"
-                  >
-                    <span>
-                      {loginLoading
-                        ? (phoneLookup.exists === false ? 'Creating Account...' : 'Signing In...')
-                        : (phoneLookup.exists === false
-                            ? 'REGISTER & CONTINUE'
-                            : 'CONTINUE')}
-                    </span>
-                    {!loginLoading && <ArrowRight size={16} />}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={loginLoading || checkoutOtp.length !== 6}
+                      style={{
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        fontSize: '0.94rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                        opacity: (checkoutOtp.length === 6) ? 1 : 0.6,
+                        transition: 'all 0.15s ease'
+                      }}
+                      id="btn-checkout-verify-otp"
+                    >
+                      <span>
+                        {loginLoading ? 'Verifying OTP...' : 'VERIFY & CONTINUE'}
+                      </span>
+                      {!loginLoading && <ArrowRight size={16} />}
+                    </button>
+                  </form>
+                )}
               </div>
             )}
 
