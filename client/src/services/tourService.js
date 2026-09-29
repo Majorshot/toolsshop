@@ -435,4 +435,308 @@ export const startInventoryTour = (force = false) => {
   return driverObj;
 };
 
+/**
+ * 4. Workshop Servicing & Tool Repairs Interactive Tour
+ * @param {boolean} force - Force start even if previously completed
+ */
+export const startRepairsTour = (force = false) => {
+  if (typeof window === 'undefined') return;
+
+  if (!force && localStorage.getItem('vpt_tour_repairs_seen') === 'true') {
+    return;
+  }
+
+  const rawSteps = [
+    {
+      element: '#repairs-section-header',
+      popover: {
+        title: '🔧 Workshop Servicing & Repairs Tracker',
+        description: 'Track and manage broken power tools (armatures, field coils, carbon brushes, gearboxes, chainsaws) brought into your Poyanil Building workshop.',
+        side: 'bottom',
+        align: 'start'
+      }
+    },
+    {
+      element: '#btn-new-repair-modal',
+      popover: {
+        title: '📝 Log Inward Machinery Ticket',
+        description: 'Create a new repair job in seconds! Enter customer details, tool brand & model, serial number, reported fault, initial estimate, and advance paid. Automatically sends a WhatsApp receipt to the customer.',
+        side: 'bottom',
+        align: 'end'
+      }
+    },
+    {
+      element: '#input-search-repairs',
+      popover: {
+        title: '🔍 Real-Time Job Ticket Search',
+        description: 'Instantly find any repair job by customer name, 10-digit mobile number, tool model, brand, or Ticket ID (e.g. VPT-REP-2433).',
+        side: 'bottom',
+        align: 'start'
+      }
+    },
+    {
+      element: 'div[id^="repair-row-"]:first-of-type, .store-tab-content-card',
+      popover: {
+        title: '🛠️ Service Ticket Anatomy',
+        description: 'Displays the Ticket ID, machinery model, customer contact, reported symptoms, technician diagnosis, and live billing balances (Estimate, Advance Paid, Balance Due).',
+        side: 'top',
+        align: 'start'
+      }
+    },
+    {
+      element: 'button[id^="btn-edit-repair-"]:first-of-type',
+      popover: {
+        title: '⚙️ Update Bill & Parts Fitted',
+        description: 'Need to add a spare part (e.g. armature or switch) and adjust the bill? Update the estimate and diagnosis here with 1-click automated WhatsApp message dispatch.',
+        side: 'top',
+        align: 'end'
+      }
+    },
+    {
+      element: '#btn-start-repairs-tour',
+      popover: {
+        title: '🎉 You\'re Ready to Run the Workshop!',
+        description: 'Click "Take Tour" anytime to review this walkthrough. Always verify the customer\'s secret 4-digit OTP before releasing repaired equipment at the counter!',
+        side: 'bottom',
+        align: 'end'
+      }
+    }
+  ];
+
+  const validSteps = rawSteps.filter(step => {
+    const el = document.querySelector(step.element);
+    return el && el.offsetParent !== null;
+  });
+
+  if (validSteps.length === 0) return null;
+
+  const driverObj = driver({
+    ...baseDriverConfig,
+    steps: validSteps,
+    onDestroyed: () => {
+      localStorage.setItem('vpt_tour_repairs_seen', 'true');
+    }
+  });
+
+  driverObj.drive();
+  return driverObj;
+};
+
+/**
+ * 5. Customer Cancellation Requests Interactive Tour
+ * @param {boolean} force - Force start even if previously completed
+ */
+export const startCancellationsTour = (force = false) => {
+  if (typeof window === 'undefined') return;
+
+  if (!force && localStorage.getItem('vpt_tour_cancellations_seen') === 'true') {
+    return;
+  }
+
+  const rawSteps = [
+    {
+      element: '#cancellations-section-header',
+      popover: {
+        title: '⚠️ Cancellation Requests Hub',
+        description: 'Review and approve/reject cancellation requests submitted by customers for online orders in real time.',
+        side: 'bottom',
+        align: 'start'
+      }
+    },
+    {
+      element: 'div[id^="cancel-request-"]:first-of-type, .store-tab-content-card',
+      popover: {
+        title: '📋 Review Customer Request & Reason',
+        description: 'Inspect the customer\'s cancellation reason, order details, courier status, and payment method (Online UPI/Cards vs Cash on Delivery).',
+        side: 'top',
+        align: 'start'
+      }
+    },
+    {
+      element: '#btn-start-cancellations-tour',
+      popover: {
+        title: '⚡ Instant 1-Click Online Refunds',
+        description: 'Approving a paid order automatically executes a 100% refund via Razorpay straight back to the customer\'s UPI or bank account.',
+        side: 'bottom',
+        align: 'end'
+      }
+    }
+  ];
+
+  const validSteps = rawSteps.filter(step => {
+    const el = document.querySelector(step.element);
+    return el && el.offsetParent !== null;
+  });
+
+  if (validSteps.length === 0) return null;
+
+  const driverObj = driver({
+    ...baseDriverConfig,
+    steps: validSteps,
+    onDestroyed: () => {
+      localStorage.setItem('vpt_tour_cancellations_seen', 'true');
+    }
+  });
+
+  driverObj.drive();
+  return driverObj;
+};
+
+/**
+ * 6. Customer Directory & CRM Interactive Tour
+ * @param {boolean} force - Force start even if previously completed
+ */
+export const startCustomersTour = (force = false) => {
+  if (typeof window === 'undefined') return;
+
+  if (!force && localStorage.getItem('vpt_tour_customers_seen') === 'true') {
+    return;
+  }
+
+  const rawSteps = [
+    {
+      element: '#customers-section-header',
+      popover: {
+        title: '👥 Customer Directory & CRM',
+        description: 'Your central database of customer profiles across Kerala. View complete purchase histories, workshop repair records, and direct contact options.',
+        side: 'bottom',
+        align: 'start'
+      }
+    },
+    {
+      element: '.store-crm-kpi-grid',
+      popover: {
+        title: '📊 Customer Intelligence Metrics',
+        description: 'Track high-level metrics: total registered clients, cumulative customer revenue, repeat buyer loyalty percentage, and average order value.',
+        side: 'bottom',
+        align: 'center'
+      }
+    },
+    {
+      element: '#input-customer-search',
+      popover: {
+        title: '🔍 Search Customer Records',
+        description: 'Find any client instantly by searching their name, 10-digit mobile number, town, district, or postal PIN code.',
+        side: 'bottom',
+        align: 'start'
+      }
+    },
+    {
+      element: '.store-customer-row:first-of-type, .store-tab-content-card',
+      popover: {
+        title: '👤 Customer Profile & VIP Badges',
+        description: 'Identifies repeat buyers and high-value VIP accounts (★ VIP badge for ₹20k+ spend or 3+ orders), verified shipping address, and lifetime spend.',
+        side: 'top',
+        align: 'start'
+      }
+    },
+    {
+      element: '.store-customer-row:first-of-type .store-customer-col-actions',
+      popover: {
+        title: '💬 Instant WhatsApp & Complete History',
+        description: 'Launch a direct WhatsApp message to check on spares or view a customer\'s entire history of machinery purchases and workshop repair tickets.',
+        side: 'top',
+        align: 'end'
+      }
+    },
+    {
+      element: '#btn-start-customers-tour',
+      popover: {
+        title: '🎉 You\'re Ready with Customer CRM!',
+        description: 'Click "Take Tour" anytime to replay this walkthrough.',
+        side: 'bottom',
+        align: 'end'
+      }
+    }
+  ];
+
+  const validSteps = rawSteps.filter(step => {
+    const el = document.querySelector(step.element);
+    return el && el.offsetParent !== null;
+  });
+
+  if (validSteps.length === 0) return null;
+
+  const driverObj = driver({
+    ...baseDriverConfig,
+    steps: validSteps,
+    onDestroyed: () => {
+      localStorage.setItem('vpt_tour_customers_seen', 'true');
+    }
+  });
+
+  driverObj.drive();
+  return driverObj;
+};
+
+/**
+ * 7. Promotional Coupons & Discounts Interactive Tour
+ * @param {boolean} force - Force start even if previously completed
+ */
+export const startCouponsTour = (force = false) => {
+  if (typeof window === 'undefined') return;
+
+  if (!force && localStorage.getItem('vpt_tour_coupons_seen') === 'true') {
+    return;
+  }
+
+  const rawSteps = [
+    {
+      element: '#coupons-section-header',
+      popover: {
+        title: '🏷️ Promotional Coupons & Discounts',
+        description: 'Manage promotional coupon codes to offer festival discounts, new customer incentives, or exclusive tool discounts at checkout.',
+        side: 'bottom',
+        align: 'start'
+      }
+    },
+    {
+      element: '#btn-new-coupon-modal',
+      popover: {
+        title: '➕ Create New Promotional Code',
+        description: 'Set custom promo codes (e.g. ONAM2026, FESTIVE500) with percentage or flat ₹ discounts, minimum cart value, and 1-per-user limits.',
+        side: 'bottom',
+        align: 'end'
+      }
+    },
+    {
+      element: 'div[id^="coupon-card-"]:first-of-type, .store-tab-content-card',
+      popover: {
+        title: '🎟️ Coupon Controls & Live Redemption',
+        description: 'Monitor total redemptions, pause/activate promo codes with 1 click, or delete expired campaign codes.',
+        side: 'top',
+        align: 'start'
+      }
+    },
+    {
+      element: '#btn-start-coupons-tour',
+      popover: {
+        title: '🎉 You\'re Ready with Promotions!',
+        description: 'Click "Take Tour" anytime to replay this walkthrough.',
+        side: 'bottom',
+        align: 'end'
+      }
+    }
+  ];
+
+  const validSteps = rawSteps.filter(step => {
+    const el = document.querySelector(step.element);
+    return el && el.offsetParent !== null;
+  });
+
+  if (validSteps.length === 0) return null;
+
+  const driverObj = driver({
+    ...baseDriverConfig,
+    steps: validSteps,
+    onDestroyed: () => {
+      localStorage.setItem('vpt_tour_coupons_seen', 'true');
+    }
+  });
+
+  driverObj.drive();
+  return driverObj;
+};
+
+
 

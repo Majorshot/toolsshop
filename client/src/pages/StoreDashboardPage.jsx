@@ -10,7 +10,7 @@ import { useConfirm, SpringModal } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
 import GlideSelect from '../components/GlideSelect';
 import RubberSegment from '../components/RubberSegment';
-import { startOverviewTour, startOrdersTour, startInventoryTour } from '../services/tourService';
+import { startOverviewTour, startOrdersTour, startInventoryTour, startRepairsTour, startCancellationsTour, startCustomersTour, startCouponsTour } from '../services/tourService';
 
 const ORDER_DATE_OPTIONS = [
   { value: 'all', label: 'All Time', tag: 'All' },
@@ -312,6 +312,26 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     } else if (activeTab === 'inventory') {
       const timer = setTimeout(() => {
         startInventoryTour(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'repairs') {
+      const timer = setTimeout(() => {
+        startRepairsTour(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'cancellations') {
+      const timer = setTimeout(() => {
+        startCancellationsTour(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'customers') {
+      const timer = setTimeout(() => {
+        startCustomersTour(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'coupons') {
+      const timer = setTimeout(() => {
+        startCouponsTour(false);
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -5136,7 +5156,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* TAB 3: PROMOTIONS & COUPONS MANAGER (Feature 4) */}
       {activeTab === 'coupons' && (
         <div className="store-tab-content-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <div id="coupons-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Percent size={20} style={{ color: '#ea580c' }} />
@@ -5149,7 +5169,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => startCouponsTour(true)}
+                className="store-action-btn-tour"
+                id="btn-start-coupons-tour"
+                title="Start Guided Interactive Tour of Coupons"
+              >
+                <Compass size={14} style={{ color: '#ea580c' }} />
+                <span>Take Tour</span>
+              </button>
+
               <button
                 type="button"
                 onClick={loadCoupons}
@@ -5309,7 +5340,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* TAB 4: WORKSHOP SERVICE & REPAIRS TRACKER (Feature 5) */}
       {activeTab === 'repairs' && (
         <div className="store-tab-content-card">
-          <div className="store-section-header">
+          <div className="store-section-header" id="repairs-section-header">
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Wrench size={20} style={{ color: '#ea580c' }} />
@@ -5322,7 +5353,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => startRepairsTour(true)}
+                className="store-action-btn-tour"
+                id="btn-start-repairs-tour"
+                title="Start Guided Interactive Tour of Workshop Repairs"
+              >
+                <Compass size={14} style={{ color: '#ea580c' }} />
+                <span>Take Tour</span>
+              </button>
+
               <button
                 type="button"
                 onClick={loadRepairs}
@@ -5868,7 +5910,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* TAB 6: CANCELLATION REQUESTS */}
       {activeTab === 'cancellations' && (
         <div className="store-tab-content-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <div id="cancellations-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
                 Customer Cancellation Requests
@@ -5877,26 +5919,40 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 Review and approve/reject cancellation requests from customers for dispatched orders.
               </p>
             </div>
-            <button
-              onClick={loadOrders}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                color: '#0f172a',
-                borderRadius: '8px',
-                padding: '9px 14px',
-                fontSize: '0.82rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <RefreshCw size={14} />
-              <span>Refresh</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => startCancellationsTour(true)}
+                className="store-action-btn-tour"
+                id="btn-start-cancellations-tour"
+                title="Start Guided Interactive Tour of Cancellation Requests"
+              >
+                <Compass size={14} style={{ color: '#ea580c' }} />
+                <span>Take Tour</span>
+              </button>
+
+              <button
+                onClick={loadOrders}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  color: '#0f172a',
+                  borderRadius: '8px',
+                  padding: '9px 14px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={14} />
+                <span>Refresh</span>
+              </button>
+            </div>
           </div>
+
 
           {pendingCancellationRequests.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '50px 20px' }}>
@@ -6813,7 +6869,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* TAB 7: CUSTOMER DIRECTORY & CRM (500+ CLIENTS) */}
       {activeTab === 'customers' && (
         <div className="store-tab-content-card">
-          <div className="store-section-header">
+          <div className="store-section-header" id="customers-section-header">
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Users size={22} style={{ color: '#ea580c' }} />
@@ -6826,7 +6882,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => startCustomersTour(true)}
+                className="store-action-btn-tour"
+                id="btn-start-customers-tour"
+                title="Start Guided Interactive Tour of Customer Directory"
+              >
+                <Compass size={14} style={{ color: '#ea580c' }} />
+                <span>Take Tour</span>
+              </button>
+
               <button
                 type="button"
                 onClick={loadCustomers}
