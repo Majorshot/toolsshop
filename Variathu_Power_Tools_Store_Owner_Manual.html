@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Variathu Power Tools - Store Owner & Manager Operations Manual</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+      --primary: #dc2626;
+      --primary-dark: #b91c1c;
+      --primary-light: #fef2f2;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --emerald-600: #059669;
+      --emerald-50: #ecfdf5;
+      --emerald- border: #a7f3d0;
+      --blue-600: #2563eb;
+      --blue-50: #eff6ff;
+      --amber-600: #d97706;
+      --amber-50: #fffbeb;
+      --amber-border: #fde68a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--slate-900);
+      background-color: #ffffff;
+      line-height: 1.6;
+      font-size: 13.5px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+    }
+
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      .no-break {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+    }
+
+    /* Cover Page */
+    .cover-page {
+      min-height: 98vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 40px 30px;
+      border: 2px solid var(--slate-200);
+      border-radius: 16px;
+      background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover-top-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-light);
+      border: 1px solid #fca5a5;
+      color: var(--primary-dark);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cover-title {
+      font-size: 38px;
+      font-weight: 800;
+      color: var(--slate-900);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin: 20px 0 12px;
+    }
+
+    .cover-title span {
+      color: var(--primary);
+    }
+
+    .cover-subtitle {
+      font-size: 17px;
+      color: var(--slate-600);
+      font-weight: 500;
+      line-height: 1.5;
+      max-width: 600px;
+    }
+
+    .cover-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin: 35px 0;
+    }
+
+    .cover-card {
+      background: #ffffff;
+      border: 1.5px solid var(--slate-200);
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+    }
+
+    .cover-card-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--slate-500);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .cover-card-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--slate-900);
+    }
+
+    .cover-card-sub {
+      font-size: 12px;
+      color: var(--slate-600);
+    }
+
+    .cover-footer {
+      border-top: 1.5px solid var(--slate-200);
+      padding-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--slate-500);
+    }
+
+    /* Headings & Section Styling */
+    h1, h2, h3, h4 {
+      color: var(--slate-900);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .section-header {
+      border-bottom: 2px solid var(--slate-200);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .section-title {
+      font-size: 22px;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title-tag {
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--primary);
+      color: #ffffff;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .section-sub {
+      font-size: 12.5px;
+      color: var(--slate-500);
+      margin-top: 4px;
+    }
+
+    h3 {
+      font-size: 16px;
+      margin: 22px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      color: var(--slate-700);
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 14px 0;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .callout-info {
+      background: var(--blue-50);
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid var(--blue-600);
+      color: #1e3a8a;
+    }
+
+    .callout-success {
+      background: var(--emerald-50);
+      border: 1px solid #a7f3d0;
+      border-left: 4px solid var(--emerald-600);
+      color: #065f46;
+    }
+
+    .callout-warning {
+      background: var(--amber-50);
+      border: 1px solid var(--amber-border);
+      border-left: 4px solid var(--amber-600);
+      color: #92400e;
+    }
+
+    .callout-danger {
+      background: var(--primary-light);
+      border: 1px solid #fecaca;
+      border-left: 4px solid var(--primary);
+      color: #991b1b;
+    }
+
+    .callout strong {
+      font-weight: 700;
+    }
+
+    /* Step Workflow Cards */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 14px;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--slate-900);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-content h4 {
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: var(--slate-900);
+    }
+
+    .step-content p {
+      margin-bottom: 0;
+      font-size: 12.5px;
+      color: var(--slate-600);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-primary { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .badge-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-blue { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-amber { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-dark { background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 12.5px;
+    }
+
+    th {
+      background: var(--slate-100);
+      color: var(--slate-700);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      padding: 10px 12px;
+      border: 1px solid var(--slate-200);
+      text-align: left;
+    }
+
+    td {
+      padding: 9px 12px;
+      border: 1px solid var(--slate-200);
+      color: var(--slate-700);
+    }
+
+    tr:nth-child(even) td {
+      background: var(--slate-50);
+    }
+
+    /* Code & Mono */
+    code, .mono {
+      font-family: 'JetBrains Mono', Courier, monospace;
+      font-size: 12px;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+    }
+
+    /* Checklist */
+    .checklist {
+      list-style: none;
+      margin: 12px 0;
+    }
+
+    .checklist li {
+      position: relative;
+      padding-left: 26px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--slate-700);
+    }
+
+    .checklist li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--emerald-600);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    /* Mini KPI Card Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .kpi-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--slate-500);
+      text-transform: uppercase;
+    }
+
+    .kpi-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--slate-900);
+      margin-top: 2px;
+    }
+
+    /* Two column layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 14px 0;
+    }
+
+    /* Flow diagram visual box */
+    .workflow-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #ffffff;
+      border: 1px solid var(--slate-200);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 14px 0;
+      gap: 8px;
+    }
+
+    .flow-node {
+      text-align: center;
+      flex: 1;
+    }
+
+    .flow-pill {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+    }
+
+    .flow-arrow {
+      color: var(--slate-400);
+      font-size: 18px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .footer-doc {
+      margin-top: 30px;
+      padding-top: 12px;
+      border-top: 1px solid var(--slate-200);
+      font-size: 11px;
+      color: var(--slate-500);
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== COVER PAGE ==================== -->
+  <div class="cover-page">
+    <div>
+      <div class="cover-top-badge">
+        🛠️ Official Operational Manual &bull; Confidential
+      </div>
+      
+      <h1 class="cover-title">
+        Variathu Power Tools<br>
+        <span>Store Owner &amp; Operations Manual</span>
+      </h1>
+      <p class="cover-subtitle">
+        Comprehensive step-by-step master handbook for customer order management, courier fulfillment, Kerala GST tax invoices, inventory control, and customer operations.
+      </p>
+
+      <div class="cover-grid">
+        <div class="cover-card">
+          <div class="cover-card-label">Retail Location</div>
+          <div class="cover-card-value">Poyanil Building, Kozhencherry</div>
+          <div class="cover-card-sub">Pathanamthitta District, Kerala - 689641</div>
+        </div>
+
+        <div class="cover-card">
+          <div class="cover-card-label">Business Contact</div>
+          <div class="cover-card-value">+91 94475 59333 / 0468 2212333</div>
+          <div class="cover-card-sub">helpline@variathupowertools.com</div>
+        </div>
+
+        <div class="cover-card">
+          <div class="cover-card-label">Store Admin Portal</div>
+          <div class="cover-card-value mono">/admin</div>
+          <div class="cover-card-sub">Username: admin@variathupowertools.com</div>
+        </div>
+
+        <div class="cover-card">
+          <div class="cover-card-label">System Architecture</div>
+          <div class="cover-card-value">Custom Express &bull; React &bull; MongoDB</div>
+          <div class="cover-card-sub">Integrated WhatsApp &bull; Resend &bull; Razorpay UPI</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="callout callout-info" style="margin-bottom: 20px;">
+        <strong>Purpose of this Document:</strong> This manual provides the store owner, manager, and counter team with an exact operational guide. It explains every button, screen, and workflow in the platform—from how customers place orders to how your team packages equipment, generates GST invoices, assigns couriers, handles cancellations, and tracks inventory.
+      </div>
+
+      <div class="cover-footer">
+        <div>Document Version: <strong>2.4 (Production Release)</strong></div>
+        <div>Date of Handover: <strong>September 2026</strong></div>
+        <div>Variathu Power Tools, Kozhencherry</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== TABLE OF CONTENTS ==================== -->
+  <div class="section-header">
+    <div>
+      <div class="section-title">
+        <span class="section-title-tag">Index</span>
+        Table of Contents
+      </div>
+      <div class="section-sub">Quick navigation directory of all sections</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 15%;">Chapter</th>
+        <th style="width: 55%;">Subject Title &amp; Covered Topics</th>
+        <th style="width: 30%;">Target Audience</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Chapter 1</strong></td>
+        <td><strong>Platform Overview &amp; Architecture</strong><br><span style="font-size: 11.5px; color: var(--slate-500);">System design, offline-to-online benefits, core web endpoints, zero-commission structure.</span></td>
+        <td>Store Owner, Store Manager</td>
+      </tr>
+      <tr>
+        <td><strong>Chapter 2</strong></td>
+        <td><strong>The Customer Journey (Client-Side Guide)</strong><br><span style="font-size: 11.5px; color: var(--slate-500);">Tool catalog browsing, OTP sign-in, cart, Kerala courier vs counter pickup, UPI / COD checkout, GST invoice preview, tracking milestones.</span></td>
+        <td>Store Staff, Support Desk, Customers</td>
+      </tr>
+      <tr>
+        <td><strong>Chapter 3</strong></td>
+        <td><strong>Store Manager Operations Manual (/admin)</strong><br><span style="font-size: 11.5px; color: var(--slate-500);">Logging in, Dashboard KPIs, fulfilling orders, DTDC/TPC courier AWB dispatch, counter pickup verification, managing customer cancellations, adding tools, editing inventory, creating coupons, managing workshop repairs.</span></td>
+        <td>Store Owner, Fulfillment Team</td>
+      </tr>
+      <tr>
+        <td><strong>Chapter 4</strong></td>
+        <td><strong>Automated WhatsApp &amp; Email Notifications</strong><br><span style="font-size: 11.5px; color: var(--slate-500);">Meta WhatsApp Cloud API templates, Resend transactional emails, dynamic domain button resolution.</span></td>
+        <td>Store Manager, Technical Team</td>
+      </tr>
+      <tr>
+        <td><strong>Chapter 5</strong></td>
+        <td><strong>Kerala GST Compliance &amp; Razorpay Settlements</strong><br><span style="font-size: 11.5px; color: var(--slate-500);">18% GST tax breakdown (CGST 9% + SGST 9%), invoice numbering, bank payout settlement timelines, processing online refunds.</span></td>
+        <td>Accountant, Store Owner</td>
+      </tr>
+      <tr>
+        <td><strong>Chapter 6</strong></td>
+        <td><strong>Daily Routine, FAQ &amp; Support Contacts</strong><br><span style="font-size: 11.5px; color: var(--slate-500);">Opening &amp; closing store checklist, troubleshooting common questions, technical support escalation.</span></td>
+        <td>All Store Staff</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ==================== CHAPTER 1 ==================== -->
+  <div style="margin-top: 35px;"></div>
+  <div class="section-header">
+    <div>
+      <div class="section-title">
+        <span class="section-title-tag">Chapter 1</span>
+        Platform Overview &amp; System Architecture
+      </div>
+      <div class="section-sub">How your custom digital showroom connects to your physical store in Kozhencherry</div>
+    </div>
+  </div>
+
+  <p>
+    Welcome to your custom-built digital retail platform for <strong>Variathu Power Tools</strong>. Unlike generic third-party marketplace platforms that charge 10%–20% commission per sale, this application is <strong>100% owned by your store</strong>. You retain direct customer relationships, zero commission fees, complete pricing autonomy, and automatic Kerala GST compliance.
+  </p>
+
+  <h3>1.1 Key Business Capabilities at a Glance</h3>
+  <div class="two-col no-break">
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--primary); margin-bottom: 6px;">🏬 Physical-to-Digital Store Synergy</h4>
+      <p style="font-size: 12.5px; margin: 0;">
+        Built specifically for your store at Poyanil Building, Kozhencherry. Supports both <strong>Store Counter Pickup</strong> (with secure pickup OTP codes) and <strong>Kerala Express Courier Shipping</strong> to all 14 districts in Kerala.
+      </p>
+    </div>
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--emerald-600); margin-bottom: 6px;">🇮🇳 Kerala GST 18% Compliant Invoicing</h4>
+      <p style="font-size: 12.5px; margin: 0;">
+        Generates legally compliant Tax Invoices showing taxable value, CGST 9%, SGST 9%, HSN codes, and your shop GSTIN. Invoices can be viewed and printed directly by both you and the customer.
+      </p>
+    </div>
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--blue-600); margin-bottom: 6px;">📱 Dual Multi-Channel Notifications</h4>
+      <p style="font-size: 12.5px; margin: 0;">
+        Every order event automatically triggers <strong>Meta WhatsApp Cloud API</strong> messages and <strong>Resend Transactional Emails</strong> with your store logo. Zero manual typing required by your staff.
+      </p>
+    </div>
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--amber-600); margin-bottom: 6px;">💳 Instant UPI &amp; COD Payment Processing</h4>
+      <p style="font-size: 12.5px; margin: 0;">
+        Customers can pay instantly using Google Pay, PhonePe, Paytm, QR code scanning, Debit/Credit cards, or choose Cash on Delivery / Counter Payment upon collection.
+      </p>
+    </div>
+  </div>
+
+  <h3>1.2 Platform Web Addresses &amp; Portals</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Portal Name</th>
+        <th>URL Route</th>
+        <th>Primary Users</th>
+        <th>Key Functions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Storefront Home</strong></td>
+        <td class="mono">/</td>
+        <td>Public Visitors</td>
+        <td>Featured machinery, brand spotlights, shop location, workshop overview.</td>
+      </tr>
+      <tr>
+        <td><strong>Catalog &amp; Shop</strong></td>
+        <td class="mono">/shop</td>
+        <td>Contractors, Buyers</td>
+        <td>Filtering by brand, power watts, category; live pricing and in-stock counts.</td>
+      </tr>
+      <tr>
+        <td><strong>Customer Portal</strong></td>
+        <td class="mono">/account</td>
+        <td>Logged-in Customers</td>
+        <td>Order status tracking, GST invoice PDF download, cancel order requests.</td>
+      </tr>
+      <tr>
+        <td><strong>Store Admin Portal</strong></td>
+        <td class="mono">/admin</td>
+        <td>Store Owner, Manager</td>
+        <td>Fulfilling orders, courier tracking assignment, product edits, inventory.</td>
+      </tr>
+      <tr>
+        <td><strong>Staff &amp; Client Login</strong></td>
+        <td class="mono">/login</td>
+        <td>Customers &amp; Staff</td>
+        <td>Customer OTP sign-in and Store Manager PIN authentication.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== CHAPTER 2 ==================== -->
+  <div class="section-header">
+    <div>
+      <div class="section-title">
+        <span class="section-title-tag">Chapter 2</span>
+        The Customer Journey (Client-Side Guide)
+      </div>
+      <div class="section-sub">Step-by-step walkthrough of how contractors and retail buyers use your website</div>
+    </div>
+  </div>
+
+  <p>
+    This chapter describes the entire shopping, ordering, and tracking process from the buyer’s perspective. Understanding this allows your counter staff to assist callers or walk-in customers efficiently.
+  </p>
+
+  <div class="workflow-diagram no-break">
+    <div class="flow-node">
+      <span class="flow-pill" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;">1. Browse Shop</span>
+      <div style="font-size:10px; color:#64748b; margin-top:3px;">Filter &amp; Select</div>
+    </div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node">
+      <span class="flow-pill" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;">2. Add to Cart</span>
+      <div style="font-size:10px; color:#64748b; margin-top:3px;">Cloud Cart Saved</div>
+    </div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node">
+      <span class="flow-pill" style="background:#fef3c7; color:#d97706; border:1px solid #fde68a;">3. Checkout</span>
+      <div style="font-size:10px; color:#64748b; margin-top:3px;">Pickup / Courier</div>
+    </div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node">
+      <span class="flow-pill" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;">4. Pay UPI / COD</span>
+      <div style="font-size:10px; color:#64748b; margin-top:3px;">Instant Receipt</div>
+    </div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-node">
+      <span class="flow-pill" style="background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">5. Track &amp; Invoice</span>
+      <div style="font-size:10px; color:#64748b; margin-top:3px;">GST Tax Bill</div>
+    </div>
+  </div>
+
+  <div class="step-list no-break">
+    <!-- Step 1 -->
+    <div class="step-item">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Browsing Machinery &amp; Filtering Tools (<span class="mono">/shop</span>)</h4>
+        <p>
+          Customers visit the catalog where they can search by keyword (e.g., <em>"Rotary Hammer"</em>, <em>"Angle Grinder"</em>) or filter by:
+        </p>
+        <ul style="font-size: 12px; margin: 4px 0 0 16px; color: var(--slate-600);">
+          <li><strong>Brand:</strong> Bosch, Makita, DeWalt, Stanley, Hikoki, etc.</li>
+          <li><strong>Category:</strong> Heavy Machinery, Cordless Power Tools, Diamond Cutting &amp; Blades, Welding, Safety.</li>
+          <li><strong>Motor Power:</strong> Filter by Wattage (e.g., 650W to 2200W) or Cordless Battery Voltage (18V, 20V Max).</li>
+          <li><strong>Price &amp; Availability:</strong> Real-time in-stock badges prevent customers from ordering unavailable tools.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step-item">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Customer Sign-In &amp; OTP Verification (<span class="mono">/login</span>)</h4>
+        <p>
+          Customers do <strong>not</strong> need to remember complicated passwords. 
+          They simply enter their 10-digit Indian Mobile Number and/or Email:
+        </p>
+        <ul style="font-size: 12px; margin: 4px 0 0 16px; color: var(--slate-600);">
+          <li>The system generates a secure <strong>6-digit OTP code</strong> valid for 10 minutes.</li>
+          <li>The OTP is dispatched instantly to both the customer's WhatsApp and Email.</li>
+          <li>Once entered, the customer's account, shipping address, and past invoices are automatically loaded.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step-item">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Persistent Cloud Shopping Cart (<span class="mono">/cart</span>)</h4>
+        <p>
+          Customers can adjust quantities, view live GST estimates, and enter discount promo coupons. 
+          Because the cart is synchronized with your cloud database, if a customer adds tools on their smartphone, the items remain in their cart when they open their laptop later.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step-item">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h4>Checkout &amp; Fulfillment Method Selection (<span class="mono">/checkout</span>)</h4>
+        <p>
+          During checkout, the buyer selects how they wish to receive their equipment:
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+          <div style="background: #ffffff; border: 1px solid var(--slate-200); border-radius: 8px; padding: 10px;">
+            <strong style="color: var(--primary);">Option A: Counter Pickup (Kozhencherry)</strong>
+            <p style="font-size: 11.5px; margin-top: 3px; color: var(--slate-600);">
+              Customer collects in person at Poyanil Building. Zero shipping fee. The customer receives a secure <strong>4-digit Pickup OTP</strong> to show at the counter.
+            </p>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--slate-200); border-radius: 8px; padding: 10px;">
+            <strong style="color: var(--blue-600);">Option B: Kerala Express Courier</strong>
+            <p style="font-size: 11.5px; margin-top: 3px; color: var(--slate-600);">
+              Delivered directly to the customer’s home, site, or workshop. The customer enters their Kerala District, street address, and 6-digit Pincode.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step-item">
+      <div class="step-number">5</div>
+      <div class="step-content">
+        <h4>Payment Options: UPI / Online vs Cash on Delivery</h4>
+        <p>
+          The platform gives buyers flexibility tailored to Kerala commerce habits:
+        </p>
+        <ul style="font-size: 12px; margin: 4px 0 0 16px; color: var(--slate-600);">
+          <li><strong>Instant UPI (Google Pay, PhonePe, Paytm, BHIM):</strong> One-tap checkout via UPI Intent or scanning a dynamic QR code on screen. Payments are verified instantly and deposited into the store's bank account.</li>
+          <li><strong>Debit &amp; Credit Cards / NetBanking:</strong> All major Indian banks supported via Razorpay.</li>
+          <li><strong>Cash on Delivery (COD) / Counter Cash:</strong> Customer pays when courier delivers to their door or when picking up at the Kozhencherry shop.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step-item">
+      <div class="step-number">6</div>
+      <div class="step-content">
+        <h4>Order Confirmation &amp; Automatic Tax Invoicing</h4>
+        <p>
+          Immediately upon order placement:
+        </p>
+        <ul style="font-size: 12px; margin: 4px 0 0 16px; color: var(--slate-600);">
+          <li>The customer sees an on-screen confirmation card with their unique <strong>Order ID (e.g., #VPT-1082)</strong>.</li>
+          <li>A complete Kerala GST Tax Invoice is generated showing itemized machinery, 18% GST (CGST 9% + SGST 9%), and barcode.</li>
+          <li>An automated confirmation WhatsApp and Email are dispatched with a direct button to track the order.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== CHAPTER 2 CONTINUED ==================== -->
+  <h3>2.1 Customer Account Portal &amp; Self-Service (<span class="mono">/account</span>)</h3>
+  <p>
+    Customers can access their account dashboard anytime to manage their orders without calling your shop.
+  </p>
+
+  <div class="two-col no-break">
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="margin-bottom: 6px; color: var(--slate-900);">🚚 Live Milestone Tracking</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin: 0;">
+        Visual progress tracker showing the current status: <em>Order Placed &bull; Processing &bull; Dispatched via Courier &bull; Delivered</em>. If dispatched, the courier partner name (e.g. DTDC Express) and clickable AWB tracking code are displayed.
+      </p>
+    </div>
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="margin-bottom: 6px; color: var(--slate-900);">📄 GST Invoice PDF Download</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin: 0;">
+        Buyers can view and print their statutory Kerala GST invoice anytime with one click. Ideal for commercial contractors claiming GST input tax credit (ITC).
+      </p>
+    </div>
+  </div>
+
+  <div class="callout callout-warning no-break">
+    <strong>How Customer Order Cancellation Works:</strong>
+    <p style="font-size: 12px; margin: 4px 0 0;">
+      Customers can cancel any pending order directly from their account dashboard by clicking <strong>"Cancel Order"</strong> and typing their reason (e.g., <em>"Duplicate order placed by mistake"</em>). If the order is already in transit with a courier, the system submits a formal <strong>Cancellation Request</strong> to your Store Manager dashboard for review, preventing unauthorized mid-transit cancellations.
+    </p>
+  </div>
+
+  <!-- ==================== CHAPTER 3 ==================== -->
+  <div style="margin-top: 35px;"></div>
+  <div class="section-header">
+    <div>
+      <div class="section-title">
+        <span class="section-title-tag">Chapter 3</span>
+        Store Manager Operations Manual (/admin)
+      </div>
+      <div class="section-sub">Master guide for store owners, fulfillment managers, and counter staff</div>
+    </div>
+  </div>
+
+  <p>
+    The Store Admin Portal is your centralized command center for handling orders, couriers, catalog items, pricing, inventory stock, and customer interactions.
+  </p>
+
+  <h3>3.1 Accessing the Admin Portal</h3>
+  <div class="step-list no-break">
+    <div class="step-item">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Open the Portal URL</h4>
+        <p>Go to <span class="mono">https://toolsshop-pied.vercel.app/admin</span> or click the "Store Portal" link in the website footer.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Enter Store Credentials</h4>
+        <p>Email: <span class="mono">admin@variathupowertools.com</span> &bull; Store Master PIN / Password: <span class="mono">admin123</span></p>
+      </div>
+    </div>
+  </div>
+
+  <h3>3.2 Dashboard KPI Metrics Bar</h3>
+  <p>At the top of the dashboard, four real-time KPI cards give you an immediate snapshot of your business health:</p>
+  <div class="kpi-grid no-break">
+    <div class="kpi-card">
+      <div class="kpi-label">Today's Sales</div>
+      <div class="kpi-val" style="color: var(--emerald-600);">₹24,850</div>
+      <div style="font-size: 10.5px; color: var(--slate-500);">Live gross revenue</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Active Orders</div>
+      <div class="kpi-val" style="color: var(--blue-600);">8 Orders</div>
+      <div style="font-size: 10.5px; color: var(--slate-500);">Needs dispatch / pickup</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Low Stock Items</div>
+      <div class="kpi-val" style="color: var(--primary);">3 Tools</div>
+      <div style="font-size: 10.5px; color: var(--slate-500);">Stock count &le; 3</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Cancellation Req</div>
+      <div class="kpi-val" style="color: var(--amber-600);">1 Pending</div>
+      <div style="font-size: 10.5px; color: var(--slate-500);">Needs manager review</div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== CHAPTER 3 CONTINUED: ORDER WORKFLOW ==================== -->
+  <h3>3.3 Complete Order Fulfillment Workflow (Step-by-Step)</h3>
+  <p>When an order arrives, follow this standard operating procedure (SOP):</p>
+
+  <div class="step-list no-break">
+    <!-- Step A -->
+    <div class="step-item">
+      <div class="step-number">A</div>
+      <div class="step-content">
+        <h4>Review Incoming Order Details in Orders Tab (<span class="mono">?tab=orders</span>)</h4>
+        <p>
+          New orders appear at the top with a yellow badge <span class="badge badge-amber">Order Placed</span>. Click on the order to inspect the items, customer phone number, delivery address, and payment method (COD vs Paid Online).
+        </p>
+      </div>
+    </div>
+
+    <!-- Step B -->
+    <div class="step-item">
+      <div class="step-number">B</div>
+      <div class="step-content">
+        <h4>Fulfill Courier Shipments (DTDC / TPC / APS Cargo)</h4>
+        <p>
+          If the customer selected <strong>Courier Express</strong>:
+        </p>
+        <ol style="font-size: 12px; margin: 4px 0 0 16px; color: var(--slate-600); line-height: 1.6;">
+          <li>Pack the power tools securely with warranty card and power accessories.</li>
+          <li>Click the blue <strong>"🚚 Dispatch via Courier"</strong> button on the order card.</li>
+          <li>A modal opens. Select the courier partner:
+            <ul style="margin: 2px 0 2px 14px;">
+              <li><strong>DTDC Express</strong> (Red &amp; Blue Surface Express)</li>
+              <li><strong>The Professional Couriers (TPC)</strong></li>
+              <li><strong>Alleppey Parcel Service (APS Cargo)</strong> (For heavy machinery like 16kg Breakers)</li>
+            </ul>
+          </li>
+          <li>Enter the tracking number (AWB) or click <em>"Generate AWB"</em>.</li>
+          <li>Click <strong>"Confirm &amp; Notify Customer"</strong>.</li>
+        </ol>
+        <div class="callout callout-success" style="margin-top: 8px; padding: 8px 12px;">
+          <strong>Automatic Trigger:</strong> The customer receives an immediate WhatsApp and Email stating: <em>"Your tools are on the way with DTDC (AWB: D58291042). Track live here."</em>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step C -->
+    <div class="step-item">
+      <div class="step-number">C</div>
+      <div class="step-content">
+        <h4>Fulfill Store Counter Pickups (Poyanil Building, Kozhencherry)</h4>
+        <p>
+          If the customer selected <strong>Store Counter Pickup</strong>:
+        </p>
+        <ol style="font-size: 12px; margin: 4px 0 0 16px; color: var(--slate-600); line-height: 1.6;">
+          <li>Pull the machinery from your showroom shelf or stock room.</li>
+          <li>Click <strong>"Mark Ready for Pickup"</strong>. The customer is automatically alerted via WhatsApp with pickup hours and directions to Poyanil Building.</li>
+          <li>When the customer arrives at the counter, ask for their <strong>4-digit Pickup OTP</strong> (visible on their phone screen or SMS).</li>
+          <li>Verify the OTP, hand over the tools, and click <strong>"Mark Completed"</strong>.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Step D -->
+    <div class="step-item">
+      <div class="step-number">D</div>
+      <div class="step-content">
+        <h4>Marking Orders as Completed &amp; Kerala GST Invoicing</h4>
+        <p>
+          Once delivered by the courier or collected at the counter, change status to <span class="badge badge-success">Completed</span>. 
+          Click the <strong>"🖨️ Print GST Invoice"</strong> button to print a physical tax invoice copy for your tax file or accounting register.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== CHAPTER 3 CONTINUED: CANCELLATIONS & INVENTORY ==================== -->
+  <h3>3.4 Managing Customer Cancellation Requests (<span class="mono">?tab=cancellations</span>)</h3>
+  <p>
+    When a customer asks to cancel an order, it appears in your dedicated <strong>Cancellations Tab</strong> with the customer’s stated reason in a prominent yellow box.
+  </p>
+
+  <div class="two-col no-break">
+    <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--emerald-600); margin-bottom: 4px;">Option A: Approve Cancellation</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin-bottom: 8px;">
+        Use if the equipment has not yet left your store.
+      </p>
+      <ul style="font-size: 11.5px; color: var(--slate-700); padding-left: 14px; line-height: 1.5;">
+        <li>Order status updates to <span class="badge badge-primary">Cancelled</span>.</li>
+        <li>Machinery stock is automatically restored back into inventory.</li>
+        <li>Online payments trigger an automatic refund breakdown notification.</li>
+        <li>Customer receives an automated cancellation confirmation email.</li>
+      </ul>
+    </div>
+
+    <div style="background: #ffffff; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--primary); margin-bottom: 4px;">Option B: Reject Request</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin-bottom: 8px;">
+        Use if the shipment is already handed to the courier and cannot be recalled.
+      </p>
+      <ul style="font-size: 11.5px; color: var(--slate-700); padding-left: 14px; line-height: 1.5;">
+        <li>You enter a clear rejection explanation (e.g. <em>"Parcel already in transit with DTDC AWB D58291042"</em>).</li>
+        <li>Order remains active in transit.</li>
+        <li>Customer is notified with instructions on how to return upon delivery.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>3.5 Inventory &amp; Stock Management (<span class="mono">?tab=inventory</span>)</h3>
+  <p>
+    You have full control over your machinery catalog. No developer assistance is required to update prices, stock, or tools.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Action</th>
+        <th style="width: 45%;">Step-by-Step Instructions</th>
+        <th style="width: 30%;">Important Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Adding a New Tool</strong></td>
+        <td>
+          1. Click the red <strong>"+ Add New Tool"</strong> button.<br>
+          2. Enter Title (e.g., <em>"Bosch GBH 2-26 DRE Rotary Hammer"</em>).<br>
+          3. Select Brand (Bosch, Makita, etc.) &amp; Category.<br>
+          4. Enter Selling Price, MRP, and Stock Quantity.<br>
+          5. Enter Power Specs (e.g. <em>"800W &bull; 26mm Concrete Capacity"</em>).<br>
+          6. Paste Image URL and click <strong>"Save Tool"</strong>.
+        </td>
+        <td>All tools automatically inherit the standard 18% Kerala GST slab.</td>
+      </tr>
+      <tr>
+        <td><strong>Editing Price or Stock</strong></td>
+        <td>
+          1. Find the tool using the search bar or category filter.<br>
+          2. Click the <strong>"✏️ Edit"</strong> icon on the product card.<br>
+          3. Update the price or increment stock count.<br>
+          4. Click <strong>"Update Product"</strong>.
+        </td>
+        <td>Changes reflect instantly across the entire customer shop in real time.</td>
+      </tr>
+      <tr>
+        <td><strong>Marking Out of Stock / Deleting</strong></td>
+        <td>
+          - Set stock to <span class="mono">0</span> to display a gray <em>"Out of Stock"</em> badge.<br>
+          - Click the <strong>"🗑️ Delete"</strong> icon to permanently remove discontinued models.
+        </td>
+        <td>A confirmation safety modal prevents accidental deletions.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.6 Customer Directory &amp; CRM (<span class="mono">?tab=customers</span>)</h3>
+  <p>
+    Your platform maintains a database of all registered retail and commercial customers:
+  </p>
+  <ul class="checklist no-break">
+    <li><strong>Lifetime Spend Tracking:</strong> Identifies your most valuable commercial contractors and frequent buyers.</li>
+    <li><strong>One-Click WhatsApp &amp; Calling:</strong> Click the green WhatsApp button next to any customer to open a pre-filled direct chat to their phone number.</li>
+    <li><strong>Complete Order History:</strong> View every single drill, grinder, or cutter a customer has ever purchased from you, making warranty verification effortless.</li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== CHAPTER 3 CONTINUED: COUPONS & REPAIRS ==================== -->
+  <h3>3.7 Creating Promo Coupons &amp; Discounts (<span class="mono">?tab=coupons</span>)</h3>
+  <p>
+    Boost seasonal sales (e.g. Onam Festival, Vishu, Kerala Construction Season) by offering discount codes:
+  </p>
+  <div class="step-list no-break">
+    <div class="step-item">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h4>Create New Coupon</h4>
+        <p>In the <strong>Coupons Tab</strong>, click <strong>"+ Create New Coupon"</strong>.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h4>Configure Coupon Rules</h4>
+        <p>
+          Code: <span class="mono">ONAM10</span> &bull; Type: <strong>Percentage (10% off)</strong> or <strong>Flat Discount (e.g. ₹500 off)</strong>.<br>
+          Set Minimum Cart Spend (e.g., ₹5,000) and Max Uses per Customer.
+        </p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h4>Track Coupon Redemptions</h4>
+        <p>The dashboard displays how many times each coupon has been used and the total revenue it generated.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>3.8 Workshop Repairs &amp; Tool Clinic Management (<span class="mono">?tab=repairs</span>)</h3>
+  <p>
+    Your Kozhencherry workshop repairs clinic is supported directly in the system:
+  </p>
+  <div class="two-col no-break">
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="margin-bottom: 6px; color: var(--slate-900);">📥 Intake &amp; Diagnosis</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin: 0;">
+        When a customer drops off damaged equipment (e.g. armature failure, carbon brush replacement, switch damage), counter staff record the tool model, serial number, and initial fault symptoms.
+      </p>
+    </div>
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="margin-bottom: 6px; color: var(--slate-900);">🔔 Ready for Pickup &amp; Settlement</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin: 0;">
+        Once repaired by your technicians, counter staff update the ticket status to <em>"Ready for Pickup"</em> with the total service cost. The customer receives an automated SMS/WhatsApp with their pickup code.
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== CHAPTER 4 ==================== -->
+  <div style="margin-top: 35px;"></div>
+  <div class="section-header">
+    <div>
+      <div class="section-title">
+        <span class="section-title-tag">Chapter 4</span>
+        Automated WhatsApp &amp; Email Notifications
+      </div>
+      <div class="section-sub">Zero-touch customer communication across Meta WhatsApp Cloud API &amp; Resend</div>
+    </div>
+  </div>
+
+  <p>
+    Your platform operates a <strong>hands-free automated notification engine</strong>. Your staff never needs to type customer messages manually.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Customer Milestone</th>
+        <th>WhatsApp Notification Trigger</th>
+        <th>Transactional Email Layout</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Order Placed</strong></td>
+        <td>Order summary, amount, Order ID #, pickup code or address confirmation.</td>
+        <td>Official logo header, items table, GST breakdown, button: <em>"View Order &amp; GST Invoice"</em>.</td>
+      </tr>
+      <tr>
+        <td><strong>Dispatched via Courier</strong></td>
+        <td>Courier partner name, AWB tracking number, direct link to courier tracking portal.</td>
+        <td>Courier badge, tracking card, destination address, button: <em>"Track Shipment &amp; Status"</em>.</td>
+      </tr>
+      <tr>
+        <td><strong>Ready for Store Pickup</strong></td>
+        <td>Pickup instructions, Poyanil Building address, counter opening hours, 4-digit OTP.</td>
+        <td>Store counter location map card, pickup OTP verification code banner.</td>
+      </tr>
+      <tr>
+        <td><strong>Order Completed</strong></td>
+        <td>Thank you message, tool warranty reminder, Kozhencherry repair clinic helpline.</td>
+        <td>Completed banner, authorized service center notice, button: <em>"Download GST Invoice"</em>.</td>
+      </tr>
+      <tr>
+        <td><strong>Cancellation Update</strong></td>
+        <td>Instant confirmation of order cancellation and refund status.</td>
+        <td>Reason callout box, refund breakdown, catalog link: <em>"Browse Our Power Tools"</em>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-info no-break">
+    <strong>Dynamic Domain Intelligence:</strong>
+    <p style="font-size: 12px; margin: 4px 0 0;">
+      All buttons inside transactional emails automatically adapt to your live domain. Whether the site is accessed on your temporary Vercel link or your future permanent custom domain (e.g., <em>variathupowertools.com</em>), customers are always directed to the correct active website without broken links.
+    </p>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== CHAPTER 5 ==================== -->
+  <div class="section-header">
+    <div>
+      <div class="section-title">
+        <span class="section-title-tag">Chapter 5</span>
+        Kerala GST Compliance &amp; Razorpay Settlements
+      </div>
+      <div class="section-sub">Accounting standards, tax compliance, and automated bank settlements</div>
+    </div>
+  </div>
+
+  <h3>5.1 Statutory Kerala GST 18% Tax Structure</h3>
+  <p>
+    Under the Central Goods and Services Tax (CGST) and Kerala State Goods and Services Tax (SGST) acts, standard power tools and machinery fall under the <strong>18% GST Bracket</strong>. Your platform automatically calculates and separates these figures:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tax Component</th>
+        <th>Rate</th>
+        <th>Applicability</th>
+        <th>Example on ₹11,800 Tool</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Taxable Value (Base)</strong></td>
+        <td>84.75%</td>
+        <td>Net Machinery Selling Price</td>
+        <td>₹10,000.00</td>
+      </tr>
+      <tr>
+        <td><strong>CGST (Central Tax)</strong></td>
+        <td>9.00%</td>
+        <td>Central Government Share</td>
+        <td>₹900.00</td>
+      </tr>
+      <tr>
+        <td><strong>SGST (Kerala State Tax)</strong></td>
+        <td>9.00%</td>
+        <td>Kerala State Government Share</td>
+        <td>₹900.00</td>
+      </tr>
+      <tr>
+        <td><strong>Total Customer Invoice</strong></td>
+        <td><strong>18.00% Total Tax</strong></td>
+        <td><strong>Final Amount Paid by Buyer</strong></td>
+        <td><strong>₹11,800.00</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>5.2 Razorpay Bank Settlement Schedule</h3>
+  <p>
+    When a customer pays online via UPI (GPay/PhonePe) or card:
+  </p>
+  <ul class="checklist no-break">
+    <li><strong>Instant Capture:</strong> Payment is immediately verified; the order is confirmed without counter delay.</li>
+    <li><strong>Direct Bank Payout (T+1 / T+2):</strong> Razorpay automatically transfers accumulated funds directly into your shop's Current Bank Account according to standard Reserve Bank of India (RBI) merchant settlement rules.</li>
+    <li><strong>0% Merchant Risk:</strong> Fraudulent or failed bank transactions are intercepted immediately; orders are only placed if payment is successfully captured.</li>
+  </ul>
+
+  <!-- ==================== CHAPTER 6 ==================== -->
+  <div style="margin-top: 35px;"></div>
+  <div class="section-header">
+    <div>
+      <div class="section-title">
+        <span class="section-title-tag">Chapter 6</span>
+        Daily Routine, FAQ &amp; Support Contacts
+      </div>
+      <div class="section-sub">Standard operating procedure for the store manager and counter staff</div>
+    </div>
+  </div>
+
+  <h3>6.1 Daily Store Team Checklist</h3>
+  <div class="two-col no-break">
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--primary); margin-bottom: 6px;">🌅 Morning Routine (09:00 AM)</h4>
+      <ul style="font-size: 12px; color: var(--slate-700); padding-left: 16px; line-height: 1.6;">
+        <li>Log into <span class="mono">/admin</span> using your store credentials.</li>
+        <li>Filter Orders by <span class="badge badge-amber">Order Placed</span>.</li>
+        <li>Check for overnight orders and print physical picking slips.</li>
+        <li>Prepare equipment packages and verify warranty cards.</li>
+        <li>Review the <strong>Cancellations Tab</strong> for any urgent morning requests before booking couriers.</li>
+      </ul>
+    </div>
+
+    <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
+      <h4 style="color: var(--emerald-600); margin-bottom: 6px;">🌇 Evening Closing (07:30 PM)</h4>
+      <ul style="font-size: 12px; color: var(--slate-700); padding-left: 16px; line-height: 1.6;">
+        <li>Hand packages to DTDC / TPC / APS courier pickup van.</li>
+        <li>Enter all courier AWB tracking numbers into the system.</li>
+        <li>Check counter pickup shelf: Confirm any collected orders by clicking <em>"Mark Completed"</em>.</li>
+        <li>Review inventory low-stock alerts for tomorrow's distributor reorder.</li>
+        <li>Sign out of the admin portal.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>6.2 Frequently Asked Questions (Store Owner FAQs)</h3>
+  <div class="callout callout-info no-break">
+    <strong>Q: What if a customer says they didn't receive their pickup OTP?</strong>
+    <p style="font-size: 12px; margin: 4px 0 0;">
+      A: Open the order in the Admin Orders Tab. Counter staff can verify the customer by matching their mobile number and Government ID (Aadhaar / Driving License). Once verified, you can mark the order as Completed manually.
+    </p>
+  </div>
+
+  <div class="callout callout-info no-break">
+    <strong>Q: Can we change prices during special festival promotions?</strong>
+    <p style="font-size: 12px; margin: 4px 0 0;">
+      A: Yes! Go to the <strong>Inventory Tab</strong>, search for the item, click the pencil icon, enter the new promotional price, and click "Update Product". It updates instantly. You can also create a promo coupon (e.g. <em>ONAM10</em>) in the Coupons Tab instead of changing product base prices.
+    </p>
+  </div>
+
+  <div class="callout callout-info no-break">
+    <strong>Q: How do we handle heavy items like 16kg Demolition Breakers that standard couriers won't carry?</strong>
+    <p style="font-size: 12px; margin: 4px 0 0;">
+      A: When clicking "Dispatch via Courier", select <strong>Alleppey Parcel Service (APS Cargo)</strong> from the dropdown. APS Cargo specializes in heavy freight and machinery across all Kerala towns.
+    </p>
+  </div>
+
+  <!-- Technical Support Card -->
+  <div style="background: var(--slate-900); color: #ffffff; border-radius: 12px; padding: 20px; margin-top: 25px;" class="no-break">
+    <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #fca5a5; margin-bottom: 6px;">
+      🛠️ Technical &amp; Engineering Support
+    </div>
+    <h3 style="color: #ffffff; margin: 0 0 8px; font-size: 18px;">
+      Dedicated System Support &bull; Variathu Power Tools Platform
+    </h3>
+    <p style="font-size: 12.5px; color: #cbd5e1; margin-bottom: 12px; line-height: 1.5;">
+      For platform maintenance, database backups, new feature additions, or connecting custom domain names, reach out to your lead systems engineer.
+    </p>
+    <div style="display: flex; gap: 24px; font-size: 12px; color: #94a3b8;">
+      <div>Platform Repo: <strong style="color: #ffffff;">github.com/Majorshot/toolsshop</strong></div>
+      <div>Hosting: <strong style="color: #ffffff;">Render Cloud API &amp; Vercel Edge</strong></div>
+      <div>Database: <strong style="color: #ffffff;">MongoDB Atlas Cluster</strong></div>
+    </div>
+  </div>
+
+  <div class="footer-doc">
+    <div>&copy; 2026 Variathu Power Tools. All Rights Reserved.</div>
+    <div>Poyanil Building, Kozhencherry, Pathanamthitta, Kerala - 689641</div>
+    <div>Page 6 of 6</div>
+  </div>
+
+</body>
+</html>
