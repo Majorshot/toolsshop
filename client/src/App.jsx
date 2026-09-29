@@ -108,7 +108,24 @@ const MainApp = () => {
     let bc = null;
     try {
       bc = new BroadcastChannel('vpt_inventory_channel');
-      bc.onmessage = () => {
+      bc.onmessage = (event) => {
+        const data = event?.data;
+        if (data?.type === 'PRODUCT_DELETED') {
+          const delId = data.productId;
+          const customId = data.customId;
+          const mongoId = data.mongoId;
+          setAllProducts(prev => prev.filter(p => {
+            if (delId && (p.id === delId || p._id === delId)) return false;
+            if (customId && (p.id === customId || p._id === customId)) return false;
+            if (mongoId && (p.id === mongoId || p._id === mongoId)) return false;
+            return true;
+          }));
+        } else if (data?.type === 'PRODUCT_ADDED' && data.product) {
+          setAllProducts(prev => [data.product, ...prev.filter(p => (p.id || p._id) !== (data.product.id || data.product._id))]);
+        } else if (data?.type === 'PRODUCT_UPDATED' && data.product) {
+          const updId = data.product.id || data.product._id;
+          setAllProducts(prev => prev.map(p => (p.id === updId || p._id === updId) ? { ...p, ...data.product } : p));
+        }
         loadProducts(0, true);
       };
     } catch (e) {}

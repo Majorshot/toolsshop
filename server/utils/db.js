@@ -642,10 +642,10 @@ function ensureMongoConnected() {
   }
 }
 
-// High-Speed In-Memory Cache for Catalog Lookups (1ms response for concurrent devices)
+// High-Speed In-Memory Cache disabled (TTL = 0) to ensure live inventory accuracy across all admin/storefront devices
 let catalogCache = null;
 let catalogCacheTime = 0;
-const CATALOG_CACHE_TTL = 60 * 1000; // 60 seconds
+const CATALOG_CACHE_TTL = 0;
 
 function invalidateCatalogCache() {
   catalogCache = null;
@@ -672,7 +672,9 @@ const db = {
       !options.page &&
       !options.limit &&
       !filters.page &&
-      !filters.limit;
+      !filters.limit &&
+      !filters._t &&
+      !options.noCache;
 
     if (isDefaultQuery && catalogCache && (Date.now() - catalogCacheTime < CATALOG_CACHE_TTL)) {
       return catalogCache;
@@ -741,8 +743,9 @@ const db = {
 
   async getProductById(id) {
     ensureMongoConnected();
-    const isObjectId = mongoose.isValidObjectId(id);
-    const query = isObjectId ? { $or: [{ id: String(id) }, { _id: id }] } : { id: String(id) };
+    const cleanId = String(id).trim();
+    const isObjectId = mongoose.isValidObjectId(cleanId);
+    const query = isObjectId ? { $or: [{ id: cleanId }, { _id: cleanId }] } : { id: cleanId };
     return await ProductModel.findOne(query).lean();
   },
 
@@ -753,13 +756,14 @@ const db = {
     const created = new ProductModel(newProduct);
     const saved = await created.save();
     invalidateCatalogCache();
-    return saved;
+    return saved.toObject ? saved.toObject() : saved;
   },
 
   async updateProduct(id, updates) {
     ensureMongoConnected();
-    const isObjectId = mongoose.isValidObjectId(id);
-    const query = isObjectId ? { $or: [{ id: String(id) }, { _id: id }] } : { id: String(id) };
+    const cleanId = String(id).trim();
+    const isObjectId = mongoose.isValidObjectId(cleanId);
+    const query = isObjectId ? { $or: [{ id: cleanId }, { _id: cleanId }] } : { id: cleanId };
     const updated = await ProductModel.findOneAndUpdate(query, updates, { new: true }).lean();
     invalidateCatalogCache();
     return updated;
@@ -767,8 +771,9 @@ const db = {
 
   async deleteProduct(id) {
     ensureMongoConnected();
-    const isObjectId = mongoose.isValidObjectId(id);
-    const query = isObjectId ? { $or: [{ id: String(id) }, { _id: id }] } : { id: String(id) };
+    const cleanId = String(id).trim();
+    const isObjectId = mongoose.isValidObjectId(cleanId);
+    const query = isObjectId ? { $or: [{ id: cleanId }, { _id: cleanId }] } : { id: cleanId };
     const res = await ProductModel.deleteOne(query);
     invalidateCatalogCache();
     return res.deletedCount > 0;

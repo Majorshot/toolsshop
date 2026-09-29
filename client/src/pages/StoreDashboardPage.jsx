@@ -851,8 +851,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         } else if (data.type === 'PRODUCT_UPDATED' && data.product) {
           const updId = data.product.id || data.product._id;
           setProducts(prev => prev.map(p => (p.id === updId || p._id === updId) ? { ...p, ...data.product } : p));
-        } else if (data.type === 'PRODUCT_DELETED' && data.productId) {
-          setProducts(prev => prev.filter(p => p.id !== data.productId && p._id !== data.productId));
+        } else if (data.type === 'PRODUCT_DELETED') {
+          const delId = data.productId;
+          const customId = data.customId;
+          const mongoId = data.mongoId;
+          setProducts(prev => prev.filter(p => {
+            if (delId && (p.id === delId || p._id === delId)) return false;
+            if (customId && (p.id === customId || p._id === customId)) return false;
+            if (mongoId && (p.id === mongoId || p._id === mongoId)) return false;
+            return true;
+          }));
         } else {
           loadProducts({ silent: true });
         }
@@ -1110,10 +1118,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (!productToDelete) return;
     setIsDeleting(true);
     const targetId = productToDelete.id || productToDelete._id;
+    const customId = productToDelete.id;
+    const mongoId = productToDelete._id;
     const deletedName = productToDelete.name;
 
     // Instant optimistic removal from UI: disappears immediately with zero lag or page reload
-    setProducts(prev => prev.filter(p => (p.id || p._id) !== targetId));
+    setProducts(prev => prev.filter(p => {
+      const matchCustom = customId && (p.id === customId || p._id === customId);
+      const matchMongo = mongoId && (p.id === mongoId || p._id === mongoId);
+      const matchTarget = targetId && (p.id === targetId || p._id === targetId);
+      return !matchCustom && !matchMongo && !matchTarget;
+    }));
     setProductToDelete(null);
 
     try {
@@ -1123,7 +1138,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       // Broadcast real-time deletion to all other browser tabs and storefront
       try {
         const bc = new BroadcastChannel('vpt_inventory_channel');
-        bc.postMessage({ type: 'PRODUCT_DELETED', productId: targetId });
+        bc.postMessage({ type: 'PRODUCT_DELETED', productId: targetId, customId, mongoId });
         bc.close();
       } catch (e) {}
 

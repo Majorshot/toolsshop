@@ -73,6 +73,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Disable HTTP caching for all API responses to ensure real-time inventory and orders synchronization
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({

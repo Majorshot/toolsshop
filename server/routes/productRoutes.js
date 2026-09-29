@@ -6,9 +6,11 @@ const { requireStoreOwner } = require('../utils/auth');
 // GET all products with filtering, search, and optional pagination (Public)
 router.get('/', async (req, res) => {
   try {
-    res.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
-    const { category, brand, cordless, search, sortBy, page, limit } = req.query;
-    const result = await db.getProducts({ category, brand, cordless, search, sortBy }, { page, limit });
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    const { category, brand, cordless, search, sortBy, page, limit, _t } = req.query;
+    const result = await db.getProducts({ category, brand, cordless, search, sortBy, _t }, { page, limit });
     if (Array.isArray(result)) {
       res.json({ success: true, count: result.length, data: result });
     } else {

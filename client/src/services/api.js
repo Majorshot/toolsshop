@@ -11,10 +11,12 @@ export function getAuthHeaders() {
 
 function authFetch(url, options = {}) {
   const headers = {
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
     ...getAuthHeaders(),
     ...(options.headers || {})
   };
-  return fetch(url, { ...options, headers });
+  return fetch(url, { cache: 'no-store', ...options, headers });
 }
 
 export const api = {
@@ -114,15 +116,28 @@ export const api = {
     if (params.sortBy) query.append('sortBy', params.sortBy);
     if (params.page) query.append('page', params.page);
     if (params.limit) query.append('limit', params.limit);
+    query.append('_t', Date.now());
 
-    const res = await fetch(`${API_BASE}/products?${query.toString()}`);
+    const res = await fetch(`${API_BASE}/products?${query.toString()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
     if (!res.ok) throw new Error('Failed to fetch products');
     return await res.json();
   },
 
   // Single product
   async getProduct(id) {
-    const res = await fetch(`${API_BASE}/products/${id}`);
+    const res = await fetch(`${API_BASE}/products/${id}?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
     if (!res.ok) throw new Error('Failed to fetch product');
     return await res.json();
   },
