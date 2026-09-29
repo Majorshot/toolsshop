@@ -75,6 +75,11 @@ router.put('/:id', requireStoreOwner, async (req, res) => {
       whatsappService.sendRepairDeliveredWhatsApp(updated).catch(err => {
         console.warn(`[WhatsApp API] Async repair handover receipt WhatsApp notice error for #${updated.jobId}:`, err.message);
       });
+    // When bill/parts/notes are updated and store owner chose to notify customer
+    } else if (req.body.sendWhatsAppUpdate || req.body.notifyCustomer) {
+      whatsappService.sendRepairEstimateUpdatedWhatsApp(updated, oldJob?.finalCost || oldJob?.estimatedCost).catch(err => {
+        console.warn(`[WhatsApp API] Async repair estimate revision WhatsApp notice error for #${updated.jobId}:`, err.message);
+      });
     }
 
     res.json({ success: true, job: updated });

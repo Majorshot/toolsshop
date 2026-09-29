@@ -721,6 +721,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [isSubmittingRepair, setIsSubmittingRepair] = useState(false);
   const [repairOtpInputs, setRepairOtpInputs] = useState({});
   const [verifyingRepairId, setVerifyingRepairId] = useState(null);
+  const [editingRepairJob, setEditingRepairJob] = useState(null);
+  const [editRepairForm, setEditRepairForm] = useState({
+    estimatedCost: '',
+    advancePaid: '',
+    technicianNotes: '',
+    sendWhatsApp: true
+  });
+  const [isSubmittingEditRepair, setIsSubmittingEditRepair] = useState(false);
 
   // Invoice & Shipping Label Printing State
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
@@ -1560,6 +1568,41 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     });
   };
 
+  const handleOpenEditRepair = (job) => {
+    setEditingRepairJob(job);
+    setEditRepairForm({
+      estimatedCost: job.finalCost || job.estimatedCost || '',
+      advancePaid: job.advancePaid || '',
+      technicianNotes: job.technicianNotes || '',
+      sendWhatsApp: true
+    });
+  };
+
+  const handleSaveEditRepair = async (e) => {
+    if (e) e.preventDefault();
+    if (!editingRepairJob) return;
+    const targetId = editingRepairJob.id || editingRepairJob.jobId || editingRepairJob._id;
+    setIsSubmittingEditRepair(true);
+    try {
+      const costNum = Number(editRepairForm.estimatedCost) || 0;
+      const advNum = Number(editRepairForm.advancePaid) || 0;
+      await api.updateRepairJob(targetId, {
+        estimatedCost: costNum,
+        finalCost: costNum,
+        advancePaid: advNum,
+        technicianNotes: editRepairForm.technicianNotes.trim(),
+        sendWhatsAppUpdate: Boolean(editRepairForm.sendWhatsApp)
+      });
+      showNotification(`✅ Repair bill & parts updated! ${editRepairForm.sendWhatsApp ? 'WhatsApp notification sent to customer.' : ''}`);
+      setEditingRepairJob(null);
+      loadRepairs();
+    } catch (err) {
+      showNotification(`Error: ${err.message}`);
+    } finally {
+      setIsSubmittingEditRepair(false);
+    }
+  };
+
   const getWhatsAppRepairText = (job) => {
     const cleanPhone = (job.customerPhone || '').replace(/[^0-9]/g, '');
     let text = `Hello ${job.customerName},\n`;
@@ -1585,7 +1628,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       text += `Please visit our counter at Poyanil Building, Poyanil Junction, Kozhencherry to collect your tested equipment.`;
     } else {
       text += `We have received your machinery at our workshop. Our technician is inspecting the equipment.\n`;
-      if (job.estimatedCost) text += `Current estimate: ₹${job.estimatedCost.toLocaleString('en-IN')}.\n`;
+      if (job.technicianNotes) text += `📝 *Diagnosis / Spare Parts:* ${job.technicianNotes}\n`;
+      if (job.finalCost || job.estimatedCost) {
+        text += `💰 *Current Estimate:* ₹${(job.finalCost || job.estimatedCost).toLocaleString('en-IN')}`;
+        if (job.advancePaid) text += ` (Advance Paid: ₹${job.advancePaid.toLocaleString('en-IN')})`;
+        text += `\n`;
+      }
     }
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   };
@@ -5440,11 +5488,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                        Est: {formatPrice(job.estimatedCost || 0)}
+                        {job.status === 'Handed Over' ? 'Bill: ' : 'Est: '}{formatPrice(job.finalCost || job.estimatedCost || 0)}
                       </span>
                       {job.advancePaid > 0 && (
                         <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700' }}>
                           Advance Paid: {formatPrice(job.advancePaid)}
+                        </div>
+                      )}
+                      {((job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)) > 0 && (
+                        <div style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '700' }}>
+                          Balance Due: {formatPrice(Math.max(0, (job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)))}
                         </div>
                       )}
                     </div>
@@ -5505,7 +5558,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditRepair(job)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        color: '#0284c7',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      id={`btn-edit-repair-${job.jobId}`}
+                      title="Update bill estimate, added spare parts, and notify customer via WhatsApp"
+                    >
+                      <Edit3 size={13} />
+                      <span>Update Bill &amp; Parts</span>
+                    </button>
+
                     <a
                       href={getWhatsAppRepairText(job)}
                       target="_blank"
@@ -7992,8 +8068,156 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 3: PRINTABLE GST TAX INVOICE (Unified Indian/Kerala Compliance)     */}
+      {/* MODAL: UPDATE REPAIR BILL & SPARE PARTS MODAL                             */}
       {/* ========================================================================= */}
+      {editingRepairJob && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '16px'
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingRepairJob(null);
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: 'var(--shadow-2xl)',
+              border: '1px solid #e2e8f0',
+              padding: '24px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Wrench size={20} style={{ color: '#ea580c' }} />
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    Update Bill &amp; Spare Parts
+                  </h3>
+                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                    Ticket: <strong>{editingRepairJob.jobId}</strong> &bull; {editingRepairJob.toolBrand ? `${editingRepairJob.toolBrand} ` : ''}{editingRepairJob.toolModel}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRepairJob(null)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '0.82rem' }}>
+              <div>Customer: <strong>{editingRepairJob.customerName}</strong> (📞 {editingRepairJob.customerPhone})</div>
+              <div style={{ color: '#64748b', marginTop: '2px' }}>
+                Initial Issue: <em>{editingRepairJob.issueDescription}</em>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveEditRepair} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                    Revised Total Bill (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    placeholder="e.g. 750"
+                    value={editRepairForm.estimatedCost}
+                    onChange={(e) => setEditRepairForm({ ...editRepairForm, estimatedCost: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #0284c7', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '800', color: '#0f172a' }}
+                    id="input-edit-repair-cost"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                    Advance Paid at Counter (₹)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 60"
+                    value={editRepairForm.advancePaid}
+                    onChange={(e) => setEditRepairForm({ ...editRepairForm, advancePaid: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
+                    id="input-edit-repair-advance"
+                  />
+                </div>
+              </div>
+
+              {/* Live balance calculation preview */}
+              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '8px', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                <span style={{ color: '#9a3412', fontWeight: '700' }}>Balance Due at Counter Collection:</span>
+                <strong style={{ fontSize: '0.95rem', color: '#ea580c', fontFamily: 'var(--font-mono)' }}>
+                  ₹{Math.max(0, (Number(editRepairForm.estimatedCost) || 0) - (Number(editRepairForm.advancePaid) || 0)).toLocaleString('en-IN')}
+                </strong>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                  Technician Notes / Replaced Spare Parts
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Replaced armature bearings, changed carbon brushes, stator coil rewound"
+                  value={editRepairForm.technicianNotes}
+                  onChange={(e) => setEditRepairForm({ ...editRepairForm, technicianNotes: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', resize: 'vertical' }}
+                  id="input-edit-repair-notes"
+                />
+                <span style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', display: 'block' }}>
+                  Explain what additional parts or labor were required so the customer understands the bill revision.
+                </span>
+              </div>
+
+              {/* WhatsApp notification checkbox */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.82rem', color: '#166534', fontWeight: '700' }}>
+                <input
+                  type="checkbox"
+                  checked={editRepairForm.sendWhatsApp}
+                  onChange={(e) => setEditRepairForm({ ...editRepairForm, sendWhatsApp: e.target.checked })}
+                  style={{ width: '16px', height: '16px', accentColor: '#16a34a', cursor: 'pointer' }}
+                />
+                <span>Send revised estimate &amp; parts update to customer via WhatsApp</span>
+              </label>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingRepairJob(null)}
+                  style={{ padding: '9px 16px', background: '#f1f5f9', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEditRepair}
+                  className="btn-hero-clean"
+                  style={{ padding: '9px 20px', fontSize: '0.84rem' }}
+                  id="btn-submit-edit-repair"
+                >
+                  {isSubmittingEditRepair ? 'Saving & Sending...' : (editRepairForm.sendWhatsApp ? 'Update & Send WhatsApp' : 'Save Changes')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       {selectedOrderForInvoice && (
         <GstInvoiceModal
           order={selectedOrderForInvoice}

@@ -327,6 +327,37 @@ Thank you for choosing Variathu Power Tools!`;
   return sendWhatsAppMessage(job.customerPhone, message);
 };
 
+/**
+ * 9. Send Workshop Repair Estimate & Additional Parts Update WhatsApp
+ */
+const sendRepairEstimateUpdatedWhatsApp = async (job, prevCost) => {
+  if (!job || !job.customerPhone) return;
+
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
+  const currentCost = Number(job.finalCost || job.estimatedCost || 0);
+  const prevNumber = Number(prevCost || 0);
+  const advance = Number(job.advancePaid || 0);
+  const balance = Math.max(0, currentCost - advance);
+
+  const message = `🔧 *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
+*Repair Estimate & Service Update* ⚙️
+
+Dear *${job.customerName || 'Valued Customer'}*,
+During technical inspection of your machine (*${brandModel}* - Ticket *${job.jobId}*), our workshop technician updated the service diagnosis:
+
+${job.technicianNotes ? `📝 *Technician Work / Replaced Parts:*\n${job.technicianNotes}\n\n` : ''}💰 *Billing Breakdown:*
+• Revised Estimate: *₹${currentCost.toLocaleString('en-IN')}*${prevNumber > 0 && prevNumber !== currentCost ? ` (Previous: ₹${prevNumber.toLocaleString('en-IN')})` : ''}
+${advance > 0 ? `• Advance Paid: ₹${advance.toLocaleString('en-IN')}\n` : ''}• Est. Balance at Counter: *₹${balance.toLocaleString('en-IN')}*
+
+Our technician is working on your machine. You will automatically receive your 4-digit collection OTP via WhatsApp once the tool is tested and ready for collection!
+
+🏢 *Workshop Location:*
+Variathu Power Tools, Poyanil Building, Kozhencherry
+📞 Helpline: *+91 94475 59333*`;
+
+  return sendWhatsAppMessage(job.customerPhone, message);
+};
+
 module.exports = {
   sendWhatsAppMessage,
   sendOrderConfirmationWhatsApp,
@@ -336,6 +367,7 @@ module.exports = {
   sendOrderCompletedWhatsApp,
   sendRepairTicketCreatedWhatsApp,
   sendRepairReadyWhatsApp,
-  sendRepairDeliveredWhatsApp
+  sendRepairDeliveredWhatsApp,
+  sendRepairEstimateUpdatedWhatsApp
 };
 
