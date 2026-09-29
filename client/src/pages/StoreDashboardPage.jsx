@@ -1529,7 +1529,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setVerifyingRepairId(targetId);
     try {
       const res = await api.verifyRepairOtp(targetId, otp);
-      showNotification(`✅ Handover verified! Tool delivered to ${job.customerName}`);
+      showNotification(`✅ Handover verified! Digital delivery receipt & service warranty sent to ${job.customerName} via WhatsApp.`);
       setRepairOtpInputs(prev => ({ ...prev, [targetId]: '' }));
       loadRepairs();
     } catch (err) {
@@ -1567,7 +1567,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     text += `🔧 *Tool:* ${job.toolBrand ? job.toolBrand + ' ' : ''}${job.toolModel}\n`;
     text += `📋 *Job Ticket:* ${job.jobId}\n`;
     text += `🚦 *Status:* ${job.status.toUpperCase()}\n`;
-    if (job.status === 'Repaired & Ready') {
+    if (job.status === 'Handed Over' || job.handoverVerified) {
+      const finalBill = Number(job.finalCost || job.estimatedCost || 0);
+      const advance = Number(job.advancePaid || 0);
+      const balance = Math.max(0, finalBill - advance);
+      text += `✅ *Machine Delivered & Collected!* 🛠️\n`;
+      text += `💰 *Total Bill:* ₹${finalBill.toLocaleString('en-IN')}\n`;
+      if (advance > 0) text += `💵 *Advance Paid:* ₹${advance.toLocaleString('en-IN')}\n`;
+      if (balance > 0) text += `💵 *Balance Settled:* ₹${balance.toLocaleString('en-IN')}\n`;
+      text += `🛡️ *Service Guarantee:* Covered under workshop warranty on replaced parts.\n\n`;
+      text += `Thank you for trusting Variathu Power Tools, Poyanil Building, Kozhencherry!`;
+    } else if (job.status === 'Repaired & Ready') {
       text += `✅ *Diagnosis / Work Done:* ${job.technicianNotes || 'Servicing, parts fitting & safety testing completed'}\n`;
       text += `💰 *Bill Amount:* ₹${(job.finalCost || job.estimatedCost || 0).toLocaleString('en-IN')}`;
       if (job.advancePaid) text += ` (Advance Paid: ₹${job.advancePaid.toLocaleString('en-IN')})`;

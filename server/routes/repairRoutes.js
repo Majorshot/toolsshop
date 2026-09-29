@@ -70,6 +70,11 @@ router.put('/:id', requireStoreOwner, async (req, res) => {
       whatsappService.sendRepairReadyWhatsApp(updated).catch(err => {
         console.warn(`[WhatsApp API] Async repair ready WhatsApp notice error for #${updated.jobId}:`, err.message);
       });
+    } else if ((newStatusLower.includes('hand') || newStatusLower.includes('over') || newStatusLower.includes('deliver')) &&
+        (!oldStatusLower.includes('hand') && !oldStatusLower.includes('deliver'))) {
+      whatsappService.sendRepairDeliveredWhatsApp(updated).catch(err => {
+        console.warn(`[WhatsApp API] Async repair handover receipt WhatsApp notice error for #${updated.jobId}:`, err.message);
+      });
     }
 
     res.json({ success: true, job: updated });
@@ -84,7 +89,9 @@ router.post('/:id/send-whatsapp', requireStoreOwner, async (req, res) => {
     const job = await db.getRepairJobById(req.params.id);
     if (!job) return res.status(404).json({ success: false, message: 'Repair job not found' });
     let waRes;
-    if (job.status === 'Repaired & Ready') {
+    if (job.status === 'Handed Over' || job.handoverVerified) {
+      waRes = await whatsappService.sendRepairDeliveredWhatsApp(job);
+    } else if (job.status === 'Repaired & Ready') {
       waRes = await whatsappService.sendRepairReadyWhatsApp(job);
     } else {
       waRes = await whatsappService.sendRepairTicketCreatedWhatsApp(job);
@@ -104,6 +111,14 @@ router.post('/:id/verify-otp', requireStoreOwner, async (req, res) => {
     if (!result.success) {
       return res.status(400).json(result);
     }
+
+    // Automatically send handover receipt & service guarantee to customer via WhatsApp!
+    if (result.job) {
+      whatsappService.sendRepairDeliveredWhatsApp(result.job).catch(err => {
+        console.warn(`[WhatsApp API] Async repair handover delivery receipt WhatsApp notice error for #${result.job.jobId}:`, err.message);
+      });
+    }
+
     res.json(result);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

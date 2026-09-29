@@ -292,6 +292,41 @@ Poyanil Building, Poyanil Junction, Kozhencherry, Kerala
   return sendWhatsAppMessage(job.customerPhone, message);
 };
 
+/**
+ * 8. Send Workshop Repair Completed / Handed Over Receipt WhatsApp
+ */
+const sendRepairDeliveredWhatsApp = async (job) => {
+  if (!job || !job.customerPhone) return;
+
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
+  const finalBill = Number(job.finalCost || job.estimatedCost || 0);
+  const advance = Number(job.advancePaid || 0);
+  const balance = Math.max(0, finalBill - advance);
+
+  const message = `✅ *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
+*Tool Handover & Service Receipt* 🛠️
+
+Dear *${job.customerName || 'Valued Customer'}*,
+Your power tool has been successfully tested and collected from our showroom counter!
+
+🏷️ *Ticket ID:* *${job.jobId}*
+⚙️ *Machine:* *${brandModel}*
+${job.serialNumber ? `🔖 *Serial No:* ${job.serialNumber}\n` : ''}📅 *Handover Date:* ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+
+💰 *Billing Summary:*
+• Total Service Bill: ₹${finalBill.toLocaleString('en-IN')}
+${advance > 0 ? `• Advance Paid: ₹${advance.toLocaleString('en-IN')}\n` : ''}${balance > 0 ? `• Balance Paid at Counter: ₹${balance.toLocaleString('en-IN')} (Settled)\n` : '• Payment Status: Paid in full\n'}
+🛡️ *Workshop Service Guarantee:*
+All armature rewinding and replaced spare parts carry our workshop service guarantee. Please keep this digital receipt for reference.
+
+📍 Variathu Power Tools, Poyanil Building, Kozhencherry, Kerala
+📞 Need spare parts, carbon brushes, or consumables? Call us: *+91 94475 59333*
+
+Thank you for choosing Variathu Power Tools!`;
+
+  return sendWhatsAppMessage(job.customerPhone, message);
+};
+
 module.exports = {
   sendWhatsAppMessage,
   sendOrderConfirmationWhatsApp,
@@ -300,6 +335,7 @@ module.exports = {
   sendOrderCancelledWhatsApp,
   sendOrderCompletedWhatsApp,
   sendRepairTicketCreatedWhatsApp,
-  sendRepairReadyWhatsApp
+  sendRepairReadyWhatsApp,
+  sendRepairDeliveredWhatsApp
 };
 
