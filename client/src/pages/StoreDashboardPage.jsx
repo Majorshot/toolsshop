@@ -241,9 +241,19 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [customerRepairHistory, setCustomerRepairHistory] = useState([]);
   const [loadingCustomerHistory, setLoadingCustomerHistory] = useState(false);
 
-  // Inventory pagination for 1,000+ products
+  // Inventory segment-based pagination for high-performance loading
   const [invPage, setInvPage] = useState(1);
-  const INV_PAGE_SIZE = 30;
+  const [invPageSize, setInvPageSize] = useState(8);
+
+  const changeInvPage = (newPage) => {
+    setInvPage(newPage);
+    try {
+      const el = document.getElementById('store-inventory-top');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (e) {}
+  };
 
   // Database Connection Status
   const [dbStatus, setDbStatus] = useState({ isMongoConnected: false, activeEngine: 'Checking...' });
@@ -1951,7 +1961,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setInventoryCategoryFilter('all');
     setInventorySortFilter('default');
     setShowLowStockOnly(false);
+    setInvPage(1);
   };
+
+  // Reset to first segment whenever filter criteria or segment size changes
+  useEffect(() => {
+    setInvPage(1);
+  }, [inventorySearch, inventoryBrandFilter, inventoryCategoryFilter, inventorySortFilter, showLowStockOnly, invPageSize]);
+
+  // Inventory segmentation math
+  const totalInvPages = Math.max(1, Math.ceil(filteredProducts.length / invPageSize));
+  const currentInvPage = Math.min(invPage, totalInvPages);
+  const invStartIdx = (currentInvPage - 1) * invPageSize;
+  const invEndIdx = Math.min(currentInvPage * invPageSize, filteredProducts.length);
+  const pagedProducts = filteredProducts.slice(invStartIdx, invEndIdx);
 
   if (!user || user.role !== 'store') return null;
 
@@ -4455,23 +4478,87 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
           </div>
 
-          {/* Catalog Count Summary */}
-          <div className="store-inv-count-bar">
-            <span>
-              Showing <strong>{filteredProducts.length}</strong> of <strong>{products.length}</strong> equipment models
-              {inventoryBrandFilter !== 'all' && <span> for <strong>{inventoryBrandFilter}</strong></span>}
-              {inventoryCategoryFilter !== 'all' && <span> in <strong>{getCategoryLabel(inventoryCategoryFilter)}</strong></span>}
-              {showLowStockOnly && <span style={{ color: '#dc2626', fontWeight: '800' }}> (Low stock only)</span>}
-            </span>
+          {/* Catalog Count Summary & Top Quick Nav */}
+          <div className="store-inv-count-bar" id="store-inventory-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span>
+                Showing <strong>{filteredProducts.length === 0 ? 0 : invStartIdx + 1} – {invEndIdx}</strong> of <strong>{filteredProducts.length}</strong> equipment models
+                {filteredProducts.length > 0 && (
+                  <span style={{ marginLeft: '6px', color: '#64748b', fontSize: '0.8rem', fontWeight: '600' }}>
+                    • Segment <strong>{currentInvPage}</strong> of <strong>{totalInvPages}</strong>
+                  </span>
+                )}
+                {inventoryBrandFilter !== 'all' && <span> for <strong>{inventoryBrandFilter}</strong></span>}
+                {inventoryCategoryFilter !== 'all' && <span> in <strong>{getCategoryLabel(inventoryCategoryFilter)}</strong></span>}
+                {showLowStockOnly && <span style={{ color: '#dc2626', fontWeight: '800' }}> (Low stock only)</span>}
+              </span>
 
-            {hasActiveInventoryFilters && (
-              <button
-                type="button"
-                onClick={handleResetInventoryFilters}
-                style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer' }}
-              >
-                Clear all filters
-              </button>
+              {hasActiveInventoryFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetInventoryFilters}
+                  style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', padding: '0 4px' }}
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+
+            {/* Quick mini-switcher at top if multiple segments */}
+            {totalInvPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  disabled={currentInvPage === 1}
+                  onClick={() => changeInvPage(currentInvPage - 1)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: currentInvPage === 1 ? '#f8fafc' : '#ffffff',
+                    color: currentInvPage === 1 ? '#94a3b8' : '#0f172a',
+                    cursor: currentInvPage === 1 ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.76rem',
+                    fontWeight: '700'
+                  }}
+                  id="btn-inv-top-prev"
+                  title="Previous segment"
+                >
+                  <ChevronLeft size={13} />
+                  <span>Prev</span>
+                </button>
+
+                <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', padding: '0 4px' }}>
+                  {currentInvPage} / {totalInvPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={currentInvPage >= totalInvPages}
+                  onClick={() => changeInvPage(currentInvPage + 1)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: currentInvPage >= totalInvPages ? '#f8fafc' : '#ffffff',
+                    color: currentInvPage >= totalInvPages ? '#94a3b8' : '#0f172a',
+                    cursor: currentInvPage >= totalInvPages ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.76rem',
+                    fontWeight: '700'
+                  }}
+                  id="btn-inv-top-next"
+                  title="Next segment"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={13} />
+                </button>
+              </div>
             )}
           </div>
 
@@ -4495,7 +4582,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           ) : (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {filteredProducts.slice((invPage - 1) * INV_PAGE_SIZE, invPage * INV_PAGE_SIZE).map((prod) => (
+              {pagedProducts.map((prod) => (
                 <div
                   key={prod.id}
                   className="store-product-item-card"
@@ -4657,67 +4744,143 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               ))}
             </div>
 
-            {/* Inventory Pagination Bar for 1,000+ Products */}
-            {Math.ceil(filteredProducts.length / INV_PAGE_SIZE) > 1 && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '12px',
-                  marginTop: '20px',
-                  paddingTop: '16px',
-                  borderTop: '1px solid #e2e8f0'
-                }}
-              >
-                <span style={{ fontSize: '0.84rem', color: '#64748b' }}>
-                  Showing <strong style={{ color: '#0f172a' }}>{(invPage - 1) * INV_PAGE_SIZE + 1}</strong> – <strong style={{ color: '#0f172a' }}>{Math.min(invPage * INV_PAGE_SIZE, filteredProducts.length)}</strong> of <strong style={{ color: '#0f172a' }}>{filteredProducts.length}</strong> tools
+            {/* Inventory Segment-based Pagination Bar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '14px',
+                marginTop: '22px',
+                paddingTop: '18px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#ffffff',
+                borderRadius: '12px'
+              }}
+              id="store-inventory-bottom-pagination"
+            >
+              {/* Left: Segment Size Control */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#64748b', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: '600' }}>Segment size:</span>
+                {[6, 8, 10, 20].map(sz => (
+                  <button
+                    key={sz}
+                    type="button"
+                    onClick={() => { setInvPageSize(sz); setInvPage(1); }}
+                    style={{
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      border: invPageSize === sz ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                      background: invPageSize === sz ? '#fff7ed' : '#ffffff',
+                      color: invPageSize === sz ? '#ea580c' : '#475569',
+                      fontWeight: invPageSize === sz ? '800' : '600',
+                      cursor: 'pointer',
+                      fontSize: '0.78rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title={`Show ${sz} tools per segment`}
+                  >
+                    {sz}
+                  </button>
+                ))}
+                <span style={{ marginLeft: '4px', fontSize: '0.76rem', color: '#94a3b8' }}>
+                  (Showing {filteredProducts.length === 0 ? 0 : invStartIdx + 1}–{invEndIdx} of {filteredProducts.length})
                 </span>
+              </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Right: Previous, Number Buttons, Next */}
+              {totalInvPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <button
                     type="button"
-                    disabled={invPage === 1}
-                    onClick={() => setInvPage(p => Math.max(1, p - 1))}
+                    disabled={currentInvPage === 1}
+                    onClick={() => changeInvPage(currentInvPage - 1)}
                     style={{
                       padding: '6px 12px',
-                      background: '#ffffff',
+                      background: currentInvPage === 1 ? '#f8fafc' : '#ffffff',
                       border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      fontSize: '0.82rem',
-                      fontWeight: '600',
-                      color: invPage === 1 ? '#94a3b8' : '#0f172a',
-                      cursor: invPage === 1 ? 'not-allowed' : 'pointer'
+                      borderRadius: '7px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      color: currentInvPage === 1 ? '#94a3b8' : '#0f172a',
+                      cursor: currentInvPage === 1 ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: currentInvPage === 1 ? 'none' : '0 1px 2px rgba(0,0,0,0.04)'
                     }}
+                    id="btn-inv-bottom-prev"
                   >
-                    Prev
+                    <ChevronLeft size={14} />
+                    <span>Prev</span>
                   </button>
 
-                  <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#0f172a', padding: '0 8px' }}>
-                    Page {invPage} of {Math.ceil(filteredProducts.length / INV_PAGE_SIZE)}
-                  </span>
+                  {/* Page numbers with smart windowing */}
+                  {Array.from({ length: totalInvPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalInvPages || Math.abs(p - currentInvPage) <= 1)
+                    .map((pageNum, idx, arr) => {
+                      const prevPage = arr[idx - 1];
+                      const showEllipsis = prevPage && pageNum - prevPage > 1;
+                      const isSelected = pageNum === currentInvPage;
+                      return (
+                        <React.Fragment key={pageNum}>
+                          {showEllipsis && (
+                            <span style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.8rem' }}>…</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => changeInvPage(pageNum)}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '7px',
+                              border: isSelected ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                              background: isSelected ? '#ea580c' : '#ffffff',
+                              color: isSelected ? '#ffffff' : '#0f172a',
+                              fontWeight: isSelected ? '800' : '600',
+                              fontSize: '0.82rem',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: isSelected ? '0 2px 6px rgba(234, 88, 12, 0.25)' : 'none',
+                              transition: 'all 0.15s ease'
+                            }}
+                            id={`btn-inv-page-${pageNum}`}
+                          >
+                            {pageNum}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
 
                   <button
                     type="button"
-                    disabled={invPage >= Math.ceil(filteredProducts.length / INV_PAGE_SIZE)}
-                    onClick={() => setInvPage(p => Math.min(Math.ceil(filteredProducts.length / INV_PAGE_SIZE), p + 1))}
+                    disabled={currentInvPage >= totalInvPages}
+                    onClick={() => changeInvPage(currentInvPage + 1)}
                     style={{
                       padding: '6px 12px',
-                      background: '#ffffff',
+                      background: currentInvPage >= totalInvPages ? '#f8fafc' : '#ffffff',
                       border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      fontSize: '0.82rem',
-                      fontWeight: '600',
-                      color: invPage >= Math.ceil(filteredProducts.length / INV_PAGE_SIZE) ? '#94a3b8' : '#0f172a',
-                      cursor: invPage >= Math.ceil(filteredProducts.length / INV_PAGE_SIZE) ? 'not-allowed' : 'pointer'
+                      borderRadius: '7px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      color: currentInvPage >= totalInvPages ? '#94a3b8' : '#0f172a',
+                      cursor: currentInvPage >= totalInvPages ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      boxShadow: currentInvPage >= totalInvPages ? 'none' : '0 1px 2px rgba(0,0,0,0.04)'
                     }}
+                    id="btn-inv-bottom-next"
                   >
-                    Next
+                    <span>Next</span>
+                    <ChevronRight size={14} />
                   </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             </>
           )}
         </div>
