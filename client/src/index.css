@@ -466,10 +466,6 @@ header.main-site-header {
     width: 36px;
     height: 36px;
   }
-  .btn-mobile-menu {
-    width: 36px;
-    height: 36px;
-  }
 }
 
 .nav-portal-pill {
@@ -592,94 +588,7 @@ header.main-site-header {
   border: 2px solid #ffffff;
 }
 
-/* Mobile Hamburger Button in Header */
-.btn-mobile-menu {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: #ffffff;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  cursor: pointer;
-}
 
-@media (min-width: 860px) {
-  .btn-mobile-menu {
-    display: none;
-  }
-}
-
-/* Slide-out Mobile Menu Drawer */
-.mobile-drawer-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 9999;
-  display: flex;
-  animation: fadeIn 0.2s ease;
-}
-
-.mobile-drawer-content {
-  background: #ffffff;
-  width: 85%;
-  max-width: 320px;
-  height: 100%;
-  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideInLeft {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-
-.mobile-drawer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.mobile-drawer-links {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.mobile-drawer-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  text-decoration: none;
-  font-size: 0.94rem;
-  font-weight: 600;
-  transition: all var(--transition-fast);
-}
-
-.mobile-drawer-link:hover, .mobile-drawer-link.active {
-  background: var(--brand-light);
-  color: var(--brand-primary);
-}
-
-.mobile-drawer-footer {
-  padding: 18px;
-  border-top: 1px solid var(--border-subtle);
-  background: var(--bg-secondary);
-}
 
 /* ==========================================================================
    HERO SECTION & ANIMATED TOOLS VISUAL SHOWCASE
