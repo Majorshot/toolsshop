@@ -38,7 +38,6 @@ export const Navbar = ({
       iconType: "logout",
       onConfirm: () => {
         logout();
-        setIsMobileMenuOpen(false);
         navigate('/');
       }
     });
