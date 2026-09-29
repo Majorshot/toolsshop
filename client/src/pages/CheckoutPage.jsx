@@ -1107,7 +1107,7 @@ export const CheckoutPage = () => {
               currency: rzpOrder.currency || 'INR',
               name: 'Variathu Power Tools',
               description: `Order #${rzpOrder.id} • ${recipientName}`,
-              image: '/Logo.jpeg',
+              image: (typeof window !== 'undefined' ? window.location.origin : '') + '/logo.jpg',
               order_id: rzpOrder.id,
               prefill: {
                 name: user?.name?.trim() || recipientName,

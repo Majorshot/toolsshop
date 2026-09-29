@@ -11,7 +11,7 @@ const getResendClient = () => {
 };
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Variathu Power Tools <onboarding@resend.dev>';
-const REAL_LOGO_URL = 'https://raw.githubusercontent.com/Majorshot/toolsshop/main/client/public/Logo.jpeg';
+const REAL_LOGO_URL = 'https://raw.githubusercontent.com/Majorshot/toolsshop/main/client/public/logo.jpg';
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 // ─── Helper: Resolve customer email from order or MongoDB CustomerModel ───────
