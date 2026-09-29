@@ -229,12 +229,77 @@ Your official GST tax invoice and manufacturer warranty records are saved in you
   return sendWhatsAppMessage(order.customer.phone, message);
 };
 
+/**
+ * 6. Send Workshop Repair Ticket Created WhatsApp
+ */
+const sendRepairTicketCreatedWhatsApp = async (job) => {
+  if (!job || !job.customerPhone) return;
+
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
+  const estCost = Number(job.estimatedCost || 0);
+  const advance = Number(job.advancePaid || 0);
+
+  const message = `🔧 *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
+*Repair Job Ticket Logged* 📋
+
+Dear *${job.customerName || 'Valued Customer'}*,
+We have received your machine for servicing & repair at our Kozhencherry workshop clinic.
+
+🏷️ *Ticket ID:* *${job.jobId}*
+⚙️ *Tool Model:* *${brandModel}*
+${job.serialNumber ? `🔖 *Serial No:* ${job.serialNumber}\n` : ''}⚠️ *Reported Issue:* ${job.issueDescription || 'Inspection / Servicing'}
+${estCost > 0 ? `💰 *Estimated Bill:* ₹${estCost.toLocaleString('en-IN')}\n` : ''}${advance > 0 ? `💵 *Advance Paid:* ₹${advance.toLocaleString('en-IN')}\n` : ''}
+Our technician is inspecting your machine. You will automatically receive a WhatsApp message with your collection OTP once your tool is repaired, safety-tested, and ready for pickup!
+
+🏢 *Workshop Location:*
+Variathu Power Tools
+Poyanil Building, Kozhencherry, Pathanamthitta
+📞 Helpline: *+91 94475 59333*`;
+
+  return sendWhatsAppMessage(job.customerPhone, message);
+};
+
+/**
+ * 7. Send Workshop Repair Ready with OTP WhatsApp
+ */
+const sendRepairReadyWhatsApp = async (job) => {
+  if (!job || !job.customerPhone) return;
+
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
+  const finalBill = Number(job.finalCost || job.estimatedCost || 0);
+  const advance = Number(job.advancePaid || 0);
+  const balance = Math.max(0, finalBill - advance);
+
+  const message = `✅ *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
+*Your Tool is Repaired & Ready for Collection!* 🛠️
+
+Dear *${job.customerName || 'Customer'}*,
+Great news! Your power tool has been thoroughly repaired, safety-tested, and is ready for pickup at our showroom counter.
+
+🏷️ *Ticket ID:* *${job.jobId}*
+⚙️ *Equipment:* *${brandModel}*
+${job.technicianNotes ? `📝 *Work Done:* ${job.technicianNotes}\n` : ''}💰 *Total Bill:* ₹${finalBill.toLocaleString('en-IN')}${advance > 0 ? ` (Advance Paid: ₹${advance.toLocaleString('en-IN')})` : ''}
+${balance > 0 ? `💵 *Balance to Pay at Counter:* *₹${balance.toLocaleString('en-IN')}*\n` : ''}
+🔐 *YOUR SECRET COLLECTION OTP:* *${job.handoverOtp || '4819'}*
+_Please show this 4-digit code to our store counter executive to collect your machine._
+
+🏢 *Collection Counter:*
+Variathu Power Tools
+Poyanil Building, Poyanil Junction, Kozhencherry, Kerala
+⏱️ *Hours:* 8:00 AM - 8:00 PM (Mon - Sat)
+📞 Helpdesk: *+91 94475 59333*`;
+
+  return sendWhatsAppMessage(job.customerPhone, message);
+};
+
 module.exports = {
   sendWhatsAppMessage,
   sendOrderConfirmationWhatsApp,
   sendOrderDispatchedWhatsApp,
   sendPickupReadyWhatsApp,
   sendOrderCancelledWhatsApp,
-  sendOrderCompletedWhatsApp
+  sendOrderCompletedWhatsApp,
+  sendRepairTicketCreatedWhatsApp,
+  sendRepairReadyWhatsApp
 };
 

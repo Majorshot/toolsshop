@@ -704,11 +704,13 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   // Workshop Repairs State
   const [repairs, setRepairs] = useState([]);
   const [loadingRepairs, setLoadingRepairs] = useState(false);
+  const [repairsSearch, setRepairsSearch] = useState('');
   const [isAddRepairModalOpen, setIsAddRepairModalOpen] = useState(false);
   const [repairForm, setRepairForm] = useState({
     customerName: '',
     customerPhone: '',
     toolBrand: 'Bosch',
+    customBrand: '',
     toolModel: '',
     serialNumber: '',
     issueDescription: '',
@@ -1462,12 +1464,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       showNotification('Please fill customer name, phone, tool model, and issue description.');
       return;
     }
+    const finalBrand = repairForm.toolBrand === 'Other'
+      ? (repairForm.customBrand?.trim() || 'Other Brand')
+      : (repairForm.toolBrand || 'Bosch');
+
     setIsSubmittingRepair(true);
     try {
       const res = await api.createRepairJob({
         customerName: repairForm.customerName.trim(),
         customerPhone: repairForm.customerPhone.trim(),
-        toolBrand: repairForm.toolBrand || 'Bosch',
+        toolBrand: finalBrand,
         toolModel: repairForm.toolModel.trim(),
         serialNumber: repairForm.serialNumber.trim(),
         issueDescription: repairForm.issueDescription.trim(),
@@ -1475,12 +1481,13 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         advancePaid: Number(repairForm.advancePaid) || 0,
         technicianNotes: repairForm.technicianNotes.trim()
       });
-      showNotification(`🛠️ Repair Job #${res.job?.jobId || 'created'} logged successfully!`);
+      showNotification(`🛠️ Repair Job #${res.job?.jobId || 'created'} logged! WhatsApp confirmation sent to customer.`);
       setIsAddRepairModalOpen(false);
       setRepairForm({
         customerName: '',
         customerPhone: '',
         toolBrand: 'Bosch',
+        customBrand: '',
         toolModel: '',
         serialNumber: '',
         issueDescription: '',
@@ -1500,7 +1507,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     try {
       const targetId = job.id || job.jobId || job._id;
       await api.updateRepairJob(targetId, { status: newStatus });
-      showNotification(`Repair #${job.jobId} updated to "${newStatus}"`);
+      if (newStatus === 'Repaired & Ready') {
+        showNotification(`✅ Marked as "Repaired & Ready"! Collection OTP automatically dispatched to customer via WhatsApp.`);
+      } else {
+        showNotification(`Repair #${job.jobId} updated to "${newStatus}"`);
+      }
       loadRepairs();
     } catch (err) {
       showNotification(`Error: ${err.message}`);
@@ -1560,15 +1571,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       text += `✅ *Diagnosis / Work Done:* ${job.technicianNotes || 'Servicing, parts fitting & safety testing completed'}\n`;
       text += `💰 *Bill Amount:* ₹${(job.finalCost || job.estimatedCost || 0).toLocaleString('en-IN')}`;
       if (job.advancePaid) text += ` (Advance Paid: ₹${job.advancePaid.toLocaleString('en-IN')})`;
-      text += `\n🔑 *Counter Collection OTP:* ${job.handoverOtp || '4819'}\n\n`;
+      text += `\n🔐 *Counter Collection OTP:* ${job.handoverOtp || '4819'}\n\n`;
       text += `Please visit our counter at Poyanil Building, Poyanil Junction, Kozhencherry to collect your tested equipment.`;
-    } else if (job.status === 'Waiting for Spares') {
-      text += `⏳ Spares/parts ordered from distributor. We will notify you once received and fitted.\n`;
     } else {
-      text += `Current estimate: ₹${(job.estimatedCost || 0).toLocaleString('en-IN')}. Our technician is currently working on it.\n`;
+      text += `We have received your machinery at our workshop. Our technician is inspecting the equipment.\n`;
+      if (job.estimatedCost) text += `Current estimate: ₹${job.estimatedCost.toLocaleString('en-IN')}.\n`;
     }
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   };
+
+  const filteredRepairs = useMemo(() => {
+    if (!repairsSearch.trim()) return repairs;
+    const q = repairsSearch.trim().toLowerCase();
+    const digits = q.replace(/[^0-9]/g, '');
+    return repairs.filter(job => {
+      const nameMatch = (job.customerName || '').toLowerCase().includes(q);
+      const phoneMatch = digits && (job.customerPhone || '').replace(/[^0-9]/g, '').includes(digits);
+      const modelMatch = (job.toolModel || '').toLowerCase().includes(q);
+      const brandMatch = (job.toolBrand || '').toLowerCase().includes(q);
+      const idMatch = (job.jobId || '').toLowerCase().includes(q);
+      return nameMatch || phoneMatch || modelMatch || brandMatch || idMatch;
+    });
+  }, [repairs, repairsSearch]);
 
   // Feature 6: Export Orders CSV
   const handleExportOrdersCSV = () => {
@@ -5217,6 +5241,59 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
           </div>
 
+          {/* Workshop Search Bar */}
+          <div style={{ marginBottom: '18px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+              <input
+                type="text"
+                placeholder="Search repairs by customer name, phone, tool brand, model, or ticket ID (e.g. VPT-REP-2433)..."
+                value={repairsSearch}
+                onChange={(e) => setRepairsSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 38px 10px 36px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.86rem',
+                  background: '#ffffff',
+                  color: '#0f172a'
+                }}
+                id="input-search-repairs"
+              />
+              {repairsSearch && (
+                <button
+                  type="button"
+                  onClick={() => setRepairsSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '22px',
+                    height: '22px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#64748b'
+                  }}
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            {repairsSearch && (
+              <span style={{ fontSize: '0.82rem', color: '#ea580c', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                Showing {filteredRepairs.length} of {repairs.length} tickets
+              </span>
+            )}
+          </div>
+
           {loadingRepairs ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Loading workshop jobs...</div>
           ) : repairs.length === 0 ? (
@@ -5225,9 +5302,34 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>No Active Repair Jobs</strong>
               <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>Click "Log Inward Tool" to create a new job ticket when a customer brings a broken machine to Poyanil Building.</p>
             </div>
+          ) : filteredRepairs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+              <strong style={{ fontSize: '0.95rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                No repair tickets found matching "{repairsSearch}"
+              </strong>
+              <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 12px' }}>
+                Try searching by customer name, 10-digit mobile number, or tool name.
+              </p>
+              <button
+                type="button"
+                onClick={() => setRepairsSearch('')}
+                style={{
+                  background: '#ea580c',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  fontSize: '0.8rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Clear Search Filter
+              </button>
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {repairs.map(job => (
+              {filteredRepairs.map(job => (
                 <div
                   key={job.id || job.jobId || job._id}
                   style={{
@@ -5238,7 +5340,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   }}
                   id={`repair-row-${job.jobId}`}
                 >
-                  {/* Ready for pickup OTP Banner */}
+                  {/* Ready for pickup OTP Banner - OTP is secret, NEVER shown on dashboard! */}
                   {job.status === 'Repaired & Ready' && !job.handoverVerified && (
                     <div
                       style={{
@@ -5255,13 +5357,13 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <CheckCircle2 size={20} style={{ color: '#0284c7' }} />
+                        <CheckCircle2 size={22} style={{ color: '#0284c7', flexShrink: 0 }} />
                         <div>
-                          <strong style={{ fontSize: '0.9rem', color: '#0369a1' }}>
-                            Repaired & Tested! Counter Collection Code: <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1rem', color: '#ea580c' }}>{job.handoverOtp || '4819'}</span>
+                          <strong style={{ fontSize: '0.9rem', color: '#0369a1', display: 'block' }}>
+                            Repaired &amp; Tested! Secret 4-Digit OTP Sent to Customer
                           </strong>
-                          <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                            Verify customer's 4-digit code before releasing the power tool.
+                          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                            The secret collection code was sent to <strong>{job.customerName}</strong> ({job.customerPhone}) via WhatsApp. Enter customer's code below to release:
                           </div>
                         </div>
                       </div>
@@ -5350,13 +5452,13 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     )}
                   </div>
 
-                  {/* Status Stepper */}
+                  {/* Status Stepper - Only 2 stages: Received and Repaired & Ready */}
                   <div style={{ marginBottom: '14px' }}>
                     <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
                       Workshop Progress Stage (Click to update):
                     </span>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {['Received', 'Diagnosing', 'Waiting for Spares', 'Repaired & Ready', 'Handed Over'].map((st, sidx) => {
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {['Received', 'Repaired & Ready'].map((st, sidx) => {
                         const isCurrent = job.status === st;
                         return (
                           <button
@@ -5364,17 +5466,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                             type="button"
                             onClick={() => handleUpdateRepairStatus(job, st)}
                             style={{
-                              padding: '6px 12px',
-                              borderRadius: '6px',
+                              padding: '7px 16px',
+                              borderRadius: '8px',
                               border: isCurrent ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
                               background: isCurrent ? '#ea580c' : '#ffffff',
                               color: isCurrent ? '#ffffff' : '#475569',
-                              fontSize: '0.76rem',
+                              fontSize: '0.78rem',
                               fontWeight: '700',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '6px',
+                              boxShadow: isCurrent ? '0 2px 8px rgba(234, 88, 12, 0.25)' : 'none',
                               transition: 'all 0.15s'
                             }}
                           >
@@ -5382,6 +5485,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           </button>
                         );
                       })}
+                      {job.handoverVerified && (
+                        <span style={{ padding: '6px 12px', background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <CheckCircle2 size={14} />
+                          <span>3. Handed Over to Customer</span>
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -7746,6 +7855,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     textColor="#0f172a"
                     highlightColor="#fff7ed"
                   />
+                  {repairForm.toolBrand === 'Other' && (
+                    <div style={{ marginTop: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#ea580c', marginBottom: '3px' }}>
+                        Specify Brand Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. iBell, Dongcheng, Cumi, Foster..."
+                        value={repairForm.customBrand || ''}
+                        onChange={(e) => setRepairForm({ ...repairForm, customBrand: e.target.value })}
+                        style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #ea580c', borderRadius: '8px', fontSize: '0.84rem' }}
+                        id="input-repair-custom-brand"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>

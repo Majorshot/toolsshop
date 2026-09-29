@@ -1106,21 +1106,36 @@
 
   <h3>3.8 Workshop Repairs &amp; Tool Clinic Management (<span class="mono">?tab=repairs</span>)</h3>
   <p>
-    Your Kozhencherry workshop repairs clinic is supported directly in the system:
+    Your Kozhencherry workshop servicing clinic is fully automated for customer communications and counter handovers:
   </p>
   <div class="two-col no-break">
     <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
-      <h4 style="margin-bottom: 6px; color: var(--slate-900);">📥 Intake &amp; Diagnosis</h4>
-      <p style="font-size: 12px; color: var(--slate-600); margin: 0;">
-        When a customer drops off damaged equipment (e.g. armature failure, carbon brush replacement, switch damage), counter staff record the tool model, serial number, and initial fault symptoms.
+      <h4 style="margin-bottom: 6px; color: var(--slate-900);">📥 1. Logging Inward Tool ("Received")</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin: 0 0 6px;">
+        When a customer brings damaged machinery to Poyanil Building, click <strong>"+ Log Inward Tool"</strong>:
       </p>
+      <ul style="font-size: 11.5px; color: var(--slate-700); padding-left: 14px; line-height: 1.5;">
+        <li>Enter Customer Name &amp; WhatsApp Phone Number.</li>
+        <li>Select Tool Brand (Bosch, Makita, etc.) or choose <strong>"Other Brand"</strong> to type a custom brand (e.g., <em>iBell, Dongcheng, Cumi</em>).</li>
+        <li>Enter Tool Model, Problem, Estimated Cost, and Advance Paid.</li>
+        <li><strong>Automated WhatsApp:</strong> The customer receives an immediate confirmation WhatsApp with their Ticket ID (#VPT-REP-XXXX) and workshop helpline.</li>
+      </ul>
     </div>
     <div style="background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 14px;">
-      <h4 style="margin-bottom: 6px; color: var(--slate-900);">🔔 Ready for Pickup &amp; Settlement</h4>
-      <p style="font-size: 12px; color: var(--slate-600); margin: 0;">
-        Once repaired by your technicians, counter staff update the ticket status to <em>"Ready for Pickup"</em> with the total service cost. The customer receives an automated SMS/WhatsApp with their pickup code.
+      <h4 style="margin-bottom: 6px; color: var(--slate-900);">🔔 2. Repaired &amp; Ready ("Secret OTP Handover")</h4>
+      <p style="font-size: 12px; color: var(--slate-600); margin: 0 0 6px;">
+        Once repaired and safety-tested, click <strong>"2. Repaired &amp; Ready"</strong>:
       </p>
+      <ul style="font-size: 11.5px; color: var(--slate-700); padding-left: 14px; line-height: 1.5;">
+        <li><strong>Automated WhatsApp with Secret OTP:</strong> The customer automatically receives a WhatsApp message containing their secret <strong>4-digit collection OTP</strong>, final bill, and Poyanil Building pickup hours.</li>
+        <li><strong>Tamper-Proof Security:</strong> The OTP is <em>never</em> displayed on the store dashboard, ensuring staff must physically verify the code from the customer's phone before releasing the tool.</li>
+        <li><strong>Counter Handover:</strong> Enter the customer's 4-digit code and click <strong>"Verify &amp; Deliver"</strong> to close the ticket.</li>
+      </ul>
     </div>
+  </div>
+
+  <div class="callout callout-info no-break" style="margin-top: 10px;">
+    <strong>Instant Search Bar:</strong> Use the search bar at the top of the Workshop tab to instantly filter repair jobs by customer name, 10-digit mobile number, tool brand/model, or ticket number (e.g. <em>VPT-REP-2433</em>).
   </div>
 
   <!-- ==================== CHAPTER 4 ==================== -->

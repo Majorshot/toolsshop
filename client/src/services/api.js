@@ -501,6 +501,15 @@ export const api = {
     return result;
   },
 
+  async sendRepairWhatsApp(id) {
+    const res = await authFetch(`${API_BASE}/repairs/${id}/send-whatsapp`, {
+      method: 'POST'
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to send WhatsApp message');
+    return result;
+  },
+
   // Customer Directory & CRM
   async getCustomers(params = {}) {
     const query = new URLSearchParams();

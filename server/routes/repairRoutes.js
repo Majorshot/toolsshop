@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 const { requireStoreOwner, optionalAuth } = require('../utils/auth');
+const whatsappService = require('../services/whatsappService');
 
 // GET /api/repairs - Get all repair jobs (Admin only)
 router.get('/', requireStoreOwner, async (req, res) => {
@@ -40,6 +41,12 @@ router.post('/', requireStoreOwner, async (req, res) => {
       });
     }
     const job = await db.createRepairJob(req.body);
+
+    // Asynchronously send WhatsApp confirmation to customer upon ticket creation
+    whatsappService.sendRepairTicketCreatedWhatsApp(job).catch(err => {
+      console.warn(`[WhatsApp API] Async repair ticket WhatsApp error for #${job.jobId}:`, err.message);
+    });
+
     res.status(201).json({ success: true, job });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -49,11 +56,40 @@ router.post('/', requireStoreOwner, async (req, res) => {
 // PUT /api/repairs/:id - Update status / diagnosis / cost (Admin only)
 router.put('/:id', requireStoreOwner, async (req, res) => {
   try {
+    const oldJob = await db.getRepairJobById(req.params.id);
     const updated = await db.updateRepairJob(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Repair job not found' });
     }
+
+    // When status changes to "Repaired & Ready", automatically send WhatsApp with collection OTP to customer!
+    const newStatusLower = (req.body.status || updated.status || '').toLowerCase();
+    const oldStatusLower = (oldJob?.status || '').toLowerCase();
+    if ((newStatusLower.includes('repaired') || newStatusLower.includes('ready')) &&
+        (!oldStatusLower.includes('ready') && !oldStatusLower.includes('repaired'))) {
+      whatsappService.sendRepairReadyWhatsApp(updated).catch(err => {
+        console.warn(`[WhatsApp API] Async repair ready WhatsApp notice error for #${updated.jobId}:`, err.message);
+      });
+    }
+
     res.json({ success: true, job: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/repairs/:id/send-whatsapp - Resend WhatsApp notification to customer on demand
+router.post('/:id/send-whatsapp', requireStoreOwner, async (req, res) => {
+  try {
+    const job = await db.getRepairJobById(req.params.id);
+    if (!job) return res.status(404).json({ success: false, message: 'Repair job not found' });
+    let waRes;
+    if (job.status === 'Repaired & Ready') {
+      waRes = await whatsappService.sendRepairReadyWhatsApp(job);
+    } else {
+      waRes = await whatsappService.sendRepairTicketCreatedWhatsApp(job);
+    }
+    res.json({ success: true, message: 'WhatsApp message dispatched to customer', result: waRes });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
