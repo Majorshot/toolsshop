@@ -120,7 +120,7 @@ export const AboutPage = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px', fontSize: '0.86rem', color: '#64748b' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Clock size={16} style={{ color: '#ea580c' }} />
-                  <span><strong>Hours:</strong> Mon - Sat: 8:30 AM - 7:30 PM (Sunday Closed)</span>
+                  <span><strong>Hours:</strong> Mon - Sat: 8:00 AM - 8:00 PM (Sunday Closed)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Phone size={16} style={{ color: '#ea580c' }} />
@@ -150,7 +150,7 @@ export const AboutPage = () => {
                 </a>
 
                 <a
-                  href="https://maps.google.com/?q=Poyanil+Junction+Kozhencherry+Pathanamthitta"
+                  href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-hero-clean"

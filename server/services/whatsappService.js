@@ -176,7 +176,8 @@ Poyanil Building, Kozhencherry, Pathanamthitta, Kerala
 🔐 *Your Counter Handover OTP:* *${order.pickupOtp || '4819'}*
 _Show this 4-digit code to our store executive to collect your tools._
 
-⏱️ *Store Timings:* 9:00 AM - 7:30 PM (Mon - Sat)
+⏱️ *Store Timings:* 8:00 AM - 8:00 PM (Mon - Sat)
+📍 *Location Map:* https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8
 📞 Helpdesk: *+91 94475 59333*`;
 
   return sendWhatsAppMessage(order.customer.phone, message);

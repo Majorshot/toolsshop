@@ -323,7 +323,15 @@ const MainApp = () => {
                   Authorized dealership and repair center for professional power tools, high pressure washers, and genuine accessories in Kozhencherry, Pathanamthitta district, Kerala.
                 </p>
                 <p style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                  📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
+                  <a
+                    href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none' }}
+                    title="Open in Google Maps"
+                  >
+                    📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
+                  </a>
                 </p>
               </div>
 
@@ -343,7 +351,7 @@ const MainApp = () => {
                   <li><a href="tel:+919447559333">📞 +91 94475 59333</a></li>
                   <li><a href="https://wa.me/919447559333" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
                   <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
-                  <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:30 AM - 7:30 PM</span></li>
+                  <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:00 AM - 8:00 PM</span></li>
                 </ul>
               </div>
             </div>

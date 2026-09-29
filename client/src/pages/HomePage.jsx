@@ -491,7 +491,7 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
                 </a>
 
                 <a
-                  href="https://maps.google.com/?q=Poyanil+Junction+Kozhencherry+Pathanamthitta"
+                  href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-hero-clean"

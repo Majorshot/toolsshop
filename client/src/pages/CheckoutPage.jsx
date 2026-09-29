@@ -2181,7 +2181,15 @@ export const CheckoutPage = () => {
                     <p style={{ fontSize: '0.84rem', color: '#475569', margin: 0, lineHeight: '1.5' }}>
                       Variathu Power Tools Showroom & Service Clinic<br />
                       Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry, Kerala - 689641<br />
-                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Store Hours: 9:00 AM - 7:30 PM (Mon - Sat) • Phone: +91 94475 59333</span>
+                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Store Hours: 8:00 AM - 8:00 PM (Mon - Sat) • Phone: +91 94475 59333</span><br />
+                      <a
+                        href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ea580c', fontSize: '0.76rem', fontWeight: '700', textDecoration: 'none', marginTop: '3px' }}
+                      >
+                        📍 View on Google Maps &rarr;
+                      </a>
                     </p>
                     <button
                       type="button"

@@ -57,11 +57,11 @@ const storeInfo = {
   whatsapp: "919447559333",
   gstin: "32BJEPG6328P2ZZ",
   email: "variathupowertools@gmail.com",
-  timings: "Monday - Saturday: 8:30 AM - 7:30 PM | Sunday: Closed",
+  timings: "Monday - Saturday: 8:00 AM - 8:00 PM | Sunday: Closed",
   geo: {
     lat: 9.3414,
     lng: 76.7028,
-    googleMapsUrl: "https://maps.google.com/?q=Poyanil+Junction+Kozhencherry+Pathanamthitta"
+    googleMapsUrl: "https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
   },
   services: [
     "Authorized Sales & Warranty Support",

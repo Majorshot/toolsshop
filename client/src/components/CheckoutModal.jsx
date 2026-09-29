@@ -962,9 +962,9 @@ export const CheckoutModal = ({ onClose }) => {
                         )}
                       </div>
                     </div>
-                  ) : (
-                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', fontSize: '0.8rem', color: '#475569', marginBottom: '14px', border: '1px solid #e2e8f0' }}>
-                      📍 <strong>Pickup Location:</strong> Variathu Power Tools Counter, Poyanil Building, Poyanil Junction, Kozhencherry-689641.<br />
+                    <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', fontSize: '0.8rem', color: '#475569', marginBottom: '14px', border: '1px solid #e2e8f0', lineHeight: 1.5 }}>
+                      📍 <strong>Pickup Location:</strong> <a href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8" target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '700' }}>Variathu Power Tools Counter, Poyanil Building, Poyanil Junction, Kozhencherry-689641</a>.<br />
+                      <span style={{ fontSize: '0.74rem', color: '#64748b' }}>Store Hours: 8:00 AM - 8:00 PM (Mon - Sat)</span><br />
                       A 4-digit pickup OTP will be generated on confirmation for instant handover.
                     </div>
                   )}

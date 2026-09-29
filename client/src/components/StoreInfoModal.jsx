@@ -99,7 +99,7 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
             {/* Timings */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: '#64748b', marginBottom: '18px' }}>
               <Clock size={16} style={{ color: '#ea580c' }} />
-              <span>Mon - Sat: 8:30 AM - 7:30 PM | Sunday: Closed</span>
+              <span>Mon - Sat: 8:00 AM - 8:00 PM | Sunday: Closed</span>
             </div>
 
             {/* Action Buttons */}
@@ -127,7 +127,7 @@ export const StoreInfoModal = ({ onClose, storeInfo }) => {
               </a>
 
               <a
-                href="https://maps.google.com/?q=Poyanil+Junction+Kozhencherry+Pathanamthitta"
+                href={storeInfo?.geo?.googleMapsUrl || "https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-hero-clean"

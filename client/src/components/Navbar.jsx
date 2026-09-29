@@ -61,10 +61,17 @@ export const Navbar = ({
         <div className="container">
           <div className="top-contact-inner">
             <div className="top-contact-left">
-              <span className="top-contact-location">
+              <a
+                href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="top-contact-location"
+                style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                title="View on Google Maps"
+              >
                 <MapPin size={11} style={{ color: 'var(--brand-primary)' }} />
                 <span>Poyanil Junction, Kozhencherry, Kerala</span>
-              </span>
+              </a>
             </div>
 
             <div className="top-contact-right">
@@ -321,7 +328,15 @@ export const Navbar = ({
             {/* Drawer Footer Contact */}
             <div className="mobile-drawer-footer">
               <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '12px' }}>
-                📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
+                <a
+                  href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'inherit', textDecoration: 'none' }}
+                  title="Open in Google Maps"
+                >
+                  📍 Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641
+                </a>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -873,7 +873,15 @@ export const CustomerAccountPage = () => {
                   </p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.74rem', color: '#64748b' }}>
                     <MapPin size={12} style={{ color: '#ea580c' }} />
-                    <span>Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641</span>
+                    <a
+                      href="https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '600' }}
+                      title="Open in Google Maps"
+                    >
+                      Poyanil Building, Near St Thomas HSS Ground, Poyanil Junction, Kozhencherry-689641 (8 AM - 8 PM)
+                    </a>
                   </div>
                 </div>
 
