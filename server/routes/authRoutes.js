@@ -35,16 +35,10 @@ router.post('/send-otp', async (req, res) => {
     const { purpose = 'login', name, email, phone } = req.body;
     const isEmailInput = rawInput.includes('@');
 
-    // 1. Check if user entered store admin email / alias
+    // 1. Check if user entered store admin email configured in backend (.env)
     const configuredAdminEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
-    const adminAliases = new Set([
-      configuredAdminEmail,
-      'admin@variathupowertools.com',
-      'admin@variathutools.com',
-      'admin'
-    ]);
 
-    if (adminAliases.has(rawInput.toLowerCase())) {
+    if (rawInput.toLowerCase() === configuredAdminEmail) {
       return res.json({
         success: true,
         requiresPassword: true,
@@ -368,21 +362,13 @@ router.post('/login', async (req, res) => {
     const { role, identifier, password } = req.body;
 
     if (role === 'store') {
-      // Store Owner / Admin Login
+      // Store Owner / Admin Login strictly against backend configured email (.env)
       const configuredEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
       const validPass = process.env.STORE_ADMIN_PASSWORD || 'admin123';
       const inputEmail = String(identifier || '').trim().toLowerCase();
       const inputPass = String(password || '');
 
-      // Allow configured email, standard domain aliases, and shorthand 'admin'
-      const allowedAdminEmails = new Set([
-        configuredEmail,
-        'admin@variathupowertools.com',
-        'admin@variathutools.com',
-        'admin'
-      ]);
-
-      const isEmailValid = allowedAdminEmails.has(inputEmail);
+      const isEmailValid = inputEmail === configuredEmail;
       const isPasswordValid = safeCompare(inputPass, validPass);
 
       // Strict constant-time credential comparison (prevents timing attacks & requires both email and password)
