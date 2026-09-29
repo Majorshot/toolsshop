@@ -3349,13 +3349,32 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
               {/* Active Filter Counter Bar with View Switcher (Cards vs Compact Table) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
-                  Showing <strong style={{ color: '#0f172a' }}>{filteredOrders.length}</strong> of <strong style={{ color: '#0f172a' }}>{orders.length}</strong> customer orders
-                  {hasActiveOrderFilters && (
-                    <span style={{ marginLeft: '8px', fontSize: '0.76rem', color: '#ea580c', fontWeight: '700' }}>
-                      (Filtered)
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
+                    Showing <strong style={{ color: '#0f172a' }}>{filteredOrders.length}</strong> of <strong style={{ color: '#0f172a' }}>{orders.length}</strong> customer orders
+                    {hasActiveOrderFilters && (
+                      <span style={{ marginLeft: '8px', fontSize: '0.76rem', color: '#ea580c', fontWeight: '700' }}>
+                        (Filtered)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Pastel Status Color Legend */}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '3px 8px' }}>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', marginRight: '2px' }}>Status Colors:</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2563eb' }}></span> Ordered (Blue)
                     </span>
-                  )}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#c2410c', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ea580c' }}></span> Dispatched (Orange)
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a' }}></span> Completed (Green)
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fff1f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.68rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }}></span> Cancelled (Red)
+                    </span>
+                  </div>
                 </div>
 
                 {/* View Switcher: Cards vs Compact Table */}
@@ -3533,15 +3552,32 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         const isStorePickup = order.deliveryType === 'store-pickup';
                         const isPaid = order.paymentStatus === 'PAID';
                         const isRefunded = order.paymentStatus === 'REFUNDED';
+                        const isCompleted = isOrderCompleted(order);
+                        const isDispatched = isOrderDispatched(order);
+                        const statusKey = isCancelled ? 'cancelled' : isCompleted ? 'completed' : isDispatched ? 'dispatched' : 'ordered';
+                        const tableRowBg = {
+                          ordered: '#f8fbff',
+                          dispatched: '#fffaf5',
+                          completed: '#f7fef9',
+                          cancelled: '#fff5f5'
+                        }[statusKey];
+                        const tableStripe = {
+                          ordered: '#2563eb',
+                          dispatched: '#ea580c',
+                          completed: '#16a34a',
+                          cancelled: '#ef4444'
+                        }[statusKey];
+
                         return (
                           <tr
                             key={order.id}
                             style={{
                               borderBottom: '1px solid #f1f5f9',
-                              background: idx % 2 === 0 ? '#ffffff' : '#fafafa',
-                              transition: 'background 0.1s ease'
+                              backgroundColor: tableRowBg,
+                              borderLeft: `4px solid ${tableStripe}`,
+                              transition: 'background 0.15s ease'
                             }}
-                            className="store-table-order-row"
+                            className={`store-table-order-row order-status-${statusKey}`}
                           >
                             <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
                               <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)', fontSize: '0.86rem', display: 'block' }}>
@@ -3720,22 +3756,79 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {filteredOrders.map((order) => {
                     const isPickup = order.deliveryType === 'store-pickup';
-                    const isCancelled = order.status === 'Cancelled';
+                    const isCancelled = (order.status || '').toLowerCase() === 'cancelled';
                     const isCancelRequested = order.cancellationRequested && !isCancelled;
+                    const isCompleted = isOrderCompleted(order);
+                    const isDispatched = isOrderDispatched(order);
                     const isPaidOnline = order.paymentStatus === 'PAID' && isOnlinePayment(order);
                     const isRefunded = order.paymentStatus === 'REFUNDED' || (isCancelled && order.paymentStatus === 'REFUNDED');
                     const hasAwb = !!(order.awb && order.awb.trim());
                     const courierCfg = !isPickup ? resolveCourierConfig(order.courierPartner) : null;
                     const itemCount = (order.items || []).reduce((acc, it) => acc + (it.quantity || 1), 0);
 
+                    // Dynamic Pastel Status Configuration:
+                    // ordered -> blue, dispatched -> orange, completed -> green, cancelled -> red
+                    const statusKey = isCancelled
+                      ? 'cancelled'
+                      : isCompleted
+                      ? 'completed'
+                      : isDispatched
+                      ? 'dispatched'
+                      : 'ordered';
+
+                    const statusColorConfig = {
+                      ordered: {
+                        bg: '#f0f7ff',
+                        border: '#bfdbfe',
+                        stripe: '#2563eb',
+                        headerBorder: '#dbeafe',
+                        boxBg: 'rgba(255, 255, 255, 0.92)',
+                        boxBorder: '#bfdbfe',
+                        shadow: '0 2px 10px rgba(37, 99, 235, 0.07)'
+                      },
+                      dispatched: {
+                        bg: '#fff7ed',
+                        border: '#fed7aa',
+                        stripe: '#ea580c',
+                        headerBorder: '#ffedd5',
+                        boxBg: 'rgba(255, 255, 255, 0.92)',
+                        boxBorder: '#fed7aa',
+                        shadow: '0 2px 10px rgba(234, 88, 12, 0.07)'
+                      },
+                      completed: {
+                        bg: '#f0fdf4',
+                        border: '#bbf7d0',
+                        stripe: '#16a34a',
+                        headerBorder: '#dcfce7',
+                        boxBg: 'rgba(255, 255, 255, 0.92)',
+                        boxBorder: '#bbf7d0',
+                        shadow: '0 2px 10px rgba(22, 163, 74, 0.07)'
+                      },
+                      cancelled: {
+                        bg: '#fff1f2',
+                        border: '#fecaca',
+                        stripe: '#ef4444',
+                        headerBorder: '#fee2e2',
+                        boxBg: 'rgba(255, 255, 255, 0.92)',
+                        boxBorder: '#fecaca',
+                        shadow: '0 2px 10px rgba(239, 68, 68, 0.07)'
+                      }
+                    }[statusKey];
+
                     return (
                       <div
                         key={order.id}
-                        className={`store-order-card ${isCancelled ? 'order-card-cancelled' : isPickup ? 'order-card-pickup' : 'order-card-courier'}`}
+                        className={`store-order-card order-status-${statusKey} ${isCancelled ? 'order-card-cancelled' : isPickup ? 'order-card-pickup' : 'order-card-courier'}`}
+                        style={{
+                          backgroundColor: statusColorConfig.bg,
+                          borderColor: statusColorConfig.border,
+                          borderLeft: `5px solid ${statusColorConfig.stripe}`,
+                          boxShadow: statusColorConfig.shadow
+                        }}
                         id={`store-order-row-${order.id}`}
                       >
                         {/* 1. COMPACT HEADER BAR */}
-                        <div className="store-order-header">
+                        <div className="store-order-header" style={{ borderBottomColor: statusColorConfig.headerBorder }}>
                           <div className="store-order-header-left">
                             <span className="store-order-id-badge" title="Order ID">
                               {order.id}
@@ -3826,7 +3919,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         {/* 2. BODY GRID: CUSTOMER/FULFILLMENT INFO (LEFT) & PACKING LIST (RIGHT) */}
                         <div className="store-order-body-grid">
                           {/* LEFT COLUMN: Customer & Dispatch/Handover Info */}
-                          <div className="store-order-context-box">
+                          <div className="store-order-context-box" style={{ background: statusColorConfig.boxBg, borderColor: statusColorConfig.boxBorder }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                               <div>
                                 <span style={{ color: '#64748b', fontSize: '0.74rem' }}>Customer:</span>{' '}
@@ -4025,7 +4118,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           </div>
 
                           {/* RIGHT COLUMN: Scannable Packing List (Ordered Items) */}
-                          <div className="store-order-items-box">
+                          <div className="store-order-items-box" style={{ background: statusColorConfig.boxBg, borderColor: statusColorConfig.boxBorder }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>
                               <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <Package size={12} style={{ color: '#ea580c' }} />
@@ -4126,7 +4219,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         )}
 
                         {/* 4. CONTEXTUAL ACTIONS BAR */}
-                        <div className="store-order-actions-bar">
+                        <div className="store-order-actions-bar" style={{ borderTopColor: statusColorConfig.headerBorder }}>
                           {/* Left helper note or quick status */}
                           <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
                             {isPickup 
