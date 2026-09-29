@@ -84,6 +84,26 @@ export const LoginPage = () => {
     setResolvedPhone('');
     setError('');
     setSuccessMsg('');
+
+    if (mode === 'register') {
+      const currentInput = (identifier || '').trim();
+      if (currentInput.includes('@')) {
+        // If an email address was typed in login, place it in the email field
+        setEmail(currentInput);
+        setIdentifier(''); // Clear mobile number field so customer can enter 10-digit phone
+      } else {
+        // If a phone number was typed in login, keep it in the phone field (identifier)
+        const digits = currentInput.replace(/[^0-9]/g, '').slice(0, 10);
+        setIdentifier(digits);
+        setEmail('');
+      }
+    } else if (mode === 'login') {
+      // If switching from register back to login:
+      // If phone (identifier) is blank but email has a value, populate identifier with the email
+      if (!identifier.trim() && email.trim()) {
+        setIdentifier(email.trim());
+      }
+    }
   };
 
   const handleTabSwitch = (tab) => {
@@ -366,7 +386,7 @@ export const LoginPage = () => {
               {activeTab === 'store'
                 ? 'Sign in to access inventory, orders & accounting analytics'
                 : customerStep === 'otp'
-                  ? `Enter the 6-digit OTP sent to ${maskedDestination}`
+                  ? 'Enter the 6-digit verification code below to sign in'
                   : authMode === 'register'
                     ? 'Register with your mobile to receive instant OTP verification'
                     : 'Enter your mobile number or email address to receive a secure OTP'
@@ -469,14 +489,40 @@ export const LoginPage = () => {
                 gap: '10px'
               }}>
                 <AlertCircle size={17} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div style={{ fontSize: '0.83rem', color: '#991b1b', lineHeight: 1.45, fontWeight: '500' }}>
-                  {error}
+                <div style={{ fontSize: '0.83rem', color: '#991b1b', lineHeight: 1.45, fontWeight: '500', flex: 1 }}>
+                  <div>{error}</div>
+                  {authMode === 'login' && error.includes('New Customer') && (
+                    <div style={{ marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleModeSwitch('register')}
+                        style={{
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 6px rgba(220, 38, 38, 0.2)'
+                        }}
+                        id="btn-error-switch-register"
+                      >
+                        <UserPlus size={13} />
+                        <span>Register as New Customer</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Success Message Box */}
-            {successMsg && (
+            {/* Success Message Box (Only show when not in OTP step to avoid duplicate Sent to box) */}
+            {successMsg && customerStep !== 'otp' && (
               <div style={{
                 background: '#f0fdf4',
                 border: '1px solid #bbf7d0',
