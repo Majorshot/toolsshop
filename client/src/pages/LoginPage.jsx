@@ -31,6 +31,7 @@ export const LoginPage = () => {
   const [devOtp, setDevOtp] = useState('');
   const [maskedDestination, setMaskedDestination] = useState('');
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [resolvedPhone, setResolvedPhone] = useState('');
 
   // Form Fields
   const [identifier, setIdentifier] = useState('');
@@ -70,6 +71,7 @@ export const LoginPage = () => {
     setOtpStatus('idle');
     setDevOtp('');
     setMaskedDestination('');
+    setResolvedPhone('');
     setResendCountdown(0);
   };
 
@@ -79,6 +81,7 @@ export const LoginPage = () => {
     setOtpCode('');
     setOtpStatus('idle');
     setDevOtp('');
+    setResolvedPhone('');
     setError('');
     setSuccessMsg('');
   };
@@ -92,16 +95,14 @@ export const LoginPage = () => {
   };
 
   const handlePhoneOrEmailChange = (e) => {
-    const raw = e.target.value;
-    // Auto-detect store owner email or admin keyword
-    if (raw.includes('@') || raw.toLowerCase().startsWith('admin')) {
-      setActiveTab('store');
-      setIdentifier(raw);
-      setError('');
-      return;
-    }
-    const val = raw.replace(/[^0-9]/g, '').slice(0, 10);
+    setIdentifier(e.target.value);
+    if (error) setError('');
+  };
+
+  const handleRegisterPhoneChange = (e) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
     setIdentifier(val);
+    if (error) setError('');
   };
 
   const handleAutoFillOtp = (code) => {
@@ -111,26 +112,24 @@ export const LoginPage = () => {
     setError('');
   };
 
-  // Step 1: Send OTP to Customer
+  // Step 1: Send OTP to Customer (or auto-detect Store Administrator)
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
     setError('');
     setSuccessMsg('');
 
-    // If store admin email was entered in customer input, switch to store password form
-    if (identifier.includes('@') || identifier.toLowerCase().trim() === 'admin') {
-      setActiveTab('store');
-      setError('Store Administrator detected. Please enter your password to sign in.');
-      return;
-    }
-
-    const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
-    if (!cleanPhone || cleanPhone.length !== 10) {
-      setError('Please enter a valid 10-digit mobile number.');
+    const trimmedInput = identifier.trim();
+    if (!trimmedInput) {
+      setError(authMode === 'register' ? 'Please enter your 10-digit mobile number.' : 'Please enter your mobile number or email address.');
       return;
     }
 
     if (authMode === 'register') {
+      const cleanPhone = trimmedInput.replace(/[^0-9]/g, '').slice(-10);
+      if (!cleanPhone || cleanPhone.length !== 10) {
+        setError('Please enter a valid 10-digit mobile number.');
+        return;
+      }
       if (!name.trim()) {
         setError('Please enter your full name.');
         return;
@@ -144,15 +143,29 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
+      const isEmail = trimmedInput.includes('@');
+      const cleanPhone = trimmedInput.replace(/[^0-9]/g, '').slice(-10);
+
       const res = await sendOtp({
-        phone: cleanPhone,
+        identifier: trimmedInput,
+        phone: isEmail ? '' : cleanPhone,
+        email: authMode === 'register' ? email.trim() : (isEmail ? trimmedInput : ''),
         purpose: authMode,
-        name: name.trim(),
-        email: email.trim()
+        name: name.trim()
       });
 
+      // Seamless Store Administrator detection: switch to password authentication
+      if (res.requiresPassword && res.role === 'store') {
+        setActiveTab('store');
+        setCustomerStep('input');
+        setError('');
+        setSuccessMsg('Store Administrator identified. Please enter your password to proceed.');
+        return;
+      }
+
+      setResolvedPhone(res.resolvedPhone || cleanPhone);
       setCustomerStep('otp');
-      setMaskedDestination(res.maskedDestination || `+91 ${cleanPhone}`);
+      setMaskedDestination(res.maskedDestination || (res.resolvedPhone ? `+91 ${res.resolvedPhone}` : trimmedInput));
       setDevOtp(res.devOtp || '');
       setResendCountdown(30);
       setSuccessMsg(res.message || 'Verification OTP sent successfully!');
@@ -173,9 +186,10 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
+      const targetPhone = resolvedPhone || identifier.replace(/[^0-9]/g, '').slice(-10);
       const res = await resendOtp({
-        phone: cleanPhone,
+        phone: targetPhone,
+        identifier: identifier.trim(),
         purpose: authMode
       });
       setDevOtp(res.devOtp || '');
@@ -206,9 +220,10 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
+      const targetPhone = resolvedPhone || identifier.replace(/[^0-9]/g, '').slice(-10);
       await verifyOtp({
-        phone: cleanPhone,
+        phone: targetPhone,
+        identifier: identifier.trim(),
         otp: enteredOtp,
         purpose: authMode
       });
@@ -354,7 +369,7 @@ export const LoginPage = () => {
                   ? `Enter the 6-digit OTP sent to ${maskedDestination}`
                   : authMode === 'register'
                     ? 'Register with your mobile to receive instant OTP verification'
-                    : 'Enter your 10-digit mobile number to receive a secure OTP'
+                    : 'Enter your mobile number or email address to receive a secure OTP'
               }
             </p>
           </div>
@@ -696,74 +711,141 @@ export const LoginPage = () => {
                   </div>
                 )}
 
-                {/* Customer Phone input with +91 badge */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.74rem',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: '#475569',
-                    marginBottom: '6px'
-                  }}>
-                    Mobile Number <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    background: '#ffffff',
-                    border: focusedField === 'phone' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    boxShadow: focusedField === 'phone' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <div style={{
-                      padding: '11px 12px 11px 14px',
-                      background: '#f8fafc',
-                      borderRight: '1px solid #e2e8f0',
-                      color: '#334155',
-                      fontSize: '0.88rem',
+                {/* Customer Login / Register Input */}
+                {authMode === 'login' ? (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.74rem',
                       fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: '#475569',
+                      marginBottom: '6px'
+                    }}>
+                      Mobile Number or Email <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    
+                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      userSelect: 'none'
+                      background: '#ffffff',
+                      border: focusedField === 'identifier' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: focusedField === 'identifier' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
+                      transition: 'all 0.2s ease'
                     }}>
-                      <span>🇮🇳</span>
-                      <span>+91</span>
+                      <div style={{
+                        padding: '11px 12px 11px 14px',
+                        background: '#f8fafc',
+                        borderRight: '1px solid #e2e8f0',
+                        color: '#334155',
+                        fontSize: '0.88rem',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        userSelect: 'none'
+                      }}>
+                        {identifier.includes('@') ? (
+                          <Mail size={16} color="#dc2626" />
+                        ) : (
+                          <>
+                            <span>🇮🇳</span>
+                            <span>+91</span>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="94475 59333 or name@gmail.com"
+                        value={identifier}
+                        onChange={handlePhoneOrEmailChange}
+                        onFocus={() => setFocusedField('identifier')}
+                        onBlur={() => setFocusedField(null)}
+                        autoComplete="username"
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          border: 'none',
+                          outline: 'none',
+                          color: '#0f172a',
+                          fontSize: '0.92rem',
+                          fontWeight: '600'
+                        }}
+                        id="input-mobile-number"
+                      />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="94475 59333"
-                      value={identifier}
-                      onChange={handlePhoneOrEmailChange}
-                      onFocus={() => setFocusedField('phone')}
-                      onBlur={() => setFocusedField(null)}
-                      autoComplete="tel"
-                      style={{
-                        width: '100%',
-                        padding: '12px 14px',
-                        border: 'none',
-                        outline: 'none',
-                        color: '#0f172a',
-                        fontSize: '0.95rem',
-                        fontWeight: '600',
-                        letterSpacing: '0.04em'
-                      }}
-                      id="input-mobile-number"
-                    />
-                  </div>
 
-                  {authMode === 'login' && (
                     <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <Shield size={12} color="#16a34a" />
                       <span>We'll send a 6-digit one-time password (OTP) to your phone & email</span>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.74rem',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: '#475569',
+                      marginBottom: '6px'
+                    }}>
+                      Mobile Number <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: '#ffffff',
+                      border: focusedField === 'phone' ? '1.5px solid #dc2626' : '1.5px solid #e2e8f0',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: focusedField === 'phone' ? '0 0 0 4px rgba(220, 38, 38, 0.08)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <div style={{
+                        padding: '11px 12px 11px 14px',
+                        background: '#f8fafc',
+                        borderRight: '1px solid #e2e8f0',
+                        color: '#334155',
+                        fontSize: '0.88rem',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        userSelect: 'none'
+                      }}>
+                        <span>🇮🇳</span>
+                        <span>+91</span>
+                      </div>
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        placeholder="94475 59333"
+                        value={identifier}
+                        onChange={handleRegisterPhoneChange}
+                        onFocus={() => setFocusedField('phone')}
+                        onBlur={() => setFocusedField(null)}
+                        autoComplete="tel"
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          border: 'none',
+                          outline: 'none',
+                          color: '#0f172a',
+                          fontSize: '0.95rem',
+                          fontWeight: '600',
+                          letterSpacing: '0.04em'
+                        }}
+                        id="input-mobile-number"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Registration: Email Address */}
                 {authMode === 'register' && (
@@ -878,7 +960,7 @@ export const LoginPage = () => {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.84rem', color: '#334155' }}>
                     <ShieldCheck size={16} color="#16a34a" />
-                    <span>Sent to: <strong>+91 {identifier.replace(/[^0-9]/g, '').slice(-10)}</strong></span>
+                    <span>Sent to: <strong>{maskedDestination || (resolvedPhone ? `+91 ${resolvedPhone}` : identifier)}</strong></span>
                   </div>
                   <button
                     type="button"
@@ -1136,32 +1218,6 @@ export const LoginPage = () => {
                       Sign in here
                     </button>
                   </p>
-                )}
-
-                {/* Discreet Store Manager Login Toggle */}
-                {authMode === 'login' && (
-                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleTabSwitch('store')}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#64748b',
-                        fontSize: '0.78rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        padding: '4px 8px'
-                      }}
-                      id="link-switch-store"
-                    >
-                      <Lock size={12} color="#94a3b8" />
-                      <span>Store Manager? Sign in with Email &amp; Password &rarr;</span>
-                    </button>
-                  </div>
                 )}
               </div>
             )}

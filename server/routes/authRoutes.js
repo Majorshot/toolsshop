@@ -31,11 +31,89 @@ function generateSecureOtp() {
 // POST /api/auth/send-otp - Dispatch 6-digit OTP via Email/WhatsApp
 router.post('/send-otp', async (req, res) => {
   try {
-    const { phone, purpose = 'login', name, email } = req.body;
-    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const rawInput = String(req.body.identifier || req.body.phone || req.body.email || '').trim();
+    const { purpose = 'login', name, email, phone } = req.body;
+    const isEmailInput = rawInput.includes('@');
 
-    if (!cleanPhone || cleanPhone.length !== 10) {
-      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number.' });
+    // 1. Check if user entered store admin email / alias
+    const configuredAdminEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
+    const adminAliases = new Set([
+      configuredAdminEmail,
+      'admin@variathupowertools.com',
+      'admin@variathutools.com',
+      'admin'
+    ]);
+
+    if (adminAliases.has(rawInput.toLowerCase())) {
+      return res.json({
+        success: true,
+        requiresPassword: true,
+        role: 'store',
+        email: configuredAdminEmail,
+        message: 'Store Administrator detected'
+      });
+    }
+
+    let cleanPhone = '';
+    let customerDoc = null;
+    let targetEmail = (email || '').trim();
+    let customerName = (name || '').trim();
+
+    if (purpose === 'register') {
+      cleanPhone = String(phone || rawInput).replace(/[^0-9]/g, '').slice(-10);
+      if (!cleanPhone || cleanPhone.length !== 10) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number for registration.' });
+      }
+      if (!customerName || !customerName.trim()) {
+        return res.status(400).json({ success: false, message: 'Full name is required for registration.' });
+      }
+      if (!targetEmail || !targetEmail.trim() || !targetEmail.includes('@') || !targetEmail.includes('.')) {
+        return res.status(400).json({ success: false, message: 'A valid email address is required for registration.' });
+      }
+
+      // Check if already registered by phone or email
+      const existingByPhone = await db.lookupCustomerByPhone(cleanPhone);
+      if (existingByPhone) {
+        return res.status(409).json({
+          success: false,
+          message: 'An account with this mobile number already exists. Please sign in instead.'
+        });
+      }
+      const existingByEmail = await db.lookupCustomerByEmail(targetEmail);
+      if (existingByEmail) {
+        return res.status(409).json({
+          success: false,
+          message: 'An account with this email address already exists. Please sign in instead.'
+        });
+      }
+    } else {
+      // Login flow: support phone OR email lookup!
+      if (isEmailInput) {
+        targetEmail = rawInput.toLowerCase();
+        customerDoc = await db.lookupCustomerByEmail(targetEmail);
+        if (!customerDoc) {
+          return res.status(404).json({
+            success: false,
+            message: 'No customer account found with this email. Please switch to "New Customer" to register.'
+          });
+        }
+        cleanPhone = String(customerDoc.phone || '').replace(/[^0-9]/g, '').slice(-10);
+        customerName = customerDoc.name || 'Valued Customer';
+      } else {
+        cleanPhone = rawInput.replace(/[^0-9]/g, '').slice(-10);
+        if (!cleanPhone || cleanPhone.length !== 10) {
+          return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number or registered email.' });
+        }
+        customerDoc = await db.lookupCustomerByPhone(cleanPhone);
+        if (!customerDoc) {
+          return res.status(404).json({
+            success: false,
+            message: 'No customer account found with this mobile number. Please switch to "New Customer" to register.'
+          });
+        }
+        targetEmail = customerDoc.email || '';
+        customerName = customerDoc.name || 'Valued Customer';
+      }
     }
 
     // Rate limiting check: 25 seconds cooldown between sends
@@ -46,39 +124,6 @@ router.post('/send-otp', async (req, res) => {
         success: false,
         message: `Please wait ${waitSec}s before requesting a new code.`
       });
-    }
-
-    let customerDoc = null;
-    let targetEmail = (email || '').trim();
-    let customerName = (name || '').trim();
-
-    if (purpose === 'login') {
-      customerDoc = await db.lookupCustomerByPhone(cleanPhone);
-      if (!customerDoc) {
-        return res.status(404).json({
-          success: false,
-          message: 'No registered account found with this mobile number. Please switch to "New Customer" to create an account.'
-        });
-      }
-      targetEmail = customerDoc.email || '';
-      customerName = customerDoc.name || 'Valued Customer';
-    } else {
-      // Registration validation
-      if (!customerName || !customerName.trim()) {
-        return res.status(400).json({ success: false, message: 'Full name is required for registration.' });
-      }
-      if (!targetEmail || !targetEmail.trim() || !targetEmail.includes('@') || !targetEmail.includes('.')) {
-        return res.status(400).json({ success: false, message: 'A valid email address is required for registration.' });
-      }
-
-      // Check if already registered
-      const existingCust = await db.lookupCustomerByPhone(cleanPhone);
-      if (existingCust) {
-        return res.status(409).json({
-          success: false,
-          message: 'An account with this mobile number already exists. Please sign in instead.'
-        });
-      }
     }
 
     // Generate secure 6-digit numeric OTP with crypto.randomInt
@@ -128,6 +173,7 @@ router.post('/send-otp', async (req, res) => {
 
     return res.json({
       success: true,
+      resolvedPhone: cleanPhone,
       message: `Verification code sent to ${maskedPhone}${maskedEmail ? ` and ${maskedEmail}` : ''}.`,
       maskedDestination: maskedEmail ? `${maskedPhone} & ${maskedEmail}` : maskedPhone,
       ...(isLocalDevOtp ? { devOtp: otp } : {}),
@@ -142,12 +188,24 @@ router.post('/send-otp', async (req, res) => {
 // POST /api/auth/verify-otp - Validate 6-digit OTP & sign in or register customer
 router.post('/verify-otp', async (req, res) => {
   try {
-    const { phone, otp } = req.body;
-    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const { phone, identifier, email, otp } = req.body;
+    let cleanPhone = String(phone || identifier || '').replace(/[^0-9]/g, '').slice(-10);
+
+    // If identifier was an email, resolve to phone from customer profile
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      const emailInput = String(identifier || email || phone || '').trim().toLowerCase();
+      if (emailInput.includes('@')) {
+        const cust = await db.lookupCustomerByEmail(emailInput);
+        if (cust && cust.phone) {
+          cleanPhone = String(cust.phone).replace(/[^0-9]/g, '').slice(-10);
+        }
+      }
+    }
+
     const submittedOtp = String(otp || '').trim();
 
     if (!cleanPhone || cleanPhone.length !== 10) {
-      return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number required.' });
+      return res.status(400).json({ success: false, message: 'Valid mobile number or email required.' });
     }
     if (!submittedOtp || submittedOtp.length !== 6) {
       return res.status(400).json({ success: false, message: 'Please enter the 6-digit OTP.' });
@@ -278,15 +336,26 @@ router.post('/verify-otp', async (req, res) => {
 
 // POST /api/auth/resend-otp - Quick resend endpoint
 router.post('/resend-otp', async (req, res) => {
-  const { phone, purpose } = req.body;
-  const cleanPhone = String(phone || '').replace(/[^0-9]/g, '').slice(-10);
+  const { phone, identifier, email, purpose } = req.body;
+  let cleanPhone = String(phone || identifier || '').replace(/[^0-9]/g, '').slice(-10);
+  if (!cleanPhone || cleanPhone.length !== 10) {
+    const emailInput = String(identifier || email || phone || '').trim().toLowerCase();
+    if (emailInput.includes('@')) {
+      const cust = await db.lookupCustomerByEmail(emailInput);
+      if (cust && cust.phone) {
+        cleanPhone = String(cust.phone).replace(/[^0-9]/g, '').slice(-10);
+      }
+    }
+  }
+
   const existing = otpStore.get(cleanPhone);
 
   const payload = {
     phone: cleanPhone,
+    identifier: identifier || email || phone,
     purpose: purpose || existing?.purpose || 'login',
     name: existing?.registerData?.name,
-    email: existing?.registerData?.email
+    email: existing?.registerData?.email || email
   };
 
   req.body = payload;
