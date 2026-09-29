@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -10,6 +10,7 @@ import { useConfirm, SpringModal } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
 import GlideSelect from '../components/GlideSelect';
 import RubberSegment from '../components/RubberSegment';
+import { startOverviewTour, startOrdersTour, startInventoryTour } from '../services/tourService';
 
 const ORDER_DATE_OPTIONS = [
   { value: 'all', label: 'All Time', tag: 'All' },
@@ -295,6 +296,26 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     const interval = setInterval(loadDbStatus, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Trigger Driver.js Overview Tour on first visit
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      const timer = setTimeout(() => {
+        startOverviewTour(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'orders') {
+      const timer = setTimeout(() => {
+        startOrdersTour(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'inventory') {
+      const timer = setTimeout(() => {
+        startInventoryTour(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
 
   // Dispatch Order Modal state
   const [dispatchModalOrder, setDispatchModalOrder] = useState(null);
@@ -2253,7 +2274,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {activeTab === 'overview' && (
         <>
           {/* Store Header Banner */}
-          <div className="store-portal-header-banner">
+          <div className="store-portal-header-banner" id="store-portal-header">
             <div className="store-portal-brand-wrap">
               <div className="store-portal-icon">
                 <ShieldCheck size={26} />
@@ -2278,6 +2299,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             <div className="store-portal-actions">
+              <button
+                type="button"
+                onClick={() => startOverviewTour(true)}
+                className="store-action-btn-tour"
+                id="btn-start-overview-tour"
+                title="Start Guided Interactive Tour of Overview Dashboard"
+              >
+                <Compass size={15} style={{ color: '#ea580c' }} />
+                <span>Take Tour</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => navigate('/')}
@@ -2386,7 +2418,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             {/* Sound Mute/Unmute & Auto-Refresh State */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div id="store-audio-sync-controls" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
                 type="button"
                 onClick={() => setSoundEnabled(prev => !prev)}
@@ -3014,7 +3046,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* TAB 1: CUSTOMER ORDERS MANAGER */}
       {activeTab === 'orders' && (
         <div className="store-tab-content-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <div id="orders-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
                 Customer Orders Management
@@ -3024,24 +3056,38 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </p>
             </div>
 
-            <button
-              onClick={loadOrders}
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <RefreshCw size={14} />
-              <span>Refresh Orders</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => startOrdersTour(true)}
+                className="store-action-btn-tour"
+                id="btn-start-orders-tour"
+                title="Start Guided Interactive Tour of Customer Orders"
+              >
+                <Compass size={14} style={{ color: '#ea580c' }} />
+                <span>Take Tour</span>
+              </button>
+
+              <button
+                onClick={loadOrders}
+                id="btn-refresh-orders"
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={14} />
+                <span>Refresh Orders</span>
+              </button>
+            </div>
           </div>
 
           {loadingOrders ? (
@@ -4436,13 +4482,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* TAB 2: INVENTORY & EQUIPMENT CONTROL */}
       {activeTab === 'inventory' && (
         <div className="store-tab-content-card">
-          <div className="store-section-header">
+          <div className="store-section-header" id="inventory-section-header">
             <div>
               <h2>Inventory & Product Control</h2>
               <p>Add, edit prices, update stock levels, or remove tools from the store catalog.</p>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => startInventoryTour(true)}
+                className="store-action-btn-tour"
+                id="btn-start-inventory-tour"
+                title="Start Guided Interactive Tour of Inventory & Stock"
+              >
+                <Compass size={14} style={{ color: '#ea580c' }} />
+                <span>Take Tour</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => loadProducts()}
