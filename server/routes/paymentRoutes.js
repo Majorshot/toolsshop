@@ -234,7 +234,7 @@ router.post('/verify', optionalAuth, async (req, res) => {
     }
 
     // Trigger automated Resend Order Confirmation Email asynchronously
-    emailService.sendOrderConfirmationEmail(confirmedOrder).catch(err => {
+    emailService.sendOrderConfirmationEmail(confirmedOrder, { clientUrl: req.clientUrl || req.headers.origin }).catch(err => {
       console.warn(`[Resend Email] Async payment order confirmation error for #${confirmedOrder.id}:`, err.message);
     });
 

@@ -12,7 +12,38 @@ const getResendClient = () => {
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Variathu Power Tools <onboarding@resend.dev>';
 const REAL_LOGO_URL = 'https://raw.githubusercontent.com/Majorshot/toolsshop/main/client/public/Logo.jpeg';
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+
+// ─── Dynamic Client URL Resolver (Auto-detects live Vercel / custom domain) ────
+let dynamicClientUrl = null;
+
+function setDynamicClientUrl(url) {
+  if (url && typeof url === 'string' && url.startsWith('http') && !url.includes('localhost')) {
+    dynamicClientUrl = url.replace(/\/$/, '');
+  }
+}
+
+function getClientUrl(explicitUrl) {
+  if (explicitUrl && typeof explicitUrl === 'string' && explicitUrl.startsWith('http') && !explicitUrl.includes('localhost')) {
+    return explicitUrl.replace(/\/$/, '');
+  }
+  if (dynamicClientUrl) {
+    return dynamicClientUrl;
+  }
+  if (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) {
+    return process.env.CLIENT_URL.replace(/\/$/, '');
+  }
+  if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')) {
+    return process.env.FRONTEND_URL.replace(/\/$/, '');
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/$/, '')}`;
+  }
+  // Default to live Vercel deployment domain instead of localhost
+  return 'https://toolsshop-pied.vercel.app';
+}
 
 // ─── Helper: Resolve customer email from order or MongoDB CustomerModel ───────
 async function resolveCustomerEmail(order) {
@@ -98,7 +129,8 @@ async function sendEmailSafely(resend, { to, subject, html }) {
 }
 
 // ─── Shared Email Layout Wrapper with Official Logo ────────────────────────────
-function emailWrapper(title, bodyContent) {
+function emailWrapper(title, bodyContent, options = {}) {
+  const baseUrl = getClientUrl(options?.clientUrl);
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -115,7 +147,7 @@ function emailWrapper(title, bodyContent) {
                 
                 <!-- Brand Header with Real Logo Image -->
                 <div style="background: #ffffff; padding: 28px 20px 22px; text-align: center; border-bottom: 2px solid #f1f5f9;">
-                  <a href="${CLIENT_URL}" target="_blank" style="text-decoration: none; display: inline-block;">
+                  <a href="${baseUrl}" target="_blank" style="text-decoration: none; display: inline-block;">
                     <img src="${REAL_LOGO_URL}" alt="Variathu Power Tools" width="260" style="max-width: 260px; height: auto; display: block; margin: 0 auto; border: 0;" />
                   </a>
                   <div style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; font-weight: 700; margin-top: 10px;">
@@ -258,7 +290,7 @@ function buildTotalsBlock(order) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 1. ORDER CONFIRMATION EMAIL (When Order is Placed)
 // ═══════════════════════════════════════════════════════════════════════════════
-async function sendOrderConfirmationEmail(order) {
+async function sendOrderConfirmationEmail(order, options = {}) {
   try {
     const customerEmail = await resolveCustomerEmail(order);
     if (!customerEmail) {
@@ -272,6 +304,7 @@ async function sendOrderConfirmationEmail(order) {
       return { success: true, simulated: true };
     }
 
+    const baseUrl = getClientUrl(options?.clientUrl || order?.clientUrl);
     const customerName = order.customer?.name || 'Valued Customer';
     const isPickup = (order.deliveryType || '').toLowerCase().includes('pickup') || order.deliveryType === 'store-pickup';
 
@@ -327,7 +360,7 @@ async function sendOrderConfirmationEmail(order) {
         <p style="font-size: 13px; color: #64748b; margin: 0 0 16px; line-height: 1.5;">
           Download your statutory Kerala GST Tax Invoice or track live order milestones anytime from your customer account.
         </p>
-        <a href="${CLIENT_URL}/account" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; letter-spacing: 0.02em; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);">
+        <a href="${baseUrl}/account" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; letter-spacing: 0.02em; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);">
           View Order &amp; GST Invoice &rarr;
         </a>
       </div>
@@ -336,7 +369,7 @@ async function sendOrderConfirmationEmail(order) {
     return await sendEmailSafely(resend, {
       to: customerEmail,
       subject: `Order Confirmed #${order.id} - Variathu Power Tools`,
-      html: emailWrapper(`Order Confirmation #${order.id}`, bodyContent)
+      html: emailWrapper(`Order Confirmation #${order.id}`, bodyContent, { clientUrl: baseUrl })
     });
   } catch (err) {
     console.warn(`[Resend Email] Error sending order confirmation:`, err.message);
@@ -347,7 +380,7 @@ async function sendOrderConfirmationEmail(order) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2. ORDER COMPLETED / DELIVERED EMAIL (When Store Marks Delivered / Completed)
 // ═══════════════════════════════════════════════════════════════════════════════
-async function sendOrderCompletedEmail(order) {
+async function sendOrderCompletedEmail(order, options = {}) {
   try {
     const customerEmail = await resolveCustomerEmail(order);
     if (!customerEmail) return { success: false, reason: 'no_email' };
@@ -358,6 +391,7 @@ async function sendOrderCompletedEmail(order) {
       return { success: true, simulated: true };
     }
 
+    const baseUrl = getClientUrl(options?.clientUrl || order?.clientUrl);
     const customerName = order.customer?.name || 'Valued Customer';
     const isPickup = (order.deliveryType || '').toLowerCase().includes('pickup') || order.deliveryType === 'store-pickup';
 
@@ -395,7 +429,7 @@ async function sendOrderCompletedEmail(order) {
 
       <!-- Action Button -->
       <div style="padding: 20px 24px 28px; text-align: center;">
-        <a href="${CLIENT_URL}/account" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px;">
+        <a href="${baseUrl}/account" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px;">
           Download GST Invoice &rarr;
         </a>
       </div>
@@ -404,7 +438,7 @@ async function sendOrderCompletedEmail(order) {
     return await sendEmailSafely(resend, {
       to: customerEmail,
       subject: `Order Completed #${order.id} - Variathu Power Tools`,
-      html: emailWrapper(`Order Completed #${order.id}`, bodyContent)
+      html: emailWrapper(`Order Completed #${order.id}`, bodyContent, { clientUrl: baseUrl })
     });
   } catch (err) {
     console.warn(`[Resend Email] Error sending completed email:`, err.message);
@@ -415,7 +449,7 @@ async function sendOrderCompletedEmail(order) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 3. ORDER DISPATCHED / COURIER EMAIL (When Handed to Courier)
 // ═══════════════════════════════════════════════════════════════════════════════
-async function sendOrderDispatchedEmail(order, courierPartner, awb) {
+async function sendOrderDispatchedEmail(order, courierPartner, awb, options = {}) {
   try {
     const customerEmail = await resolveCustomerEmail(order);
     if (!customerEmail) return { success: false, reason: 'no_email' };
@@ -426,6 +460,7 @@ async function sendOrderDispatchedEmail(order, courierPartner, awb) {
       return { success: true, simulated: true };
     }
 
+    const baseUrl = getClientUrl(options?.clientUrl || order?.clientUrl);
     const customerName = order.customer?.name || 'Valued Customer';
     const partner = courierPartner || order.courierPartner || 'Kerala Express Courier';
     const awbNum = awb || order.awb || 'In Transit';
@@ -491,7 +526,7 @@ async function sendOrderDispatchedEmail(order, courierPartner, awb) {
 
       <!-- Action Button -->
       <div style="padding: 28px 24px; text-align: center;">
-        <a href="${CLIENT_URL}/account" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+        <a href="${baseUrl}/account" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
           Track Shipment &amp; Status &rarr;
         </a>
       </div>
@@ -500,7 +535,7 @@ async function sendOrderDispatchedEmail(order, courierPartner, awb) {
     return await sendEmailSafely(resend, {
       to: customerEmail,
       subject: `Order Dispatched 🚚 #${order.id} (${partner}) - Variathu Power Tools`,
-      html: emailWrapper(`Order Dispatched #${order.id}`, bodyContent)
+      html: emailWrapper(`Order Dispatched #${order.id}`, bodyContent, { clientUrl: baseUrl })
     });
   } catch (err) {
     console.warn(`[Resend Email] Error sending dispatched email:`, err.message);
@@ -511,7 +546,7 @@ async function sendOrderDispatchedEmail(order, courierPartner, awb) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 4. CANCELLATION REQUEST EMAIL (Customer requested cancel for dispatched order)
 // ═══════════════════════════════════════════════════════════════════════════════
-async function sendCancellationRequestEmail(order, reason) {
+async function sendCancellationRequestEmail(order, reason, options = {}) {
   try {
     const customerEmail = await resolveCustomerEmail(order);
     if (!customerEmail) return { success: false, reason: 'no_email' };
@@ -522,6 +557,7 @@ async function sendCancellationRequestEmail(order, reason) {
       return { success: true, simulated: true };
     }
 
+    const baseUrl = getClientUrl(options?.clientUrl || order?.clientUrl);
     const customerName = order.customer?.name || 'Valued Customer';
     const displayReason = (reason && String(reason).trim()) || order.cancellationRequestReason || order.cancellationReason || 'Customer requested cancellation from account dashboard';
 
@@ -587,7 +623,7 @@ async function sendCancellationRequestEmail(order, reason) {
 
       <!-- Action Button -->
       <div style="padding: 28px 24px; text-align: center;">
-        <a href="${CLIENT_URL}/account" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px;">
+        <a href="${baseUrl}/account" style="display: inline-block; background: #0f172a; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px;">
           View Request in Account &rarr;
         </a>
       </div>
@@ -597,7 +633,7 @@ async function sendCancellationRequestEmail(order, reason) {
     const customerSendResult = await sendEmailSafely(resend, {
       to: customerEmail,
       subject: `Cancellation Request Received #${order.id} - Variathu Power Tools`,
-      html: emailWrapper(`Cancellation Request #${order.id}`, bodyContent)
+      html: emailWrapper(`Cancellation Request #${order.id}`, bodyContent, { clientUrl: baseUrl })
     });
 
     // 2. Also send real-time notification to Store Owner / Manager
@@ -627,12 +663,12 @@ async function sendCancellationRequestEmail(order, reason) {
             <tr><td style="color: #64748b; padding: 4px 0;">AWB Number:</td><td style="font-family: monospace; font-weight: 700; color: #1e3a5f; text-align: right;">${order.awb || 'N/A'}</td></tr>
           </table>
           <div style="text-align: center; margin-top: 20px;">
-            <a href="${CLIENT_URL}/admin" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 13px;">
+            <a href="${baseUrl}/admin" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 13px;">
               Open Store Dashboard & Review Request &rarr;
             </a>
           </div>
         </div>
-      `);
+      `, { clientUrl: baseUrl });
 
       sendEmailSafely(resend, {
         to: adminEmail,
@@ -651,7 +687,7 @@ async function sendCancellationRequestEmail(order, reason) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. ORDER CANCELLED & REFUND EMAIL
 // ═══════════════════════════════════════════════════════════════════════════════
-async function sendOrderCancelledEmail(order, reason, cancelledBy) {
+async function sendOrderCancelledEmail(order, reason, cancelledBy, options = {}) {
   try {
     const customerEmail = await resolveCustomerEmail(order);
     if (!customerEmail) return { success: false, reason: 'no_email' };
@@ -662,6 +698,7 @@ async function sendOrderCancelledEmail(order, reason, cancelledBy) {
       return { success: true, simulated: true };
     }
 
+    const baseUrl = getClientUrl(options?.clientUrl || order?.clientUrl);
     const customerName = order.customer?.name || 'Valued Customer';
     const isByStore = cancelledBy === 'store';
     const displayReason = (reason && String(reason).trim()) || order.cancellationReason || order.cancellationRequestReason || order.cancelReason || 'Order cancelled';
@@ -734,7 +771,7 @@ async function sendOrderCancelledEmail(order, reason, cancelledBy) {
 
       <!-- Action Button -->
       <div style="padding: 28px 24px; text-align: center;">
-        <a href="${CLIENT_URL}/shop" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px;">
+        <a href="${baseUrl}/shop" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px;">
           Browse Our Power Tools Catalog &rarr;
         </a>
       </div>
@@ -743,7 +780,7 @@ async function sendOrderCancelledEmail(order, reason, cancelledBy) {
     return await sendEmailSafely(resend, {
       to: customerEmail,
       subject: `Order Cancelled #${order.id} - Variathu Power Tools`,
-      html: emailWrapper(`Order Cancelled #${order.id}`, bodyContent)
+      html: emailWrapper(`Order Cancelled #${order.id}`, bodyContent, { clientUrl: baseUrl })
     });
   } catch (err) {
     console.warn(`[Resend Email] Error sending cancelled email:`, err.message);
@@ -754,7 +791,7 @@ async function sendOrderCancelledEmail(order, reason, cancelledBy) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // 6. WELCOME EMAIL (New Customer Registration)
 // ═══════════════════════════════════════════════════════════════════════════════
-async function sendWelcomeEmail(customer) {
+async function sendWelcomeEmail(customer, options = {}) {
   try {
     const email = (customer?.email || '').trim();
     if (!email || !email.includes('@')) return { success: false, reason: 'no_email' };
@@ -765,6 +802,7 @@ async function sendWelcomeEmail(customer) {
       return { success: true, simulated: true };
     }
 
+    const baseUrl = getClientUrl(options?.clientUrl || customer?.clientUrl);
     const customerName = customer?.name || 'Valued Customer';
     const customerPhone = customer?.phone || '';
 
@@ -821,7 +859,7 @@ async function sendWelcomeEmail(customer) {
 
       <!-- Action Button -->
       <div style="padding: 20px 24px 28px; text-align: center; border-top: 1px solid #f1f5f9;">
-        <a href="${CLIENT_URL}/shop" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);">
+        <a href="${baseUrl}/shop" style="display: inline-block; background: #dc2626; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);">
           Start Shopping Power Tools &rarr;
         </a>
       </div>
@@ -830,7 +868,7 @@ async function sendWelcomeEmail(customer) {
     return await sendEmailSafely(resend, {
       to: email,
       subject: `Welcome to Variathu Power Tools, ${customerName}!`,
-      html: emailWrapper(`Welcome to Variathu Power Tools`, bodyContent)
+      html: emailWrapper(`Welcome to Variathu Power Tools`, bodyContent, { clientUrl: baseUrl })
     });
   } catch (err) {
     console.warn("[Resend Email] Error sending welcome email:", err.message);
@@ -839,7 +877,7 @@ async function sendWelcomeEmail(customer) {
 }
 
 // ─── 7. OTP Security Verification Email ─────────────────────────────────────────
-async function sendOtpEmail({ to, name, otp, purpose = 'login' }) {
+async function sendOtpEmail({ to, name, otp, purpose = 'login', clientUrl }) {
   try {
     const resend = getResendClient();
     const email = (to || '').trim();
@@ -854,6 +892,8 @@ async function sendOtpEmail({ to, name, otp, purpose = 'login' }) {
     if (!email || !email.includes('@')) {
       return { success: false, error: 'Invalid recipient email' };
     }
+
+    const baseUrl = getClientUrl(clientUrl);
 
     const bodyContent = `
       <!-- Hero Status Banner -->
@@ -898,7 +938,7 @@ async function sendOtpEmail({ to, name, otp, purpose = 'login' }) {
     return await sendEmailSafely(resend, {
       to: email,
       subject: `🔐 Your Security Code: ${otp} - Variathu Power Tools`,
-      html: emailWrapper(`Variathu Security Verification`, bodyContent)
+      html: emailWrapper(`Variathu Security Verification`, bodyContent, { clientUrl: baseUrl })
     });
   } catch (err) {
     console.warn("[Resend Email] Error sending OTP email:", err.message);
@@ -913,6 +953,8 @@ module.exports = {
   sendCancellationRequestEmail,
   sendOrderCancelledEmail,
   sendWelcomeEmail,
-  sendOtpEmail
+  sendOtpEmail,
+  setDynamicClientUrl,
+  getClientUrl
 };
 

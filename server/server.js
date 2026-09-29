@@ -21,6 +21,7 @@ const shippingRoutes = require('./routes/shippingRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const repairRoutes = require('./routes/repairRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const emailService = require('./services/emailService');
 const { startKeepAliveService, getKeepAliveStatus } = require('./utils/keepAlive');
 const { createRateLimiter } = require('./utils/rateLimiter');
 
@@ -44,7 +45,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://localhost:5173',
       'http://localhost:5000',
       'https://variathupowertools.vercel.app',
-      'https://toolsshop.vercel.app'
+      'https://toolsshop.vercel.app',
+      'https://toolsshop-pied.vercel.app'
     ];
 
 app.use(cors({
@@ -66,6 +68,22 @@ app.use(cors({
 
 app.use(compression({ threshold: 1024 }));
 app.use(express.json({ limit: '5mb' }));
+
+// Dynamic domain capture for outbound transactional emails:
+// Whenever an HTTP request comes in from the live frontend (Vercel deployment or custom domain),
+// automatically update the email service base URL so all buttons point to the live domain.
+app.use((req, res, next) => {
+  const origin = req.headers.origin || req.headers.referer;
+  if (origin && typeof origin === 'string' && origin.startsWith('http') && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+    try {
+      const u = new URL(origin);
+      const cleanOrigin = `${u.protocol}//${u.host}`;
+      req.clientUrl = cleanOrigin;
+      emailService.setDynamicClientUrl(cleanOrigin);
+    } catch (e) {}
+  }
+  next();
+});
 
 // Request logger for debugging
 app.use((req, res, next) => {

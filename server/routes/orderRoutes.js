@@ -85,9 +85,11 @@ router.put('/:id/status', requireStoreOwner, async (req, res) => {
 
     const sLower = (status || '').toLowerCase();
 
+    const clientUrl = req.clientUrl || req.headers.origin;
+
     // Trigger dispatched/courier email & WhatsApp when status changes to dispatched or shipped
     if (sLower.includes('dispatch') || sLower.includes('shipp') || sLower.includes('in-transit')) {
-      emailService.sendOrderDispatchedEmail(updated, courierPartner, awb).catch(err => {
+      emailService.sendOrderDispatchedEmail(updated, courierPartner, awb, { clientUrl }).catch(err => {
         console.warn(`[Resend Email] Async dispatch email error for order #${updated.id}:`, err.message);
       });
       whatsappService.sendOrderDispatchedWhatsApp(updated, courierPartner, awb).catch(err => {
@@ -104,7 +106,7 @@ router.put('/:id/status', requireStoreOwner, async (req, res) => {
 
     // Trigger completed / delivered email & WhatsApp when status changes to delivered or completed
     if (sLower.includes('deliver') || sLower.includes('complet')) {
-      emailService.sendOrderCompletedEmail(updated).catch(err => {
+      emailService.sendOrderCompletedEmail(updated, { clientUrl }).catch(err => {
         console.warn(`[Resend Email] Async completed/delivered email error for order #${updated.id}:`, err.message);
       });
       whatsappService.sendOrderCompletedWhatsApp(updated).catch(err => {
@@ -114,7 +116,7 @@ router.put('/:id/status', requireStoreOwner, async (req, res) => {
 
     // Trigger cancelled email & WhatsApp when store owner cancels directly via status update
     if (sLower.includes('cancel')) {
-      emailService.sendOrderCancelledEmail(updated, 'Cancelled by store', 'store').catch(err => {
+      emailService.sendOrderCancelledEmail(updated, 'Cancelled by store', 'store', { clientUrl }).catch(err => {
         console.warn(`[Resend Email] Async cancelled email error for order #${updated.id}:`, err.message);
       });
       whatsappService.sendOrderCancelledWhatsApp(updated, 'Cancelled by store').catch(err => {
@@ -231,7 +233,7 @@ router.post('/', optionalAuth, async (req, res) => {
     }
 
     // Trigger automated Resend Order Confirmation Email asynchronously
-    emailService.sendOrderConfirmationEmail(order).catch(err => {
+    emailService.sendOrderConfirmationEmail(order, { clientUrl: req.clientUrl || req.headers.origin }).catch(err => {
       console.warn(`[Resend Email] Async dispatch notice for order #${order.id}:`, err.message);
     });
 
@@ -326,7 +328,7 @@ router.post('/:id/cancel', optionalAuth, async (req, res) => {
 
     const orderData = result.order || result.data;
     if (orderData) {
-      emailService.sendOrderCancelledEmail(orderData, reason, cancelledBy).catch(err => {
+      emailService.sendOrderCancelledEmail(orderData, reason, cancelledBy, { clientUrl: req.clientUrl || req.headers.origin }).catch(err => {
         console.warn(`[Resend Email] Async cancelled email error:`, err.message);
       });
       whatsappService.sendOrderCancelledWhatsApp(orderData, reason).catch(err => {
@@ -366,7 +368,7 @@ router.post('/:id/request-cancel', optionalAuth, async (req, res) => {
 
     const orderData = result.order || result.data;
     if (orderData) {
-      emailService.sendCancellationRequestEmail(orderData, reason).catch(err => {
+      emailService.sendCancellationRequestEmail(orderData, reason, { clientUrl: req.clientUrl || req.headers.origin }).catch(err => {
         console.warn(`[Resend Email] Async cancellation request email error:`, err.message);
       });
     }

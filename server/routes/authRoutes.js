@@ -142,7 +142,8 @@ router.post('/send-otp', async (req, res) => {
         to: targetEmail,
         name: customerName,
         otp,
-        purpose
+        purpose,
+        clientUrl: req.clientUrl || req.headers.origin
       }).catch(err => {
         console.warn('[Auth OTP] Email send error:', err.message);
       });
@@ -253,7 +254,7 @@ router.post('/verify-otp', async (req, res) => {
       });
 
       // Send welcome email asynchronously
-      emailService.sendWelcomeEmail(newCust).catch(err => {
+      emailService.sendWelcomeEmail(newCust, { clientUrl: req.clientUrl || req.headers.origin }).catch(err => {
         console.warn(`[Resend Email] Welcome email error:`, err.message);
       });
 
