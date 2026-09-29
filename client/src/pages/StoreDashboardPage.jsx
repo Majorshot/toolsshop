@@ -817,21 +817,42 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (!autoRefresh) return;
     const interval = setInterval(() => {
       loadOrders({ silent: true });
-    }, 10000); // Live sync: polling every 10s
+      loadProducts({ silent: true });
+      loadRepairs({ silent: true });
+    }, 10000); // Live sync: polling orders, inventory stock & repairs every 10s
 
-    let bc = null;
+    let ordersBc = null;
+    let invBc = null;
     try {
-      bc = new BroadcastChannel('vpt_orders_channel');
-      bc.onmessage = (event) => {
-        if (event.data?.type === 'CANCEL_REQUESTED' || event.data?.type === 'ORDER_UPDATED') {
+      ordersBc = new BroadcastChannel('vpt_orders_channel');
+      ordersBc.onmessage = (event) => {
+        if (event.data?.type === 'CANCEL_REQUESTED' || event.data?.type === 'ORDER_UPDATED' || event.data?.type === 'ORDER_PLACED') {
           loadOrders({ silent: true });
+          loadProducts({ silent: true });
+        }
+      };
+
+      invBc = new BroadcastChannel('vpt_inventory_channel');
+      invBc.onmessage = (event) => {
+        const data = event.data;
+        if (!data) return;
+        if (data.type === 'PRODUCT_ADDED' && data.product) {
+          setProducts(prev => [data.product, ...prev.filter(p => (p.id || p._id) !== (data.product.id || data.product._id))]);
+        } else if (data.type === 'PRODUCT_UPDATED' && data.product) {
+          const updId = data.product.id || data.product._id;
+          setProducts(prev => prev.map(p => (p.id === updId || p._id === updId) ? { ...p, ...data.product } : p));
+        } else if (data.type === 'PRODUCT_DELETED' && data.productId) {
+          setProducts(prev => prev.filter(p => p.id !== data.productId && p._id !== data.productId));
+        } else {
+          loadProducts({ silent: true });
         }
       };
     } catch (e) {}
 
     return () => {
       clearInterval(interval);
-      if (bc) bc.close();
+      if (ordersBc) ordersBc.close();
+      if (invBc) invBc.close();
     };
   }, [autoRefresh, soundEnabled]);
 
@@ -1078,15 +1099,29 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const handleConfirmDelete = async () => {
     if (!productToDelete) return;
     setIsDeleting(true);
+    const targetId = productToDelete.id || productToDelete._id;
+    const deletedName = productToDelete.name;
+
+    // Instant optimistic removal from UI: disappears immediately with zero lag or page reload
+    setProducts(prev => prev.filter(p => (p.id || p._id) !== targetId));
+    setProductToDelete(null);
+
     try {
-      const targetId = productToDelete.id || productToDelete._id;
       await api.deleteProduct(targetId);
-      showNotification(`Deleted "${productToDelete.name}" from store catalog!`);
-      setProductToDelete(null);
-      await loadProducts();
+      showNotification(`Deleted "${deletedName}" from store catalog!`);
+
+      // Broadcast real-time deletion to all other browser tabs and storefront
+      try {
+        const bc = new BroadcastChannel('vpt_inventory_channel');
+        bc.postMessage({ type: 'PRODUCT_DELETED', productId: targetId });
+        bc.close();
+      } catch (e) {}
+
+      loadProducts({ silent: true });
       if (onProductUpdated) onProductUpdated();
     } catch (err) {
       showNotification(`Delete failed: ${err.message}`);
+      loadProducts({ silent: true });
     } finally {
       setIsDeleting(false);
     }
@@ -1127,15 +1162,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
-  const loadProducts = async () => {
-    setLoadingProducts(true);
+  const loadProducts = async (options = {}) => {
+    const isSilent = Boolean(options && options.silent);
+    if (!isSilent) setLoadingProducts(true);
     try {
       const res = await api.getProducts();
       setProducts(Array.isArray(res) ? res : (res.data || []));
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingProducts(false);
+      if (!isSilent) setLoadingProducts(false);
     }
   };
 
@@ -1151,15 +1187,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
-  const loadRepairs = async () => {
-    setLoadingRepairs(true);
+  const loadRepairs = async (options = {}) => {
+    const isSilent = Boolean(options && options.silent);
+    if (!isSilent) setLoadingRepairs(true);
     try {
       const res = await api.getRepairJobs();
       setRepairs(Array.isArray(res) ? res : (res.data || []));
     } catch (err) {
       console.error("Failed to load repairs:", err);
     } finally {
-      setLoadingRepairs(false);
+      if (!isSilent) setLoadingRepairs(false);
     }
   };
 
@@ -1218,17 +1255,27 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     const newStock = Math.max(0, currentStock + delta);
     if (newStock === currentStock) return;
 
-    // Optimistic update
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock: newStock } : p));
-    setSteppingStockId(product.id);
+    const prodId = product.id || product._id;
+
+    // Optimistic instant state update
+    setProducts(prev => prev.map(p => (p.id === prodId || p._id === prodId) ? { ...p, stock: newStock } : p));
+    setSteppingStockId(prodId);
 
     try {
-      await api.updateProduct(product.id, { stock: newStock });
+      await api.updateProduct(prodId, { stock: newStock });
       showNotification(`Stock for "${product.name.slice(0, 20)}..." updated to ${newStock}`);
+
+      // Broadcast stock update
+      try {
+        const bc = new BroadcastChannel('vpt_inventory_channel');
+        bc.postMessage({ type: 'PRODUCT_UPDATED', product: { ...product, stock: newStock } });
+        bc.close();
+      } catch (e) {}
+
       if (onProductUpdated) onProductUpdated();
     } catch (err) {
       // Revert on error
-      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock: currentStock } : p));
+      setProducts(prev => prev.map(p => (p.id === prodId || p._id === prodId) ? { ...p, stock: currentStock } : p));
       showNotification(`Failed to update stock: ${err.message}`);
     } finally {
       setSteppingStockId(null);
@@ -1237,7 +1284,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   // Feature 2: Inline Price Edit
   const handleStartEditingPrice = (product) => {
-    setEditingPriceId(product.id);
+    setEditingPriceId(product.id || product._id);
     setEditingPriceValue(String(product.price || ''));
   };
 
@@ -1251,9 +1298,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setSavingPriceId(productId);
     try {
       await api.updateProduct(productId, { price: numericPrice });
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, price: numericPrice } : p));
+      setProducts(prev => prev.map(p => (p.id === productId || p._id === productId) ? { ...p, price: numericPrice } : p));
       showNotification(`Price updated to ₹${numericPrice.toLocaleString('en-IN')}`);
       setEditingPriceId(null);
+
+      // Broadcast price update
+      try {
+        const bc = new BroadcastChannel('vpt_inventory_channel');
+        bc.postMessage({ type: 'PRODUCT_UPDATED', product: { id: productId, price: numericPrice } });
+        bc.close();
+      } catch (e) {}
+
       if (onProductUpdated) onProductUpdated();
     } catch (err) {
       showNotification(`Failed to update price: ${err.message}`);
@@ -1613,17 +1668,35 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         }
       };
 
+      let savedProduct = null;
       if (editingProduct) {
-        await api.updateProduct(editingProduct.id, payload);
+        const editId = editingProduct.id || editingProduct._id;
+        const res = await api.updateProduct(editId, payload);
+        savedProduct = (res && res.data) ? res.data : { ...editingProduct, ...payload };
+        // Immediate in-place state update: no reload needed
+        setProducts(prev => prev.map(p => (p.id === editId || p._id === editId) ? { ...p, ...savedProduct } : p));
         showNotification(`Updated tool "${payload.name}" successfully!`);
       } else {
-        await api.createProduct(payload);
+        const res = await api.createProduct(payload);
+        savedProduct = (res && res.data) ? res.data : { ...payload, id: `vpt-${Date.now()}` };
+        // Immediate prepend to the inventory list so it appears right at the top
+        setProducts(prev => [savedProduct, ...prev.filter(p => (p.id || p._id) !== (savedProduct.id || savedProduct._id))]);
+        setInvPage(1); // Jump to page 1 to see the new equipment
         showNotification(`Added tool "${payload.name}" to inventory!`);
       }
 
       setIsAddModalOpen(false);
       setEditingProduct(null);
-      loadProducts();
+
+      // Broadcast live addition/edit to other open tabs and shop storefront
+      try {
+        const bc = new BroadcastChannel('vpt_inventory_channel');
+        bc.postMessage({ type: editingProduct ? 'PRODUCT_UPDATED' : 'PRODUCT_ADDED', product: savedProduct });
+        bc.close();
+      } catch (e) {}
+
+      // Silent background sync
+      loadProducts({ silent: true });
       if (onProductUpdated) onProductUpdated();
     } catch (err) {
       alert(err.message);
@@ -4156,7 +4229,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <p>Add, edit prices, update stock levels, or remove tools from the store catalog.</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => loadProducts()}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  padding: '9px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: '#334155'
+                }}
+                id="btn-refresh-inventory"
+                title="Fetch latest stock levels from database"
+              >
+                <RefreshCw size={14} className={loadingProducts ? 'spin-slow' : ''} />
+                <span>Refresh Catalog</span>
+              </button>
+
               <button
                 onClick={openNewProduct}
                 className="btn-hero-clean"

@@ -74,8 +74,8 @@ const MainApp = () => {
   const [storeInfo, setStoreInfo] = useState(null);
 
   // Load all products for the store (unfiltered base) with auto-retry
-  const loadProducts = async (retryCount = 0) => {
-    setLoading(true);
+  const loadProducts = async (retryCount = 0, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await api.getProducts();
       setAllProducts(res.data || []);
@@ -89,18 +89,32 @@ const MainApp = () => {
       if (retryCount < 3) {
         setError(`Connecting to database... (retrying ${retryCount + 1}/3)`);
         setTimeout(() => {
-          loadProducts(retryCount + 1);
+          loadProducts(retryCount + 1, silent);
         }, 2500);
       } else {
         setError('Could not connect to equipment server. Please ensure backend is running on port 5000.');
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadProducts();
+  }, []);
+
+  // Real-time multi-tab & admin sync via BroadcastChannel
+  useEffect(() => {
+    let bc = null;
+    try {
+      bc = new BroadcastChannel('vpt_inventory_channel');
+      bc.onmessage = () => {
+        loadProducts(0, true);
+      };
+    } catch (e) {}
+    return () => {
+      if (bc) bc.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -238,7 +252,7 @@ const MainApp = () => {
             path="/admin"
             element={
               <ProtectedAdminRoute>
-                <StoreDashboardPage onProductUpdated={loadProducts} />
+                <StoreDashboardPage onProductUpdated={() => loadProducts(0, true)} />
               </ProtectedAdminRoute>
             }
           />
