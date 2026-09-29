@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User, ShieldCheck, ArrowRight, Lock, Phone, Mail, AlertCircle,
-  UserPlus, LogIn, CheckCircle2, Sparkles, Eye, EyeOff, Store, ChevronRight, Check,
+  UserPlus, LogIn, CheckCircle2, Sparkles, Eye, EyeOff, Check,
   KeyRound, RefreshCw, Edit3, ArrowLeft, Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -10,8 +10,19 @@ import AnimatedContent from '../components/AnimatedContent';
 import CodeSlots from '../components/CodeSlots';
 
 export const LoginPage = () => {
-  const [activeTab, setActiveTab] = useState('customer'); // 'customer' or 'store'
+  const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isPortalAdmin = searchParams.get('portal') === 'admin' || searchParams.get('role') === 'store';
+
+  const [activeTab, setActiveTab] = useState(isPortalAdmin ? 'store' : 'customer'); // 'customer' or 'store'
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+
+  useEffect(() => {
+    if (isPortalAdmin) {
+      setActiveTab('store');
+    }
+  }, [isPortalAdmin]);
   
   // Customer Step: 'input' (Step 1: Phone/Details) or 'otp' (Step 2: 6-Digit OTP)
   const [customerStep, setCustomerStep] = useState('input');
@@ -34,7 +45,6 @@ export const LoginPage = () => {
   const [focusedField, setFocusedField] = useState(null);
 
   const { login, sendOtp, verifyOtp, resendOtp } = useAuth();
-  const navigate = useNavigate();
 
   // Resend Countdown Timer
   useEffect(() => {
@@ -76,6 +86,22 @@ export const LoginPage = () => {
   const handleTabSwitch = (tab) => {
     setActiveTab(tab);
     resetForm();
+    if (tab === 'customer' && isPortalAdmin) {
+      navigate('/login', { replace: true });
+    }
+  };
+
+  const handlePhoneOrEmailChange = (e) => {
+    const raw = e.target.value;
+    // Auto-detect store owner email or admin keyword
+    if (raw.includes('@') || raw.toLowerCase().startsWith('admin')) {
+      setActiveTab('store');
+      setIdentifier(raw);
+      setError('');
+      return;
+    }
+    const val = raw.replace(/[^0-9]/g, '').slice(0, 10);
+    setIdentifier(val);
   };
 
   const handleAutoFillOtp = (code) => {
@@ -90,6 +116,13 @@ export const LoginPage = () => {
     if (e) e.preventDefault();
     setError('');
     setSuccessMsg('');
+
+    // If store admin email was entered in customer input, switch to store password form
+    if (identifier.includes('@') || identifier.toLowerCase().trim() === 'admin') {
+      setActiveTab('store');
+      setError('Store Administrator detected. Please enter your password to sign in.');
+      return;
+    }
 
     const cleanPhone = identifier.replace(/[^0-9]/g, '').slice(-10);
     if (!cleanPhone || cleanPhone.length !== 10) {
@@ -703,14 +736,10 @@ export const LoginPage = () => {
                       <span>+91</span>
                     </div>
                     <input
-                      type="tel"
-                      maxLength={10}
+                      type="text"
                       placeholder="94475 59333"
                       value={identifier}
-                      onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                        setIdentifier(val);
-                      }}
+                      onChange={handlePhoneOrEmailChange}
                       onFocus={() => setFocusedField('phone')}
                       onBlur={() => setFocusedField(null)}
                       autoComplete="tel"
@@ -1111,73 +1140,30 @@ export const LoginPage = () => {
               </div>
             )}
 
-            {/* Divider */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              margin: '24px 0 18px',
-              color: '#cbd5e1'
-            }}>
-              <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-              <span style={{ fontSize: '0.72rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '600' }}>
-                {activeTab === 'customer' ? 'Store Staff' : 'Customer Area'}
-              </span>
-              <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-            </div>
-
-            {/* Discreet Portal Switcher */}
-            {activeTab === 'customer' ? (
-              <button
-                type="button"
-                onClick={() => handleTabSwitch('store')}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '11px',
-                  color: '#475569',
-                  fontSize: '0.82rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s ease'
-                }}
-                id="btn-switch-store-admin"
-              >
-                <Store size={14} color="#64748b" />
-                <span>Store Owner &amp; Staff Login</span>
-                <ChevronRight size={13} color="#94a3b8" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleTabSwitch('customer')}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '11px',
-                  color: '#475569',
-                  fontSize: '0.82rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  transition: 'all 0.2s ease'
-                }}
-                id="btn-switch-customer"
-              >
-                <User size={14} color="#64748b" />
-                <span>&larr; Return to Customer Login</span>
-              </button>
+            {/* If in Store Mode (accessed via /admin or email), show clean return link */}
+            {activeTab === 'store' && (
+              <div style={{ textAlign: 'center', marginTop: '18px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleTabSwitch('customer')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '0.82rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: 0
+                  }}
+                  id="btn-switch-customer"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Return to Customer Store</span>
+                </button>
+              </div>
             )}
 
           </div>

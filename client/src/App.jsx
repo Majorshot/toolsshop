@@ -45,7 +45,7 @@ function ScrollToTop() {
 function ProtectedAdminRoute({ children }) {
   const { isLoggedIn, isStoreOwner } = useAuth();
   if (!isLoggedIn || !isStoreOwner) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login?portal=admin" replace />;
   }
   return children;
 }
