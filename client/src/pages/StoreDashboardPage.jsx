@@ -381,12 +381,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     return order.deliveryType === 'store-pickup' && !order.handoverVerified && (order.status || '').toLowerCase() !== 'cancelled';
   };
 
+  const isOrderUnattended = (order) => {
+    if (!order) return false;
+    const s = (order.status || '').toLowerCase();
+    if (s === 'cancelled') return false;
+    if (isOrderCompleted(order)) return false;
+    return true;
+  };
+
   const orderCounts = useMemo(() => {
     const list = Array.isArray(orders) ? orders.filter(Boolean) : [];
-    const activeList = list.filter(o => (o.status || '').toLowerCase() !== 'cancelled');
+    // Only unattended orders (not completed and not cancelled) require store action or attention
+    const unattendedList = list.filter(isOrderUnattended);
+    const todayUnattendedList = unattendedList.filter(o => isOrderDateToday(o.createdAt || o.date));
     return {
-      all: activeList.length,
-      today: activeList.filter(o => isOrderDateToday(o.createdAt || o.date)).length,
+      total: list.length,
+      all: unattendedList.length,
+      unattended: unattendedList.length,
+      today: todayUnattendedList.length,
       undispatched: list.filter(isOrderUndispatched).length,
       dispatched: list.filter(isOrderDispatched).length,
       pickupPending: list.filter(isOrderPickupPending).length,
@@ -1882,7 +1894,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       id: 'orders',
       title: `Customer Orders${orderCounts.all > 0 ? ` (${orderCounts.all})` : ''}`,
       icon: ShoppingBag,
-      notifs: orderCounts.undispatched > 0 ? orderCounts.undispatched : undefined,
+      notifs: orderCounts.all > 0 ? orderCounts.all : undefined,
       notifsColor: '#ea580c',
       selected: activeTab === 'orders',
       onClick: () => setActiveTab('orders')
@@ -2326,7 +2338,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
               <span>💰 Revenue: <strong style={{ color: '#0f172a' }}>{formatPrice(periodRevenue)}</strong> <small style={{ color: '#64748b' }}>({analyticsPeriod === 'all' ? 'All Time' : analyticsPeriod === 'today' ? 'Today' : analyticsPeriod === 'week' ? 'Past 7 Days' : 'This Month'})</small></span>
-              <span>📦 Active: <strong style={{ color: '#0f172a' }}>{orderCounts.all}</strong></span>
+              <span>📦 Active Pending: <strong style={{ color: orderCounts.all > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.all}</strong></span>
               <span>🚚 Undispatched: <strong style={{ color: orderCounts.undispatched > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.undispatched}</strong></span>
               <span>🏬 Pickup Pending: <strong style={{ color: '#0f172a' }}>{orderCounts.pickupPending}</strong></span>
               <span>🔧 Workshop: <strong style={{ color: '#0f172a' }}>{repairs.filter(r => r.status !== 'Handed Over').length}</strong> jobs</span>
@@ -2440,9 +2452,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 title="Customer Orders"
                 subtitle={`${orders.length} total customer orders • Courier shipping & store pickup OTP passes`}
                 Icon={ShoppingBag}
-                badge={orderCounts.undispatched > 0 ? `${orderCounts.undispatched} undispatched` : 'All dispatched'}
-                badgeBg={orderCounts.undispatched > 0 ? '#ffedd5' : '#ecfdf5'}
-                badgeColor={orderCounts.undispatched > 0 ? '#c2410c' : '#15803d'}
+                badge={orderCounts.all > 0 ? `${orderCounts.all} pending` : 'All attended'}
+                badgeBg={orderCounts.all > 0 ? '#ffedd5' : '#ecfdf5'}
+                badgeColor={orderCounts.all > 0 ? '#c2410c' : '#15803d'}
                 iconColor="#dc2626"
                 iconBg="#fef2f2"
                 gradient="linear-gradient(135deg, #dc2626 0%, #ea580c 100%)"
@@ -2987,11 +2999,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     { id: 'undispatched', label: '📦 Undispatched', count: orderCounts.undispatched, icon: AlertCircle, color: '#d97706' },
                     { id: 'dispatched', label: '🚚 Dispatched', count: orderCounts.dispatched, icon: Truck, color: '#16a34a' },
                     { id: 'pickup-pending', label: '🏬 Counter Pickup', count: orderCounts.pickupPending, icon: ShieldCheck, color: '#0284c7' },
-                    { id: 'completed', label: '✅ Completed', count: orderCounts.completed, icon: CheckCircle2, color: '#059669' },
+                    { id: 'completed', label: '✅ Completed', count: 0, icon: CheckCircle2, color: '#059669' },
                     ...(orderCounts.cancelPending > 0 ? [
                       { id: 'cancel-pending', label: '⚠️ Cancel Requests', count: orderCounts.cancelPending, icon: AlertTriangle, color: '#dc2626' }
                     ] : []),
-                    { id: 'cancelled', label: '❌ Cancelled', count: orderCounts.cancelled, icon: XCircle, color: '#64748b' }
+                    { id: 'cancelled', label: '❌ Cancelled', count: 0, icon: XCircle, color: '#64748b' }
                   ].map(chip => {
                     const isSelected = orderStatusFilter === chip.id;
                     const IconComp = chip.icon;
@@ -3025,7 +3037,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       >
                         <IconComp size={14} style={{ color: isSelected ? '#ffffff' : chip.color }} />
                         <span>{chip.label}</span>
-                        {chip.id !== 'cancelled' && chip.count > 0 && (
+                        {chip.count > 0 && (
                           <span
                             style={{
                               background: isSelected ? 'rgba(255, 255, 255, 0.28)' : '#f1f5f9',
