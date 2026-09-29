@@ -357,7 +357,7 @@ const MainApp = () => {
             </div>
 
             <div className="footer-clean-bottom">
-              © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
+              © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved. • <Link to="/admin" style={{ color: 'inherit', textDecoration: 'none', opacity: 0.7 }} id="footer-admin-link">Store Portal</Link>
             </div>
           </div>
         </footer>

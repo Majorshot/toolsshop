@@ -1137,6 +1137,32 @@ export const LoginPage = () => {
                     </button>
                   </p>
                 )}
+
+                {/* Discreet Store Manager Login Toggle */}
+                {authMode === 'login' && (
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleTabSwitch('store')}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#64748b',
+                        fontSize: '0.78rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '4px 8px'
+                      }}
+                      id="link-switch-store"
+                    >
+                      <Lock size={12} color="#94a3b8" />
+                      <span>Store Manager? Sign in with Email &amp; Password &rarr;</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
