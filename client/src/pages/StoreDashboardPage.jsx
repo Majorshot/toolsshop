@@ -3644,76 +3644,202 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   background: '#f0fdf4',
                   border: '2px solid #16a34a',
                   borderRadius: '12px',
-                  padding: '14px 18px',
-                  marginBottom: '16px',
+                  padding: '16px 18px',
+                  marginBottom: '18px',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '12px',
+                  flexDirection: 'column',
+                  gap: '14px',
                   boxShadow: '0 4px 16px rgba(22, 163, 74, 0.16)'
                 }}
                 id="box-matched-otp-order"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ background: '#16a34a', color: '#ffffff', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <CheckCircle2 size={22} />
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ background: '#16a34a', color: '#ffffff', borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <CheckCircle2 size={22} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '800', fontSize: '0.96rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span>Pickup Order Match Found: <strong>{quickOtpMatchedOrder.id}</strong> • {quickOtpMatchedOrder.customer?.name}</span>
+                          <span style={{ fontSize: '0.72rem', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', fontWeight: '800', border: '1px solid #86efac' }}>
+                            🏬 Counter Pickup
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#374151', marginTop: '3px' }}>
+                          Customer Phone: <strong>{quickOtpMatchedOrder.customer?.phone}</strong> • Total: <strong style={{ color: '#0f172a' }}>{formatPrice(quickOtpMatchedOrder.totalAmount)}</strong> ({quickOtpMatchedOrder.paymentStatus === 'PAID' ? 'PAID ONLINE' : 'COLLECT CASH AT COUNTER'}) • OTP: <strong style={{ color: '#ea580c', fontFamily: 'var(--font-mono)', fontSize: '0.92rem' }}>{quickOtpMatchedOrder.pickupOtp}</strong>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontWeight: '800', fontSize: '0.96rem', color: '#166534' }}>
-                        Pickup Order Match Found: {quickOtpMatchedOrder.id} • {quickOtpMatchedOrder.customer?.name}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#374151', marginTop: '2px' }}>
-                        Customer Phone: <strong>{quickOtpMatchedOrder.customer?.phone}</strong> • Total: <strong>{formatPrice(quickOtpMatchedOrder.totalAmount)}</strong> ({quickOtpMatchedOrder.paymentStatus === 'PAID' ? 'PAID ONLINE' : 'COLLECT CASH AT COUNTER'}) • OTP: <strong style={{ color: '#ea580c', fontFamily: 'var(--font-mono)' }}>{quickOtpMatchedOrder.pickupOtp}</strong>
-                      </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      {/* View Details Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrderForDetails(quickOtpMatchedOrder)}
+                        style={{
+                          padding: '9px 14px',
+                          background: '#ffffff',
+                          color: '#0f172a',
+                          border: '1.5px solid #cbd5e1',
+                          borderRadius: '8px',
+                          fontWeight: '700',
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                          transition: 'all 0.15s ease'
+                        }}
+                        id="btn-fast-otp-view-details"
+                        title="View Full Order Breakdown & Specifications"
+                      >
+                        <Eye size={15} style={{ color: '#0284c7' }} />
+                        <span>Details</span>
+                      </button>
+
+                      {/* Verify & Complete Handover Button */}
+                      <button
+                        type="button"
+                        disabled={verifyingOrderId === quickOtpMatchedOrder.id}
+                        onClick={async () => {
+                          setVerifyingOrderId(quickOtpMatchedOrder.id);
+                          try {
+                            await api.verifyPickupOtp(quickOtpMatchedOrder.id, quickOtpMatchedOrder.pickupOtp);
+                            showNotification(`✅ Counter handover verified for ${quickOtpMatchedOrder.id}!`);
+                            setQuickOtpInput('');
+                            setQuickOtpMatchedOrder(null);
+                            loadOrders();
+                            if (onProductUpdated) onProductUpdated();
+                          } catch (err) {
+                            showNotification(`❌ ${err.message}`);
+                          } finally {
+                            setVerifyingOrderId(null);
+                          }
+                        }}
+                        style={{
+                          padding: '9px 18px',
+                          background: '#16a34a',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontWeight: '800',
+                          fontSize: '0.84rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 6px rgba(22,163,74,0.3)'
+                        }}
+                        id="btn-fast-otp-verify-handover"
+                      >
+                        <ShieldCheck size={16} />
+                        <span>{verifyingOrderId === quickOtpMatchedOrder.id ? 'Verifying...' : 'Verify & Complete Handover'}</span>
+                      </button>
+
+                      {/* Dismiss Button */}
+                      <button
+                        type="button"
+                        onClick={() => { setQuickOtpInput(''); setQuickOtpMatchedOrder(null); }}
+                        style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px' }}
+                        title="Dismiss"
+                      >
+                        <X size={18} />
+                      </button>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      type="button"
-                      disabled={verifyingOrderId === quickOtpMatchedOrder.id}
-                      onClick={async () => {
-                        setVerifyingOrderId(quickOtpMatchedOrder.id);
-                        try {
-                          await api.verifyPickupOtp(quickOtpMatchedOrder.id, quickOtpMatchedOrder.pickupOtp);
-                          showNotification(`✅ Counter handover verified for ${quickOtpMatchedOrder.id}!`);
-                          setQuickOtpInput('');
-                          setQuickOtpMatchedOrder(null);
-                          loadOrders();
-                          if (onProductUpdated) onProductUpdated();
-                        } catch (err) {
-                          showNotification(`❌ ${err.message}`);
-                        } finally {
-                          setVerifyingOrderId(null);
-                        }
-                      }}
-                      style={{
-                        padding: '9px 18px',
-                        background: '#16a34a',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontWeight: '800',
-                        fontSize: '0.84rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 2px 6px rgba(22,163,74,0.3)'
-                      }}
-                    >
-                      <ShieldCheck size={16} />
-                      <span>{verifyingOrderId === quickOtpMatchedOrder.id ? 'Verifying...' : 'Verify & Complete Handover'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setQuickOtpInput(''); setQuickOtpMatchedOrder(null); }}
-                      style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px' }}
-                      title="Dismiss"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
+
+                  {/* Purchased Products / Items List */}
+                  {quickOtpMatchedOrder.items && quickOtpMatchedOrder.items.length > 0 && (
+                    <div style={{
+                      background: '#ffffff',
+                      borderRadius: '8px',
+                      padding: '12px 14px',
+                      border: '1px solid #bbf7d0',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Package size={13} style={{ color: '#ea580c' }} />
+                          Items to Handover ({quickOtpMatchedOrder.items.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrderForDetails(quickOtpMatchedOrder)}
+                          style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.74rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                        >
+                          Full Breakdown &rarr;
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
+                        {quickOtpMatchedOrder.items.map((item, idx) => {
+                          const matchedProd = products.find(p =>
+                            (p.id && item.id && String(p.id) === String(item.id)) ||
+                            (p._id && item.id && String(p._id) === String(item.id)) ||
+                            (p.name && item.name && p.name.toLowerCase() === item.name.toLowerCase())
+                          );
+                          const displayImg = item.image || matchedProd?.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=100&q=80';
+                          const brand = item.brand || matchedProd?.brand || '';
+                          const qty = item.quantity || 1;
+                          const lineTotal = (item.price || 0) * qty;
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                padding: '8px 10px'
+                              }}
+                            >
+                              <img
+                                src={displayImg}
+                                alt=""
+                                style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px', background: '#ffffff', border: '1px solid #e2e8f0', flexShrink: 0 }}
+                                onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=100&q=80'; }}
+                              />
+                              <div style={{ minWidth: 0, flex: 1 }}>
+                                <div
+                                  onClick={() => setSelectedOrderForDetails(quickOtpMatchedOrder)}
+                                  style={{ fontSize: '0.8rem', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+                                  title={item.name}
+                                >
+                                  {brand && (
+                                    <span style={{ fontSize: '0.64rem', fontWeight: '900', color: '#ea580c', background: '#fff7ed', padding: '1px 4px', borderRadius: '3px', marginRight: '4px', border: '1px solid #fed7aa' }}>
+                                      {brand}
+                                    </span>
+                                  )}
+                                  <span>{item.name}</span>
+                                </div>
+                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
+                                  Unit: {formatPrice(item.price)}
+                                </div>
+                              </div>
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: '800', background: '#0284c7', color: '#ffffff', padding: '2px 7px', borderRadius: '4px' }}>
+                                  ×{qty}
+                                </span>
+                                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>
+                                  {formatPrice(lineTotal)}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
