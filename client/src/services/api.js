@@ -191,6 +191,26 @@ export const api = {
     return data;
   },
 
+  // Admin: Auto-delete images from Cloudinary CDN to prevent storage build-up
+  async deleteImage(urlOrUrls) {
+    const urls = Array.isArray(urlOrUrls) ? urlOrUrls : [urlOrUrls];
+    const cloudinaryUrls = urls.filter(u => typeof u === 'string' && u.includes('cloudinary.com'));
+    if (!cloudinaryUrls.length) return { success: true, count: 0 };
+
+    try {
+      const res = await authFetch(`${API_BASE}/upload/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls: cloudinaryUrls }),
+      });
+      const data = await res.json().catch(() => ({}));
+      return data;
+    } catch (err) {
+      console.warn('[Cloudinary Delete Notice]', err.message);
+      return { success: false, error: err.message };
+    }
+  },
+
   // Taxonomy: Categories and Brands
   async getTaxonomy() {
     const res = await fetch(`${API_BASE}/products/meta/taxonomy?_t=${Date.now()}`, {

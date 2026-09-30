@@ -49,6 +49,7 @@ export const AddEquipmentModal = ({
 }) => {
   const { confirm } = useConfirm();
   const fileInputRef = useRef(null);
+  const sessionUploadedUrls = useRef(new Set());
 
   // Clean production form state
   const [form, setForm] = useState({
@@ -194,10 +195,19 @@ export const AddEquipmentModal = ({
         cancelText: "Keep Editing",
         variant: "danger",
         onConfirm: () => {
+          // If we uploaded new images in this session while creating a new product and discarded, clean them up from Cloudinary
+          if (!editingProduct && sessionUploadedUrls.current.size > 0) {
+            api.deleteImage(Array.from(sessionUploadedUrls.current)).catch(() => {});
+            sessionUploadedUrls.current.clear();
+          }
           onClose();
         }
       });
     } else {
+      if (!editingProduct && sessionUploadedUrls.current.size > 0) {
+        api.deleteImage(Array.from(sessionUploadedUrls.current)).catch(() => {});
+        sessionUploadedUrls.current.clear();
+      }
       onClose();
     }
   };
@@ -275,6 +285,13 @@ export const AddEquipmentModal = ({
         throw new Error('No image URLs returned from Cloudinary');
       }
 
+      // Track newly uploaded Cloudinary URLs for clean lifecycle management
+      uploadedUrls.forEach(u => {
+        if (typeof u === 'string' && u.includes('cloudinary.com')) {
+          sessionUploadedUrls.current.add(u);
+        }
+      });
+
       setForm(prev => {
         const currentImgs = (Array.isArray(prev.images) ? prev.images : [prev.image]).filter(Boolean);
         const nextImgs = [...currentImgs, ...uploadedUrls];
@@ -332,8 +349,12 @@ export const AddEquipmentModal = ({
     });
   };
 
-  // Delete Image
-  const handleDeletePhoto = (idx) => {
+  // Delete Image - Instantly removes from UI and automatically purges from Cloudinary CDN storage
+  const handleDeletePhoto = async (idx) => {
+    const imgToDelete = form.images?.[idx];
+    if (!imgToDelete) return;
+
+    // Optimistically update UI immediately
     setForm(prev => {
       const cur = [...(prev.images || [])];
       cur.splice(idx, 1);
@@ -343,6 +364,18 @@ export const AddEquipmentModal = ({
         image: cur[0] || ''
       };
     });
+
+    sessionUploadedUrls.current.delete(imgToDelete);
+
+    // Auto-delete from Cloudinary immediately the moment the user deletes the image in Store Dashboard
+    if (typeof imgToDelete === 'string' && imgToDelete.includes('cloudinary.com')) {
+      try {
+        await api.deleteImage(imgToDelete);
+        console.log('[Cloudinary Auto-Delete] Image permanently deleted from CDN storage:', imgToDelete);
+      } catch (err) {
+        console.warn('[Cloudinary Auto-Delete] Notice on deleting image:', err.message);
+      }
+    }
   };
 
   // Calculate discount percentage and savings
@@ -433,6 +466,7 @@ export const AddEquipmentModal = ({
       };
 
       await onSaveProduct(payload, editingProduct, shouldAddAnother);
+      sessionUploadedUrls.current.clear();
 
       if (shouldAddAnother) {
         // Reset form for next item, retaining brand & category
@@ -986,7 +1020,7 @@ export const AddEquipmentModal = ({
                           type="button"
                           className="eq-thumb-remove"
                           onClick={(e) => { e.stopPropagation(); handleDeletePhoto(idx); }}
-                          title="Remove photo"
+                          title="Delete photo (automatically purges from Cloudinary storage)"
                         >
                           <Trash2 size={11} />
                         </button>

@@ -10,6 +10,7 @@ try {
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const seedProducts = require('../data/seedProducts');
+const { deleteManyFromCloudinary } = require('./cloudinary');
 
 let razorpayClient = null;
 try {
@@ -764,6 +765,34 @@ const db = {
     const cleanId = String(id).trim();
     const isObjectId = mongoose.isValidObjectId(cleanId);
     const query = isObjectId ? { $or: [{ id: cleanId }, { _id: cleanId }] } : { id: cleanId };
+
+    // If images list was changed, detect removed Cloudinary images and clean them up from storage
+    if (updates && (updates.images || updates.image)) {
+      try {
+        const oldProduct = await ProductModel.findOne(query).lean();
+        if (oldProduct) {
+          const oldImgs = [
+            ...(Array.isArray(oldProduct.images) ? oldProduct.images : []),
+            oldProduct.image
+          ].filter(Boolean);
+
+          const newImgs = [
+            ...(Array.isArray(updates.images) ? updates.images : []),
+            updates.image
+          ].filter(Boolean);
+
+          const removedImgs = oldImgs.filter(url => typeof url === 'string' && url.includes('cloudinary.com') && !newImgs.includes(url));
+          if (removedImgs.length > 0) {
+            deleteManyFromCloudinary(removedImgs).catch(err => {
+              console.warn('[Cloudinary Purge Warning on Update]:', err.message);
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[Cloudinary Check Error on Update]:', e.message);
+      }
+    }
+
     const updated = await ProductModel.findOneAndUpdate(query, updates, { new: true }).lean();
     invalidateCatalogCache();
     return updated;
@@ -774,8 +803,30 @@ const db = {
     const cleanId = String(id).trim();
     const isObjectId = mongoose.isValidObjectId(cleanId);
     const query = isObjectId ? { $or: [{ id: cleanId }, { _id: cleanId }] } : { id: cleanId };
+
+    // Fetch product to find its Cloudinary images before deleting
+    let imagesToPurge = [];
+    try {
+      const prod = await ProductModel.findOne(query).lean();
+      if (prod) {
+        imagesToPurge = [
+          ...(Array.isArray(prod.images) ? prod.images : []),
+          prod.image
+        ].filter(url => typeof url === 'string' && url.includes('cloudinary.com'));
+      }
+    } catch (e) {
+      console.warn('[Cloudinary Find Error on Delete]:', e.message);
+    }
+
     const res = await ProductModel.deleteOne(query);
     invalidateCatalogCache();
+
+    if (res.deletedCount > 0 && imagesToPurge.length > 0) {
+      deleteManyFromCloudinary(imagesToPurge).catch(err => {
+        console.warn('[Cloudinary Purge Warning on Delete]:', err.message);
+      });
+    }
+
     return res.deletedCount > 0;
   },
 
@@ -942,7 +993,22 @@ const db = {
     let deletedProductsCount = 0;
     if (deleteProducts) {
       const escaped = escapeRegex(clean);
-      const res = await ProductModel.deleteMany({ brand: { $regex: new RegExp(`^${escaped}$`, 'i') } });
+      const brandFilter = { brand: { $regex: new RegExp(`^${escaped}$`, 'i') } };
+
+      // Purge any Cloudinary images belonging to deleted brand tools
+      try {
+        const prods = await ProductModel.find(brandFilter).lean();
+        const imgs = prods.flatMap(p => [
+          ...(Array.isArray(p.images) ? p.images : []),
+          p.image
+        ]).filter(url => typeof url === 'string' && url.includes('cloudinary.com'));
+
+        if (imgs.length > 0) {
+          deleteManyFromCloudinary(imgs).catch(() => {});
+        }
+      } catch (e) {}
+
+      const res = await ProductModel.deleteMany(brandFilter);
       deletedProductsCount = res.deletedCount || 0;
       invalidateCatalogCache();
     }
@@ -957,7 +1023,22 @@ const db = {
 
     let deletedProductsCount = 0;
     if (deleteProducts) {
-      const res = await ProductModel.deleteMany({ category: categoryId });
+      const catFilter = { category: categoryId };
+
+      // Purge any Cloudinary images belonging to deleted category tools
+      try {
+        const prods = await ProductModel.find(catFilter).lean();
+        const imgs = prods.flatMap(p => [
+          ...(Array.isArray(p.images) ? p.images : []),
+          p.image
+        ]).filter(url => typeof url === 'string' && url.includes('cloudinary.com'));
+
+        if (imgs.length > 0) {
+          deleteManyFromCloudinary(imgs).catch(() => {});
+        }
+      } catch (e) {}
+
+      const res = await ProductModel.deleteMany(catFilter);
       deletedProductsCount = res.deletedCount || 0;
       invalidateCatalogCache();
     }
