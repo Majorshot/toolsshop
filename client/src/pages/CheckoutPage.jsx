@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   CheckCircle, MapPin, Truck, ShieldCheck, AlertCircle, ArrowRight,
@@ -258,6 +258,43 @@ export const CheckoutPage = () => {
   const [completedOrder, setCompletedOrder] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [pincodeCheck, setPincodeCheck] = useState(null);
+  const successViewRef = useRef(null);
+
+  // Auto-scroll to top when order completes so user always lands at the top of the thank you card
+  useEffect(() => {
+    if (completedOrder) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+
+      const rAF = requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+        if (successViewRef.current) {
+          successViewRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+        }
+      });
+
+      const t1 = setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }, 50);
+
+      const t2 = setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }, 150);
+
+      return () => {
+        cancelAnimationFrame(rAF);
+        clearTimeout(t1);
+        clearTimeout(t2);
+      };
+    }
+  }, [completedOrder]);
 
   // Sync user profile & saved addresses from AuthContext / Atlas
   useEffect(() => {
@@ -1137,6 +1174,9 @@ export const CheckoutPage = () => {
                     confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
                   } catch {}
 
+                  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+                  if (document.documentElement) document.documentElement.scrollTop = 0;
+                  if (document.body) document.body.scrollTop = 0;
                   setCompletedOrder(verifyRes.data);
                   if (isBuyNow) {
                     try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
@@ -1193,6 +1233,9 @@ export const CheckoutPage = () => {
         confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
       } catch {}
 
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
       setCompletedOrder(result.data);
       if (isBuyNow) {
         try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
@@ -1222,7 +1265,19 @@ export const CheckoutPage = () => {
   // SUCCESS VIEW
   if (completedOrder) {
     return (
-      <div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', background: '#f1f3f6' }}>
+      <div
+        ref={successViewRef}
+        id="checkout-order-success-view"
+        style={{
+          minHeight: '80vh',
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: '36px 16px 80px',
+          background: '#f1f3f6',
+          overflowAnchor: 'none'
+        }}
+      >
         <div style={{ maxWidth: '640px', width: '100%', background: '#ffffff', borderRadius: '16px', padding: '36px 28px', border: '1px solid #e2e8f0', boxShadow: '0 10px 35px rgba(0,0,0,0.06)' }}>
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
