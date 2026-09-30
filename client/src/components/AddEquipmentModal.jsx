@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import GlideSelect from './GlideSelect';
 import { useConfirm } from './SpringModal';
+import { ProductCard } from './ProductCard';
 import './AddEquipmentModal.css';
 
 const BADGE_OPTIONS = [
@@ -333,6 +334,35 @@ export const AddEquipmentModal = ({
     const percent = Math.round((savings / m) * 100);
     return { savings, percent };
   }, [form.price, form.originalPrice]);
+
+  // Memoized Live Storefront Product Model for Pixel-Perfect Preview
+  const previewProduct = useMemo(() => {
+    const rawImgs = Array.isArray(form.images) ? form.images : (form.image ? [form.image] : []);
+    const primaryImg = rawImgs[0] || form.image || '';
+
+    return {
+      id: editingProduct?.id || editingProduct?._id || 'preview-tool',
+      name: form.name.trim() || 'Equipment Name & Model',
+      brand: form.brand || (taxonomy.brands?.[0] || 'Bosch'),
+      category: form.category || (taxonomy.categories?.[0]?.id || 'cordless'),
+      price: Number(form.price) || 0,
+      originalPrice: form.originalPrice && Number(form.originalPrice) > Number(form.price || 0)
+        ? Number(form.originalPrice)
+        : undefined,
+      discount: discountStats ? `${discountStats.percent}% OFF` : undefined,
+      stock: Number(form.stock || 0),
+      inStock: Number(form.stock || 0) > 0,
+      cordless: Boolean(form.cordless),
+      badge: form.badge || '',
+      image: primaryImg,
+      specs: {
+        power: form.specs?.power || '',
+        voltage: form.specs?.voltage || '',
+        warranty: form.specs?.warranty || '1 Year Official Warranty'
+      },
+      deliveryCost: Number(form.deliveryCost || 0)
+    };
+  }, [form, discountStats, editingProduct, taxonomy]);
 
   // Quick Stock Adjustment
   const adjustStock = (delta) => {
@@ -1043,108 +1073,41 @@ export const AddEquipmentModal = ({
               </span>
             </div>
 
-            {/* The Live Interactive Tool Card */}
-            <div className="eq-live-card">
-              <div className="eq-live-card-media">
-                {form.image || (Array.isArray(form.images) && form.images[0]) ? (
-                  <img
-                    src={form.image || form.images[0]}
-                    alt={form.name || 'Equipment Preview'}
-                    onError={(e) => { e.target.style.opacity = '0.3'; }}
-                  />
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', color: '#94a3b8' }}>
-                    <ImageIcon size={36} />
-                    <span style={{ fontSize: '0.74rem' }}>No photo uploaded</span>
-                  </div>
-                )}
-
-                {form.badge && (
-                  <span className="eq-live-badge-ribbon">
-                    {form.badge}
-                  </span>
-                )}
-
-                {discountStats && (
-                  <span className="eq-live-discount-tag">
-                    {discountStats.percent}% OFF
-                  </span>
-                )}
-              </div>
-
-              <div className="eq-live-card-body">
-                <div className="eq-live-card-brand-row">
-                  <span className="eq-live-card-brand">{form.brand || 'Brand'}</span>
-                  <span>•</span>
-                  <span className="eq-live-card-cat">{form.category || 'Category'}</span>
-                  {form.cordless && (
-                    <span style={{ marginLeft: 'auto', background: '#f0fdf4', color: '#16a34a', fontSize: '0.68rem', fontWeight: '800', padding: '1px 5px', borderRadius: '4px' }}>
-                      🔋 Cordless
-                    </span>
-                  )}
-                </div>
-
-                <h5 className="eq-live-card-name">
-                  {form.name || 'Equipment Name & Model'}
-                </h5>
-
-                <div className="eq-live-card-pricing">
-                  <span className="eq-live-card-price">
-                    ₹{form.price ? Number(form.price).toLocaleString('en-IN') : '0'}
-                  </span>
-                  {form.originalPrice && Number(form.originalPrice) > Number(form.price || 0) && (
-                    <span className="eq-live-card-mrp">
-                      ₹{Number(form.originalPrice).toLocaleString('en-IN')}
-                    </span>
-                  )}
-                </div>
-
-                <div className="eq-live-card-meta">
-                  <div className="eq-live-card-meta-row">
-                    <span>Warehouse Stock:</span>
-                    <strong style={{ color: Number(form.stock) <= 3 ? '#dc2626' : '#16a34a' }}>
-                      {Number(form.stock) <= 3 ? `⚠️ Low: ${form.stock} left` : `🟢 ${form.stock} In Stock`}
-                    </strong>
-                  </div>
-
-                  <div className="eq-live-card-meta-row">
-                    <span>Shipping:</span>
-                    <strong>
-                      {Number(form.deliveryCost) === 0 ? '🚚 Free Express Delivery' : `📦 ₹${form.deliveryCost} Delivery`}
-                    </strong>
-                  </div>
-
-                  {form.specs?.power && (
-                    <div className="eq-live-card-meta-row">
-                      <span>Power:</span>
-                      <strong>{form.specs.power}</strong>
-                    </div>
-                  )}
-
-                  {form.specs?.warranty && (
-                    <div className="eq-live-card-meta-row">
-                      <span>Warranty:</span>
-                      <strong>{form.specs.warranty}</strong>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* The Official Customer-Facing Product Card Preview */}
+            <div className="eq-preview-card-wrap" style={{ width: '100%', maxWidth: '280px', margin: '0 auto' }}>
+              <ProductCard product={previewProduct} isPreview={true} />
             </div>
 
-            {/* Quick summary box */}
-            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px', fontSize: '0.74rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700' }}>
-                <span>Backend Database:</span>
-                <span style={{ color: '#16a34a' }}>● MongoDB Atlas Live</span>
+            {/* Live Administrative & Stock Details */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px', fontSize: '0.74rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '280px', width: '100%', margin: '0 auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', fontWeight: '800', color: '#1e293b' }}>
+                <span>Inventory & Storefront Sync</span>
+                <span style={{ color: '#16a34a', fontSize: '0.68rem', background: '#dcfce7', padding: '2px 6px', borderRadius: '4px' }}>● Atlas Live</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Real-Time Sync:</span>
-                <span>Immediate (All Tabs)</span>
+                <span>Warehouse Stock:</span>
+                <strong style={{ color: Number(form.stock) <= 3 ? '#dc2626' : '#16a34a' }}>
+                  {Number(form.stock) <= 3 ? `⚠️ Low: ${form.stock} left` : `🟢 ${form.stock} In Stock`}
+                </strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Barcode:</span>
-                <span>Auto-generated upon save</span>
+                <span>Shipping:</span>
+                <strong>
+                  {Number(form.deliveryCost) === 0 ? '🚚 Free Express Delivery' : `📦 ₹${form.deliveryCost} Delivery`}
+                </strong>
               </div>
+              {form.specs?.warranty && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Warranty:</span>
+                  <strong>{form.specs.warranty}</strong>
+                </div>
+              )}
+              {form.specs?.power && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Power:</span>
+                  <strong>{form.specs.power}</strong>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -527,6 +527,22 @@
   margin: 0;
 }
 
+.eq-preview-card-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.eq-preview-card-wrap .product-card {
+  width: 100%;
+  box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.08);
+}
+
+.eq-preview-card-wrap .product-card:hover {
+  transform: none;
+  box-shadow: 0 8px 24px -2px rgba(15, 23, 42, 0.12);
+}
+
 .eq-live-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;

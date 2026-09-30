@@ -713,7 +713,7 @@ const db = {
     }
 
     // High Performance Projection: Include essential list fields and image galleries
-    const listFields = 'id name brand category price originalPrice discount rating reviewsCount badge stock cordless image images deliveryCost';
+    const listFields = 'id name brand category price originalPrice discount rating reviewsCount badge stock cordless image images deliveryCost specs inStock';
 
     const page = parseInt(options.page || filters.page, 10);
     const limit = parseInt(options.limit || filters.limit, 10);
