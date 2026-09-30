@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X, Plus, Trash2, ShieldCheck, Upload, Image as ImageIcon,
-  Zap, Check, Battery, Truck, Percent, Eye, Wrench, Shield
+  Zap, Check, Battery, Truck, Percent, Eye, Wrench, Shield,
+  Loader2, CloudUpload
 } from 'lucide-react';
 import GlideSelect from './GlideSelect';
 import { useConfirm } from './SpringModal';
 import { ProductCard } from './ProductCard';
+import { api } from '../services/api';
 import './AddEquipmentModal.css';
 
 const BADGE_OPTIONS = [
@@ -72,6 +74,8 @@ export const AddEquipmentModal = ({
   const [newImageUrl, setNewImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   // Accidental Click-Outside Protection State
   const [shakeModal, setShakeModal] = useState(false);
@@ -252,16 +256,28 @@ export const AddEquipmentModal = ({
     });
   };
 
-  // Handle file input upload
+  // Handle file input upload with Cloudinary CDN integration
   const handleFilesUpload = async (files) => {
     const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
     if (!validFiles.length) return;
 
+    setIsUploadingPhotos(true);
+    setUploadError('');
     try {
+      // 1. Client-side canvas preprocessing (downscale to max 900px to ensure ultra-fast upload)
       const compressedList = await Promise.all(validFiles.map(processImageFile));
+
+      // 2. Upload to Cloudinary CDN via server API
+      const res = await api.uploadImages(compressedList);
+      const uploadedUrls = res?.urls || (res?.url ? [res.url] : []);
+
+      if (!uploadedUrls.length) {
+        throw new Error('No image URLs returned from Cloudinary');
+      }
+
       setForm(prev => {
         const currentImgs = (Array.isArray(prev.images) ? prev.images : [prev.image]).filter(Boolean);
-        const nextImgs = [...currentImgs, ...compressedList];
+        const nextImgs = [...currentImgs, ...uploadedUrls];
         return {
           ...prev,
           images: nextImgs,
@@ -269,7 +285,11 @@ export const AddEquipmentModal = ({
         };
       });
     } catch (err) {
-      console.error('Image compression failed:', err);
+      console.error('Cloudinary upload failed:', err);
+      setUploadError(err.message || 'Image upload to Cloudinary failed');
+      alert(`Cloudinary Notice: ${err.message || 'Could not upload to Cloudinary'}`);
+    } finally {
+      setIsUploadingPhotos(false);
     }
   };
 
@@ -854,9 +874,14 @@ export const AddEquipmentModal = ({
                   <ImageIcon size={14} style={{ color: '#ea580c' }} />
                   <span>3. Equipment Photos</span>
                 </h4>
-                <span className="eq-section-subtitle">
-                  {form.images?.length || 0} photo{(form.images?.length || 0) === 1 ? '' : 's'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '1px 6px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    <CloudUpload size={10} /> Cloudinary CDN
+                  </span>
+                  <span className="eq-section-subtitle">
+                    {form.images?.length || 0} photo{(form.images?.length || 0) === 1 ? '' : 's'}
+                  </span>
+                </div>
               </div>
 
               {/* Upload Dropzone */}
@@ -865,23 +890,41 @@ export const AddEquipmentModal = ({
                 onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
                 onDragLeave={() => setIsDragOver(false)}
                 onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => !isUploadingPhotos && fileInputRef.current?.click()}
                 title="Click or drag photos to upload directly from your device"
+                style={{ opacity: isUploadingPhotos ? 0.75 : 1, cursor: isUploadingPhotos ? 'wait' : 'pointer' }}
               >
-                <div className="eq-dropzone-icon">
-                  <Upload size={18} />
-                </div>
-                <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a' }}>
-                  Click to Upload Photos from Phone or PC
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                  Auto-compressed & optimized for high-speed store catalog browsing
-                </div>
+                {isUploadingPhotos ? (
+                  <>
+                    <div className="eq-dropzone-icon" style={{ animation: 'spin 1s linear infinite' }}>
+                      <Loader2 size={18} />
+                    </div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#ea580c' }}>
+                      Uploading to Cloudinary CDN & Optimizing...
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Directly hosted on Cloudinary • Zero database storage used
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="eq-dropzone-icon">
+                      <Upload size={18} />
+                    </div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a' }}>
+                      Click to Upload Photos from Phone or PC
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                      Auto-compressed & stored on Cloudinary CDN for instant loading
+                    </div>
+                  </>
+                )}
                 <input
                   type="file"
                   ref={fileInputRef}
                   accept="image/*"
                   multiple
+                  disabled={isUploadingPhotos}
                   style={{ display: 'none' }}
                   onChange={(e) => {
                     if (e.target.files?.length) handleFilesUpload(e.target.files);
@@ -889,6 +932,12 @@ export const AddEquipmentModal = ({
                   }}
                 />
               </div>
+
+              {uploadError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '8px', padding: '8px 12px', fontSize: '0.74rem' }}>
+                  ⚠️ {uploadError}
+                </div>
+              )}
 
               {/* Manual URL Input */}
               <div>

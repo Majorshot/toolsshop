@@ -21,6 +21,7 @@ const shippingRoutes = require('./routes/shippingRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const repairRoutes = require('./routes/repairRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 const emailService = require('./services/emailService');
 const { startKeepAliveService, getKeepAliveStatus } = require('./utils/keepAlive');
 const { createRateLimiter } = require('./utils/rateLimiter');
@@ -67,7 +68,7 @@ app.use(cors({
 }));
 
 app.use(compression({ threshold: 1024 }));
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 // Dynamic domain capture for outbound transactional emails:
 // Whenever an HTTP request comes in from the live frontend (Vercel deployment or custom domain),
@@ -153,6 +154,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/repairs', repairRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Meta WhatsApp Cloud API Webhook verification & handler
 app.get('/api/webhook', (req, res) => {

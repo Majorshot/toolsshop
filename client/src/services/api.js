@@ -176,6 +176,21 @@ export const api = {
     return await res.json();
   },
 
+  // Admin: Upload images directly to Cloudinary CDN via server
+  async uploadImages(images) {
+    const payload = Array.isArray(images) ? { images } : { image: images };
+    const res = await authFetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to upload image to Cloudinary');
+    }
+    return data;
+  },
+
   // Taxonomy: Categories and Brands
   async getTaxonomy() {
     const res = await fetch(`${API_BASE}/products/meta/taxonomy?_t=${Date.now()}`, {
@@ -668,3 +683,5 @@ export const api = {
     }
   }
 };
+
+export default api;
