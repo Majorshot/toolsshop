@@ -174,18 +174,6 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
 
         {/* Feature / Highlight Badge & Warranty Pills */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', margin: '4px 0 8px', minHeight: '18px', flexWrap: 'wrap' }}>
-          {isOutOfStock ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', padding: '1px 7px', borderRadius: '4px', fontWeight: '800' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#dc2626' }} />
-              Out of Stock
-            </span>
-          ) : isLowStock ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.68rem', color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa', padding: '1px 7px', borderRadius: '4px', fontWeight: '800' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ea580c' }} />
-              Only {maxStock} unit{maxStock > 1 ? 's' : ''} left
-            </span>
-          ) : null}
-
           {/* Offer / Highlight Badge Pill (Best Seller, New Arrival, Pro Choice, etc.) */}
           {badgeConfig && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', ...badgeConfig.pillStyle }}>
