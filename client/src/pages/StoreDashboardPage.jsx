@@ -677,6 +677,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [managerNewBrand, setManagerNewBrand] = useState('');
   const [managerNewCatName, setManagerNewCatName] = useState('');
 
+  // Brand & Category Inline Editing state
+  const [editingBrandName, setEditingBrandName] = useState(null);
+  const [editBrandInput, setEditBrandInput] = useState('');
+  const [isUpdatingBrand, setIsUpdatingBrand] = useState(false);
+
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editCatNameInput, setEditCatNameInput] = useState('');
+  const [editCatSlugInput, setEditCatSlugInput] = useState('');
+  const [isUpdatingCat, setIsUpdatingCat] = useState(false);
+
   // Delete Confirmation Modal state for Products
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -1078,6 +1088,88 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       if (onProductUpdated) onProductUpdated();
     } catch (err) {
       showNotification(`Error: ${err.message}`);
+    }
+  };
+
+  // Inline Brand Editing Handlers
+  const handleStartEditBrand = (brandName) => {
+    setEditingBrandName(brandName);
+    setEditBrandInput(brandName);
+  };
+
+  const handleCancelEditBrand = () => {
+    setEditingBrandName(null);
+    setEditBrandInput('');
+  };
+
+  const handleSaveEditBrand = async (oldName) => {
+    const cleanNew = editBrandInput.trim();
+    if (!cleanNew) {
+      showNotification('Brand name cannot be empty');
+      return;
+    }
+    if (cleanNew.toLowerCase() === oldName.toLowerCase()) {
+      handleCancelEditBrand();
+      return;
+    }
+    setIsUpdatingBrand(true);
+    try {
+      const res = await api.updateBrand(oldName, cleanNew);
+      const newBrands = res.brands || (taxonomy.brands || []).map(b => b.toLowerCase() === oldName.toLowerCase() ? cleanNew : b);
+      setTaxonomy(prev => ({ ...prev, brands: newBrands }));
+      setProducts(prev => prev.map(p => (p.brand || '').toLowerCase() === oldName.toLowerCase() ? { ...p, brand: cleanNew } : p));
+      showNotification(`Brand "${oldName}" updated to "${cleanNew}"!`);
+      handleCancelEditBrand();
+      await loadTaxonomy();
+      await loadProducts({ silent: true });
+      if (onProductUpdated) onProductUpdated();
+    } catch (err) {
+      showNotification(`Update error: ${err.message}`);
+    } finally {
+      setIsUpdatingBrand(false);
+    }
+  };
+
+  // Inline Category Editing Handlers
+  const handleStartEditCategory = (cat) => {
+    setEditingCategoryId(cat.id);
+    setEditCatNameInput(cat.name);
+    setEditCatSlugInput(cat.id);
+  };
+
+  const handleCancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditCatNameInput('');
+    setEditCatSlugInput('');
+  };
+
+  const handleSaveEditCategory = async (oldId) => {
+    const cleanName = editCatNameInput.trim();
+    const cleanSlug = (editCatSlugInput.trim() || cleanName.toLowerCase().replace(/[^a-z0-9]+/g, '-')).trim();
+    if (!cleanName) {
+      showNotification('Category name cannot be empty');
+      return;
+    }
+    setIsUpdatingCat(true);
+    try {
+      const res = await api.updateCategory(oldId, { name: cleanName, newId: cleanSlug });
+      const updatedCat = res.category || { id: cleanSlug, name: cleanName };
+      setTaxonomy(prev => ({
+        ...prev,
+        categories: res.categories || (prev.categories || []).map(c => c.id === oldId ? updatedCat : c)
+      }));
+      if (oldId !== cleanSlug) {
+        setProducts(prev => prev.map(p => p.category === oldId ? { ...p, category: cleanSlug } : p));
+      }
+      showNotification(`Category "${cleanName}" updated successfully!`);
+      handleCancelEditCategory();
+      await loadTaxonomy();
+      await loadProducts({ silent: true });
+      if (onProductUpdated) onProductUpdated();
+    } catch (err) {
+      showNotification(`Update error: ${err.message}`);
+    } finally {
+      setIsUpdatingCat(false);
     }
   };
 
@@ -5748,39 +5840,129 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <div
                   key={b}
                   style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
+                    background: editingBrandName === b ? '#fff7ed' : '#f8fafc',
+                    border: editingBrandName === b ? '1.5px solid #ea580c' : '1px solid #e2e8f0',
                     borderRadius: '8px',
-                    padding: '8px 12px',
+                    padding: '6px 10px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
                     fontSize: '0.84rem',
                     fontWeight: '700',
-                    color: '#0f172a'
+                    color: '#0f172a',
+                    transition: 'all 0.15s ease'
                   }}
                   id={`brand-badge-${b.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                 >
-                  <span>{b}</span>
-                  <button
-                    onClick={() => triggerDeleteBrand(b)}
-                    title={`Delete brand ${b}`}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#94a3b8',
-                      cursor: 'pointer',
-                      padding: '2px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      borderRadius: '4px'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                    id={`btn-delete-brand-${b.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                  >
-                    <X size={14} />
-                  </button>
+                  {editingBrandName === b ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <input
+                        type="text"
+                        value={editBrandInput}
+                        onChange={(e) => setEditBrandInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); handleSaveEditBrand(b); }
+                          if (e.key === 'Escape') { e.preventDefault(); handleCancelEditBrand(); }
+                        }}
+                        autoFocus
+                        disabled={isUpdatingBrand}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '0.82rem',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '4px',
+                          outline: 'none',
+                          color: '#0f172a',
+                          fontWeight: '700',
+                          minWidth: '100px',
+                          background: '#ffffff'
+                        }}
+                        id={`input-edit-brand-${b.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEditBrand(b)}
+                        disabled={isUpdatingBrand}
+                        title="Save brand changes (Enter)"
+                        style={{
+                          background: '#16a34a',
+                          border: 'none',
+                          color: '#ffffff',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        id={`btn-save-brand-${b.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      >
+                        <Check size={12} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEditBrand}
+                        disabled={isUpdatingBrand}
+                        title="Cancel (Esc)"
+                        style={{
+                          background: '#e2e8f0',
+                          border: 'none',
+                          color: '#475569',
+                          borderRadius: '4px',
+                          padding: '4px 6px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        id={`btn-cancel-brand-${b.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      >
+                        <X size={12} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span>{b}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditBrand(b)}
+                        title={`Edit brand name "${b}"`}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          borderRadius: '4px'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#ea580c')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                        id={`btn-edit-brand-${b.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerDeleteBrand(b)}
+                        title={`Delete brand "${b}"`}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          borderRadius: '4px'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                        id={`btn-delete-brand-${b.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                      >
+                        <X size={13} />
+                      </button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -5832,43 +6014,157 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <div
                   key={cat.id}
                   style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
+                    background: editingCategoryId === cat.id ? '#fff7ed' : '#f8fafc',
+                    border: editingCategoryId === cat.id ? '1.5px solid #ea580c' : '1px solid #e2e8f0',
                     borderRadius: '8px',
                     padding: '10px 14px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    fontSize: '0.86rem'
+                    fontSize: '0.86rem',
+                    transition: 'all 0.15s ease'
                   }}
                   id={`cat-badge-${cat.id}`}
                 >
-                  <div>
-                    <strong style={{ color: '#0f172a' }}>{cat.name}</strong>
-                    <span style={{ fontSize: '0.74rem', color: '#64748b', marginLeft: '8px', fontFamily: 'var(--font-mono)' }}>
-                      slug: {cat.id}
-                    </span>
-                  </div>
+                  {editingCategoryId === cat.id ? (
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', width: '100%', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: '180px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>Category Name</span>
+                        <input
+                          type="text"
+                          value={editCatNameInput}
+                          onChange={(e) => {
+                            setEditCatNameInput(e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleSaveEditCategory(cat.id); }
+                            if (e.key === 'Escape') { e.preventDefault(); handleCancelEditCategory(); }
+                          }}
+                          autoFocus
+                          disabled={isUpdatingCat}
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '0.84rem',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            color: '#0f172a',
+                            fontWeight: '700',
+                            background: '#ffffff'
+                          }}
+                          id={`input-edit-cat-name-${cat.id}`}
+                        />
+                      </div>
 
-                  <button
-                    onClick={() => triggerDeleteCategory(cat.id, cat.name)}
-                    title={`Delete category ${cat.name}`}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#94a3b8',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      borderRadius: '4px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
-                    id={`btn-delete-cat-${cat.id}`}
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: '140px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#64748b' }}>URL Slug (ID)</span>
+                        <input
+                          type="text"
+                          value={editCatSlugInput}
+                          onChange={(e) => setEditCatSlugInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleSaveEditCategory(cat.id); }
+                            if (e.key === 'Escape') { e.preventDefault(); handleCancelEditCategory(); }
+                          }}
+                          disabled={isUpdatingCat}
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '0.84rem',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            color: '#475569',
+                            fontFamily: 'var(--font-mono)',
+                            background: '#ffffff'
+                          }}
+                          id={`input-edit-cat-slug-${cat.id}`}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditCategory(cat.id)}
+                          disabled={isUpdatingCat}
+                          className="btn-hero-clean"
+                          style={{ padding: '6px 12px', fontSize: '0.78rem', background: '#16a34a' }}
+                          id={`btn-save-cat-${cat.id}`}
+                        >
+                          <Check size={14} />
+                          <span>Save</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEditCategory}
+                          disabled={isUpdatingCat}
+                          style={{
+                            padding: '6px 10px',
+                            fontSize: '0.78rem',
+                            background: '#f1f5f9',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            color: '#475569',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                          id={`btn-cancel-cat-${cat.id}`}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <strong style={{ color: '#0f172a' }}>{cat.name}</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#64748b', marginLeft: '8px', fontFamily: 'var(--font-mono)' }}>
+                          slug: {cat.id}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditCategory(cat)}
+                          title={`Edit category "${cat.name}"`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#ea580c')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          id={`btn-edit-cat-${cat.id}`}
+                        >
+                          <Edit3 size={15} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => triggerDeleteCategory(cat.id, cat.name)}
+                          title={`Delete category "${cat.name}"`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = '#dc2626')}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                          id={`btn-delete-cat-${cat.id}`}
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

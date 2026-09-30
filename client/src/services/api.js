@@ -222,6 +222,28 @@ export const api = {
     return data;
   },
 
+  async updateBrand(oldName, newName) {
+    const res = await authFetch(`${API_BASE}/products/meta/brands/${encodeURIComponent(oldName)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newName }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update brand');
+    return data;
+  },
+
+  async updateCategory(id, catData) {
+    const res = await authFetch(`${API_BASE}/products/meta/categories/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(catData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update category');
+    return data;
+  },
+
   async deleteBrand(name, deleteProducts = false) {
     const res = await authFetch(`${API_BASE}/products/meta/brands/${encodeURIComponent(name)}?deleteProducts=${deleteProducts}`, {
       method: 'DELETE',

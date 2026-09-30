@@ -60,6 +60,26 @@ router.post('/meta/categories', requireStoreOwner, async (req, res) => {
   }
 });
 
+// PUT update brand name (Admin only)
+router.put('/meta/brands/:name', requireStoreOwner, async (req, res) => {
+  try {
+    const result = await db.updateBrand(req.params.name, req.body.newName || req.body.name);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// PUT update category name and slug (Admin only)
+router.put('/meta/categories/:id', requireStoreOwner, async (req, res) => {
+  try {
+    const result = await db.updateCategory(req.params.id, req.body);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 // DELETE brand (Admin only)
 router.delete('/meta/brands/:name', requireStoreOwner, async (req, res) => {
   try {

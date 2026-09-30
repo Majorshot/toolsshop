@@ -850,6 +850,88 @@ const db = {
     return { success: true, category: { id: cleanId, name: cleanName }, categories: updatedCats, message: `Category "${cleanName}" added successfully` };
   },
 
+  async updateBrand(oldName, newName) {
+    ensureMongoConnected();
+    const cleanOld = (oldName || '').trim();
+    const cleanNew = (newName || '').trim();
+    if (!cleanOld) throw new Error('Old brand name required');
+    if (!cleanNew) throw new Error('New brand name cannot be empty');
+
+    const tax = await this.getTaxonomy();
+    const exists = tax.brands.some(b => b.toLowerCase() === cleanOld.toLowerCase());
+    if (!exists) throw new Error(`Brand "${cleanOld}" not found`);
+
+    if (cleanOld.toLowerCase() !== cleanNew.toLowerCase() && tax.brands.some(b => b.toLowerCase() === cleanNew.toLowerCase())) {
+      throw new Error(`Brand "${cleanNew}" already exists`);
+    }
+
+    const updatedBrands = tax.brands.map(b => b.toLowerCase() === cleanOld.toLowerCase() ? cleanNew : b);
+    await TaxonomyModel.findOneAndUpdate({}, { brands: updatedBrands });
+
+    const escaped = escapeRegex(cleanOld);
+    const res = await ProductModel.updateMany(
+      { brand: { $regex: new RegExp(`^${escaped}$`, 'i') } },
+      { $set: { brand: cleanNew } }
+    );
+    const updatedProductsCount = res.modifiedCount || 0;
+    invalidateCatalogCache();
+
+    return {
+      success: true,
+      oldBrand: cleanOld,
+      brand: cleanNew,
+      brands: updatedBrands,
+      updatedProductsCount,
+      message: `Brand "${cleanOld}" updated to "${cleanNew}" (${updatedProductsCount} product(s) updated)`
+    };
+  },
+
+  async updateCategory(oldId, { name, newId }) {
+    ensureMongoConnected();
+    const cleanOldId = (oldId || '').trim();
+    const cleanName = (name || '').trim();
+    if (!cleanOldId) throw new Error('Old category ID required');
+    if (!cleanName) throw new Error('Category name cannot be empty');
+
+    const tax = await this.getTaxonomy();
+    const targetCat = tax.categories.find(c => c.id === cleanOldId);
+    if (!targetCat) throw new Error(`Category "${cleanOldId}" not found`);
+
+    const cleanNewId = (newId || cleanOldId).trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    if (cleanOldId !== cleanNewId && tax.categories.some(c => c.id === cleanNewId)) {
+      throw new Error(`Category slug "${cleanNewId}" already exists`);
+    }
+
+    const updatedCategories = tax.categories.map(c => {
+      if (c.id === cleanOldId) {
+        return { id: cleanNewId, name: cleanName };
+      }
+      return c;
+    });
+
+    await TaxonomyModel.findOneAndUpdate({}, { categories: updatedCategories });
+
+    let updatedProductsCount = 0;
+    if (cleanOldId !== cleanNewId) {
+      const res = await ProductModel.updateMany(
+        { category: cleanOldId },
+        { $set: { category: cleanNewId } }
+      );
+      updatedProductsCount = res.modifiedCount || 0;
+    }
+    invalidateCatalogCache();
+
+    return {
+      success: true,
+      oldId: cleanOldId,
+      category: { id: cleanNewId, name: cleanName },
+      categories: updatedCategories,
+      updatedProductsCount,
+      message: `Category "${cleanName}" updated successfully`
+    };
+  },
+
   async deleteBrand(brandName, deleteProducts = false) {
     ensureMongoConnected();
     const clean = (brandName || '').trim().toLowerCase();
