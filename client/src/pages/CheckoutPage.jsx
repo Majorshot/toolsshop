@@ -1737,9 +1737,9 @@ export const CheckoutPage = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Fees</span>
-                  <span style={{ color: deliveryType === 'store-pickup' ? '#16a34a' : '#0f172a', fontWeight: '700' }}>
-                    {deliveryType === 'store-pickup' ? 'FREE' : formatPrice(deliveryFee || 120)}
+                  <span>Delivery Fee</span>
+                  <span style={{ color: deliveryType === 'store-pickup' || deliveryFee === 0 ? '#16a34a' : '#0f172a', fontWeight: '700' }}>
+                    {deliveryType === 'store-pickup' || deliveryFee === 0 ? 'FREE' : formatPrice(deliveryFee)}
                   </span>
                 </div>
 
@@ -2161,8 +2161,8 @@ export const CheckoutPage = () => {
                         <Truck size={16} style={{ color: '#0284c7' }} />
                         Express Courier
                       </span>
-                      <span style={{ color: '#ea580c', fontSize: '0.82rem', fontWeight: '800' }}>
-                        ₹120
+                      <span style={{ color: totalCourierFee === 0 ? '#16a34a' : '#ea580c', fontSize: '0.82rem', fontWeight: '800' }}>
+                        {totalCourierFee === 0 ? 'FREE' : formatPrice(totalCourierFee)}
                       </span>
                     </div>
                     <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
@@ -2630,8 +2630,8 @@ export const CheckoutPage = () => {
                           </span>
                         </div>
                       </div>
-                      <span style={{ color: '#ea580c', fontSize: '0.92rem', fontWeight: '800', flexShrink: 0 }}>
-                        ₹120
+                      <span style={{ color: totalCourierFee === 0 ? '#16a34a' : '#ea580c', fontSize: '0.92rem', fontWeight: '800', flexShrink: 0 }}>
+                        {totalCourierFee === 0 ? 'FREE' : formatPrice(totalCourierFee)}
                       </span>
                     </div>
 
@@ -2812,7 +2812,9 @@ export const CheckoutPage = () => {
 
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700', display: 'block' }}>
-                        {deliveryType === 'store-pickup' ? 'Free Store Pickup' : 'Includes ₹120 Courier'}
+                        {deliveryType === 'store-pickup'
+                          ? 'Free Store Pickup'
+                          : (deliveryFee === 0 ? 'Free Delivery' : `Includes ${formatPrice(deliveryFee)} Courier`)}
                       </span>
                       <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                         {checkoutItems.reduce((s, i) => s + i.quantity, 0)} Item(s)
