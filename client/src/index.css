@@ -2810,6 +2810,156 @@ header.main-site-header {
 }
 
 /* ==========================================================================
+   PRODUCT DETAIL PAGE - FULL SCREEN LOADER
+   Hides footer, locks window scrolling, keeps top navbar & bottom nav accessible
+   ========================================================================== */
+
+html.product-loading-active,
+body.product-loading-active {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+
+body.product-loading-active .main-footer-clean {
+  display: none !important;
+}
+
+@keyframes pdpSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pdpPulseIcon {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmerPulse {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmerPulse 1.6s ease-in-out infinite;
+}
+
+.product-fullscreen-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 950;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding-top: var(--header-height, 72px);
+  padding-bottom: 0;
+  pointer-events: auto;
+}
+
+@media (max-width: 900px) {
+  .product-fullscreen-loader {
+    padding-bottom: var(--bottom-nav-height, 68px);
+  }
+}
+
+.product-fullscreen-loader-card {
+  max-width: 440px;
+  width: 90%;
+  padding: 28px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pdp-spinner-container {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdp-spinner-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 4px solid #f1f5f9;
+  border-top-color: var(--brand-primary, #dc2626);
+  border-right-color: var(--brand-yellow, #facc15);
+  animation: pdpSpin 0.85s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+}
+
+.pdp-spinner-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.1) 0%, transparent 70%);
+}
+
+.pdp-spinner-center-icon {
+  position: relative;
+  z-index: 2;
+  color: var(--brand-primary, #dc2626);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdp-tool-pulse-icon {
+  animation: pdpPulseIcon 1.6s ease-in-out infinite;
+}
+
+.pdp-loading-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.pdp-loading-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0 0 22px;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.pdp-loader-skeleton-preview {
+  width: 100%;
+  max-width: 270px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+/* ==========================================================================
    PRODUCT DETAIL GALLERY & FULL SCREEN VIEWER
    ========================================================================== */
 

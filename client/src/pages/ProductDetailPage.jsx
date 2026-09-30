@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle, CheckCircle2, 
@@ -79,6 +80,21 @@ export const ProductDetailPage = () => {
       }
     };
   }, [id]);
+
+  // Lock body scroll and apply product loading state to hide footer while fetching details
+  useEffect(() => {
+    if (loading) {
+      document.documentElement.classList.add('product-loading-active');
+      document.body.classList.add('product-loading-active');
+      return () => {
+        document.documentElement.classList.remove('product-loading-active');
+        document.body.classList.remove('product-loading-active');
+      };
+    } else {
+      document.documentElement.classList.remove('product-loading-active');
+      document.body.classList.remove('product-loading-active');
+    }
+  }, [loading]);
 
   // Guaranteed scroll-to-top whenever product details finish loading and DOM expands
   useEffect(() => {
@@ -301,22 +317,40 @@ export const ProductDetailPage = () => {
   };
 
   if (loading) {
-    return (
-      <div style={{ padding: '80px 20px', textAlign: 'center', minHeight: '60vh' }}>
-        <div
-          style={{
-            width: '44px',
-            height: '44px',
-            border: '4px solid #e2e8f0',
-            borderTopColor: '#ea580c',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-            margin: '0 auto 18px'
-          }}
-        />
-        <h3 style={{ fontSize: '1.2rem', color: '#0f172a', fontWeight: '700' }}>Loading Equipment Details...</h3>
-        <p style={{ color: '#64748b', fontSize: '0.88rem' }}>Retrieving live inventory, pricing, and specifications from database</p>
+    const loaderOverlay = (
+      <div className="product-fullscreen-loader" id="product-page-loader" role="status" aria-live="polite">
+        <div className="product-fullscreen-loader-card">
+          <div className="pdp-spinner-container">
+            <div className="pdp-spinner-ring" />
+            <div className="pdp-spinner-glow" />
+            <div className="pdp-spinner-center-icon">
+              <Wrench size={22} className="pdp-tool-pulse-icon" />
+            </div>
+          </div>
+
+          <h3 className="pdp-loading-title">Loading Equipment Details</h3>
+          <p className="pdp-loading-desc">
+            Retrieving live workshop inventory, technical specs & delivery rates
+          </p>
+
+          <div className="pdp-loader-skeleton-preview">
+            <div className="skeleton-line skeleton-shimmer" style={{ width: '45%', height: '12px', borderRadius: '4px', margin: '0 auto 10px' }} />
+            <div className="skeleton-line skeleton-shimmer" style={{ width: '70%', height: '16px', borderRadius: '6px', margin: '0 auto 16px' }} />
+            <div className="skeleton-box skeleton-shimmer" style={{ width: '160px', height: '95px', borderRadius: '12px', margin: '0 auto 16px' }} />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <div className="skeleton-pill skeleton-shimmer" style={{ width: '75px', height: '22px', borderRadius: '20px' }} />
+              <div className="skeleton-pill skeleton-shimmer" style={{ width: '90px', height: '22px', borderRadius: '20px' }} />
+            </div>
+          </div>
+        </div>
       </div>
+    );
+
+    return (
+      <>
+        {createPortal(loaderOverlay, document.body)}
+        <div style={{ minHeight: 'calc(100vh - 140px)' }} aria-hidden="true" />
+      </>
     );
   }
 
@@ -437,7 +471,7 @@ export const ProductDetailPage = () => {
                 </span>
               ) : product.cordless ? (
                 <span className="gallery-badge-cordless">
-                  <Zap size={11} /> Cordless 20V
+                  <Zap size={11} /> Cordless
                 </span>
               ) : null}
 
@@ -510,7 +544,7 @@ export const ProductDetailPage = () => {
                   </span>
                 ) : product.cordless ? (
                   <span className="gallery-badge-cordless">
-                    <Zap size={12} /> Cordless 20V XR
+                    <Zap size={12} /> Cordless
                   </span>
                 ) : null}
 

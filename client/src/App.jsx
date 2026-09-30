@@ -297,7 +297,7 @@ const MainApp = () => {
             position: 'fixed',
             bottom: '80px',
             right: '20px',
-            zIndex: 140,
+            zIndex: 1001,
             background: '#16a34a',
             color: '#ffffff',
             width: '52px',
