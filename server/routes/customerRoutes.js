@@ -60,13 +60,16 @@ function sanitizeCartItem(item) {
   const qty = Math.max(1, Math.min(99, Number(item.quantity) || 1));
   const price = Math.max(0, Number(item.price) || 0);
   return {
+    ...item,
     id: String(id),
     name: String(item.name || 'Equipment').trim(),
     brand: item.brand ? String(item.brand).trim() : '',
     price,
-    originalPrice: item.originalPrice ? Number(item.originalPrice) : null,
+    mrp: item.mrp ? Number(item.mrp) : (item.originalPrice ? Number(item.originalPrice) : null),
+    originalPrice: item.originalPrice ? Number(item.originalPrice) : (item.mrp ? Number(item.mrp) : null),
     discount: item.discount ? String(item.discount).trim() : null,
     image: item.image ? String(item.image).trim() : '',
+    images: Array.isArray(item.images) ? item.images : (item.image ? [item.image] : []),
     quantity: qty,
     stock: typeof item.stock === 'number' ? item.stock : 999,
     deliveryCost: typeof item.deliveryCost === 'number' ? item.deliveryCost : 120,
@@ -120,6 +123,7 @@ router.put('/cart', requireAuth, async (req, res) => {
       .filter(Boolean);
 
     customer.cart = sanitizedCart;
+    customer.markModified('cart');
     await customer.save();
 
     return res.json({
@@ -175,6 +179,7 @@ router.post('/cart/sync', requireAuth, async (req, res) => {
 
     const mergedCart = Array.from(itemMap.values());
     customer.cart = mergedCart;
+    customer.markModified('cart');
     await customer.save();
 
     return res.json({
@@ -194,6 +199,7 @@ router.delete('/cart', requireAuth, async (req, res) => {
     const customer = await getAuthCustomer(req.user);
     if (customer) {
       customer.cart = [];
+      customer.markModified('cart');
       await customer.save();
     }
     return res.json({ success: true, message: 'Cart cleared successfully', cart: [] });

@@ -17,9 +17,11 @@ export const CartProvider = ({ children }) => {
     }
   });
 
-  // Track whether the page was initially loaded while already authenticated
-  const wasLoggedInAtMount = useRef(Boolean(token));
-  const isInitialMountRef = useRef(true);
+  const cartRef = useRef(cart);
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
+
   const activeUserKeyRef = useRef(null);
 
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -43,6 +45,29 @@ export const CartProvider = ({ children }) => {
     } catch {}
   }, [deliveryType]);
 
+  // Helper to merge local and cloud carts cleanly without dropping any items
+  const mergeCarts = (cartA = [], cartB = []) => {
+    const map = new Map();
+    for (const item of (cartA || [])) {
+      const id = String(item.id || item._id || '');
+      if (id) map.set(id, { ...item, id });
+    }
+    for (const item of (cartB || [])) {
+      const id = String(item.id || item._id || '');
+      if (id) {
+        if (map.has(id)) {
+          const existing = map.get(id);
+          const maxStock = typeof existing.stock === 'number' ? existing.stock : (typeof item.stock === 'number' ? item.stock : 999);
+          const mergedQty = Math.min(Math.max(existing.quantity || 1, item.quantity || 1), maxStock);
+          map.set(id, { ...existing, ...item, id, quantity: mergedQty });
+        } else {
+          map.set(id, { ...item, id });
+        }
+      }
+    }
+    return Array.from(map.values());
+  };
+
   // Sync Cart with Backend on Customer Login vs Session Resume (Flipkart / Amazon style)
   useEffect(() => {
     let isCancelled = false;
@@ -53,56 +78,34 @@ export const CartProvider = ({ children }) => {
         if (activeUserKeyRef.current === userKey) return;
         activeUserKeyRef.current = userKey;
 
-        // CASE 1: Page Refresh / Session Resume
-        // If the user was ALREADY logged in when this page mounted, DO NOT merge guest cart!
-        // Simply fetch their cloud cart from MongoDB Atlas so it is guaranteed 100% in sync.
-        if (wasLoggedInAtMount.current && isInitialMountRef.current) {
-          isInitialMountRef.current = false;
-          try {
-            const cloudRes = await api.getCustomerCart();
-            if (!isCancelled && cloudRes && cloudRes.success && Array.isArray(cloudRes.cart)) {
-              setCart(cloudRes.cart);
-              try {
-                localStorage.setItem('vpt_cart', JSON.stringify(cloudRes.cart));
-              } catch {}
-            }
-          } catch (err) {
-            console.warn('Could not fetch cloud cart on session resume:', err);
-          }
-          return;
-        }
-
-        // CASE 2: Fresh Login Transition (Guest -> Logged In)
-        // User was browsing as a guest without a token and just signed in / verified OTP.
-        isInitialMountRef.current = false;
         try {
-          if (cart && cart.length > 0) {
-            // Merge guest cart with account cart
-            const syncRes = await api.syncCustomerCart(cart);
-            if (!isCancelled && syncRes && syncRes.success && Array.isArray(syncRes.cart)) {
-              setCart(syncRes.cart);
-              try {
-                localStorage.setItem('vpt_cart', JSON.stringify(syncRes.cart));
-              } catch {}
-            }
-          } else {
-            // Guest had no items, retrieve whatever account already has
-            const cloudRes = await api.getCustomerCart();
-            if (!isCancelled && cloudRes && cloudRes.success && Array.isArray(cloudRes.cart)) {
-              setCart(cloudRes.cart);
-              try {
-                localStorage.setItem('vpt_cart', JSON.stringify(cloudRes.cart));
-              } catch {}
+          const cloudRes = await api.getCustomerCart();
+          if (!isCancelled && cloudRes && cloudRes.success) {
+            const cloudCart = Array.isArray(cloudRes.cart) ? cloudRes.cart : [];
+            const localCart = cartRef.current || [];
+
+            if (cloudCart.length > 0 && localCart.length > 0) {
+              // Both have items: merge them so nothing is lost!
+              const merged = mergeCarts(cloudCart, localCart);
+              cartRef.current = merged;
+              setCart(merged);
+              try { localStorage.setItem('vpt_cart', JSON.stringify(merged)); } catch {}
+              api.saveCustomerCart(merged).catch(() => {});
+            } else if (cloudCart.length > 0 && localCart.length === 0) {
+              // Cloud has items, local was empty: restore cloud cart
+              cartRef.current = cloudCart;
+              setCart(cloudCart);
+              try { localStorage.setItem('vpt_cart', JSON.stringify(cloudCart)); } catch {}
+            } else if (localCart.length > 0 && cloudCart.length === 0) {
+              // Local cart has items, cloud was empty: keep local and sync to cloud
+              api.saveCustomerCart(localCart).catch(() => {});
             }
           }
         } catch (err) {
-          console.warn('Customer cart sync error on login:', err);
+          console.warn('Customer cart sync notice:', err);
         }
       } else if (!token) {
-        // User is logged out
         activeUserKeyRef.current = null;
-        wasLoggedInAtMount.current = false;
-        isInitialMountRef.current = false;
       }
     }
 
@@ -113,7 +116,7 @@ export const CartProvider = ({ children }) => {
     };
   }, [token, isCustomer, user?.id, user?.phone]);
 
-  // Keep localStorage continuously updated
+  // Keep localStorage continuously updated whenever cart changes
   useEffect(() => {
     try {
       localStorage.setItem('vpt_cart', JSON.stringify(cart));
@@ -161,106 +164,114 @@ export const CartProvider = ({ children }) => {
   };
 
   const addToCart = (product, quantity = 1) => {
+    if (!product) return false;
     const availableStock = typeof product.stock === 'number' ? product.stock : 999;
     if (availableStock <= 0) {
-      showToast(`Sorry, "${product.name.slice(0, 24)}" is currently out of stock!`);
+      showToast(`Sorry, "${(product.name || '').slice(0, 24)}" is currently out of stock!`);
       return false;
     }
 
-    let cappedNotice = false;
-    let computedCart = [];
+    const prodId = String(product.id || product._id || '');
+    if (!prodId) return false;
 
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        const currentQty = existing.quantity || 0;
-        if (currentQty >= availableStock) {
-          cappedNotice = true;
-          computedCart = prev;
-          return prev;
-        }
-        const nextQty = Math.min(currentQty + quantity, availableStock);
-        if (currentQty + quantity > availableStock) {
-          cappedNotice = true;
-        }
-        computedCart = prev.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: nextQty, stock: availableStock }
-            : item
-        );
-        return computedCart;
+    let cappedNotice = false;
+    const prev = cartRef.current || [];
+    const existingIndex = prev.findIndex(item => String(item.id || item._id) === prodId);
+
+    let nextCart;
+    if (existingIndex > -1) {
+      const existing = prev[existingIndex];
+      const currentQty = existing.quantity || 0;
+      if (currentQty >= availableStock) {
+        showToast(`Stock limit reached! Max ${availableStock} unit(s) available.`);
+        return false;
       }
+      const nextQty = Math.min(currentQty + quantity, availableStock);
+      if (currentQty + quantity > availableStock) {
+        cappedNotice = true;
+      }
+      nextCart = prev.map((item, idx) =>
+        idx === existingIndex
+          ? { ...item, ...product, id: prodId, quantity: nextQty, stock: availableStock }
+          : item
+      );
+    } else {
       const initialQty = Math.min(quantity, availableStock);
       if (quantity > availableStock) {
         cappedNotice = true;
       }
-      computedCart = [...prev, { ...product, quantity: initialQty, stock: availableStock }];
-      return computedCart;
-    });
+      nextCart = [...prev, { ...product, id: prodId, quantity: initialQty, stock: availableStock }];
+    }
+
+    cartRef.current = nextCart;
+    setCart(nextCart);
 
     try {
-      localStorage.setItem('vpt_cart', JSON.stringify(computedCart));
+      localStorage.setItem('vpt_cart', JSON.stringify(nextCart));
     } catch {}
 
     if (token && isCustomer) {
-      api.saveCustomerCart(computedCart).catch(() => {});
+      api.saveCustomerCart(nextCart).catch(() => {});
     }
 
     if (cappedNotice) {
       showToast(`Stock limit reached! Max ${availableStock} unit(s) available.`);
     } else {
-      showToast(`Added "${product.name.slice(0, 24)}..." to cart!`);
+      showToast(`Added "${(product.name || '').slice(0, 24)}..." to cart!`);
     }
     return true;
   };
 
   const updateQuantity = (productId, quantity) => {
+    const cleanId = String(productId);
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(cleanId);
       return;
     }
-    let computedCart = [];
-    setCart(prev => {
-      computedCart = prev.map(item => {
-        if (item.id !== productId) return item;
-        const availableStock = typeof item.stock === 'number' ? item.stock : 999;
-        if (quantity > availableStock) {
-          showToast(`Only ${availableStock} unit(s) available in stock.`);
-          return { ...item, quantity: availableStock };
-        }
-        return { ...item, quantity };
-      });
-      return computedCart;
+    const prev = cartRef.current || [];
+    const nextCart = prev.map(item => {
+      if (String(item.id || item._id) !== cleanId) return item;
+      const availableStock = typeof item.stock === 'number' ? item.stock : 999;
+      if (quantity > availableStock) {
+        showToast(`Only ${availableStock} unit(s) available in stock.`);
+        return { ...item, quantity: availableStock };
+      }
+      return { ...item, quantity };
     });
 
+    cartRef.current = nextCart;
+    setCart(nextCart);
+
     try {
-      localStorage.setItem('vpt_cart', JSON.stringify(computedCart));
+      localStorage.setItem('vpt_cart', JSON.stringify(nextCart));
     } catch {}
 
     if (token && isCustomer) {
-      api.saveCustomerCart(computedCart).catch(() => {});
+      api.saveCustomerCart(nextCart).catch(() => {});
     }
   };
 
   const removeFromCart = (productId) => {
-    let computedCart = [];
-    setCart(prev => {
-      computedCart = prev.filter(item => item.id !== productId);
-      return computedCart;
-    });
+    const cleanId = String(productId);
+    const prev = cartRef.current || [];
+    const nextCart = prev.filter(item => String(item.id || item._id) !== cleanId);
+
+    cartRef.current = nextCart;
+    setCart(nextCart);
 
     try {
-      localStorage.setItem('vpt_cart', JSON.stringify(computedCart));
+      localStorage.setItem('vpt_cart', JSON.stringify(nextCart));
     } catch {}
 
     showToast("Item removed from cart");
 
     if (token && isCustomer) {
-      api.saveCustomerCart(computedCart).catch(() => {});
+      api.saveCustomerCart(nextCart).catch(() => {});
     }
   };
 
   const clearCart = () => {
+    cartRef.current = [];
     setCart([]);
     try {
       localStorage.removeItem('vpt_cart');

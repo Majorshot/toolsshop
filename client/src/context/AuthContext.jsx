@@ -113,7 +113,6 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem('vpt_user');
       localStorage.removeItem('vpt_token');
-      localStorage.removeItem('vpt_cart');
     } catch {}
   };
 

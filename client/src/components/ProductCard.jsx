@@ -70,11 +70,11 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
   const isOutOfStock = maxStock <= 0 || product?.inStock === false;
   const isLowStock = !isOutOfStock && maxStock <= 2;
 
-  const cartItem = cart?.find(item => item.id === product.id);
+  const prodKey = String(product?.id || product?._id || '');
+  const cartItem = cart?.find(item => String(item.id || item._id) === prodKey);
   const cartQty = cartItem ? cartItem.quantity : 0;
 
-  const badgeConfig = getBadgeConfig(product.badge);
-  const prodKey = product.id || product._id;
+  const badgeConfig = getBadgeConfig(product?.badge);
 
   const handleCardClick = () => {
     if (isPreview) return;
@@ -273,7 +273,7 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
                 disabled={cartQty >= maxStock}
                 title={cartQty >= maxStock ? `Max stock (${maxStock}) reached` : "Increase quantity"}
                 aria-label="Increase quantity"
-                id={`btn-stepper-plus-${product.id}`}
+                id={`btn-stepper-plus-${prodKey}`}
               >
                 <Plus size={14} strokeWidth={2.5} />
               </button>
@@ -283,7 +283,7 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
               className="btn-card-add"
               onClick={handleAddToCart}
               title="Add tool to cart"
-              id={`btn-add-${product.id}`}
+              id={`btn-add-${prodKey}`}
             >
               <ShoppingCart size={15} />
               <span>Add</span>
