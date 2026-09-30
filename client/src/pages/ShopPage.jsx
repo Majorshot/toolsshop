@@ -85,6 +85,39 @@ export const ShopPage = ({
   const [powerFilter, setPowerFilter] = useState('all');
   const [inStockOnly, setInStockOnly] = useState(false);
 
+  // Local immediate search input state for debounced 60fps typing
+  const [localSearch, setLocalSearch] = useState(searchQuery || '');
+
+  useEffect(() => {
+    setLocalSearch(searchQuery || '');
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== searchQuery) {
+        setSearchQuery(localSearch);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [localSearch]);
+
+  // Synchronize all filters to URL searchParams & sessionStorage for seamless back navigation
+  const updateFilterParams = (updates) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, val]) => {
+        if (val === null || val === undefined || val === '' || val === 'all' || val === false) {
+          next.delete(key);
+          try { sessionStorage.removeItem(`shop_${key}_filter`); } catch (e) {}
+        } else {
+          next.set(key, String(val));
+          try { sessionStorage.setItem(`shop_${key}_filter`, String(val)); } catch (e) {}
+        }
+      });
+      return next;
+    }, { replace: true });
+  };
+
   // Pagination State for 1,000+ Products Performance
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 24;
@@ -136,12 +169,49 @@ export const ShopPage = ({
     }).catch(err => console.error("Could not fetch taxonomy in shop:", err));
   }, []);
 
-  // Sync URL search params
+  // Sync URL search params and sessionStorage on mount / URL changes
   useEffect(() => {
-    const brandParam = searchParams.get('brand');
-    const catParam = searchParams.get('category');
+    const brandParam = searchParams.get('brand') || sessionStorage.getItem('shop_brand_filter');
+    const catParam = searchParams.get('category') || sessionStorage.getItem('shop_category_filter');
+    const powerParam = searchParams.get('power') || sessionStorage.getItem('shop_power_filter');
+    const priceParam = searchParams.get('price') || sessionStorage.getItem('shop_price_filter');
+    const minPriceParam = searchParams.get('minPrice') || sessionStorage.getItem('shop_minPrice_filter');
+    const maxPriceParam = searchParams.get('maxPrice') || sessionStorage.getItem('shop_maxPrice_filter');
+    const inStockParam = searchParams.get('inStock') ?? sessionStorage.getItem('shop_inStock_filter');
+
     if (brandParam) setActiveBrand(brandParam);
+    else setActiveBrand('all');
+
     if (catParam) setActiveCategory(catParam);
+    else setActiveCategory('all');
+
+    if (powerParam) setPowerFilter(powerParam);
+    else setPowerFilter('all');
+
+    if (priceParam) setPriceFilter(priceParam);
+    else setPriceFilter('all');
+
+    if (minPriceParam) {
+      setMinPriceInput(minPriceParam);
+      setAppliedMinPrice(minPriceParam);
+    } else {
+      setMinPriceInput('');
+      setAppliedMinPrice('');
+    }
+
+    if (maxPriceParam) {
+      setMaxPriceInput(maxPriceParam);
+      setAppliedMaxPrice(maxPriceParam);
+    } else {
+      setMaxPriceInput('');
+      setAppliedMaxPrice('');
+    }
+
+    if (inStockParam !== null && inStockParam !== undefined) {
+      setInStockOnly(inStockParam === 'true');
+    } else {
+      setInStockOnly(false);
+    }
   }, [searchParams]);
 
   // Dynamic Item Counts
@@ -167,7 +237,7 @@ export const ShopPage = ({
   const cordlessCount = useMemo(() => {
     return products.filter(p => {
       const txt = `${p.name} ${p.category} ${p.specs || ''}`.toLowerCase();
-      return txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
+      return Boolean(p.cordless) || txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
     }).length;
   }, [products]);
 
@@ -218,12 +288,12 @@ export const ShopPage = ({
         // Power Source Filter
         if (powerFilter === 'cordless') {
           const txt = `${product.name} ${product.category} ${product.specs || ''}`.toLowerCase();
-          const isCordless = txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
+          const isCordless = Boolean(product.cordless) || txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
           if (!isCordless) return false;
         }
         if (powerFilter === 'corded') {
           const txt = `${product.name} ${product.category} ${product.specs || ''}`.toLowerCase();
-          const isCordless = txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
+          const isCordless = Boolean(product.cordless) || txt.includes('cordless') || txt.includes('18v') || txt.includes('20v') || txt.includes('battery');
           if (isCordless) return false;
         }
 
@@ -268,6 +338,11 @@ export const ShopPage = ({
       setPriceFilter('custom');
       setAppliedMinPrice(minPriceInput);
       setAppliedMaxPrice(maxPriceInput);
+      updateFilterParams({
+        price: 'custom',
+        minPrice: minPriceInput,
+        maxPrice: maxPriceInput
+      });
     }
   };
 
@@ -275,6 +350,7 @@ export const ShopPage = ({
     setActiveCategory('all');
     setActiveBrand('all');
     setSearchQuery('');
+    setLocalSearch('');
     setSortBy('featured');
     setPriceFilter('all');
     setMinPriceInput('');
@@ -285,6 +361,15 @@ export const ShopPage = ({
     setInStockOnly(false);
     setBrandSearch('');
     setCategorySearch('');
+    try {
+      sessionStorage.removeItem('shop_brand_filter');
+      sessionStorage.removeItem('shop_category_filter');
+      sessionStorage.removeItem('shop_power_filter');
+      sessionStorage.removeItem('shop_price_filter');
+      sessionStorage.removeItem('shop_minPrice_filter');
+      sessionStorage.removeItem('shop_maxPrice_filter');
+      sessionStorage.removeItem('shop_inStock_filter');
+    } catch (e) {}
     setSearchParams({});
   };
 
@@ -396,13 +481,16 @@ export const ShopPage = ({
             <input
               type="text"
               placeholder="Search Bosch, Makita, grinder, drill..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
               id="shop-search-input"
             />
-            {searchQuery && (
+            {localSearch && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setLocalSearch('');
+                  setSearchQuery('');
+                }}
                 style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
               >
                 <X size={15} />
@@ -470,7 +558,7 @@ export const ShopPage = ({
                 type="button"
                 onClick={() => {
                   setActiveCategory('all');
-                  setSearchParams(prev => { prev.delete('category'); return prev; });
+                  updateFilterParams({ category: 'all' });
                 }}
                 title="Remove Category filter"
               >
@@ -487,7 +575,7 @@ export const ShopPage = ({
                 type="button"
                 onClick={() => {
                   setActiveBrand('all');
-                  setSearchParams(prev => { prev.delete('brand'); return prev; });
+                  updateFilterParams({ brand: 'all' });
                 }}
                 title="Remove Brand filter"
               >
@@ -510,6 +598,9 @@ export const ShopPage = ({
                   setPriceFilter('all');
                   setAppliedMinPrice('');
                   setAppliedMaxPrice('');
+                  setMinPriceInput('');
+                  setMaxPriceInput('');
+                  updateFilterParams({ price: 'all', minPrice: null, maxPrice: null });
                 }}
                 title="Remove Price filter"
               >
@@ -522,7 +613,14 @@ export const ShopPage = ({
           {powerFilter !== 'all' && (
             <span className="active-filter-chip">
               <span>{powerFilter === 'cordless' ? '⚡ Cordless Only' : '🔌 Corded Electric'}</span>
-              <button type="button" onClick={() => setPowerFilter('all')} title="Remove Power filter">
+              <button
+                type="button"
+                onClick={() => {
+                  setPowerFilter('all');
+                  updateFilterParams({ power: 'all' });
+                }}
+                title="Remove Power filter"
+              >
                 <X size={13} />
               </button>
             </span>
@@ -532,7 +630,14 @@ export const ShopPage = ({
           {inStockOnly && (
             <span className="active-filter-chip">
               <span>In Stock Only</span>
-              <button type="button" onClick={() => setInStockOnly(false)} title="Remove In-Stock filter">
+              <button
+                type="button"
+                onClick={() => {
+                  setInStockOnly(false);
+                  updateFilterParams({ inStock: false });
+                }}
+                title="Remove In-Stock filter"
+              >
                 <X size={13} />
               </button>
             </span>
@@ -935,11 +1040,7 @@ export const ShopPage = ({
                             className={`filter-pill-option ${isActive ? 'active' : ''}`}
                             onClick={() => {
                               setActiveCategory(cat.id);
-                              setSearchParams(prev => {
-                                if (cat.id === 'all') prev.delete('category');
-                                else prev.set('category', cat.id);
-                                return prev;
-                              });
+                              updateFilterParams({ category: cat.id });
                             }}
                             id={`modal-filter-cat-${cat.id}`}
                           >
@@ -990,7 +1091,7 @@ export const ShopPage = ({
                         className={`filter-pill-option ${activeBrand === 'all' ? 'active' : ''}`}
                         onClick={() => {
                           setActiveBrand('all');
-                          setSearchParams(prev => { prev.delete('brand'); return prev; });
+                          updateFilterParams({ brand: 'all' });
                         }}
                         id="modal-filter-brand-all"
                       >
@@ -1014,11 +1115,7 @@ export const ShopPage = ({
                             onClick={() => {
                               const next = isActive ? 'all' : brandVal;
                               setActiveBrand(next);
-                              setSearchParams(prev => {
-                                if (next === 'all') prev.delete('brand');
-                                else prev.set('brand', next);
-                                return prev;
-                              });
+                              updateFilterParams({ brand: next });
                             }}
                             id={`modal-filter-brand-${brandVal}`}
                           >
@@ -1054,6 +1151,9 @@ export const ShopPage = ({
                               setPriceFilter(preset.id);
                               setAppliedMinPrice('');
                               setAppliedMaxPrice('');
+                              setMinPriceInput('');
+                              setMaxPriceInput('');
+                              updateFilterParams({ price: preset.id, minPrice: null, maxPrice: null });
                             }}
                             id={`modal-filter-price-${preset.id}`}
                           >
@@ -1114,7 +1214,10 @@ export const ShopPage = ({
                       <button
                         type="button"
                         className={`filter-pill-option ${powerFilter === 'all' ? 'active' : ''}`}
-                        onClick={() => setPowerFilter('all')}
+                        onClick={() => {
+                          setPowerFilter('all');
+                          updateFilterParams({ power: 'all' });
+                        }}
                         id="modal-filter-power-all"
                       >
                         <div className="filter-custom-checkbox">
@@ -1127,7 +1230,11 @@ export const ShopPage = ({
                       <button
                         type="button"
                         className={`filter-pill-option ${powerFilter === 'cordless' ? 'active' : ''}`}
-                        onClick={() => setPowerFilter(powerFilter === 'cordless' ? 'all' : 'cordless')}
+                        onClick={() => {
+                          const next = powerFilter === 'cordless' ? 'all' : 'cordless';
+                          setPowerFilter(next);
+                          updateFilterParams({ power: next });
+                        }}
                         id="modal-filter-power-cordless"
                       >
                         <div className="filter-custom-checkbox">
@@ -1143,7 +1250,11 @@ export const ShopPage = ({
                       <button
                         type="button"
                         className={`filter-pill-option ${powerFilter === 'corded' ? 'active' : ''}`}
-                        onClick={() => setPowerFilter(powerFilter === 'corded' ? 'all' : 'corded')}
+                        onClick={() => {
+                          const next = powerFilter === 'corded' ? 'all' : 'corded';
+                          setPowerFilter(next);
+                          updateFilterParams({ power: next });
+                        }}
                         id="modal-filter-power-corded"
                       >
                         <div className="filter-custom-checkbox">
@@ -1168,7 +1279,10 @@ export const ShopPage = ({
                       <button
                         type="button"
                         className={`filter-pill-option ${!inStockOnly ? 'active' : ''}`}
-                        onClick={() => setInStockOnly(false)}
+                        onClick={() => {
+                          setInStockOnly(false);
+                          updateFilterParams({ inStock: false });
+                        }}
                         id="modal-filter-stock-all"
                       >
                         <div className="filter-custom-checkbox">
@@ -1181,7 +1295,10 @@ export const ShopPage = ({
                       <button
                         type="button"
                         className={`filter-pill-option ${inStockOnly ? 'active' : ''}`}
-                        onClick={() => setInStockOnly(true)}
+                        onClick={() => {
+                          setInStockOnly(true);
+                          updateFilterParams({ inStock: true });
+                        }}
                         id="modal-filter-stock-instock"
                       >
                         <div className="filter-custom-checkbox">

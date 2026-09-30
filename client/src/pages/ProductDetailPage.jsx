@@ -10,6 +10,7 @@ import { useCart } from '../context/CartContext';
 import { api } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import AnimatedContent from '../components/AnimatedContent';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 export const ProductDetailPage = () => {
   const { id } = useParams();
@@ -226,9 +227,8 @@ export const ProductDetailPage = () => {
   const rawGallery = Array.isArray(product?.images) && product.images.length > 0
     ? product.images.map(s => typeof s === 'string' ? s.trim() : '').filter(Boolean)
     : (product?.image ? [product.image] : []);
-  const galleryImages = rawGallery.length > 0 
-    ? rawGallery 
-    : ['https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80'];
+  const galleryImages = (rawGallery.length > 0 ? rawGallery : ['https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80'])
+    .map(img => getOptimizedImageUrl(img, 900));
 
   const openFullScreen = (index = 0) => {
     setFullScreenIdx(index);

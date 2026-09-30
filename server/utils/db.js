@@ -643,10 +643,10 @@ function ensureMongoConnected() {
   }
 }
 
-// High-Speed In-Memory Cache disabled (TTL = 0) to ensure live inventory accuracy across all admin/storefront devices
+// High-Speed In-Memory Micro-Cache (TTL = 30s) with instant real-time invalidation on any inventory/order mutation
 let catalogCache = null;
 let catalogCacheTime = 0;
-const CATALOG_CACHE_TTL = 0;
+const CATALOG_CACHE_TTL = 30 * 1000;
 
 function invalidateCatalogCache() {
   catalogCache = null;

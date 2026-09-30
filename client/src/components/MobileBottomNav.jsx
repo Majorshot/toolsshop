@@ -25,6 +25,19 @@ export const MobileBottomNav = () => {
 
       <NavLink
         to="/shop"
+        onClick={() => {
+          try {
+            sessionStorage.removeItem('shop_last_product_id');
+            sessionStorage.removeItem('shop_scroll_pos');
+            sessionStorage.removeItem('shop_brand_filter');
+            sessionStorage.removeItem('shop_category_filter');
+            sessionStorage.removeItem('shop_power_filter');
+            sessionStorage.removeItem('shop_price_filter');
+            sessionStorage.removeItem('shop_minPrice_filter');
+            sessionStorage.removeItem('shop_maxPrice_filter');
+            sessionStorage.removeItem('shop_inStock_filter');
+          } catch (e) {}
+        }}
         className={({ isActive }) => `nav-bottom-item ${isActive ? 'active' : ''}`}
         id="mobile-nav-shop"
       >

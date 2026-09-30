@@ -5,6 +5,7 @@ import {
   Sparkles, Flame, Wrench, Award, Tag, Image as ImageIcon
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 // Helper to style highlight badges into attractive storefront pills
 export const getBadgeConfig = (badge) => {
@@ -129,10 +130,11 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
       <div className={`card-image-wrap ${isOutOfStock ? 'is-out-of-stock' : ''}`}>
         {product.image ? (
           <img
-            src={product.image}
+            src={getOptimizedImageUrl(product.image, 480)}
             alt={product.name}
             className={`card-img ${isOutOfStock ? 'card-img-out-of-stock' : ''}`}
             loading="lazy"
+            decoding="async"
             onError={(e) => { e.target.style.opacity = '0.3'; }}
           />
         ) : (
