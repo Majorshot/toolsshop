@@ -10,6 +10,7 @@ import { useConfirm, SpringModal } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
 import GlideSelect from '../components/GlideSelect';
 import RubberSegment from '../components/RubberSegment';
+import AddEquipmentModal from '../components/AddEquipmentModal';
 import { startOverviewTour, startOrdersTour, startInventoryTour, startRepairsTour, startCancellationsTour, startCustomersTour, startCouponsTour } from '../services/tourService';
 
 const ORDER_DATE_OPTIONS = [
@@ -1792,35 +1793,42 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   const handleStatusChange = handleUpdateOrderStatus;
 
-  const handleSaveProduct = async (e) => {
-    e.preventDefault();
+  const handleSaveProduct = async (payloadOrEvent, productBeingEdited = null, shouldAddAnother = false) => {
     try {
-      const rawImgs = Array.isArray(productForm.images) ? productForm.images : [productForm.image];
-      const cleanedImages = rawImgs.map(s => typeof s === 'string' ? s.trim() : '').filter(Boolean);
-      const primaryImage = cleanedImages[0] || productForm.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+      let payload;
+      let targetEditingProduct = productBeingEdited !== null ? productBeingEdited : editingProduct;
 
-      const payload = {
-        ...productForm,
-        image: primaryImage,
-        images: cleanedImages.length > 0 ? cleanedImages : [primaryImage],
-        price: Number(productForm.price),
-        originalPrice: productForm.originalPrice ? Number(productForm.originalPrice) : undefined,
-        stock: Number(productForm.stock),
-        deliveryCost: Number(productForm.deliveryCost || 0),
-        rating: 5.0,
-        reviewsCount: 1,
-        specs: {
-          power: productForm.cordless ? '20V XR Brushless' : '850 Watts',
-          voltage: '230V / 50Hz',
-          warranty: '1 Year Warranty'
-        }
-      };
+      if (payloadOrEvent && typeof payloadOrEvent === 'object' && !payloadOrEvent.preventDefault && payloadOrEvent.name) {
+        payload = payloadOrEvent;
+      } else {
+        if (payloadOrEvent && payloadOrEvent.preventDefault) payloadOrEvent.preventDefault();
+        const rawImgs = Array.isArray(productForm.images) ? productForm.images : [productForm.image];
+        const cleanedImages = rawImgs.map(s => typeof s === 'string' ? s.trim() : '').filter(Boolean);
+        const primaryImage = cleanedImages[0] || productForm.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+
+        payload = {
+          ...productForm,
+          image: primaryImage,
+          images: cleanedImages.length > 0 ? cleanedImages : [primaryImage],
+          price: Number(productForm.price),
+          originalPrice: productForm.originalPrice ? Number(productForm.originalPrice) : undefined,
+          stock: Number(productForm.stock),
+          deliveryCost: Number(productForm.deliveryCost || 0),
+          rating: 5.0,
+          reviewsCount: 1,
+          specs: {
+            power: productForm.cordless ? '20V XR Brushless' : '850 Watts',
+            voltage: '230V / 50Hz',
+            warranty: '1 Year Warranty'
+          }
+        };
+      }
 
       let savedProduct = null;
-      if (editingProduct) {
-        const editId = editingProduct.id || editingProduct._id;
+      if (targetEditingProduct) {
+        const editId = targetEditingProduct.id || targetEditingProduct._id;
         const res = await api.updateProduct(editId, payload);
-        savedProduct = (res && res.data) ? res.data : { ...editingProduct, ...payload };
+        savedProduct = (res && res.data) ? res.data : { ...targetEditingProduct, ...payload };
         // Immediate in-place state update: no reload needed
         setProducts(prev => prev.map(p => (p.id === editId || p._id === editId) ? { ...p, ...savedProduct } : p));
         showNotification(`Updated tool "${payload.name}" successfully!`);
@@ -1833,44 +1841,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         showNotification(`Added tool "${payload.name}" to inventory!`);
       }
 
-      setIsAddModalOpen(false);
-      setEditingProduct(null);
+      if (!shouldAddAnother) {
+        setIsAddModalOpen(false);
+        setEditingProduct(null);
+      }
 
       // Broadcast live addition/edit to other open tabs and shop storefront
       try {
         const bc = new BroadcastChannel('vpt_inventory_channel');
-        bc.postMessage({ type: editingProduct ? 'PRODUCT_UPDATED' : 'PRODUCT_ADDED', product: savedProduct });
+        bc.postMessage({ type: targetEditingProduct ? 'PRODUCT_UPDATED' : 'PRODUCT_ADDED', product: savedProduct });
         bc.close();
       } catch (e) {}
 
       // Silent background sync
       loadProducts({ silent: true });
       if (onProductUpdated) onProductUpdated();
+      return savedProduct;
     } catch (err) {
       alert(err.message);
+      throw err;
     }
   };
 
   const openEditProduct = async (prod) => {
     setEditingProduct(prod);
-    const existingImages = Array.isArray(prod.images) && prod.images.length > 0
-      ? prod.images.filter(Boolean)
-      : (prod.image ? [prod.image] : ['']);
-
-    setProductForm({
-      name: prod.name,
-      brand: prod.brand,
-      category: prod.category || 'cordless',
-      price: prod.price,
-      originalPrice: prod.originalPrice || '',
-      stock: prod.stock || 10,
-      deliveryCost: prod.deliveryCost !== undefined ? prod.deliveryCost : 120,
-      image: prod.image || existingImages[0] || '',
-      images: existingImages.length > 0 ? existingImages : [''],
-      description: prod.description || '',
-      cordless: !!prod.cordless,
-      badge: prod.badge || '',
-    });
     setShowAddBrandInline(false);
     setShowAddCatInline(false);
     setIsAddModalOpen(true);
@@ -1880,18 +1874,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       const res = await api.getProduct(prod.id);
       const fullProd = res?.data || res;
       if (fullProd) {
-        const fullImages = Array.isArray(fullProd.images) && fullProd.images.length > 0
-          ? fullProd.images.filter(Boolean)
-          : (fullProd.image ? [fullProd.image] : []);
-
-        if (fullImages.length > 0) {
-          setProductForm(prev => ({
-            ...prev,
-            image: fullProd.image || fullImages[0] || prev.image,
-            images: fullImages,
-            description: fullProd.description !== undefined ? fullProd.description : prev.description
-          }));
-        }
+        setEditingProduct(prev => prev && (prev.id === prod.id || prev._id === prod.id) ? { ...prev, ...fullProd } : prev);
       }
     } catch (err) {
       console.warn("Could not fetch full product details for edit:", err.message);
@@ -1900,20 +1883,6 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   const openNewProduct = () => {
     setEditingProduct(null);
-    setProductForm({
-      name: '',
-      brand: taxonomy.brands[0] || 'Bosch',
-      category: taxonomy.categories[0]?.id || 'cordless',
-      price: '',
-      originalPrice: '',
-      stock: 12,
-      deliveryCost: 120,
-      image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80',
-      images: ['https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80'],
-      description: '',
-      cordless: false,
-      badge: 'New Arrival',
-    });
     setShowAddBrandInline(false);
     setShowAddCatInline(false);
     setIsAddModalOpen(true);
@@ -6131,364 +6100,29 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       )}
 
 
-      {/* ADD / EDIT PRODUCT MODAL */}
-      {isAddModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsAddModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
-            <div className="modal-header">
-              <h3 style={{ fontSize: '1.15rem', color: '#0f172a' }}>
-                {editingProduct ? 'Edit Tool Details & Price' : 'Add New Equipment to Catalog'}
-              </h3>
-              <button className="btn-close-modal" onClick={() => setIsAddModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveProduct} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
-                  Equipment Name & Model *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={productForm.name}
-                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
-                  id="input-tool-name"
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {/* BRAND SELECTION & INLINE ADD */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600' }}>Brand *</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddBrandInline(!showAddBrandInline)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ea580c',
-                        fontSize: '0.74rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        padding: 0
-                      }}
-                      id="btn-inline-brand-toggle"
-                    >
-                      <Plus size={12} />
-                      <span>{showAddBrandInline ? 'Cancel' : 'Add Brand'}</span>
-                    </button>
-                  </div>
-
-                  {showAddBrandInline && (
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', background: '#fff7ed', padding: '6px', borderRadius: '6px', border: '1px solid #fed7aa' }}>
-                      <input
-                        type="text"
-                        placeholder="Brand name (e.g. KPT)"
-                        value={newBrandInput}
-                        onChange={(e) => setNewBrandInput(e.target.value)}
-                        style={{ flex: 1, padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #ea580c', borderRadius: '4px' }}
-                        id="input-inline-brand-name"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddBrandInline}
-                        disabled={isAddingBrand}
-                        style={{ background: '#ea580c', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '6px 10px', fontSize: '0.76rem', fontWeight: '700', cursor: 'pointer' }}
-                        id="btn-save-inline-brand"
-                      >
-                        {isAddingBrand ? '...' : 'Save'}
-                      </button>
-                    </div>
-                  )}
-
-                  <GlideSelect
-                    id="select-tool-brand"
-                    options={[
-                      ...(taxonomy.brands || []).map(b => ({ value: b, label: b })),
-                      ...(productForm.brand && !(taxonomy.brands || []).includes(productForm.brand)
-                        ? [{ value: productForm.brand, label: productForm.brand }]
-                        : [])
-                    ]}
-                    value={productForm.brand || (taxonomy.brands?.[0] || 'Bosch')}
-                    onChange={(val) => setProductForm({ ...productForm, brand: val })}
-                    ariaLabel="Select tool brand"
-                    placeholder="Select Brand…"
-                    size="lg"
-                    radius={8}
-                    fullWidth
-                    menuWidth="100%"
-                    maxHeight={260}
-                    align="left"
-                    accentColor="#ea580c"
-                    surfaceColor="#ffffff"
-                    borderColor="#cbd5e1"
-                    textColor="#0f172a"
-                    highlightColor="#fff7ed"
-                  />
-                </div>
-
-                {/* CATEGORY SELECTION & INLINE ADD */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600' }}>Category *</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowAddCatInline(!showAddCatInline)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ea580c',
-                        fontSize: '0.74rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        padding: 0
-                      }}
-                      id="btn-inline-cat-toggle"
-                    >
-                      <Plus size={12} />
-                      <span>{showAddCatInline ? 'Cancel' : 'Add Category'}</span>
-                    </button>
-                  </div>
-
-                  {showAddCatInline && (
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', background: '#fff7ed', padding: '6px', borderRadius: '6px', border: '1px solid #fed7aa' }}>
-                      <input
-                        type="text"
-                        placeholder="Category (e.g. Welding)"
-                        value={newCatNameInput}
-                        onChange={(e) => setNewCatNameInput(e.target.value)}
-                        style={{ flex: 1, padding: '6px 8px', fontSize: '0.8rem', border: '1px solid #ea580c', borderRadius: '4px' }}
-                        id="input-inline-cat-name"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddCategoryInline}
-                        disabled={isAddingCat}
-                        style={{ background: '#ea580c', color: '#ffffff', border: 'none', borderRadius: '4px', padding: '6px 10px', fontSize: '0.76rem', fontWeight: '700', cursor: 'pointer' }}
-                        id="btn-save-inline-cat"
-                      >
-                        {isAddingCat ? '...' : 'Save'}
-                      </button>
-                    </div>
-                  )}
-
-                  <GlideSelect
-                    id="select-tool-category"
-                    options={[
-                      ...(taxonomy.categories || []).map(c => ({ value: c.id, label: c.name })),
-                      ...(productForm.category && !(taxonomy.categories || []).some(c => c.id === productForm.category)
-                        ? [{ value: productForm.category, label: productForm.category }]
-                        : [])
-                    ]}
-                    value={productForm.category || (taxonomy.categories?.[0]?.id || '')}
-                    onChange={(val) => setProductForm({ ...productForm, category: val })}
-                    ariaLabel="Select tool category"
-                    placeholder="Select Category…"
-                    size="lg"
-                    radius={8}
-                    fullWidth
-                    menuWidth="100%"
-                    maxHeight={260}
-                    align="right"
-                    accentColor="#ea580c"
-                    surfaceColor="#ffffff"
-                    borderColor="#cbd5e1"
-                    textColor="#0f172a"
-                    highlightColor="#fff7ed"
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Selling Price (₹) *</label>
-                  <input
-                    type="number"
-                    required
-                    value={productForm.price}
-                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
-                    id="input-tool-price"
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Original MRP (₹)</label>
-                  <input
-                    type="number"
-                    value={productForm.originalPrice}
-                    onChange={(e) => setProductForm({ ...productForm, originalPrice: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Stock Units *</label>
-                  <input
-                    type="number"
-                    required
-                    value={productForm.stock}
-                    onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
-                    id="input-tool-stock"
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Delivery Fee (₹)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0 = Free"
-                    value={productForm.deliveryCost}
-                    onChange={(e) => setProductForm({ ...productForm, deliveryCost: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
-                    id="input-tool-delivery-cost"
-                  />
-                </div>
-              </div>
-              <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '6px 0 12px' }}>
-                💡 <em>Tip: Enter <strong>0</strong> for Free Courier Delivery, or set a custom rate based on equipment weight.</em>
-              </p>
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600' }}>
-                    Equipment Images (Multiple URLs)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cur = Array.isArray(productForm.images) ? productForm.images : [productForm.image || ''];
-                      setProductForm({ ...productForm, images: [...cur, ''] });
-                    }}
-                    style={{
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
-                      color: '#dc2626',
-                      borderRadius: '6px',
-                      padding: '3px 8px',
-                      fontSize: '0.76rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                    id="btn-add-image-link"
-                  >
-                    <Plus size={13} />
-                    <span>Add Image Link</span>
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {(Array.isArray(productForm.images) && productForm.images.length > 0 ? productForm.images : [productForm.image || '']).map((imgUrl, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span 
-                        style={{ 
-                          fontSize: '0.72rem', 
-                          fontWeight: '800', 
-                          color: idx === 0 ? '#dc2626' : '#64748b', 
-                          width: '55px', 
-                          flexShrink: 0 
-                        }}
-                      >
-                        {idx === 0 ? 'Main *' : `Image ${idx + 1}`}
-                      </span>
-
-                      <input
-                        type="text"
-                        placeholder="https://images.unsplash.com/..."
-                        value={imgUrl}
-                        onChange={(e) => {
-                          const cur = Array.isArray(productForm.images) ? [...productForm.images] : [productForm.image || ''];
-                          cur[idx] = e.target.value;
-                          setProductForm({ 
-                            ...productForm, 
-                            images: cur, 
-                            image: cur[0] || '' 
-                          });
-                        }}
-                        style={{ flex: 1, padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.84rem' }}
-                      />
-
-                      {imgUrl && imgUrl.startsWith('http') && (
-                        <img 
-                          src={imgUrl} 
-                          alt="preview" 
-                          style={{ width: '34px', height: '34px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', flexShrink: 0 }}
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      )}
-
-                      {(Array.isArray(productForm.images) ? productForm.images.length : 1) > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const cur = Array.isArray(productForm.images) ? [...productForm.images] : [productForm.image || ''];
-                            const next = cur.filter((_, i) => i !== idx);
-                            setProductForm({ 
-                              ...productForm, 
-                              images: next.length > 0 ? next : [''],
-                              image: next[0] || ''
-                            });
-                          }}
-                          style={{ background: '#fef2f2', border: '1px solid #fee2e2', color: '#dc2626', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Remove image link"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>Short Description</label>
-                <textarea
-                  rows={3}
-                  value={productForm.description}
-                  onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '0.86rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="checkbox"
-                  id="cordless-toggle"
-                  checked={productForm.cordless}
-                  onChange={(e) => setProductForm({ ...productForm, cordless: e.target.checked })}
-                />
-                <label htmlFor="cordless-toggle" style={{ fontSize: '0.82rem', color: '#0f172a' }}>
-                  Is this a Cordless (Battery Operated) Tool?
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                className="btn-hero-clean"
-                style={{ justifyContent: 'center', marginTop: '10px' }}
-                id="btn-save-tool-submit"
-              >
-                <span>{editingProduct ? 'Save Changes' : 'Add to Store Catalog'}</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* REDESIGNED ADD / EDIT PRODUCT MODAL (OUTSIDE CLICK PROTECTED) */}
+      <AddEquipmentModal
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditingProduct(null);
+        }}
+        editingProduct={editingProduct}
+        taxonomy={taxonomy}
+        onSaveProduct={handleSaveProduct}
+        showAddBrandInline={showAddBrandInline}
+        setShowAddBrandInline={setShowAddBrandInline}
+        newBrandInput={newBrandInput}
+        setNewBrandInput={setNewBrandInput}
+        handleAddBrandInline={handleAddBrandInline}
+        isAddingBrand={isAddingBrand}
+        showAddCatInline={showAddCatInline}
+        setShowAddCatInline={setShowAddCatInline}
+        newCatNameInput={newCatNameInput}
+        setNewCatNameInput={setNewCatNameInput}
+        handleAddCategoryInline={handleAddCategoryInline}
+        isAddingCat={isAddingCat}
+      />
 
       {/* SPRING CONFIRMATION MODAL FOR DELETING A PRODUCT */}
       <SpringModal
