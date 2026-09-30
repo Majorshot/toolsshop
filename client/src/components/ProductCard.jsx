@@ -173,25 +173,25 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
         </h4>
 
         {/* Feature / Highlight Badge & Warranty Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', margin: '4px 0 8px', minHeight: '18px', flexWrap: 'wrap' }}>
+        <div className="card-pills-row">
           {/* Offer / Highlight Badge Pill (Best Seller, New Arrival, Pro Choice, etc.) */}
           {badgeConfig && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', ...badgeConfig.pillStyle }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', padding: '1.5px 6px', borderRadius: '4px', whiteSpace: 'nowrap', ...badgeConfig.pillStyle }}>
               {badgeConfig.icon} {badgeConfig.label}
             </span>
           )}
 
           {/* Cordless Pill */}
           {product.cordless && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '1.5px 6px', borderRadius: '4px', fontWeight: '700', whiteSpace: 'nowrap' }}>
               <Zap size={11} /> Cordless
             </span>
           )}
 
           {/* Official Warranty Pill */}
           {(!product.cordless || !badgeConfig) && product.specs?.warranty !== 'No Warranty' && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1px 6px', borderRadius: '4px', fontWeight: '600' }}>
-              <ShieldCheck size={11} /> {product.specs?.warranty || 'Official Warranty'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1.5px 6px', borderRadius: '4px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+              <ShieldCheck size={11} /> {badgeConfig ? (product.specs?.warranty || 'Warranty').replace(/Official\s+/i, '') : (product.specs?.warranty || 'Official Warranty')}
             </span>
           )}
         </div>
