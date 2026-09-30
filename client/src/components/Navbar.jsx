@@ -105,6 +105,12 @@ export const Navbar = ({
 
               <NavLink
                 to="/shop"
+                onClick={() => {
+                  try {
+                    sessionStorage.removeItem('shop_last_product_id');
+                    sessionStorage.removeItem('shop_scroll_pos');
+                  } catch (e) {}
+                }}
                 className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}
               >
                 Shop Equipment

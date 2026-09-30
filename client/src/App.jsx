@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, Navigate, useNavigationType } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomePage } from './pages/HomePage';
@@ -22,13 +22,18 @@ import SlideInNotifications from './components/SlideInNotifications';
 import { ConfirmationProvider } from './components/SpringModal';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Scroll to top on route change
+// Scroll to top on route change ONLY for fresh forward navigation (PUSH)
 function ScrollToTop() {
   const { pathname } = useLocation();
+  const navType = useNavigationType();
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
+    // When returning via browser back button or history navigation (POP),
+    // preserve previous reading position instead of forcefully jumping to top
+    if (navType === 'POP') {
+      return;
     }
+
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     if (document.documentElement) document.documentElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
@@ -37,7 +42,7 @@ function ScrollToTop() {
         ScrollTrigger.refresh();
       }, 100);
     } catch {}
-  }, [pathname]);
+  }, [pathname, navType]);
   return null;
 }
 
@@ -231,8 +236,14 @@ const MainApp = () => {
                   searchQuery={searchQuery}
                   setSearchQuery={setSearchQuery}
                   sortBy={sortBy}
-                  setSortBy={setSortBy}
-                  onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
+                  onSelectProduct={(p) => {
+                    const key = p.id || p._id;
+                    try {
+                      if (key) sessionStorage.setItem('shop_last_product_id', String(key));
+                      sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
+                    } catch (e) {}
+                    navigate(`/product/${key}`);
+                  }}
                 />
               </div>
             }

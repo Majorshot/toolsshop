@@ -68,24 +68,21 @@ export const ProductDetailPage = () => {
     }
 
     loadData();
-    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
-    }
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     if (document.documentElement) document.documentElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
 
     return () => {
       isMounted = false;
+      if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'auto';
+      }
     };
   }, [id]);
 
   // Guaranteed scroll-to-top whenever product details finish loading and DOM expands
   useEffect(() => {
     if (!loading && product) {
-      if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
-        window.history.scrollRestoration = 'manual';
-      }
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
       if (document.documentElement) document.documentElement.scrollTop = 0;
       if (document.body) document.body.scrollTop = 0;
@@ -363,6 +360,27 @@ export const ProductDetailPage = () => {
           }}
           aria-label="Breadcrumb"
         >
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#ea580c',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px 2px 0',
+              marginRight: '4px',
+              borderRight: '1px solid #cbd5e1',
+              fontSize: '0.82rem'
+            }}
+            title="Go back to previous catalog position"
+          >
+            <ArrowLeft size={14} strokeWidth={2.5} /> Back
+          </button>
           <Link to="/" style={{ color: '#64748b', textDecoration: 'none', fontWeight: '500' }}>Home</Link>
           <ChevronRight size={13} style={{ color: '#94a3b8' }} />
           <Link to="/shop" style={{ color: '#64748b', textDecoration: 'none', fontWeight: '500' }}>Catalog</Link>

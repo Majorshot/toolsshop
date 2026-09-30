@@ -73,13 +73,21 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
   const cartQty = cartItem ? cartItem.quantity : 0;
 
   const badgeConfig = getBadgeConfig(product.badge);
+  const prodKey = product.id || product._id;
 
   const handleCardClick = () => {
     if (isPreview) return;
+    try {
+      if (prodKey) {
+        sessionStorage.setItem('shop_last_product_id', String(prodKey));
+      }
+      sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
+    } catch (e) {}
+
     if (onSelectProduct) {
       onSelectProduct(product);
     } else {
-      navigate(`/product/${product.id || product._id}`);
+      navigate(`/product/${prodKey}`);
     }
   };
 
@@ -113,7 +121,8 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
     <div
       className={`product-card ${isOutOfStock ? 'is-out-of-stock' : ''}`}
       onClick={handleCardClick}
-      id={`product-card-${product.id}`}
+      id={`product-card-${prodKey}`}
+      data-product-id={prodKey}
       style={{ cursor: isPreview ? 'default' : 'pointer' }}
     >
       {/* Product Image Wrap */}

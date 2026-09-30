@@ -288,6 +288,74 @@ export const ShopPage = ({
     setSearchParams({});
   };
 
+  // Auto-scroll restoration to the last viewed equipment when returning to ShopPage
+  useEffect(() => {
+    if (loading || !displayedProducts || displayedProducts.length === 0) return;
+
+    let savedProdId = null;
+    let savedScrollPos = null;
+    try {
+      savedProdId = sessionStorage.getItem('shop_last_product_id');
+      savedScrollPos = sessionStorage.getItem('shop_scroll_pos');
+    } catch (e) {}
+
+    if (!savedProdId && !savedScrollPos) return;
+
+    // 1. If product is in catalog, ensure the correct pagination page is displayed
+    if (savedProdId) {
+      const prodIndex = displayedProducts.findIndex(p => String(p.id || p._id) === String(savedProdId));
+      if (prodIndex !== -1) {
+        const targetPage = Math.floor(prodIndex / ITEMS_PER_PAGE) + 1;
+        if (currentPage !== targetPage) {
+          setCurrentPage(targetPage);
+          return; // Allow page state to update and re-render target page
+        }
+      }
+    }
+
+    // 2. Poll briefly for the card element in DOM and scroll it cleanly into view
+    let attempts = 0;
+    const maxAttempts = 18;
+
+    const performScroll = () => {
+      attempts++;
+      const targetCard = savedProdId
+        ? (document.getElementById(`product-card-${savedProdId}`) || document.querySelector(`[data-product-id="${savedProdId}"]`))
+        : null;
+
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'auto', block: 'center' });
+        // Subtle brief highlight ring so user immediately knows which tool was opened
+        targetCard.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease';
+        targetCard.style.borderColor = 'var(--brand-primary, #dc2626)';
+        targetCard.style.boxShadow = '0 0 0 3px rgba(220, 38, 38, 0.25)';
+        setTimeout(() => {
+          targetCard.style.borderColor = '';
+          targetCard.style.boxShadow = '';
+        }, 1200);
+
+        try {
+          sessionStorage.removeItem('shop_last_product_id');
+          sessionStorage.removeItem('shop_scroll_pos');
+        } catch (e) {}
+      } else if (attempts < maxAttempts) {
+        setTimeout(performScroll, 50);
+      } else if (savedScrollPos) {
+        const y = Number(savedScrollPos);
+        if (!isNaN(y) && y > 0) {
+          window.scrollTo({ top: y, behavior: 'auto' });
+        }
+        try {
+          sessionStorage.removeItem('shop_last_product_id');
+          sessionStorage.removeItem('shop_scroll_pos');
+        } catch (e) {}
+      }
+    };
+
+    const timer = setTimeout(performScroll, 60);
+    return () => clearTimeout(timer);
+  }, [loading, displayedProducts, currentPage]);
+
   // Check if any filter is active
   const hasActiveFilters =
     (activeCategory && activeCategory !== 'all') ||
