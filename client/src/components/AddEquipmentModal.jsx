@@ -982,16 +982,14 @@ export const AddEquipmentModal = ({
                       >
                         <img src={imgUrl} alt={`Equipment ${idx + 1}`} onError={(e) => { e.target.style.opacity = '0.3'; }} />
                         {idx === 0 && <span className="eq-thumb-badge">COVER</span>}
-                        {form.images.length > 1 && (
-                          <button
-                            type="button"
-                            className="eq-thumb-remove"
-                            onClick={(e) => { e.stopPropagation(); handleDeletePhoto(idx); }}
-                            title="Remove photo"
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="eq-thumb-remove"
+                          onClick={(e) => { e.stopPropagation(); handleDeletePhoto(idx); }}
+                          title="Remove photo"
+                        >
+                          <Trash2 size={11} />
+                        </button>
                       </div>
                     ))}
                   </div>
