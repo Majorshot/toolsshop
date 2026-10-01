@@ -14,6 +14,7 @@ import { useConfirm } from '../components/SpringModal';
 import SlideCommit from '../components/SlideCommit';
 import CodeSlots from '../components/CodeSlots';
 import { COURIER_PARTNERS } from '../utils/courierPartners';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 
 const KERALA_DISTRICTS = [
   'Pathanamthitta',
@@ -56,6 +57,7 @@ export const CheckoutPage = () => {
   });
 
   const isBuyNow = Boolean(buyNowItem);
+  const [legalModalTab, setLegalModalTab] = useState(null);
 
   const { user, isLoggedIn, login, register, sendOtp, verifyOtp, resendOtp, logout, updateUser } = useAuth();
   const {
@@ -2960,13 +2962,48 @@ export const CheckoutPage = () => {
 
                   {/* Terms disclaimer */}
                   <p style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.74rem',
                     color: '#94a3b8',
                     margin: 0,
-                    lineHeight: '1.4',
+                    lineHeight: '1.5',
                     textAlign: 'center'
                   }}>
-                    By continuing with the order, you confirm that you are above 18 years of age, and you agree to the Variathu Power Tools Terms of Use and Privacy Policy.
+                    By continuing with the order, you confirm that you are above 18 years of age, and you agree to our{' '}
+                    <button
+                      type="button"
+                      onClick={() => setLegalModalTab('terms')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        color: '#2563eb',
+                        fontWeight: '600',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        fontSize: 'inherit',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      Terms of Use
+                    </button>
+                    {' '}and{' '}
+                    <button
+                      type="button"
+                      onClick={() => setLegalModalTab('privacy')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        color: '#2563eb',
+                        fontWeight: '600',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        fontSize: 'inherit',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      Privacy Policy
+                    </button>.
                   </p>
                 </div>
 
@@ -3957,6 +3994,13 @@ export const CheckoutPage = () => {
           </div>
         </div>
       )}
+
+      {/* Privacy Policy & Terms Modal */}
+      <PrivacyPolicyModal
+        isOpen={Boolean(legalModalTab)}
+        onClose={() => setLegalModalTab(null)}
+        initialTab={legalModalTab || 'terms'}
+      />
     </div>
   );
 };

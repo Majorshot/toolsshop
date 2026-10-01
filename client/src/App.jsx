@@ -13,6 +13,8 @@ import SlideInNotifications from './components/SlideInNotifications';
 import { ConfirmationProvider } from './components/SpringModal';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ErrorBoundary from './components/ErrorBoundary';
+import CookieConsentBanner from './components/CookieConsentBanner';
+import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 
 // Robust lazy-load wrapper that auto-reloads if a new deployment changes chunk hashes
 const lazyWithRetry = (componentImport) =>
@@ -114,6 +116,8 @@ const MainApp = () => {
   // Modals
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [privacyModalTab, setPrivacyModalTab] = useState('privacy');
 
   // Store information
   const [storeInfo, setStoreInfo] = useState(null);
@@ -405,10 +409,89 @@ const MainApp = () => {
                   <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:00 AM - 8:00 PM</span></li>
                 </ul>
               </div>
+
+              <div className="footer-clean-col">
+                <h4>Trust & Legal</h4>
+                <ul>
+                  <li>
+                    <button
+                      type="button"
+                      className="footer-link-btn"
+                      onClick={() => { setPrivacyModalTab('privacy'); setIsPrivacyModalOpen(true); }}
+                    >
+                      Privacy Policy (DPDP)
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="footer-link-btn"
+                      onClick={() => { setPrivacyModalTab('terms'); setIsPrivacyModalOpen(true); }}
+                    >
+                      Terms of Service
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="footer-link-btn"
+                      onClick={() => { setPrivacyModalTab('cookies'); setIsPrivacyModalOpen(true); }}
+                    >
+                      Cookie Policy
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      className="footer-link-btn"
+                      onClick={() => { setPrivacyModalTab('grievance'); setIsPrivacyModalOpen(true); }}
+                    >
+                      Grievance Officer
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </div>
 
-            <div className="footer-clean-bottom">
-              © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
+            <div
+              className="footer-clean-bottom"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+                textAlign: 'left'
+              }}
+            >
+              <div>
+                © {new Date().getFullYear()} Variathu Power Tools. Poyanil Building, Poyanil Junction, Kozhencherry, Kerala. All rights reserved.
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '0.8rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setPrivacyModalTab('privacy'); setIsPrivacyModalOpen(true); }}
+                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0 }}
+                >
+                  Privacy Policy
+                </button>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <button
+                  type="button"
+                  onClick={() => { setPrivacyModalTab('terms'); setIsPrivacyModalOpen(true); }}
+                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0 }}
+                >
+                  Terms
+                </button>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <button
+                  type="button"
+                  onClick={() => { setPrivacyModalTab('cookies'); setIsPrivacyModalOpen(true); }}
+                  style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 0 }}
+                >
+                  Cookie Consent
+                </button>
+              </div>
             </div>
           </div>
         </footer>
@@ -417,9 +500,22 @@ const MainApp = () => {
       {/* Mobile Bottom Navigation (Hidden on Admin Portal) */}
       {!isAdminRoute && <MobileBottomNav />}
 
+      {/* Privacy Policy, Terms & Cookie Modal */}
+      <PrivacyPolicyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        initialTab={privacyModalTab}
+      />
 
-
-
+      {/* Cookie & Privacy Consent Floating Banner */}
+      {!isAdminRoute && (
+        <CookieConsentBanner
+          onOpenPrivacy={(tab) => {
+            setPrivacyModalTab(tab || 'privacy');
+            setIsPrivacyModalOpen(true);
+          }}
+        />
+      )}
 
       {/* Store Info & Location Modal */}
       {isStoreModalOpen && (
