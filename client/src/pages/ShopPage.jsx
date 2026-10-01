@@ -460,18 +460,6 @@ export const ShopPage = ({
 
   return (
     <div style={{ padding: '16px 0 48px' }}>
-      {/* Top Shop Banner / Header */}
-      <AnimatedContent distance={30} delay={0.05}>
-        <div style={{ marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '4px' }}>
-            Equipment Catalog
-          </h1>
-          <p style={{ fontSize: '0.88rem', color: '#64748b' }}>
-            Explore genuine power tools, cordless machinery, and industrial accessories backed by direct repair support in Kozhencherry.
-          </p>
-        </div>
-      </AnimatedContent>
-
       {/* Top Controls Bar with Filter Button (Saves screen space & opens filter modal) */}
       <AnimatedContent distance={25} delay={0.1} style={{ position: 'relative', zIndex: 50 }}>
         <div className="shop-top-controls">
