@@ -165,7 +165,7 @@ export const CustomerAccountPage = () => {
     setEditingAddressId(null);
     setAddressForm({
       name: user?.name || '',
-      phone: user?.phone || '',
+      phone: user?.phone ? String(user.phone).replace(/[^0-9]/g, '').slice(-10) : '',
       pincode: '689641',
       locality: '',
       address: '',
@@ -178,25 +178,30 @@ export const CustomerAccountPage = () => {
       isDefault: !user?.savedAddresses || user.savedAddresses.length === 0
     });
     setAddressView('form');
+    setModalTab('addresses');
+    setShowAddressModal(true);
   };
 
   const handleStartEditAddress = (addr) => {
-    setEditingAddressId(addr.id || addr._id);
+    if (!addr) return;
+    setEditingAddressId(addr.id || addr._id || 'default-1');
     setAddressForm({
       name: addr.name || user?.name || '',
-      phone: addr.phone || user?.phone || '',
-      pincode: addr.pincode || '689641',
+      phone: addr.phone ? String(addr.phone).replace(/[^0-9]/g, '').slice(-10) : (user?.phone ? String(user.phone).replace(/[^0-9]/g, '').slice(-10) : ''),
+      pincode: addr.pincode ? String(addr.pincode).trim() : '689641',
       locality: addr.locality || '',
       address: addr.address || '',
       city: addr.city || addr.district || 'Pathanamthitta',
       district: addr.district || 'Pathanamthitta',
       state: addr.state || 'Kerala',
       landmark: addr.landmark || '',
-      alternatePhone: addr.alternatePhone || '',
+      alternatePhone: addr.alternatePhone ? String(addr.alternatePhone).replace(/[^0-9]/g, '').slice(-10) : '',
       addressType: (addr.addressType || 'HOME').toUpperCase() === 'WORK' ? 'WORK' : 'HOME',
       isDefault: Boolean(addr.isDefault)
     });
     setAddressView('form');
+    setModalTab('addresses');
+    setShowAddressModal(true);
   };
 
   // Live Pincode Serviceability & Auto-Fill in CustomerAccountPage
@@ -306,6 +311,7 @@ export const CustomerAccountPage = () => {
       }
       setAddressView('list');
       setEditingAddressId(null);
+      setShowAddressModal(false);
       setTimeout(() => setAddressFeedback(null), 5000);
     } catch (err) {
       alert(`Failed to save address: ${err.message}`);
@@ -366,6 +372,7 @@ export const CustomerAccountPage = () => {
       } else {
         updateUser(profileForm);
       }
+      setShowAddressModal(false);
       setAddressFeedback('Account profile updated successfully!');
       setTimeout(() => setAddressFeedback(null), 5000);
     } catch (err) {
@@ -757,7 +764,7 @@ export const CustomerAccountPage = () => {
                     ? 'REFUNDED'
                     : order.paymentStatus === 'PAID'
                     ? 'PAID (UPI)'
-                    : 'PAY AT STORE'}
+                    : 'CASH ON DELIVERY'}
                 </span>
               </div>
             </div>
@@ -2493,7 +2500,13 @@ export const CustomerAccountPage = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
                       <button
                         type="button"
-                        onClick={() => setAddressView('list')}
+                        onClick={() => {
+                          if (sidebarTab === 'addresses') {
+                            setShowAddressModal(false);
+                          } else {
+                            setAddressView('list');
+                          }
+                        }}
                         style={{ background: 'transparent', border: 'none', color: '#2874f0', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       >
                         ← Back to Saved Addresses
@@ -2696,7 +2709,10 @@ export const CustomerAccountPage = () => {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                       <button
                         type="button"
-                        onClick={() => setAddressView('list')}
+                        onClick={() => {
+                          setShowAddressModal(false);
+                          setAddressView('list');
+                        }}
                         style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '9px 16px', borderRadius: '6px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
                       >
                         Cancel
