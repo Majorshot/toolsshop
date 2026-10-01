@@ -8457,22 +8457,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   {(() => {
                     const cfg = resolveCourierConfig(selectedOrderForLabel.courierPartner);
                     return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ height: '32px', display: 'flex', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <div style={{ height: '36px', display: 'flex', alignItems: 'center' }}>
                           <img
                             src={cfg.logo}
                             alt={cfg.name}
-                            style={{ maxHeight: '28px', maxWidth: '110px', objectFit: 'contain' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            style={{ maxHeight: '34px', maxWidth: '180px', objectFit: 'contain' }}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextSibling) {
+                                e.currentTarget.nextSibling.style.display = 'block';
+                              }
+                            }}
                           />
-                        </div>
-                        <div>
-                          <strong style={{ fontSize: '1.05rem', fontWeight: '900', letterSpacing: '-0.02em', color: cfg.color, display: 'block' }}>
-                            {cfg.name.toUpperCase()}
+                          <strong style={{ display: 'none', fontSize: '1.1rem', fontWeight: '900', color: cfg.color }}>
+                            {cfg.badge || cfg.name}
                           </strong>
-                          <div style={{ fontSize: '0.68rem', fontWeight: '700' }}>
-                            {cfg.tagline} • Kozhencherry Hub
-                          </div>
                         </div>
                       </div>
                     );
