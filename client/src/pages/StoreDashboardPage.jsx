@@ -4214,16 +4214,26 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                   <Phone size={11} />
                                   <span>{order.customer?.phone}</span>
                                 </a>
-                                <a
-                                  href={`https://wa.me/${(order.customer?.phone || '').replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(order.customer?.name || '')},%20this%20is%20Variathu%20Power%20Tools%20regarding%20order%20${order.id}.`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{ color: '#16a34a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 6px', borderRadius: '4px', background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.7rem', fontWeight: '700' }}
-                                  title="Chat on WhatsApp"
-                                  id={`btn-whatsapp-order-${order.id}`}
-                                >
-                                  <MessageCircle size={11} /> WhatsApp
-                                </a>
+                                {(() => {
+                                  const cLink = order.awb ? (courierCfg?.trackingUrl || courierCfg?.portalUrl || 'https://www.dtdc.com/track-your-shipment/') : '';
+                                  const waText = order.awb
+                                    ? `Hello ${order.customer?.name || ''}, your order #${order.id} from Variathu Power Tools has been dispatched!\n\n📦 Delivery Partner: ${courierCfg?.name || order.courierPartner || 'Courier'}\n🔖 Consignment AWB: ${order.awb}\n🔗 Live Tracking Link: ${cLink}\n\nThank you for choosing Variathu Power Tools, Kozhencherry.`
+                                    : isPickup && (order.pickupOtp || (order.status || '').toLowerCase().includes('ready'))
+                                    ? `Hello ${order.customer?.name || ''}, your order #${order.id} from Variathu Power Tools is ready for counter pickup at Poyanil Building, Kozhencherry!\n🔐 Secret Pickup OTP: ${order.pickupOtp || ''}`
+                                    : `Hello ${order.customer?.name || ''}, this is Variathu Power Tools regarding order #${order.id}.`;
+                                  return (
+                                    <a
+                                      href={`https://wa.me/${(order.customer?.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ color: '#16a34a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', padding: '2px 6px', borderRadius: '4px', background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '0.7rem', fontWeight: '700' }}
+                                      title="Chat on WhatsApp"
+                                      id={`btn-whatsapp-order-${order.id}`}
+                                    >
+                                      <MessageCircle size={11} /> WhatsApp
+                                    </a>
+                                  );
+                                })()}
                               </div>
                             </div>
 
@@ -8943,29 +8953,38 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         <Phone size={12} style={{ color: '#ea580c' }} />
                         <span>Call</span>
                       </a>
-                      <a
-                        href={`https://wa.me/${(selectedOrderForDetails.customer?.phone || '').replace(/[^0-9]/g, '')}?text=Hello%20${encodeURIComponent(selectedOrderForDetails.customer?.name || '')},%20this%20is%20Variathu%20Power%20Tools%20regarding%20order%20${selectedOrderForDetails.id}.`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          background: '#ecfdf5',
-                          border: '1px solid #a7f3d0',
-                          borderRadius: '6px',
-                          padding: '6px 8px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          color: '#15803d',
-                          textAlign: 'center',
-                          textDecoration: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <MessageCircle size={12} />
-                        <span>WhatsApp</span>
-                      </a>
+                      {(() => {
+                        const dCourier = resolveCourierConfig(selectedOrderForDetails.courierPartner);
+                        const dTrackLink = selectedOrderForDetails.awb ? (dCourier?.trackingUrl || dCourier?.portalUrl || 'https://www.dtdc.com/track-your-shipment/') : '';
+                        const waText = selectedOrderForDetails.awb
+                          ? `Hello ${selectedOrderForDetails.customer?.name || ''}, your order #${selectedOrderForDetails.id} from Variathu Power Tools has been dispatched!\n\n📦 Delivery Partner: ${dCourier?.name || selectedOrderForDetails.courierPartner}\n🔖 Consignment AWB: ${selectedOrderForDetails.awb}\n🔗 Live Tracking Link: ${dTrackLink}\n\nThank you for choosing Variathu Power Tools, Kozhencherry.`
+                          : `Hello ${selectedOrderForDetails.customer?.name || ''}, this is Variathu Power Tools regarding order #${selectedOrderForDetails.id}.`;
+                        return (
+                          <a
+                            href={`https://wa.me/${(selectedOrderForDetails.customer?.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(waText)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              background: '#ecfdf5',
+                              border: '1px solid #a7f3d0',
+                              borderRadius: '6px',
+                              padding: '6px 8px',
+                              fontSize: '0.74rem',
+                              fontWeight: '800',
+                              color: '#15803d',
+                              textAlign: 'center',
+                              textDecoration: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <MessageCircle size={12} />
+                            <span>WhatsApp</span>
+                          </a>
+                        );
+                      })()}
                     </div>
                   </div>
 

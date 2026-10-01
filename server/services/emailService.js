@@ -446,6 +446,21 @@ async function sendOrderCompletedEmail(order, options = {}) {
   }
 }
 
+function resolveCourierPortalUrl(carrierName = '', awb = '') {
+  const c = String(carrierName || '').toLowerCase();
+  const cleanAwb = String(awb || '').trim();
+  if (c.includes('delh')) {
+    return cleanAwb ? `https://www.delhivery.com/tracking?tracking_id=${encodeURIComponent(cleanAwb)}` : 'https://www.delhivery.com/';
+  }
+  if (c.includes('alep') || c.includes('allep') || c.includes('aps')) {
+    return 'https://www.apscargo.com/index';
+  }
+  if (c.includes('prof') || c.includes('tpc')) {
+    return 'https://www.tpcindia.com/';
+  }
+  return 'https://www.dtdc.com/track-your-shipment/';
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // 3. ORDER DISPATCHED / COURIER EMAIL (When Handed to Courier)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -464,6 +479,7 @@ async function sendOrderDispatchedEmail(order, courierPartner, awb, options = {}
     const customerName = order.customer?.name || 'Valued Customer';
     const partner = courierPartner || order.courierPartner || 'Kerala Express Courier';
     const awbNum = awb || order.awb || 'In Transit';
+    const trackingPortal = resolveCourierPortalUrl(partner, awbNum);
 
     const bodyContent = `
       <!-- Status Pill -->
@@ -496,6 +512,14 @@ async function sendOrderDispatchedEmail(order, courierPartner, awb, options = {}
                 <span style="font-family: monospace; background: #ffffff; padding: 3px 8px; border-radius: 6px; border: 1px solid #93c5fd; font-weight: 800; color: #1d4ed8; font-size: 13px;">
                   ${awbNum}
                 </span>
+              </td>
+            </tr>
+            <tr>
+              <td style="font-size: 13px; color: #475569; padding-bottom: 8px;">Tracking Portal:</td>
+              <td style="text-align: right; padding-bottom: 8px;">
+                <a href="${trackingPortal}" target="_blank" style="color: #2563eb; font-weight: 700; font-size: 12px; text-decoration: underline;">
+                  Track with ${partner} &rarr;
+                </a>
               </td>
             </tr>
             <tr>

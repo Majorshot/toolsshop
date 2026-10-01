@@ -128,31 +128,70 @@ ${deliveryNotice}
   return sendWhatsAppMessage(order.customer.phone, message);
 };
 
+const resolveCourierTracking = (courierName = '', awb = '') => {
+  const c = String(courierName || '').toLowerCase();
+  const cleanAwb = String(awb || '').trim();
+
+  if (c.includes('delh')) {
+    return {
+      name: 'Delhivery',
+      badge: 'DELHIVERY',
+      trackingUrl: cleanAwb ? `https://www.delhivery.com/tracking?tracking_id=${encodeURIComponent(cleanAwb)}` : 'https://www.delhivery.com/'
+    };
+  }
+  if (c.includes('alep') || c.includes('allep') || c.includes('aps')) {
+    return {
+      name: 'Alleppey Parcel Service (APS Cargo)',
+      badge: 'APS',
+      trackingUrl: 'https://www.apscargo.com/index'
+    };
+  }
+  if (c.includes('prof') || c.includes('tpc')) {
+    return {
+      name: 'The Professional Couriers',
+      badge: 'TPC',
+      trackingUrl: 'https://www.tpcindia.com/'
+    };
+  }
+  return {
+    name: 'DTDC Express',
+    badge: 'DTDC',
+    trackingUrl: 'https://www.dtdc.com/track-your-shipment/'
+  };
+};
+
 /**
  * 2. Send Order Dispatched via Courier WhatsApp
  */
 const sendOrderDispatchedWhatsApp = async (order, courierPartner, awb) => {
   if (!order || !order.customer?.phone) return;
 
-  const carrier = courierPartner || order.courierPartner || 'Courier Express';
+  const rawPartner = courierPartner || order.courierPartner || 'DTDC Express';
   const trackingNumber = awb || order.awb || 'Assigned at Hub';
   const consigneeName = order.customer?.recipientName || order.customer?.name || 'Customer';
   const consigneePhone = order.customer?.recipientPhone || order.customer?.phone || '';
+
+  const courierInfo = resolveCourierTracking(rawPartner, trackingNumber);
 
   const message = `🚚 *VARIATHU POWER TOOLS*
 *Your Order is on the Way!*
 
 Dear *${order.customer?.name || 'Customer'}*,
-Great news! Your order *${order.id}* has been packed and dispatched from our Kozhencherry store.
+Great news! Your order *#${order.id}* has been packed and dispatched from our Kozhencherry store.
 
-📦 *Carrier:* *${carrier}*
-🔖 *Tracking / AWB No:* *${trackingNumber}*
+📦 *Delivery Partner:* *${courierInfo.name}*
+🔖 *Consignment / AWB No:* *${trackingNumber}*
+🔗 *Track Your Parcel Live:*
+${courierInfo.trackingUrl}
+
 👤 *Consignee:* *${consigneeName}*${consigneePhone && consigneePhone !== order.customer?.phone ? ` (📞 ${consigneePhone})` : ''}
 📍 *Destination:* ${order.customer?.city || order.customer?.district || 'Kerala'} - PIN: ${order.customer?.pincode || '689641'}
 
-You will receive your package soon. Thank you for choosing Variathu Power Tools!
+You can track your package movement directly on ${courierInfo.name}'s official portal using your AWB number above.
 
-📞 Showroom Hotline: *+91 94475 59333*`;
+Thank you for choosing Variathu Power Tools!
+📞 Showroom Hotline: *+91 94475 59333*
+🌐 Store: https://toolsshop-pied.vercel.app`;
 
   return sendWhatsAppMessage(order.customer.phone, message);
 };
@@ -212,15 +251,16 @@ const sendOrderCompletedWhatsApp = async (order) => {
   if (!order || !order.customer?.phone) return;
 
   const isPickup = order.deliveryType === 'store-pickup';
+  const courierInfo = !isPickup && order.courierPartner ? resolveCourierTracking(order.courierPartner, order.awb) : null;
   const message = `✅ *VARIATHU POWER TOOLS*
 *Order Completed* 📦
 
 Dear *${order.customer?.name || 'Customer'}*,
-Your order *${order.id}* has been successfully ${isPickup ? 'collected from our showroom counter' : `delivered to your destination address via ${order.courierPartner || 'Courier'}`}.
+Your order *#${order.id}* has been successfully ${isPickup ? 'collected from our showroom counter' : `delivered to your destination address via ${courierInfo?.name || order.courierPartner || 'Courier'}`}.
 
 💼 *Order Details:*
 • Total Amount: *₹${order.totalAmount}*
-${order.awb ? `• Courier AWB: *${order.awb}* (${order.courierPartner || 'Courier'})\n` : ''}
+${order.awb ? `• Delivery Partner: *${courierInfo?.name || order.courierPartner}*\n• Courier AWB: *${order.awb}*\n• Tracking Portal: ${courierInfo?.trackingUrl || 'https://www.dtdc.com/track-your-shipment/'}\n` : ''}
 Your official GST tax invoice and manufacturer warranty records are saved in your account. Thank you for choosing Variathu Power Tools!
 
 📞 Showroom Support: *+91 94475 59333*

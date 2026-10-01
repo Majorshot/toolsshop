@@ -84,3 +84,12 @@ export const resolveCourierPartner = (courierNameOrObj = '') => {
 };
 
 export const resolveCourierConfig = resolveCourierPartner;
+
+export const getCourierTrackingLink = (courierNameOrObj = '', awb = '') => {
+  const cfg = resolveCourierPartner(courierNameOrObj);
+  const cleanAwb = String(awb || '').trim();
+  if (cfg.id === 'delhivery' && cleanAwb) {
+    return `https://www.delhivery.com/tracking?tracking_id=${encodeURIComponent(cleanAwb)}`;
+  }
+  return cfg.trackingUrl || cfg.portalUrl || 'https://www.dtdc.com/track-your-shipment/';
+};

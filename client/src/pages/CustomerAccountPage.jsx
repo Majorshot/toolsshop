@@ -1381,7 +1381,11 @@ export const CustomerAccountPage = () => {
               )}
 
               <a
-                href={`https://wa.me/919447559333?text=${encodeURIComponent(`Hello Variathu Power Tools, I have a query about my order ${order.id}.`)}`}
+                href={`https://wa.me/919447559333?text=${encodeURIComponent(
+                  order.awb
+                    ? `Hello Variathu Power Tools, I have a query regarding my order #${order.id}. Consignment dispatched via ${courierCfg.name}, AWB: ${order.awb} (Tracking link: ${courierCfg.trackingUrl}).`
+                    : `Hello Variathu Power Tools, I have a query about my order #${order.id}.`
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
