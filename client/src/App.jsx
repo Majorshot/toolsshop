@@ -12,17 +12,40 @@ import AnimatedContent from './components/AnimatedContent';
 import SlideInNotifications from './components/SlideInNotifications';
 import { ConfirmationProvider } from './components/SpringModal';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Lazy-loaded routes for 80%+ smaller initial bundle & faster first paint
-const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
-const AboutPage = lazy(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
-const CartPage = lazy(() => import('./pages/CartPage').then(m => ({ default: m.CartPage })));
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
-const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage').then(m => ({ default: m.CustomerAccountPage })));
-const StoreDashboardPage = lazy(() => import('./pages/StoreDashboardPage').then(m => ({ default: m.StoreDashboardPage })));
-const StoreInfoModal = lazy(() => import('./components/StoreInfoModal').then(m => ({ default: m.StoreInfoModal })));
-const AdminModal = lazy(() => import('./components/AdminModal').then(m => ({ default: m.AdminModal })));
+// Robust lazy-load wrapper that auto-reloads if a new deployment changes chunk hashes
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('vpt_chunk_reload') || 'false'
+    );
+
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('vpt_chunk_reload', 'false');
+      return component;
+    } catch (error) {
+      console.warn('Dynamic chunk import error detected:', error);
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('vpt_chunk_reload', 'true');
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+
+// Lazy-loaded routes with deployment-mismatch auto-recovery
+const ProductDetailPage = lazyWithRetry(() => import('./pages/ProductDetailPage').then(m => ({ default: m.ProductDetailPage })));
+const AboutPage = lazyWithRetry(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
+const CartPage = lazyWithRetry(() => import('./pages/CartPage').then(m => ({ default: m.CartPage })));
+const CheckoutPage = lazyWithRetry(() => import('./pages/CheckoutPage').then(m => ({ default: m.CheckoutPage })));
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const CustomerAccountPage = lazyWithRetry(() => import('./pages/CustomerAccountPage').then(m => ({ default: m.CustomerAccountPage })));
+const StoreDashboardPage = lazyWithRetry(() => import('./pages/StoreDashboardPage').then(m => ({ default: m.StoreDashboardPage })));
+const StoreInfoModal = lazyWithRetry(() => import('./components/StoreInfoModal').then(m => ({ default: m.StoreInfoModal })));
+const AdminModal = lazyWithRetry(() => import('./components/AdminModal').then(m => ({ default: m.AdminModal })));
 
 const RouteLoadingFallback = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '60px 20px' }}>
@@ -221,85 +244,87 @@ const MainApp = () => {
         </div>
       )}
 
-      {/* Routes Content with Lazy Suspense */}
+      {/* Routes Content with Lazy Suspense & ErrorBoundary */}
       <main className="app-main-content">
-        <Suspense fallback={<RouteLoadingFallback />}>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <HomePage
-                  products={allProducts}
-                  onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
-                />
-              }
-            />
-            <Route
-              path="/shop"
-              element={
-                <div className="container">
-                  <ShopPage
+        <ErrorBoundary>
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <HomePage
                     products={allProducts}
-                    loading={loading}
-                    error={error}
-                    onRetry={() => loadProducts(0)}
-                    activeCategory={activeCategory}
-                    setActiveCategory={setActiveCategory}
-                    activeBrand={activeBrand}
-                    setActiveBrand={setActiveBrand}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    sortBy={sortBy}
-                    onSelectProduct={(p) => {
-                      const key = p.id || p._id;
-                      try {
-                        if (key) sessionStorage.setItem('shop_last_product_id', String(key));
-                        sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
-                      } catch (e) {}
-                      navigate(`/product/${key}`);
-                    }}
+                    onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
                   />
-                </div>
-              }
-            />
-            <Route
-              path="/product/:id"
-              element={<div className="container"><ProductDetailPage /></div>}
-            />
-            <Route
-              path="/about"
-              element={<div className="container"><AboutPage /></div>}
-            />
-            <Route
-              path="/cart"
-              element={<div className="container"><CartPage /></div>}
-            />
-            <Route
-              path="/checkout"
-              element={<CheckoutPage />}
-            />
-            <Route
-              path="/login"
-              element={<LoginPage />}
-            />
-            <Route
-              path="/account"
-              element={<CustomerAccountPage />}
-            />
-            <Route
-              path="/customer"
-              element={<Navigate to="/account" replace />}
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedAdminRoute>
-                  <StoreDashboardPage onProductUpdated={() => loadProducts(0, true)} />
-                </ProtectedAdminRoute>
-              }
-            />
-          </Routes>
-        </Suspense>
+                }
+              />
+              <Route
+                path="/shop"
+                element={
+                  <div className="container">
+                    <ShopPage
+                      products={allProducts}
+                      loading={loading}
+                      error={error}
+                      onRetry={() => loadProducts(0)}
+                      activeCategory={activeCategory}
+                      setActiveCategory={setActiveCategory}
+                      activeBrand={activeBrand}
+                      setActiveBrand={setActiveBrand}
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
+                      sortBy={sortBy}
+                      onSelectProduct={(p) => {
+                        const key = p.id || p._id;
+                        try {
+                          if (key) sessionStorage.setItem('shop_last_product_id', String(key));
+                          sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
+                        } catch (e) {}
+                        navigate(`/product/${key}`);
+                      }}
+                    />
+                  </div>
+                }
+              />
+              <Route
+                path="/product/:id"
+                element={<div className="container"><ProductDetailPage /></div>}
+              />
+              <Route
+                path="/about"
+                element={<div className="container"><AboutPage /></div>}
+              />
+              <Route
+                path="/cart"
+                element={<div className="container"><CartPage /></div>}
+              />
+              <Route
+                path="/checkout"
+                element={<CheckoutPage />}
+              />
+              <Route
+                path="/login"
+                element={<LoginPage />}
+              />
+              <Route
+                path="/account"
+                element={<CustomerAccountPage />}
+              />
+              <Route
+                path="/customer"
+                element={<Navigate to="/account" replace />}
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedAdminRoute>
+                    <StoreDashboardPage onProductUpdated={() => loadProducts(0, true)} />
+                  </ProtectedAdminRoute>
+                }
+              />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* Floating Speed-Dial WhatsApp Button (Hidden on Admin Portal) */}

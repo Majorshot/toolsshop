@@ -2118,9 +2118,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const currentInvPage = Math.min(invPage, totalInvPages);
   const invStartIdx = (currentInvPage - 1) * invPageSize;
   const invEndIdx = Math.min(currentInvPage * invPageSize, filteredProducts.length);
-  const pagedProducts = filteredProducts.slice(invStartIdx, invEndIdx);
-
-  if (!user || user.role !== 'store') return null;
+  if (!user || user.role !== 'store') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '60px 20px', gap: '16px' }}>
+        <div
+          style={{
+            width: '36px',
+            height: '36px',
+            border: '3px solid #e2e8f0',
+            borderTopColor: '#dc2626',
+            borderRadius: '50%',
+            animation: 'spin 0.7s linear infinite'
+          }}
+        />
+        <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>Verifying store portal access...</span>
+      </div>
+    );
+  }
 
   const sidebarNavItems = [
     {

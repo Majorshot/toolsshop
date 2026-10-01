@@ -662,11 +662,23 @@ export const CustomerAccountPage = () => {
     setExpandedOrders(all);
   };
 
-  const handleCollapseAllOrders = () => {
-    setExpandedOrders({});
-  };
-
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '60px 20px', gap: '16px' }}>
+        <div
+          style={{
+            width: '36px',
+            height: '36px',
+            border: '3px solid #e2e8f0',
+            borderTopColor: '#dc2626',
+            borderRadius: '50%',
+            animation: 'spin 0.7s linear infinite'
+          }}
+        />
+        <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '500' }}>Loading account details...</span>
+      </div>
+    );
+  }
 
   const savedAddressesList = (user.savedAddresses && user.savedAddresses.length > 0)
     ? user.savedAddresses
