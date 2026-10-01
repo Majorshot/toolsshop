@@ -902,10 +902,12 @@ async function sendOtpEmail({ to, name, otp, purpose = 'login', clientUrl }) {
           🔐 Security Verification Code
         </div>
         <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">
-          ${isLogin ? 'Sign In to Your Account' : 'Verify Your New Account'}
+          ${isLogin ? 'Sign In to Your Account' : (purpose === 'profile_update' ? 'Confirm Profile Contact Change' : 'Verify Your New Account')}
         </h2>
         <p style="margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.5; max-width: 440px; margin: 0 auto;">
-          Hello <strong>${customerName}</strong>, please use the 6-digit one-time code below to authenticate your Variathu Power Tools session.
+          ${purpose === 'profile_update'
+            ? `Hello <strong>${customerName}</strong>, a request was made to update your account contact details. Please use the 6-digit security code below to confirm this change.`
+            : `Hello <strong>${customerName}</strong>, please use the 6-digit one-time code below to authenticate your Variathu Power Tools session.`}
         </p>
       </div>
 
@@ -937,7 +939,9 @@ async function sendOtpEmail({ to, name, otp, purpose = 'login', clientUrl }) {
 
     return await sendEmailSafely(resend, {
       to: email,
-      subject: `🔐 Your Security Code: ${otp} - Variathu Power Tools`,
+      subject: purpose === 'profile_update'
+        ? `🔐 Security Code: ${otp} to confirm account contact update - Variathu Power Tools`
+        : `🔐 Your Security Code: ${otp} - Variathu Power Tools`,
       html: emailWrapper(`Variathu Security Verification`, bodyContent, { clientUrl: baseUrl })
     });
   } catch (err) {

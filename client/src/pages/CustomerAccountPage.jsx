@@ -119,8 +119,18 @@ export const CustomerAccountPage = () => {
     isDefault: false
   });
 
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileStep, setProfileStep] = useState('form'); // 'form' or 'otp'
+  const [profileOtp, setProfileOtp] = useState('');
+  const [profileOtpSentTo, setProfileOtpSentTo] = useState('');
+  const [profileResendTimer, setProfileResendTimer] = useState(0);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [profileDevOtp, setProfileDevOtp] = useState(null);
+
   const [profileForm, setProfileForm] = useState({
     name: user?.name || '',
+    phone: user?.phone ? String(user.phone).replace(/[^0-9]/g, '').slice(-10) : '',
     email: user?.email || ''
   });
 
@@ -129,10 +139,31 @@ export const CustomerAccountPage = () => {
     if (user) {
       setProfileForm({
         name: user.name || '',
+        phone: user.phone ? String(user.phone).replace(/[^0-9]/g, '').slice(-10) : '',
         email: user.email || ''
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    if (profileResendTimer > 0) {
+      const timer = setTimeout(() => setProfileResendTimer(t => t - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [profileResendTimer]);
+
+  const handleOpenProfileModal = () => {
+    setProfileForm({
+      name: user?.name || '',
+      phone: user?.phone ? String(user.phone).replace(/[^0-9]/g, '').slice(-10) : '',
+      email: user?.email || ''
+    });
+    setProfileStep('form');
+    setProfileOtp('');
+    setProfileError('');
+    setProfileDevOtp(null);
+    setShowProfileModal(true);
+  };
 
   // Open Modal
   const handleOpenAddressModal = (addressToEdit = null) => {
@@ -360,25 +391,119 @@ export const CustomerAccountPage = () => {
     });
   };
 
-  // Save Profile Info
+  // Save Profile Info (Supports Name, Phone & Email with OTP Verification)
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setSavingAddress(true);
+    setProfileError('');
+    const cleanPhone = String(profileForm.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const cleanEmail = String(profileForm.email || '').trim().toLowerCase();
+    const currentPhone = String(user?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const currentEmail = String(user?.email || '').trim().toLowerCase();
+
+    if (!profileForm.name.trim()) {
+      setProfileError('Full customer name is required.');
+      return;
+    }
+    if (cleanPhone.length !== 10) {
+      setProfileError('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (cleanEmail && (!cleanEmail.includes('@') || !cleanEmail.includes('.'))) {
+      setProfileError('Please enter a valid email address.');
+      return;
+    }
+
+    const phoneChanged = cleanPhone !== currentPhone;
+    const emailChanged = cleanEmail !== currentEmail;
+
+    setSavingProfile(true);
+    try {
+      const customerId = user?.id || user?._id || currentPhone;
+      if (phoneChanged || emailChanged) {
+        const res = await api.requestProfileUpdateOtp(customerId, {
+          name: profileForm.name.trim(),
+          phone: cleanPhone,
+          email: cleanEmail
+        });
+        if (res.requiresOtp) {
+          setProfileOtpSentTo(res.maskedDestination || res.maskedPhone);
+          if (res.devOtp) setProfileDevOtp(res.devOtp);
+          setProfileStep('otp');
+          setProfileResendTimer(30);
+        } else {
+          if (res.data) updateUser(res.data);
+          setShowProfileModal(false);
+          setAddressFeedback('Account profile updated successfully!');
+          setTimeout(() => setAddressFeedback(null), 5000);
+        }
+      } else {
+        const res = await api.updateCustomer(customerId, { name: profileForm.name.trim() });
+        if (res.data) {
+          updateUser(res.data);
+        } else {
+          updateUser({ name: profileForm.name.trim() });
+        }
+        setShowProfileModal(false);
+        setAddressFeedback('Account profile updated successfully!');
+        setTimeout(() => setAddressFeedback(null), 5000);
+      }
+    } catch (err) {
+      setProfileError(err.message || 'Failed to update profile');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // Verify OTP for Profile Updates
+  const handleVerifyProfileOtp = async (e) => {
+    e?.preventDefault();
+    if (!profileOtp || profileOtp.trim().length !== 6) {
+      setProfileError('Please enter the 6-digit verification code.');
+      return;
+    }
+    setSavingProfile(true);
+    setProfileError('');
     try {
       const customerId = user?.id || user?._id || user?.phone;
-      const res = await api.updateCustomer(customerId, profileForm);
+      const res = await api.verifyProfileUpdateOtp(customerId, { otp: profileOtp.trim() });
       if (res.data) {
         updateUser(res.data);
-      } else {
-        updateUser(profileForm);
       }
-      setShowAddressModal(false);
-      setAddressFeedback('Account profile updated successfully!');
+      if (res.token) {
+        try { localStorage.setItem('vpt_token', res.token); } catch {}
+      }
+      setShowProfileModal(false);
+      setAddressFeedback('Account profile & contact details updated successfully!');
       setTimeout(() => setAddressFeedback(null), 5000);
     } catch (err) {
-      alert(`Failed to update profile: ${err.message}`);
+      setProfileError(err.message || 'Invalid or expired OTP');
     } finally {
-      setSavingAddress(false);
+      setSavingProfile(false);
+    }
+  };
+
+  // Resend OTP for Profile Updates
+  const handleResendProfileOtp = async () => {
+    if (profileResendTimer > 0) return;
+    setSavingProfile(true);
+    setProfileError('');
+    try {
+      const cleanPhone = String(profileForm.phone || '').replace(/[^0-9]/g, '').slice(-10);
+      const cleanEmail = String(profileForm.email || '').trim().toLowerCase();
+      const customerId = user?.id || user?._id || user?.phone;
+      const res = await api.requestProfileUpdateOtp(customerId, {
+        name: profileForm.name.trim(),
+        phone: cleanPhone,
+        email: cleanEmail
+      });
+      if (res.devOtp) setProfileDevOtp(res.devOtp);
+      setProfileResendTimer(30);
+      setAddressFeedback('New security code sent!');
+      setTimeout(() => setAddressFeedback(null), 4000);
+    } catch (err) {
+      setProfileError(err.message || 'Failed to resend code');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -1466,6 +1591,28 @@ export const CustomerAccountPage = () => {
 
             <div className="customer-profile-actions">
               <button
+                type="button"
+                onClick={handleOpenProfileModal}
+                style={{
+                  background: '#fff7ed',
+                  border: '1px solid #fdba74',
+                  color: '#c2410c',
+                  borderRadius: '8px',
+                  padding: '9px 14px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                id="btn-open-profile-edit"
+              >
+                <User size={14} />
+                <span>Edit Profile</span>
+              </button>
+
+              <button
                 onClick={loadCustomerOrders}
                 style={{
                   background: '#f8fafc',
@@ -1554,7 +1701,7 @@ export const CustomerAccountPage = () => {
 
                   <button
                     type="button"
-                    onClick={() => handleOpenAddressModal()}
+                    onClick={() => setSidebarTab('addresses')}
                     style={{
                       background: '#fff7ed',
                       border: '1px solid #fdba74',
@@ -1571,7 +1718,7 @@ export const CustomerAccountPage = () => {
                     }}
                     id="btn-edit-customer-address"
                   >
-                    <Edit3 size={14} />
+                    <MapPin size={14} />
                     <span>{savedAddressesList.length > 0 ? `Manage Addresses (${savedAddressesList.length})` : '+ Add Delivery Address'}</span>
                   </button>
                 </div>
@@ -1611,10 +1758,7 @@ export const CustomerAccountPage = () => {
                 subtitle={`${user.name || 'Customer'} • +91 ${user.phone || 'Manage info'}`}
                 Icon={User}
                 badge="Verified"
-                onClick={() => {
-                  setModalTab('profile');
-                  setShowAddressModal(true);
-                }}
+                onClick={handleOpenProfileModal}
               />
               <HoverDevCard
                 title="Shop Equipment"
@@ -2295,7 +2439,10 @@ export const CustomerAccountPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setModalTab('profile')}
+                onClick={() => {
+                  setShowAddressModal(false);
+                  handleOpenProfileModal();
+                }}
                 style={{
                   background: 'transparent',
                   border: 'none',
@@ -2730,11 +2877,76 @@ export const CustomerAccountPage = () => {
               </div>
             )}
 
-            {/* TAB 2: ACCOUNT PROFILE */}
-            {modalTab === 'profile' && (
-              <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          </div>
+        </div>
+      )}
+
+      {/* Account Profile Edit & OTP Verification Modal */}
+      {showProfileModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 9999
+          }}
+          onClick={() => !savingProfile && setShowProfileModal(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '26px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fff7ed', border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c' }}>
+                  {profileStep === 'otp' ? <Shield size={20} /> : <User size={20} />}
+                </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    {profileStep === 'otp' ? 'Security Verification' : 'Edit Account Profile'}
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '2px 0 0' }}>
+                    {profileStep === 'otp' ? 'Authorize changes to your contact details' : `Account ID: +91 ${user?.phone || 'Customer'}`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                disabled={savingProfile}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {profileError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#b91c1c' }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{profileError}</span>
+              </div>
+            )}
+
+            {/* STEP 1: FORM */}
+            {profileStep === 'form' && (
+              <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '5px' }}>
                     Full Customer Name *
                   </label>
                   <input
@@ -2742,53 +2954,216 @@ export const CustomerAccountPage = () => {
                     required
                     value={profileForm.name}
                     onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    placeholder="Customer Name"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    placeholder="e.g. Midhun Mohan"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                    Registered Mobile (Primary Account ID)
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value={user?.phone ? `+91 ${user.phone}` : ''}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b', fontSize: '0.88rem', boxSizing: 'border-box' }}
-                  />
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px', display: 'block' }}>
-                    Orders and WhatsApp receipts are tied to this verified mobile number.
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#334155' }}>
+                      Registered Mobile Number *
+                    </label>
+                    {profileForm.phone !== String(user?.phone || '').replace(/[^0-9]/g, '').slice(-10) && (
+                      <span style={{ fontSize: '0.7rem', color: '#ea580c', fontWeight: '700' }}>
+                        Requires OTP verification
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.88rem', color: '#64748b', fontWeight: '700' }}>
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
+                      placeholder="10-digit mobile number"
+                      style={{ width: '100%', padding: '10px 12px 10px 48px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Your primary login number. Changing this requires OTP sent to your current registered contact (+91 {user?.phone}).
                   </span>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                    Email Address (For Tax Invoices & Warranty)
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#334155' }}>
+                      Email Address (Optional)
+                    </label>
+                    {profileForm.email.trim().toLowerCase() !== String(user?.email || '').trim().toLowerCase() && (
+                      <span style={{ fontSize: '0.7rem', color: '#ea580c', fontWeight: '700' }}>
+                        Requires OTP verification
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="email"
                     value={profileForm.email}
                     onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                    placeholder="name@example.com"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                    placeholder="e.g. yourname@gmail.com"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                   />
+                  <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Used for GST tax invoices, courier tracking updates, and warranty receipts.
+                  </span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                {(profileForm.phone !== String(user?.phone || '').replace(/[^0-9]/g, '').slice(-10) ||
+                  profileForm.email.trim().toLowerCase() !== String(user?.email || '').trim().toLowerCase()) && (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px', padding: '10px 14px', fontSize: '0.78rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={16} style={{ flexShrink: 0 }} />
+                    <span>
+                      To protect your account, modifying your phone or email will require a 6-digit security OTP sent to your currently registered phone and email.
+                    </span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
                   <button
                     type="button"
-                    onClick={() => setShowAddressModal(false)}
-                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '9px 16px', borderRadius: '6px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
+                    onClick={() => setShowProfileModal(false)}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '10px 18px', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
                   >
-                    Close
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={savingAddress}
-                    style={{ background: '#ea580c', border: 'none', color: '#ffffff', padding: '9px 20px', borderRadius: '6px', fontSize: '0.84rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)' }}
+                    disabled={savingProfile}
+                    style={{
+                      background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      padding: '10px 22px',
+                      borderRadius: '8px',
+                      fontSize: '0.84rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)'
+                    }}
                   >
-                    {savingAddress ? 'Updating...' : 'Update Profile'}
+                    {savingProfile ? 'Processing...' : (
+                      profileForm.phone !== String(user?.phone || '').replace(/[^0-9]/g, '').slice(-10) ||
+                      profileForm.email.trim().toLowerCase() !== String(user?.email || '').trim().toLowerCase()
+                        ? 'Next: Send OTP'
+                        : 'Save Changes'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 2: OTP VERIFICATION */}
+            {profileStep === 'otp' && (
+              <form onSubmit={handleVerifyProfileOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                  <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#fff7ed', border: '2px solid #fdba74', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c' }}>
+                    <Shield size={24} />
+                  </div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 6px' }}>
+                    Enter 6-Digit Security Code
+                  </h4>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: 0, lineHeight: 1.45 }}>
+                    We sent a one-time verification code to your current registered contact:<br />
+                    <strong style={{ color: '#0f172a' }}>{profileOtpSentTo}</strong>
+                  </p>
+                </div>
+
+                {/* Changes Summary Pill */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '0.78rem', color: '#475569' }}>
+                  <div style={{ fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>Requested Updates:</div>
+                  {profileForm.name !== user?.name && <div>• Name: {profileForm.name}</div>}
+                  {profileForm.phone !== String(user?.phone || '').replace(/[^0-9]/g, '').slice(-10) && (
+                    <div>• New Mobile: <strong>+91 {profileForm.phone}</strong></div>
+                  )}
+                  {profileForm.email.trim().toLowerCase() !== String(user?.email || '').trim().toLowerCase() && (
+                    <div>• New Email: <strong>{profileForm.email || 'None'}</strong></div>
+                  )}
+                </div>
+
+                {/* Dev OTP quick helper */}
+                {profileDevOtp && (
+                  <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px 12px', fontSize: '0.78rem', color: '#065f46', textAlign: 'center' }}>
+                    Dev Security OTP: <strong style={{ letterSpacing: '2px' }}>{profileDevOtp}</strong>
+                  </div>
+                )}
+
+                <div>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    autoFocus
+                    value={profileOtp}
+                    onChange={(e) => setProfileOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    placeholder="• • • • • •"
+                    style={{
+                      width: '100%',
+                      padding: '14px 12px',
+                      borderRadius: '8px',
+                      border: '2px solid #ea580c',
+                      fontSize: '1.4rem',
+                      fontWeight: '800',
+                      letterSpacing: '10px',
+                      textAlign: 'center',
+                      outline: 'none',
+                      fontFamily: 'monospace',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setProfileStep('form'); setProfileOtp(''); setProfileError(''); }}
+                      style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      ← Back to edit details
+                    </button>
+                    <button
+                      type="button"
+                      disabled={profileResendTimer > 0 || savingProfile}
+                      onClick={handleResendProfileOtp}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: profileResendTimer > 0 ? '#94a3b8' : '#ea580c',
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        cursor: profileResendTimer > 0 ? 'default' : 'pointer'
+                      }}
+                    >
+                      {profileResendTimer > 0 ? `Resend in ${profileResendTimer}s` : 'Resend Code'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileModal(false)}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '10px 18px', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingProfile || profileOtp.length !== 6}
+                    style={{
+                      background: profileOtp.length === 6 ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' : '#cbd5e1',
+                      border: 'none',
+                      color: '#ffffff',
+                      padding: '10px 22px',
+                      borderRadius: '8px',
+                      fontSize: '0.84rem',
+                      fontWeight: '800',
+                      cursor: profileOtp.length === 6 ? 'pointer' : 'not-allowed',
+                      boxShadow: profileOtp.length === 6 ? '0 2px 8px rgba(22, 163, 74, 0.3)' : 'none'
+                    }}
+                  >
+                    {savingProfile ? 'Verifying...' : 'Confirm & Update Profile'}
                   </button>
                 </div>
               </form>

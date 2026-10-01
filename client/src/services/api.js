@@ -597,6 +597,28 @@ export const api = {
     return result;
   },
 
+  async requestProfileUpdateOtp(id, data) {
+    const res = await authFetch(`${API_BASE}/customers/${id}/request-profile-update-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to send verification code');
+    return result;
+  },
+
+  async verifyProfileUpdateOtp(id, data) {
+    const res = await authFetch(`${API_BASE}/customers/${id}/verify-profile-update-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to verify security code');
+    return result;
+  },
+
   async createCustomer(data) {
     const res = await authFetch(`${API_BASE}/customers`, {
       method: 'POST',

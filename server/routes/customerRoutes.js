@@ -1,8 +1,23 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const db = require('../utils/db');
-const { requireAuth, requireStoreOwner, optionalAuth } = require('../utils/auth');
+const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
+const { requireAuth, requireStoreOwner, optionalAuth, generateToken } = require('../utils/auth');
+
+// In-memory OTP storage for customer profile contact updates (keyed by customer id)
+const profileUpdateOtpStore = new Map();
+const profileOtpCleanupTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [key, data] of profileUpdateOtpStore.entries()) {
+    if (data.expiresAt < now) {
+      profileUpdateOtpStore.delete(key);
+    }
+  }
+}, 60000);
+if (profileOtpCleanupTimer.unref) profileOtpCleanupTimer.unref();
 
 /**
  * Access Control Helper: Allows access if caller is Store Owner OR the customer themselves
@@ -255,6 +270,207 @@ router.put('/:id', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
     res.json({ success: true, message: "Customer updated successfully", data: updated });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/customers/:id/request-profile-update-otp - Request OTP for updating sensitive profile contact info (mobile/email)
+router.post('/:id/request-profile-update-otp', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
+  try {
+    const { name, phone, email } = req.body;
+    const target = req.params.id;
+    const isObjectId = mongoose.isValidObjectId(target);
+    const customer = await db.CustomerModel.findOne(
+      isObjectId ? { _id: target } : { phone: target.replace(/[^0-9]/g, '').slice(-10) }
+    );
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const currentPhone = String(customer.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const currentEmail = String(customer.email || '').trim().toLowerCase();
+
+    const cleanNewPhone = phone ? String(phone).replace(/[^0-9]/g, '').slice(-10) : currentPhone;
+    const cleanNewEmail = email !== undefined ? String(email).trim().toLowerCase() : currentEmail;
+    const newName = name !== undefined ? String(name).trim() : (customer.name || '');
+
+    const phoneChanged = cleanNewPhone && cleanNewPhone !== currentPhone;
+    const emailChanged = cleanNewEmail !== currentEmail;
+
+    // Validate phone if changed
+    if (phoneChanged) {
+      if (cleanNewPhone.length !== 10) {
+        return res.status(400).json({ success: false, message: 'New mobile number must be a valid 10-digit Indian number.' });
+      }
+      const existingPhone = await db.lookupCustomerByPhone(cleanNewPhone);
+      if (existingPhone && String(existingPhone._id) !== String(customer._id)) {
+        return res.status(409).json({ success: false, message: 'This mobile number is already registered to another account.' });
+      }
+    }
+
+    // Validate email if changed and provided
+    if (emailChanged && cleanNewEmail) {
+      if (!cleanNewEmail.includes('@') || !cleanNewEmail.includes('.')) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+      }
+      const existingEmail = await db.lookupCustomerByEmail(cleanNewEmail);
+      if (existingEmail && String(existingEmail._id) !== String(customer._id)) {
+        return res.status(409).json({ success: false, message: 'This email address is already registered to another account.' });
+      }
+    }
+
+    // If neither phone nor email changed, update name directly without OTP!
+    if (!phoneChanged && !emailChanged) {
+      const updated = await db.updateCustomer(customer._id, { name: newName });
+      return res.json({
+        success: true,
+        requiresOtp: false,
+        message: 'Profile name updated successfully',
+        data: updated
+      });
+    }
+
+    // Rate limiting check: 25 seconds cooldown between OTP dispatches
+    const existingEntry = profileUpdateOtpStore.get(String(customer._id));
+    if (existingEntry && Date.now() - existingEntry.lastSentAt < 25000) {
+      const waitSec = Math.ceil((25000 - (Date.now() - existingEntry.lastSentAt)) / 1000);
+      return res.status(429).json({ success: false, message: `Please wait ${waitSec}s before requesting a new code.` });
+    }
+
+    // Generate secure 6-digit OTP
+    const otp = String(crypto.randomInt(100000, 1000000));
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+
+    profileUpdateOtpStore.set(String(customer._id), {
+      otp,
+      expiresAt,
+      lastSentAt: Date.now(),
+      attempts: 0,
+      pendingUpdates: {
+        name: newName,
+        phone: cleanNewPhone,
+        email: cleanNewEmail
+      },
+      phoneChanged,
+      emailChanged,
+      currentPhone,
+      currentEmail
+    });
+
+    console.log(`[Profile OTP] Sent verification OTP for customer ${customer._id} to current phone +91 ${currentPhone} and current email ${currentEmail || 'none'}`);
+
+    // Dispatch to current (old) phone via WhatsApp
+    if (currentPhone) {
+      try {
+        if (whatsappService && typeof whatsappService.sendWhatsAppMessage === 'function') {
+          const waMsg = `🔐 *Variathu Power Tools Security Alert*\n\nYour 6-digit OTP to confirm changing your account details is: *${otp}*\n\nRequested changes:\n${phoneChanged ? `• Mobile: +91 ${currentPhone} ➔ +91 ${cleanNewPhone}\n` : ''}${emailChanged ? `• Email: ${currentEmail || 'None'} ➔ ${cleanNewEmail || 'None'}\n` : ''}\nIf you did not request this change, please contact us immediately (+91 94475 59333).\n_Valid for 10 minutes._`;
+          whatsappService.sendWhatsAppMessage(currentPhone, waMsg).catch(() => {});
+        }
+      } catch (err) {}
+    }
+
+    // Dispatch to current (old) email via Resend Email service
+    if (currentEmail && currentEmail.includes('@')) {
+      emailService.sendOtpEmail({
+        to: currentEmail,
+        name: customer.name || 'Valued Customer',
+        otp,
+        purpose: 'profile_update',
+        clientUrl: req.clientUrl || req.headers.origin
+      }).catch(err => {
+        console.warn('[Profile OTP] Email send error:', err.message);
+      });
+    }
+
+    const maskedPhone = currentPhone ? `+91 ${currentPhone.slice(0, 2)}••••••${currentPhone.slice(-2)}` : null;
+    const maskedEmail = currentEmail && currentEmail.includes('@')
+      ? `${currentEmail.slice(0, 2)}••••@${currentEmail.split('@')[1]}`
+      : null;
+
+    const destinations = [];
+    if (maskedPhone) destinations.push(maskedPhone);
+    if (maskedEmail) destinations.push(maskedEmail);
+
+    const isLocalDevOtp = process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEV_OTP === 'true';
+
+    return res.json({
+      success: true,
+      requiresOtp: true,
+      message: `Security OTP sent to your registered ${destinations.join(' and ')}.`,
+      maskedPhone,
+      maskedEmail,
+      maskedDestination: destinations.join(' and '),
+      ...(isLocalDevOtp ? { devOtp: otp } : {}),
+      expiresAt
+    });
+  } catch (err) {
+    console.error('[Profile OTP] Error in /request-profile-update-otp:', err);
+    return res.status(500).json({ success: false, message: 'Failed to request profile update OTP: ' + err.message });
+  }
+});
+
+// POST /api/customers/:id/verify-profile-update-otp - Validate 6-digit OTP and commit profile & contact updates
+router.post('/:id/verify-profile-update-otp', requireAuth, authorizeCustomerOrAdmin, async (req, res) => {
+  try {
+    const target = req.params.id;
+    const isObjectId = mongoose.isValidObjectId(target);
+    const customer = await db.CustomerModel.findOne(
+      isObjectId ? { _id: target } : { phone: target.replace(/[^0-9]/g, '').slice(-10) }
+    );
+    if (!customer) {
+      return res.status(404).json({ success: false, message: 'Customer not found' });
+    }
+
+    const submittedOtp = String(req.body.otp || '').trim();
+    if (!submittedOtp || submittedOtp.length !== 6) {
+      return res.status(400).json({ success: false, message: 'Please enter the 6-digit verification code.' });
+    }
+
+    const record = profileUpdateOtpStore.get(String(customer._id));
+    if (!record) {
+      return res.status(400).json({ success: false, message: 'No active OTP verification session found or it has expired. Please request a new code.' });
+    }
+
+    if (Date.now() > record.expiresAt) {
+      profileUpdateOtpStore.delete(String(customer._id));
+      return res.status(400).json({ success: false, message: 'Verification code has expired. Please request a new one.' });
+    }
+
+    record.attempts = (record.attempts || 0) + 1;
+    if (record.attempts > 5) {
+      profileUpdateOtpStore.delete(String(customer._id));
+      return res.status(429).json({ success: false, message: 'Too many incorrect attempts. Please request a new code.' });
+    }
+
+    if (record.otp !== submittedOtp) {
+      const remaining = 5 - record.attempts;
+      return res.status(400).json({ success: false, message: `Invalid 6-digit OTP. ${remaining} attempt(s) remaining.` });
+    }
+
+    // OTP Verified! Clear session
+    profileUpdateOtpStore.delete(String(customer._id));
+
+    const { pendingUpdates, phoneChanged } = record;
+    const updated = await db.updateCustomer(customer._id, pendingUpdates);
+
+    // If phone changed, generate new token
+    let newToken = null;
+    if (phoneChanged) {
+      newToken = generateToken({
+        id: String(updated._id || updated.id),
+        phone: updated.phone,
+        role: 'customer'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Account profile and contact details updated successfully!',
+      data: updated,
+      token: newToken
+    });
+  } catch (err) {
+    console.error('[Profile OTP] Error in /verify-profile-update-otp:', err);
+    return res.status(500).json({ success: false, message: 'Failed to verify profile update: ' + err.message });
   }
 });
 
