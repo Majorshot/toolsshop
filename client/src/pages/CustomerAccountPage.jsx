@@ -1379,28 +1379,53 @@ export const CustomerAccountPage = () => {
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => setInvoiceOrder(order)}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#0f172a',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-                title="Download Official GST B2C Tax Invoice"
-                id={`btn-customer-invoice-${order.id}`}
-              >
-                <FileText size={15} style={{ color: '#ea580c' }} />
-                <span>GST Tax Invoice</span>
-              </button>
+              {/* Show GST Tax Invoice ONLY if order is Dispatched or Completed (Never for Cancelled or Pre-dispatch) */}
+              {!isCancelled && (isDispatched || isCompleted) && (
+                <button
+                  type="button"
+                  onClick={() => setInvoiceOrder(order)}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    color: '#0f172a',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  title="Download Official GST B2C Tax Invoice"
+                  id={`btn-customer-invoice-${order.id}`}
+                >
+                  <FileText size={15} style={{ color: '#ea580c' }} />
+                  <span>GST Tax Invoice</span>
+                </button>
+              )}
+
+              {!isCancelled && !isDispatched && !isCompleted && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    color: '#64748b',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: '600',
+                    cursor: 'default'
+                  }}
+                  title={isPickup ? "Official GST Tax Invoice will be generated and available once your tools are collected at the counter" : "Official GST Tax Invoice will be generated and available for download once your order is dispatched"}
+                >
+                  <FileText size={14} style={{ color: '#94a3b8' }} />
+                  <span>{isPickup ? 'Invoice on Pickup' : 'Invoice on Dispatch'}</span>
+                </span>
+              )}
 
               <a
                 href={`https://wa.me/919447559333?text=${encodeURIComponent(`Hello Variathu Power Tools, I have a query about my order ${order.id}.`)}`}
