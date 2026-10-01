@@ -2118,6 +2118,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const currentInvPage = Math.min(invPage, totalInvPages);
   const invStartIdx = (currentInvPage - 1) * invPageSize;
   const invEndIdx = Math.min(currentInvPage * invPageSize, filteredProducts.length);
+  const pagedProducts = filteredProducts.slice(invStartIdx, invEndIdx);
+
   if (!user || user.role !== 'store') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '60px 20px', gap: '16px' }}>

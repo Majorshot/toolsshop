@@ -662,6 +662,10 @@ export const CustomerAccountPage = () => {
     setExpandedOrders(all);
   };
 
+  const handleCollapseAllOrders = () => {
+    setExpandedOrders({});
+  };
+
   if (!user) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '60px 20px', gap: '16px' }}>
@@ -720,12 +724,6 @@ export const CustomerAccountPage = () => {
       notifs: savedAddressesList.length > 0 ? savedAddressesList.length : undefined,
       notifsColor: '#0284c7',
       onClick: () => setSidebarTab('addresses')
-    },
-    {
-      id: 'refresh',
-      title: 'Refresh Status',
-      icon: RefreshCw,
-      onClick: loadCustomerOrders
     }
   ];
 
@@ -1553,121 +1551,122 @@ export const CustomerAccountPage = () => {
         <>
           {/* Top Customer Banner */}
           <div className="customer-profile-card">
-            <div className="customer-profile-top">
-              <div className="customer-profile-avatar">
-                {user.name ? user.name[0].toUpperCase() : 'U'}
-              </div>
-
-              <div className="customer-profile-info">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <h1 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                    {user.name}
-                  </h1>
-                  <span
-                    style={{
-                      background: 'rgba(234, 88, 12, 0.08)',
-                      color: '#ea580c',
-                      fontSize: '0.72rem',
-                      fontWeight: '700',
-                      padding: '2px 8px',
-                      borderRadius: '9999px',
-                      border: '1px solid rgba(234, 88, 12, 0.2)'
-                    }}
-                  >
-                    Customer Account
-                  </span>
+            {/* Row 1: Profile Info (Left) + Action Buttons (Right) */}
+            <div className="customer-profile-top-row">
+              <div className="customer-profile-top">
+                <div className="customer-profile-avatar">
+                  {user.name ? user.name[0].toUpperCase() : 'U'}
                 </div>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '3px 0 0' }}>
-                  {user.phone ? `+91 ${user.phone}` : user.email} • Kozhencherry, Pathanamthitta
-                </p>
+
+                <div className="customer-profile-info">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <h1 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+                      {user.name}
+                    </h1>
+                    <span
+                      style={{
+                        background: 'rgba(234, 88, 12, 0.08)',
+                        color: '#ea580c',
+                        fontSize: '0.74rem',
+                        fontWeight: '700',
+                        padding: '3px 10px',
+                        borderRadius: '9999px',
+                        border: '1px solid rgba(234, 88, 12, 0.2)'
+                      }}
+                    >
+                      Customer Account
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '4px 0 0', lineHeight: 1.4 }}>
+                    {user.phone ? `+91 ${user.phone}` : user.email} • Kozhencherry, Pathanamthitta
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons: Edit Profile & Sign Out (Refresh Status removed) */}
+              <div className="customer-profile-actions">
+                <button
+                  type="button"
+                  onClick={handleOpenProfileModal}
+                  style={{
+                    background: '#fff7ed',
+                    border: '1px solid #fdba74',
+                    color: '#c2410c',
+                    borderRadius: '8px',
+                    padding: '9px 16px',
+                    fontSize: '0.84rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  id="btn-open-profile-edit"
+                >
+                  <User size={15} />
+                  <span>Edit Profile</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCustomerLogout}
+                  style={{
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626',
+                    borderRadius: '8px',
+                    padding: '9px 16px',
+                    fontSize: '0.84rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  id="btn-customer-logout"
+                >
+                  <LogOut size={15} />
+                  <span>Sign Out</span>
+                </button>
               </div>
             </div>
 
-            <div className="customer-profile-actions">
-              <button
-                type="button"
-                onClick={handleOpenProfileModal}
-                style={{
-                  background: '#fff7ed',
-                  border: '1px solid #fdba74',
-                  color: '#c2410c',
-                  borderRadius: '8px',
-                  padding: '9px 14px',
-                  fontSize: '0.82rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-                id="btn-open-profile-edit"
-              >
-                <User size={14} />
-                <span>Edit Profile</span>
-              </button>
-
-              <button
-                onClick={loadCustomerOrders}
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  color: '#0f172a',
-                  borderRadius: '8px',
-                  padding: '9px 14px',
-                  fontSize: '0.82rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <RefreshCw size={14} />
-                <span>Refresh Status</span>
-              </button>
-
-              <button
-                onClick={handleCustomerLogout}
-                style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#dc2626',
-                  borderRadius: '8px',
-                  padding: '9px 14px',
-                  fontSize: '0.82rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-                id="btn-customer-logout"
-              >
-                <LogOut size={14} />
-                <span>Sign Out</span>
-              </button>
-            </div>
-
-            {/* Saved Addresses Bar */}
+            {/* Row 2: Default Saved Delivery Address Bar (Full Width) */}
             {(() => {
               const defaultAddr = savedAddressesList.find(a => a.isDefault) || savedAddressesList[0];
 
               return (
                 <div style={{
-                  marginTop: '16px',
+                  width: '100%',
+                  marginTop: '4px',
                   paddingTop: '16px',
                   borderTop: '1px solid #f1f5f9',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
-                  gap: '12px'
+                  gap: '14px'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', maxWidth: '720px' }}>
-                    <MapPin size={18} style={{ color: '#ea580c', marginTop: '2px', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', maxWidth: '780px' }}>
+                    <div style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '8px',
+                      background: '#fff7ed',
+                      color: '#ea580c',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: '2px'
+                    }}>
+                      <MapPin size={18} />
+                    </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: '800' }}>
+                        <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', fontWeight: '800' }}>
                           Default Delivery Address & Contact
                         </span>
                         {defaultAddr?.addressType && (
@@ -1708,6 +1707,7 @@ export const CustomerAccountPage = () => {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
+                      whiteSpace: 'nowrap',
                       transition: 'all 0.2s ease'
                     }}
                     id="btn-edit-customer-address"
@@ -1769,11 +1769,11 @@ export const CustomerAccountPage = () => {
                 onClick={() => window.open('https://wa.me/919447559333', '_blank')}
               />
               <HoverDevCard
-                title="Refresh Status"
-                subtitle="Sync real-time order tracking & shipments"
-                Icon={RefreshCw}
-                badge="Live Sync"
-                onClick={loadCustomerOrders}
+                title="Tax Invoices"
+                subtitle="Official GST billing & warranty documentation"
+                Icon={FileText}
+                badge="GST Invoices"
+                onClick={() => setSidebarTab('orders')}
               />
             </div>
           </div>

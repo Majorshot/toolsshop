@@ -5546,10 +5546,18 @@ body.product-loading-active .main-footer-clean {
   margin-bottom: 28px;
   box-shadow: var(--shadow-xs);
   display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+}
+
+.customer-profile-top-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
+  width: 100%;
 }
 
 .customer-profile-top {
@@ -5557,7 +5565,6 @@ body.product-loading-active .main-footer-clean {
   align-items: center;
   gap: 14px;
   min-width: 0;
-  flex: 1;
 }
 
 .customer-profile-avatar {
