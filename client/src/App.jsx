@@ -278,6 +278,7 @@ const MainApp = () => {
                       searchQuery={searchQuery}
                       setSearchQuery={setSearchQuery}
                       sortBy={sortBy}
+                      setSortBy={setSortBy}
                       onSelectProduct={(p) => {
                         const key = p.id || p._id;
                         try {

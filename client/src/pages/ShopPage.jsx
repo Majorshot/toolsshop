@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -57,8 +58,8 @@ export const ShopPage = ({
   setActiveBrand,
   searchQuery,
   setSearchQuery,
-  sortBy,
-  setSortBy,
+  sortBy: propSortBy,
+  setSortBy: propSetSortBy,
   onSelectProduct,
   onRetry
 }) => {
@@ -106,16 +107,41 @@ export const ShopPage = ({
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       Object.entries(updates).forEach(([key, val]) => {
-        if (val === null || val === undefined || val === '' || val === 'all' || val === false) {
+        if (val === null || val === undefined || val === '' || val === 'all' || val === false || (key === 'sort' && val === 'featured')) {
           next.delete(key);
           try { sessionStorage.removeItem(`shop_${key}_filter`); } catch (e) {}
+          if (key === 'sort') {
+            try { sessionStorage.removeItem('shop_sort'); } catch (e) {}
+          }
         } else {
           next.set(key, String(val));
           try { sessionStorage.setItem(`shop_${key}_filter`, String(val)); } catch (e) {}
+          if (key === 'sort') {
+            try { sessionStorage.setItem('shop_sort', String(val)); } catch (e) {}
+          }
         }
       });
       return next;
     }, { replace: true });
+  };
+
+  // Resilient Sort State: supports external prop, fallback internal state, and URL sync
+  const [internalSortBy, setInternalSortBy] = useState(() => {
+    return searchParams.get('sort') || sessionStorage.getItem('shop_sort') || propSortBy || 'featured';
+  });
+
+  const sortBy = propSortBy !== undefined ? propSortBy : internalSortBy;
+
+  const setSortBy = (val) => {
+    setInternalSortBy(val);
+    if (typeof propSetSortBy === 'function') {
+      try {
+        propSetSortBy(val);
+      } catch (e) {
+        console.error("propSetSortBy error:", e);
+      }
+    }
+    updateFilterParams({ sort: val });
   };
 
   // Pagination State for 1,000+ Products Performance
@@ -211,6 +237,14 @@ export const ShopPage = ({
       setInStockOnly(inStockParam === 'true');
     } else {
       setInStockOnly(false);
+    }
+
+    const sortParam = searchParams.get('sort') || sessionStorage.getItem('shop_sort');
+    if (sortParam && ['featured', 'price-low', 'price-high'].includes(sortParam)) {
+      setInternalSortBy(sortParam);
+      if (typeof propSetSortBy === 'function') {
+        try { propSetSortBy(sortParam); } catch (e) {}
+      }
     }
   }, [searchParams]);
 
@@ -315,8 +349,10 @@ export const ShopPage = ({
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'price-low') return a.price - b.price;
-        if (sortBy === 'price-high') return b.price - a.price;
+        const priceA = Number(a.price) || 0;
+        const priceB = Number(b.price) || 0;
+        if (sortBy === 'price-low') return priceA - priceB;
+        if (sortBy === 'price-high') return priceB - priceA;
         return 0; // featured/default
       });
   }, [
@@ -369,6 +405,7 @@ export const ShopPage = ({
       sessionStorage.removeItem('shop_minPrice_filter');
       sessionStorage.removeItem('shop_maxPrice_filter');
       sessionStorage.removeItem('shop_inStock_filter');
+      sessionStorage.removeItem('shop_sort');
     } catch (e) {}
     setSearchParams({});
   };
@@ -836,7 +873,7 @@ export const ShopPage = ({
       </main>
 
       {/* INTERACTIVE MULTI-CRITERIA FILTER MODAL DIALOG */}
-      {showFilterModal && (
+      {showFilterModal && createPortal(
         <div className="filter-modal-overlay" onClick={() => setShowFilterModal(false)}>
           <div
             className="filter-modal-dialog"
@@ -1333,7 +1370,8 @@ export const ShopPage = ({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -405,7 +405,11 @@ export default function GlideSelect({
     setActive(i);
     if (it.value !== current) {
       if (value === undefined) setInner(it.value);
-      onChange?.(it.value, it);
+      try {
+        onChange?.(it.value, it);
+      } catch (err) {
+        console.error('GlideSelect onChange error:', err);
+      }
       if (!viaKey && rootRef.current) rootRef.current.dataset.swap = '';
     }
     close('instant');
@@ -584,6 +588,11 @@ export default function GlideSelect({
                 aria-selected={i === selected}
                 data-index={i}
                 className="gs-option-row"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  pick(i, false);
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   pick(i, false);
