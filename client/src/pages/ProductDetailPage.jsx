@@ -11,6 +11,7 @@ import { api } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import AnimatedContent from '../components/AnimatedContent';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { COURIER_PARTNERS } from '../utils/courierPartners';
 
 export const ProductDetailPage = () => {
   const { id } = useParams();
@@ -731,17 +732,45 @@ export const ProductDetailPage = () => {
                   <strong>Pickup Ready Today:</strong> Poyanil Building, Kozhencherry (Counter Handover with OTP)
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Truck size={15} style={{ color: '#0284c7' }} />
-                <span>
-                  <strong>Doorstep Courier:</strong>{' '}
-                  {product.deliveryCost === 0 ? (
-                    <span style={{ color: '#16a34a', fontWeight: '800' }}>FREE Delivery</span>
-                  ) : (
-                    <span><strong>₹{product.deliveryCost ?? 120}</strong> delivery fee</span>
-                  )}{' '}
-                  (DTDC, Professional, Alleppey & Delhivery • Speed delivery across Kerala)
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Truck size={15} style={{ color: '#0284c7' }} />
+                  <span>
+                    <strong>Doorstep Courier:</strong>{' '}
+                    {product.deliveryCost === 0 ? (
+                      <span style={{ color: '#16a34a', fontWeight: '800' }}>FREE Delivery</span>
+                    ) : (
+                      <span><strong>₹{product.deliveryCost ?? 120}</strong> delivery fee</span>
+                    )}{' '}
+                    • Speed delivery across Kerala
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '21px', flexWrap: 'wrap' }}>
+                  {COURIER_PARTNERS.map(cp => (
+                    <div
+                      key={cp.id}
+                      title={`${cp.name} - ${cp.tagline}`}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        padding: '2px 8px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <img
+                        src={cp.logo}
+                        alt={cp.name}
+                        style={{ maxHeight: '16px', maxWidth: '70px', objectFit: 'contain' }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

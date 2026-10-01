@@ -13,41 +13,9 @@ import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
 export { HoverDevCard };
-
-
-export const resolveCourierPartner = (courierName = '') => {
-  const c = (courierName || '').toLowerCase();
-  if (c.includes('alep') || c.includes('allep') || c.includes('aps')) {
-    return {
-      name: 'Alleppey Parcel Service (APS Cargo)',
-      badge: 'APS',
-      color: '#059669',
-      trackingUrl: 'https://www.apscargo.com/index'
-    };
-  }
-  if (c.includes('delh')) {
-    return {
-      name: 'Delhivery',
-      badge: 'DELHIVERY',
-      color: '#d97706',
-      trackingUrl: 'https://www.delhivery.com/'
-    };
-  }
-  if (c.includes('prof') || c.includes('tpc')) {
-    return {
-      name: 'The Professional Couriers',
-      badge: 'TPC',
-      color: '#0284c7',
-      trackingUrl: 'https://www.tpcindia.com/'
-    };
-  }
-  return {
-    name: 'DTDC Express',
-    badge: 'DTDC',
-    color: '#dc2626',
-    trackingUrl: 'https://www.dtdc.com/track-your-shipment/'
-  };
-};
+import CourierLogo from '../components/CourierLogo';
+import { resolveCourierPartner } from '../utils/courierPartners';
+export { resolveCourierPartner };
 
 export const CustomerAccountPage = () => {
   const { user, logout, updateUser } = useAuth();
@@ -1067,9 +1035,12 @@ export const CustomerAccountPage = () => {
                       <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         Order Completed • Delivered
                       </span>
-                      <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block' }}>
-                        Successfully Delivered via {courierCfg.name}
-                      </strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: '1rem', color: '#0f172a' }}>
+                          Successfully Delivered via {courierCfg.name}
+                        </strong>
+                        <CourierLogo partner={order.courierPartner} size="xs" />
+                      </div>
                       <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                         Consignment handed over to recipient. Thank you for shopping with Variathu Power Tools!
                       </span>
@@ -1166,26 +1137,8 @@ export const CustomerAccountPage = () => {
                 id={`order-dispatched-box-${order.id}`}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        minWidth: '36px',
-                        height: '32px',
-                        padding: '0 8px',
-                        borderRadius: '8px',
-                        background: courierCfg.color,
-                        color: '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: '900',
-                        fontSize: '0.75rem',
-                        letterSpacing: '-0.02em',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
-                      }}
-                    >
-                      {courierCfg.badge}
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <CourierLogo partner={order.courierPartner} size="md" />
                     <div>
                       <span style={{ fontSize: '0.7rem', color: '#0284c7', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                         Step 2 of 2 • Delivery Details

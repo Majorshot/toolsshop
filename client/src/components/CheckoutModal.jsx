@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { COURIER_PARTNERS } from '../utils/courierPartners';
 
 const KERALA_DISTRICTS = [
   'Pathanamthitta',
@@ -881,9 +882,32 @@ export const CheckoutModal = ({ onClose }) => {
                           {(totalCourierFee || 0) === 0 ? 'FREE' : formatPrice(totalCourierFee || 0)}
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                        DTDC / Professional / Delhivery across Kerala
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px', flexWrap: 'wrap' }}>
+                        {COURIER_PARTNERS.map(cp => (
+                          <div
+                            key={cp.id}
+                            title={cp.name}
+                            style={{
+                              background: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '4px',
+                              padding: '1px 5px',
+                              height: '18px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                            }}
+                          >
+                            <img
+                              src={cp.logo}
+                              alt={cp.name}
+                              style={{ maxHeight: '12px', maxWidth: '50px', objectFit: 'contain' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

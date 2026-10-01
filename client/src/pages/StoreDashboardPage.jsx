@@ -11,6 +11,8 @@ import HoverDevCard from '../components/HoverDevCard';
 import GlideSelect from '../components/GlideSelect';
 import RubberSegment from '../components/RubberSegment';
 import AddEquipmentModal from '../components/AddEquipmentModal';
+import CourierLogo from '../components/CourierLogo';
+import { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner } from '../utils/courierPartners';
 import { startOverviewTour, startOrdersTour, startInventoryTour, startRepairsTour, startCancellationsTour, startCustomersTour, startCouponsTour } from '../services/tourService';
 
 const ORDER_DATE_OPTIONS = [
@@ -64,64 +66,7 @@ const STATUS_OPTIONS = [
   'Completed'
 ];
 
-export const COURIER_PARTNERS = [
-  {
-    id: 'dtdc',
-    name: 'DTDC Express',
-    badge: 'DTDC',
-    color: '#dc2626',
-    bg: '#fef2f2',
-    border: '#fca5a5',
-    tagline: 'Red & Blue Surface Express',
-    portalUrl: 'https://www.dtdc.com/track-your-shipment/',
-    awbPlaceholder: 'e.g. D58291042',
-    generateAwb: () => `D${Math.floor(10000000 + Math.random() * 90000000)}`
-  },
-  {
-    id: 'tpc',
-    name: 'The Professional Couriers',
-    badge: 'TPC',
-    color: '#0284c7',
-    bg: '#f0f9ff',
-    border: '#bae6fd',
-    tagline: 'TPC India Domestic Network',
-    portalUrl: 'https://www.tpcindia.com/',
-    awbPlaceholder: 'e.g. KLB38920194',
-    generateAwb: () => `KLB${Math.floor(10000000 + Math.random() * 90000000)}`
-  },
-  {
-    id: 'aps',
-    name: 'Alleppey Parcel Service (APS Cargo)',
-    badge: 'APS',
-    color: '#059669',
-    bg: '#ecfdf5',
-    border: '#a7f3d0',
-    tagline: 'Kerala Parcel Cargo Logistics',
-    portalUrl: 'https://www.apscargo.com/index',
-    awbPlaceholder: 'e.g. APS682914',
-    generateAwb: () => `APS${Math.floor(100000 + Math.random() * 900000)}`
-  },
-  {
-    id: 'delhivery',
-    name: 'Delhivery',
-    badge: 'DELHIVERY',
-    color: '#d97706',
-    bg: '#fffbeb',
-    border: '#fde68a',
-    tagline: 'Pan-India Express Surface',
-    portalUrl: 'https://www.delhivery.com/',
-    awbPlaceholder: 'e.g. 142985720193',
-    generateAwb: () => `${Math.floor(100000000000 + Math.random() * 900000000000)}`
-  }
-];
-
-export const resolveCourierConfig = (partnerName = '') => {
-  const p = (partnerName || '').toLowerCase();
-  if (p.includes('prof') || p.includes('tpc')) return COURIER_PARTNERS[1];
-  if (p.includes('alep') || p.includes('aps') || p.includes('alleppey')) return COURIER_PARTNERS[2];
-  if (p.includes('delhivery')) return COURIER_PARTNERS[3];
-  return COURIER_PARTNERS[0];
-};
+export { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner };
 
 export const StoreDashboardPage = ({ onProductUpdated }) => {
   const { user, logout } = useAuth();
@@ -4408,9 +4353,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                     <span style={{ color: '#16a34a', fontWeight: '800', background: '#ecfdf5', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
                                       ✅ Delivered
                                     </span>
+                                    <CourierLogo partner={order.courierPartner} size="xs" />
                                     {order.awb && (
                                       <span style={{ fontFamily: 'var(--font-mono)', background: '#ffffff', border: '1px solid #cbd5e1', padding: '1px 6px', borderRadius: '4px', fontSize: '0.74rem', color: '#0f172a', fontWeight: '700' }}>
-                                        AWB: {order.awb} ({courierCfg?.badge || order.courierPartner})
+                                        AWB: {order.awb}
                                       </span>
                                     )}
                                     {courierCfg?.portalUrl && (
@@ -4426,9 +4372,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                   </div>
                                 ) : hasAwb ? (
                                   <div style={{ marginTop: '4px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                    <span style={{ color: courierCfg?.color || '#0284c7', fontWeight: '800' }}>
-                                      {courierCfg?.badge || order.courierPartner || 'Courier'}
-                                    </span>
+                                    <CourierLogo partner={order.courierPartner} size="xs" />
                                     <span style={{ fontFamily: 'var(--font-mono)', background: '#ffffff', border: '1px solid #cbd5e1', padding: '1px 6px', borderRadius: '4px', fontSize: '0.74rem', color: '#0f172a', fontWeight: '700' }}>
                                       AWB: {order.awb}
                                     </span>
@@ -6411,23 +6355,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                     {/* Courier & AWB Info */}
                     <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <div
-                        style={{
-                          minWidth: '36px',
-                          height: '28px',
-                          padding: '0 8px',
-                          borderRadius: '6px',
-                          background: courierCfg.color,
-                          color: '#ffffff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: '900',
-                          fontSize: '0.7rem'
-                        }}
-                      >
-                        {courierCfg.badge}
-                      </div>
+                      <CourierLogo partner={order.courierPartner} size="sm" />
                       <div style={{ fontSize: '0.82rem', color: '#0f172a' }}>
                         <strong>{courierCfg.name}</strong>
                         {order.awb && (
@@ -7583,7 +7511,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
               {/* Select Courier Partner (4 Partners) */}
               <div>
-                <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700', display: 'block', marginBottom: '8px' }}>
                   Select Logistics Partner *
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px' }}>
@@ -7600,21 +7528,46 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           }));
                         }}
                         style={{
-                          padding: '10px 12px',
+                          padding: '12px 14px',
                           borderRadius: '10px',
-                          border: isSelected ? `2px solid ${cp.color}` : '1px solid #cbd5e1',
+                          border: isSelected ? `2px solid ${cp.color}` : '1.5px solid #e2e8f0',
                           background: isSelected ? cp.bg : '#ffffff',
                           cursor: 'pointer',
-                          transition: 'all 0.15s ease'
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
-                          <span style={{ fontSize: '0.68rem', fontWeight: '900', padding: '1px 5px', borderRadius: '4px', background: isSelected ? cp.color : '#f1f5f9', color: isSelected ? '#ffffff' : '#475569' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div
+                            style={{
+                              height: '34px',
+                              background: '#ffffff',
+                              borderRadius: '6px',
+                              padding: '2px 8px',
+                              border: '1px solid #e2e8f0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                            }}
+                          >
+                            <img
+                              src={cp.logo}
+                              alt={cp.name}
+                              style={{ maxHeight: '26px', maxWidth: '120px', objectFit: 'contain' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          </div>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '900', padding: '2px 6px', borderRadius: '4px', background: isSelected ? cp.color : '#f1f5f9', color: isSelected ? '#ffffff' : '#475569' }}>
                             {cp.badge}
                           </span>
-                          <strong style={{ color: isSelected ? cp.color : '#0f172a', fontSize: '0.84rem' }}>{cp.name}</strong>
                         </div>
-                        <span style={{ fontSize: '0.68rem', color: '#64748b', display: 'block' }}>{cp.tagline}</span>
+                        <div>
+                          <strong style={{ color: isSelected ? cp.color : '#0f172a', fontSize: '0.86rem', display: 'block', marginBottom: '2px' }}>{cp.name}</strong>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', lineHeight: 1.3 }}>{cp.tagline}</span>
+                        </div>
                       </div>
                     );
                   })}
@@ -8494,12 +8447,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   {(() => {
                     const cfg = resolveCourierConfig(selectedOrderForLabel.courierPartner);
                     return (
-                      <div>
-                        <strong style={{ fontSize: '1.05rem', fontWeight: '900', letterSpacing: '-0.02em', color: cfg.color }}>
-                          {cfg.name.toUpperCase()}
-                        </strong>
-                        <div style={{ fontSize: '0.68rem', fontWeight: '700' }}>
-                          {cfg.tagline} • Kozhencherry Hub
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ height: '32px', display: 'flex', alignItems: 'center' }}>
+                          <img
+                            src={cfg.logo}
+                            alt={cfg.name}
+                            style={{ maxHeight: '28px', maxWidth: '110px', objectFit: 'contain' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '1.05rem', fontWeight: '900', letterSpacing: '-0.02em', color: cfg.color, display: 'block' }}>
+                            {cfg.name.toUpperCase()}
+                          </strong>
+                          <div style={{ fontSize: '0.68rem', fontWeight: '700' }}>
+                            {cfg.tagline} • Kozhencherry Hub
+                          </div>
                         </div>
                       </div>
                     );
@@ -9049,7 +9012,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '0.78rem' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ color: '#64748b' }}>Courier Partner:</span>
-                            <strong>{selectedOrderForDetails.courierPartner || 'Needs Dispatch'}</strong>
+                            {selectedOrderForDetails.courierPartner ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <CourierLogo partner={selectedOrderForDetails.courierPartner} size="xs" />
+                                <strong>{selectedOrderForDetails.courierPartner}</strong>
+                              </div>
+                            ) : (
+                              <strong>Needs Dispatch</strong>
+                            )}
                           </div>
                           {selectedOrderForDetails.awb && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>

@@ -13,6 +13,7 @@ import { api } from '../services/api';
 import { useConfirm } from '../components/SpringModal';
 import SlideCommit from '../components/SlideCommit';
 import CodeSlots from '../components/CodeSlots';
+import { COURIER_PARTNERS } from '../utils/courierPartners';
 
 const KERALA_DISTRICTS = [
   'Pathanamthitta',
@@ -2220,9 +2221,35 @@ export const CheckoutPage = () => {
                         {totalCourierFee === 0 ? 'FREE' : formatPrice(totalCourierFee)}
                       </span>
                     </div>
-                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
+                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 6px' }}>
                       Fast delivery to your home or site across Kerala.
                     </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                      {COURIER_PARTNERS.map(cp => (
+                        <div
+                          key={cp.id}
+                          title={cp.name}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            padding: '1px 6px',
+                            height: '22px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                          }}
+                        >
+                          <img
+                            src={cp.logo}
+                            alt={cp.name}
+                            style={{ maxHeight: '14px', maxWidth: '60px', objectFit: 'contain' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -2683,6 +2710,32 @@ export const CheckoutPage = () => {
                           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
                             Fast parcel dispatch to your address
                           </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px', flexWrap: 'wrap' }}>
+                            {COURIER_PARTNERS.map(cp => (
+                              <div
+                                key={cp.id}
+                                title={cp.name}
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '4px',
+                                  padding: '1px 6px',
+                                  height: '20px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                                }}
+                              >
+                                <img
+                                  src={cp.logo}
+                                  alt={cp.name}
+                                  style={{ maxHeight: '14px', maxWidth: '55px', objectFit: 'contain' }}
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <span style={{ color: totalCourierFee === 0 ? '#16a34a' : '#ea580c', fontSize: '0.92rem', fontWeight: '800', flexShrink: 0 }}>
