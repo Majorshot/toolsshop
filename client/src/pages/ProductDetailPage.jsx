@@ -30,6 +30,12 @@ export const ProductDetailPage = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
 
+  // Check if description is long enough to require collapsible 'View More' toggle
+  const isLongDesc = Boolean(
+    product?.description &&
+    (product.description.trim().length > 180 || (product.description.match(/\n/g) || []).length >= 3)
+  );
+
   // Full Screen Lightbox & Mobile Slider state
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const [fullScreenIdx, setFullScreenIdx] = useState(0);
@@ -1080,7 +1086,7 @@ export const ProductDetailPage = () => {
                 <div 
                   className={`pdp-description-content ${!isDescExpanded && isLongDesc ? 'collapsed' : ''}`}
                 >
-                  <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.65, margin: 0 }}>
+                  <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-line' }}>
                     {product.description}
                   </p>
                 </div>
