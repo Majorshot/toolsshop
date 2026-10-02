@@ -411,6 +411,27 @@ export const CartProvider = ({ children }) => {
     showToast("Coupon removed");
   };
 
+  // Calculations
+  const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  const effectiveSubtotalForDiscount = subtotal > 0 ? subtotal : getCheckoutSubtotal();
+  let discountAmount = 0;
+  if (activeCoupon) {
+    if (activeCoupon.discountType === 'flat') {
+      discountAmount = Math.min(effectiveSubtotalForDiscount, Number(activeCoupon.discountValue) || 0);
+    } else {
+      discountAmount = Math.round((effectiveSubtotalForDiscount * (Number(activeCoupon.discountValue) || 0)) / 100);
+    }
+  }
+
+  const totalCourierFee = cart.reduce((sum, item) => {
+    const itemFee = typeof item.deliveryCost === 'number' ? item.deliveryCost : 120;
+    return sum + (itemFee * (item.quantity || 1));
+  }, 0);
+  const deliveryFee = deliveryType === 'kerala-courier' ? totalCourierFee : 0;
+  const finalTotal = Math.max(0, subtotal - discountAmount + deliveryFee);
+
   // Auto-validate minimum order amount if checkout subtotal changes
   useEffect(() => {
     let hasBuyNow = false;
@@ -439,27 +460,6 @@ export const CartProvider = ({ children }) => {
       showToast(`Coupon removed: Order subtotal fell below ₹${activeCoupon.minOrderAmount.toLocaleString('en-IN')}`);
     }
   }, [cart.length, subtotal, activeCoupon]);
-
-  // Calculations
-  const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  
-  const effectiveSubtotalForDiscount = subtotal > 0 ? subtotal : getCheckoutSubtotal();
-  let discountAmount = 0;
-  if (activeCoupon) {
-    if (activeCoupon.discountType === 'flat') {
-      discountAmount = Math.min(effectiveSubtotalForDiscount, Number(activeCoupon.discountValue) || 0);
-    } else {
-      discountAmount = Math.round((effectiveSubtotalForDiscount * (Number(activeCoupon.discountValue) || 0)) / 100);
-    }
-  }
-
-  const totalCourierFee = cart.reduce((sum, item) => {
-    const itemFee = typeof item.deliveryCost === 'number' ? item.deliveryCost : 120;
-    return sum + (itemFee * (item.quantity || 1));
-  }, 0);
-  const deliveryFee = deliveryType === 'kerala-courier' ? totalCourierFee : 0;
-  const finalTotal = Math.max(0, subtotal - discountAmount + deliveryFee);
 
   return (
     <CartContext.Provider
