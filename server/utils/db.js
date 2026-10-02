@@ -1807,8 +1807,8 @@ const db = {
     const connected = isMongoConnected && (mongoose.connection && mongoose.connection.readyState === 1);
     return {
       isMongoConnected: connected,
-      activeEngine: connected ? 'MongoDB Atlas (Mumbai Cloud)' : 'Disconnected (Awaiting Network)',
-      clusterHost: 'cluster0.rljhcg3.mongodb.net',
+      activeEngine: connected ? 'MongoDB Atlas Cloud' : 'Disconnected (Awaiting Network)',
+      clusterHost: mongoose.connection?.host || 'MongoDB Atlas',
       lastAtlasError: lastAtlasError || null
     };
   },
