@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
-const { requireStoreOwner, extractToken, verifyToken } = require('../utils/auth');
+const { requireStoreOwner, extractToken, verifyToken, optionalAuth } = require('../utils/auth');
 
 // GET /api/coupons - List all coupons
 router.get('/', async (req, res) => {
@@ -37,21 +37,15 @@ router.post('/', requireStoreOwner, async (req, res) => {
 });
 
 // POST /api/coupons/validate - Validate coupon against checkout subtotal & account/phone/email eligibility
-router.post('/validate', async (req, res) => {
+router.post('/validate', optionalAuth, async (req, res) => {
   try {
     const code = req.body.code;
     const subtotal = req.body.subtotal ?? req.body.orderSubtotal ?? req.body.cartSubtotal ?? 0;
 
-    let authUser = null;
-    const token = extractToken(req);
-    if (token) {
-      authUser = verifyToken(token);
-    }
-
     const userIdent = {
-      customerId: req.body.customerId || authUser?.id || authUser?._id,
-      phone: req.body.phone || authUser?.phone || '',
-      email: req.body.email || authUser?.email || ''
+      customerId: req.body.customerId || req.user?.id || req.user?._id,
+      phone: req.body.phone || req.user?.phone || '',
+      email: req.body.email || req.user?.email || ''
     };
     const result = await db.validateCoupon(code, Number(subtotal) || 0, userIdent);
     if (!result.valid) {
@@ -59,7 +53,8 @@ router.post('/validate', async (req, res) => {
     }
     res.json(result);
   } catch (err) {
-    res.status(500).json({ valid: false, message: 'Coupon validation failed' });
+    console.error('Coupon validation error:', err);
+    res.status(500).json({ valid: false, message: err.message || 'Coupon validation failed' });
   }
 });
 

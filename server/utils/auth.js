@@ -161,6 +161,7 @@ function safeCompare(a, b) {
 module.exports = {
   generateToken,
   verifyToken,
+  extractToken,
   requireAuth,
   requireStoreOwner,
   optionalAuth,
