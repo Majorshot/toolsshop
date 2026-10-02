@@ -298,12 +298,21 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
               </div>
             </div>
 
-            <div className="hero-pro-couriers-row">
-              {COURIER_PARTNERS.slice(0, 4).map(partner => (
-                <div key={partner.id} className="hero-pro-courier-box" title={partner.name}>
-                  <CourierLogo partner={partner} size="md" showName={false} bordered={false} />
-                </div>
-              ))}
+            <div className="hero-pro-couriers-marquee-wrap">
+              <div className="hero-pro-couriers-track">
+                {/* Primary Partner Logos (Visible on both desktop & mobile) */}
+                {COURIER_PARTNERS.map(partner => (
+                  <div key={partner.id} className="hero-pro-courier-box" title={partner.name}>
+                    <CourierLogo partner={partner} size="md" showName={false} bordered={false} />
+                  </div>
+                ))}
+                {/* Duplicated Partner Logos for Seamless Infinite Marquee Carousel on Mobile */}
+                {COURIER_PARTNERS.map(partner => (
+                  <div key={`dup-${partner.id}`} className="hero-pro-courier-box hero-pro-courier-duplicate" title={partner.name}>
+                    <CourierLogo partner={partner} size="md" showName={false} bordered={false} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
