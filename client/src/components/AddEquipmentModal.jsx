@@ -232,20 +232,11 @@ export const AddEquipmentModal = ({
     }
   };
 
-  // Toggle Cordless with sensible specs hints
+  // Toggle Cordless
   const handleToggleCordless = (checked) => {
     setForm(prev => ({
       ...prev,
-      cordless: checked,
-      specs: {
-        ...prev.specs,
-        power: checked
-          ? (prev.specs.power === '850 Watts' ? '20V XR Brushless' : prev.specs.power)
-          : (prev.specs.power === '20V XR Brushless' ? '850 Watts' : prev.specs.power),
-        voltage: checked
-          ? (prev.specs.voltage === '230V / 50Hz' ? '20V Max Li-Ion' : prev.specs.voltage)
-          : (prev.specs.voltage === '20V Max Li-Ion' ? '230V / 50Hz' : prev.specs.voltage)
-      }
+      cordless: checked
     }));
   };
 
@@ -1097,34 +1088,6 @@ export const AddEquipmentModal = ({
                 </label>
               </div>
 
-              {/* Specs Inputs Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label className="eq-field-label">
-                    <span>Power / Wattage</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={form.cordless ? 'e.g. 20V XR Brushless' : 'e.g. 850 Watts'}
-                    value={form.specs?.power || ''}
-                    onChange={(e) => setForm({ ...form, specs: { ...form.specs, power: e.target.value } })}
-                    className="eq-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="eq-field-label">
-                    <span>Operating Voltage / Battery</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={form.cordless ? 'e.g. 20V Max (Dual Battery)' : 'e.g. 230V / 50Hz'}
-                    value={form.specs?.voltage || ''}
-                    onChange={(e) => setForm({ ...form, specs: { ...form.specs, voltage: e.target.value } })}
-                    className="eq-input"
-                  />
-                </div>
-              </div>
 
               {/* Warranty Quick Chips */}
               <div>
@@ -1201,12 +1164,6 @@ export const AddEquipmentModal = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Warranty:</span>
                   <strong>{form.specs.warranty}</strong>
-                </div>
-              )}
-              {form.specs?.power && (
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Power:</span>
-                  <strong>{form.specs.power}</strong>
                 </div>
               )}
             </div>
