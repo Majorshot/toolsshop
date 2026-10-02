@@ -283,16 +283,76 @@ export const ShopPage = ({
     return products.filter(p => p.stock !== 0 && p.inStock !== false).length;
   }, [products]);
 
-  // Filtered lists for inline searches
+  // Available categories: ONLY categories that actually have at least 1 product uploaded
+  const availableCategories = useMemo(() => {
+    const list = [{ id: 'all', label: 'All Categories', icon: Layers }];
+    const seenCatIds = new Set(['all']);
+
+    // From backend taxonomy categories, include only those with products
+    dynamicCategories.forEach(cat => {
+      if (cat.id !== 'all' && (categoryCounts[cat.id] || 0) > 0 && !seenCatIds.has(cat.id)) {
+        seenCatIds.add(cat.id);
+        list.push(cat);
+      }
+    });
+
+    // Also include any categories present in products that weren't in dynamicCategories
+    products.forEach(p => {
+      if (p.category && !seenCatIds.has(p.category) && (categoryCounts[p.category] || 0) > 0) {
+        seenCatIds.add(p.category);
+        const formattedLabel = p.category
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+        list.push({
+          id: p.category,
+          label: formattedLabel,
+          icon: p.category.includes('hammer') ? Hammer :
+                p.category.includes('grind') ? Disc :
+                p.category.includes('wood') ? Wrench :
+                p.category.includes('wash') ? Wind :
+                p.category.includes('weld') ? Zap : Sparkles
+        });
+      }
+    });
+
+    return list;
+  }, [dynamicCategories, products, categoryCounts]);
+
+  // Available brands: ONLY brand names that actually have at least 1 product uploaded
+  const availableBrands = useMemo(() => {
+    const brandMap = new Map(); // lowercase -> formatted name
+
+    // From backend taxonomy brands, include only those with at least 1 product
+    dynamicBrands.forEach(b => {
+      if (b && (brandCounts[b.toLowerCase()] || 0) > 0) {
+        brandMap.set(b.toLowerCase(), b);
+      }
+    });
+
+    // Also include any brand on products with count > 0
+    products.forEach(p => {
+      if (p.brand && p.brand.trim()) {
+        const lower = p.brand.trim().toLowerCase();
+        if (!brandMap.has(lower) && (brandCounts[lower] || 0) > 0) {
+          brandMap.set(lower, p.brand.trim());
+        }
+      }
+    });
+
+    return Array.from(brandMap.values()).sort((a, b) => a.localeCompare(b));
+  }, [dynamicBrands, products, brandCounts]);
+
+  // Filtered lists for inline searches within filter modal
   const filteredBrandsList = useMemo(() => {
-    if (!brandSearch.trim()) return dynamicBrands;
-    return dynamicBrands.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()));
-  }, [dynamicBrands, brandSearch]);
+    if (!brandSearch.trim()) return availableBrands;
+    return availableBrands.filter(b => b.toLowerCase().includes(brandSearch.toLowerCase()));
+  }, [availableBrands, brandSearch]);
 
   const filteredCategoriesList = useMemo(() => {
-    if (!categorySearch.trim()) return dynamicCategories;
-    return dynamicCategories.filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()));
-  }, [dynamicCategories, categorySearch]);
+    if (!categorySearch.trim()) return availableCategories;
+    return availableCategories.filter(c => c.label.toLowerCase().includes(categorySearch.toLowerCase()));
+  }, [availableCategories, categorySearch]);
 
   // Master product filtering logic
   const displayedProducts = useMemo(() => {
@@ -578,7 +638,7 @@ export const ShopPage = ({
           {/* Category Chip */}
           {activeCategory && activeCategory !== 'all' && (
             <span className="active-filter-chip">
-              <span>Category: {dynamicCategories.find(c => c.id === activeCategory)?.label || activeCategory}</span>
+              <span>Category: {availableCategories.find(c => c.id === activeCategory)?.label || dynamicCategories.find(c => c.id === activeCategory)?.label || activeCategory}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -940,7 +1000,7 @@ export const ShopPage = ({
                   </div>
                   <span className="filter-tab-count-sub">
                     {activeCategory !== 'all'
-                      ? (dynamicCategories.find(c => c.id === activeCategory)?.label || activeCategory)
+                      ? (availableCategories.find(c => c.id === activeCategory)?.label || dynamicCategories.find(c => c.id === activeCategory)?.label || activeCategory)
                       : 'All'}
                   </span>
                 </button>
@@ -1032,7 +1092,7 @@ export const ShopPage = ({
                       <span className="filter-panel-hint">Select a specialized machinery category</span>
                     </div>
 
-                    {dynamicCategories.length > 6 && (
+                    {availableCategories.length > 6 && (
                       <div className="filter-search-box">
                         <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                         <input
@@ -1077,6 +1137,18 @@ export const ShopPage = ({
                           </button>
                         );
                       })}
+
+                      {filteredCategoriesList.length <= 1 && products.length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', padding: '24px 16px', textAlign: 'center', color: '#64748b', fontSize: '0.88rem' }}>
+                          No categories with uploaded products yet
+                        </div>
+                      )}
+
+                      {filteredCategoriesList.length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', padding: '24px 16px', textAlign: 'center', color: '#64748b', fontSize: '0.88rem' }}>
+                          {categorySearch ? `No categories matching "${categorySearch}"` : 'No categories available'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1089,25 +1161,27 @@ export const ShopPage = ({
                       <span className="filter-panel-hint">Authorized brand warranties supported by Variathu</span>
                     </div>
 
-                    <div className="filter-search-box">
-                      <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                      <input
-                        type="text"
-                        placeholder="Search Brand (e.g. Bosch, Makita, Stanley)..."
-                        value={brandSearch}
-                        onChange={(e) => setBrandSearch(e.target.value)}
-                        id="modal-brand-filter-search"
-                      />
-                      {brandSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setBrandSearch('')}
-                          style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
-                        >
-                          <X size={13} />
-                        </button>
-                      )}
-                    </div>
+                    {availableBrands.length > 6 && (
+                      <div className="filter-search-box">
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                        <input
+                          type="text"
+                          placeholder="Search Brand (e.g. Bosch, Makita, Stanley)..."
+                          value={brandSearch}
+                          onChange={(e) => setBrandSearch(e.target.value)}
+                          id="modal-brand-filter-search"
+                        />
+                        {brandSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setBrandSearch('')}
+                            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                          >
+                            <X size={13} />
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     <div className="filter-options-grid">
                       {/* All Brands Option */}
@@ -1152,6 +1226,12 @@ export const ShopPage = ({
                           </button>
                         );
                       })}
+
+                      {filteredBrandsList.length === 0 && (
+                        <div style={{ gridColumn: '1 / -1', padding: '24px 16px', textAlign: 'center', color: '#64748b', fontSize: '0.88rem' }}>
+                          {brandSearch ? `No brands matching "${brandSearch}"` : 'No brands available with uploaded products yet'}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

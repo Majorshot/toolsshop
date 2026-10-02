@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -46,7 +46,7 @@ const DEFAULT_CATEGORIES = [
 export const HomePage = ({ products = [], onSelectProduct }) => {
   const navigate = useNavigate();
   const featuredTools = products.slice(0, 8);
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const categoryScrollRef = useRef(null);
@@ -74,10 +74,10 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
     api.getTaxonomy()
       .then(res => {
         if (res && res.categories) {
-          // Exclude 'all' if present, and show only 4-5 categories as requested
+          // Exclude 'all' if present
           const valid = res.categories.filter(c => c.id !== 'all');
           if (valid.length > 0) {
-            setCategories(valid.slice(0, 5));
+            setCategories(valid);
           }
         }
         if (res && res.brands && res.brands.length > 0) {
@@ -116,19 +116,52 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
     }
   };
 
-  // Prepare category cards data using real product images from backend
-  const categoryCardsData = categories.map(cat => {
-    const matchingProduct = products.find(p => p.category === cat.id && (p.image || p.images?.[0]));
-    const count = products.filter(p => p.category === cat.id).length;
-    const IconComponent = getCategoryIcon(cat.id, cat.name);
-    return {
-      id: cat.id,
-      name: cat.name,
-      image: matchingProduct?.image || matchingProduct?.images?.[0] || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
-      count,
-      icon: IconComponent
-    };
-  });
+  // Prepare category cards data using real product images from backend,
+  // ONLY including categories that actually have at least 1 product uploaded
+  const categoryCardsData = useMemo(() => {
+    if (!products || products.length === 0) return [];
+
+    const result = [];
+    const seenCatIds = new Set();
+
+    // 1. First prioritize taxonomy categories that have at least 1 product
+    (categories || []).forEach(cat => {
+      const matchingProducts = products.filter(p => p.category === cat.id);
+      if (matchingProducts.length > 0 && !seenCatIds.has(cat.id)) {
+        seenCatIds.add(cat.id);
+        const matchingProductWithImg = matchingProducts.find(p => p.image || p.images?.[0]) || matchingProducts[0];
+        result.push({
+          id: cat.id,
+          name: cat.name || cat.id,
+          image: matchingProductWithImg?.image || matchingProductWithImg?.images?.[0] || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
+          count: matchingProducts.length,
+          icon: getCategoryIcon(cat.id, cat.name)
+        });
+      }
+    });
+
+    // 2. Also include any categories present in products that weren't in taxonomy
+    products.forEach(p => {
+      if (p.category && !seenCatIds.has(p.category)) {
+        seenCatIds.add(p.category);
+        const matchingProducts = products.filter(item => item.category === p.category);
+        const matchingProductWithImg = matchingProducts.find(item => item.image || item.images?.[0]) || matchingProducts[0];
+        const formattedName = p.category
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+        result.push({
+          id: p.category,
+          name: formattedName,
+          image: matchingProductWithImg?.image || matchingProductWithImg?.images?.[0] || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
+          count: matchingProducts.length,
+          icon: getCategoryIcon(p.category, formattedName)
+        });
+      }
+    });
+
+    return result;
+  }, [categories, products]);
 
   // Format long product names so hero title stays clean and never exceeds ~3 lines
   const formatHeroProductName = (name = '') => {
@@ -219,167 +252,171 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
 
       {/* Main Page Content Inside Container */}
       <div className="container">
-        {/* SECTION 2: Horizontal Category Cards (Full Image Background + Bottom Name & Button) */}
-        <section className="categories-horizontal-section">
-          <AnimatedContent distance={40} delay={0.08}>
-            <div className="categories-header-row">
-              <div>
-                <div className="categories-section-badge">
-                  <Sparkles size={13} />
-                  <span>AUTHORIZED CATEGORIES</span>
-                </div>
-                <h2 className="categories-section-title">
-                  Shop by Category
-                </h2>
-                <p className="categories-section-sub">
-                  Explore specialized power tool lines configured directly from our store catalog
-                </p>
-              </div>
-
-              <div className="categories-scroll-buttons">
-                <button
-                  type="button"
-                  className="btn-category-arrow"
-                  onClick={() => handleScrollCategories('left')}
-                  aria-label="Scroll Categories Left"
-                  title="Previous Categories"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  type="button"
-                  className="btn-category-arrow"
-                  onClick={() => handleScrollCategories('right')}
-                  aria-label="Scroll Categories Right"
-                  title="Next Categories"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-          </AnimatedContent>
-
-          {/* Horizontal Track with Full-Background Category Cards */}
-          <AnimatedContent distance={50} delay={0.2}>
-            <div className="categories-horizontal-track no-scrollbar" ref={categoryScrollRef}>
-              {categoryCardsData.map(cat => (
-                <Link
-                  key={cat.id}
-                  to={`/shop?category=${cat.id}`}
-                  className="category-full-card"
-                  id={`cat-card-${cat.id}`}
-                >
-                  {/* Product Image as Full Background */}
-                  <img src={cat.image} alt={cat.name} className="cat-card-full-bg" />
-                  <div className="cat-card-full-scrim" />
-
-                  {/* Top Category Icon Badge */}
-                  <div className="cat-card-top-badge">
-                    <cat.icon size={16} />
+        {/* SECTION 2: Horizontal Category Cards (Only shown when there are categories with products) */}
+        {categoryCardsData.length > 0 && (
+          <section className="categories-horizontal-section">
+            <AnimatedContent distance={40} delay={0.08}>
+              <div className="categories-header-row">
+                <div>
+                  <div className="categories-section-badge">
+                    <Sparkles size={13} />
+                    <span>AUTHORIZED CATEGORIES</span>
                   </div>
+                  <h2 className="categories-section-title">
+                    Shop by Category
+                  </h2>
+                  <p className="categories-section-sub">
+                    Explore specialized power tool lines configured directly from our store catalog
+                  </p>
+                </div>
 
-                  {/* Bottom Overlay: Category Name & Button */}
-                  <div className="cat-card-bottom-overlay">
-                    <span className="cat-card-overlay-count">
-                      {cat.count > 0 ? `${cat.count} Tools in Catalog` : 'Authorized Category'}
+                <div className="categories-scroll-buttons">
+                  <button
+                    type="button"
+                    className="btn-category-arrow"
+                    onClick={() => handleScrollCategories('left')}
+                    aria-label="Scroll Categories Left"
+                    title="Previous Categories"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-category-arrow"
+                    onClick={() => handleScrollCategories('right')}
+                    aria-label="Scroll Categories Right"
+                    title="Next Categories"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </AnimatedContent>
+
+            {/* Horizontal Track with Full-Background Category Cards */}
+            <AnimatedContent distance={50} delay={0.2}>
+              <div className="categories-horizontal-track no-scrollbar" ref={categoryScrollRef}>
+                {categoryCardsData.map(cat => (
+                  <Link
+                    key={cat.id}
+                    to={`/shop?category=${cat.id}`}
+                    className="category-full-card"
+                    id={`cat-card-${cat.id}`}
+                  >
+                    {/* Product Image as Full Background */}
+                    <img src={cat.image} alt={cat.name} className="cat-card-full-bg" />
+                    <div className="cat-card-full-scrim" />
+
+                    {/* Top Category Icon Badge */}
+                    <div className="cat-card-top-badge">
+                      <cat.icon size={16} />
+                    </div>
+
+                    {/* Bottom Overlay: Category Name & Button */}
+                    <div className="cat-card-bottom-overlay">
+                      <span className="cat-card-overlay-count">
+                        {cat.count > 0 ? `${cat.count} ${cat.count === 1 ? 'Tool' : 'Tools'} in Catalog` : 'Authorized Category'}
+                      </span>
+                      <h3 className="cat-card-overlay-name">{cat.name}</h3>
+                      <div className="cat-card-overlay-btn">
+                        <span>Shop Now</span>
+                        <ArrowRight size={14} />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+
+                {/* Final Card: View All Categories */}
+                <Link
+                  to="/shop"
+                  className="category-full-card category-full-card-all"
+                  id="cat-card-view-all"
+                >
+                  <div className="cat-card-all-bg-glow" />
+                  <div className="cat-card-all-inner">
+                    <div className="cat-card-all-icon">
+                      <Grid size={26} />
+                    </div>
+                    <span className="cat-card-overlay-count" style={{ color: '#facc15' }}>
+                      FULL SHOWROOM
                     </span>
-                    <h3 className="cat-card-overlay-name">{cat.name}</h3>
-                    <div className="cat-card-overlay-btn">
-                      <span>Shop Now</span>
+                    <h3 className="cat-card-overlay-name" style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
+                      View All Categories
+                    </h3>
+                    <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0', lineHeight: 1.45 }}>
+                      Browse our complete catalog of {products.length}+ power tools & genuine spares
+                    </p>
+                    <div className="cat-card-overlay-btn cat-card-all-btn">
+                      <span>Open Full Shop</span>
                       <ArrowRight size={14} />
                     </div>
                   </div>
                 </Link>
-              ))}
-
-              {/* Final Card: View All Categories */}
-              <Link
-                to="/shop"
-                className="category-full-card category-full-card-all"
-                id="cat-card-view-all"
-              >
-                <div className="cat-card-all-bg-glow" />
-                <div className="cat-card-all-inner">
-                  <div className="cat-card-all-icon">
-                    <Grid size={26} />
-                  </div>
-                  <span className="cat-card-overlay-count" style={{ color: '#facc15' }}>
-                    FULL SHOWROOM
-                  </span>
-                  <h3 className="cat-card-overlay-name" style={{ fontSize: '1.2rem', marginBottom: '8px' }}>
-                    View All Categories
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0', lineHeight: 1.45 }}>
-                    Browse our complete catalog of {products.length}+ power tools & genuine spares
-                  </p>
-                  <div className="cat-card-overlay-btn cat-card-all-btn">
-                    <span>Open Full Shop</span>
-                    <ArrowRight size={14} />
-                  </div>
-                </div>
-              </Link>
-            </div>
-          </AnimatedContent>
-        </section>
-
-
-        {/* Featured Bestsellers Section */}
-        <section style={{ marginBottom: '48px' }}>
-          <AnimatedContent distance={30} delay={0.08}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                  Featured & Trending Equipment
-                </h2>
-                <p style={{ fontSize: '0.86rem', color: '#64748b' }}>
-                  Handpicked professional tools favored by Kerala contractors and workshops
-                </p>
               </div>
+            </AnimatedContent>
+          </section>
+        )}
 
-              <Link
-                to="/shop"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.88rem',
-                  fontWeight: '700',
-                  color: 'var(--brand-primary)',
-                  textDecoration: 'none'
-                }}
-              >
-                <span>View Full Catalog</span>
-                <ArrowRight size={16} />
-              </Link>
+
+        {/* Featured Bestsellers Section (Only shown when products exist) */}
+        {featuredTools.length > 0 && (
+          <section style={{ marginBottom: '48px' }}>
+            <AnimatedContent distance={30} delay={0.08}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
+                    Featured & Trending Equipment
+                  </h2>
+                  <p style={{ fontSize: '0.86rem', color: '#64748b' }}>
+                    Handpicked professional tools favored by Kerala contractors and workshops
+                  </p>
+                </div>
+
+                <Link
+                  to="/shop"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.88rem',
+                    fontWeight: '700',
+                    color: 'var(--brand-primary)',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <span>View Full Catalog</span>
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </AnimatedContent>
+
+            <div className="product-grid">
+              {featuredTools.map((product, idx) => (
+                <AnimatedContent
+                  key={product.id || product._id || idx}
+                  distance={40}
+                  delay={idx * 0.06}
+                  duration={0.7}
+                  style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                >
+                  <ProductCard
+                    product={product}
+                    onSelectProduct={onSelectProduct}
+                  />
+                </AnimatedContent>
+              ))}
             </div>
-          </AnimatedContent>
 
-          <div className="product-grid">
-            {featuredTools.map((product, idx) => (
-              <AnimatedContent
-                key={product.id || product._id || idx}
-                distance={40}
-                delay={idx * 0.06}
-                duration={0.7}
-                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-              >
-                <ProductCard
-                  product={product}
-                  onSelectProduct={onSelectProduct}
-                />
-              </AnimatedContent>
-            ))}
-          </div>
-
-          <AnimatedContent distance={20} delay={0.15}>
-            <div style={{ textAlign: 'center', marginTop: '32px' }}>
-              <Link to="/shop" className="btn-hero-secondary" style={{ padding: '12px 32px' }}>
-                <span>Explore All {products.length}+ Tools in Shop</span>
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-          </AnimatedContent>
-        </section>
+            <AnimatedContent distance={20} delay={0.15}>
+              <div style={{ textAlign: 'center', marginTop: '32px' }}>
+                <Link to="/shop" className="btn-hero-secondary" style={{ padding: '12px 32px' }}>
+                  <span>Explore All {products.length}+ Tools in Shop</span>
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+            </AnimatedContent>
+          </section>
+        )}
 
         {/* Why Choose Variathu */}
         <section style={{ marginBottom: '48px' }}>
