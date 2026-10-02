@@ -21,6 +21,7 @@ export const ProductDetailPage = () => {
 
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [taxonomyCategories, setTaxonomyCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -36,6 +37,17 @@ export const ProductDetailPage = () => {
   const mobileSliderRef = useRef(null);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+
+  // Load backend taxonomy categories to map raw category slugs to formatted names
+  useEffect(() => {
+    api.getTaxonomy()
+      .then(res => {
+        if (res?.categories && Array.isArray(res.categories)) {
+          setTaxonomyCategories(res.categories);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Fetch current product and related products
   useEffect(() => {
@@ -381,9 +393,55 @@ export const ProductDetailPage = () => {
     ? product.originalPrice - product.price 
     : 0;
 
-  const isLongDesc = Boolean(product?.description && product.description.length > 180);
+  // Known category display dictionary
+  const KNOWN_CATEGORY_NAMES = {
+    'pressurewasher': 'Pressure Washer',
+    'pressurewashers': 'Pressure Washers',
+    'pressure-washer': 'Pressure Washer',
+    'pressure-washers': 'Pressure Washers',
+    'highpressurewasher': 'High Pressure Washer',
+    'cordless': 'Cordless Tools',
+    'cordless-tools': 'Cordless Tools',
+    'grinders-cutters': 'Grinders & Cutters',
+    'grinder': 'Grinder',
+    'grinders': 'Grinders',
+    'hammers': 'Hammer Drills',
+    'hammer': 'Hammer Drill',
+    'hammer-drills': 'Hammer Drills',
+    'woodworking': 'Woodworking Tools',
+    'washers-blowers': 'Washers & Blowers',
+    'blowers': 'Air Blowers',
+    'welding': 'Welding Machines'
+  };
 
-  const categoryLabel = product.category ? product.category.replace(/-/g, ' ') : 'Equipment';
+  const formatCategoryName = (rawCat = '') => {
+    if (!rawCat) return 'Equipment';
+    const norm = String(rawCat).trim().toLowerCase();
+
+    // 1. Check if backend taxonomy has this category
+    const found = taxonomyCategories.find(
+      c => c.id?.toLowerCase() === norm || c.name?.toLowerCase() === norm || c.slug?.toLowerCase() === norm
+    );
+    if (found?.name) return found.name;
+
+    // 2. Check known dictionary
+    if (KNOWN_CATEGORY_NAMES[norm]) return KNOWN_CATEGORY_NAMES[norm];
+
+    // 3. Fallback: split camelCase and hyphenated or common names
+    const spaced = norm
+      .replace(/pressurewasher/gi, 'Pressure Washer')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/[-_]+/g, ' ');
+
+    return spaced
+      .split(' ')
+      .filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const categoryLabel = formatCategoryName(product?.category);
+  const relatedCategoryHeading = categoryLabel.replace(/\s+tools$/i, '');
 
   return (
     <div style={{ padding: '16px 0 70px' }}>
@@ -1076,7 +1134,7 @@ export const ProductDetailPage = () => {
                 <Sparkles size={14} /> Similar Equipment in this Category
               </div>
               <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em', marginTop: '2px' }}>
-                Related {categoryLabel} Tools
+                Related {relatedCategoryHeading} Tools
               </h2>
             </div>
 
