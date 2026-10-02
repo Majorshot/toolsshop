@@ -3335,15 +3335,15 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 >
                   {[
                     { id: 'all', label: 'All Orders', count: orderCounts.all, icon: ShoppingBag, color: '#0f172a' },
-                    { id: 'today', label: "⚡ Today's Orders", count: orderCounts.today, icon: Clock, color: '#ea580c' },
-                    { id: 'undispatched', label: '📦 Undispatched', count: orderCounts.undispatched, icon: AlertCircle, color: '#d97706' },
-                    { id: 'dispatched', label: '🚚 Dispatched', count: orderCounts.dispatched, icon: Truck, color: '#16a34a' },
-                    { id: 'pickup-pending', label: '🏬 Counter Pickup', count: orderCounts.pickupPending, icon: ShieldCheck, color: '#0284c7' },
-                    { id: 'completed', label: '✅ Completed', count: 0, icon: CheckCircle2, color: '#059669' },
+                    { id: 'today', label: "Today's Orders", count: orderCounts.today, icon: Clock, color: '#ea580c' },
+                    { id: 'undispatched', label: 'Undispatched', count: orderCounts.undispatched, icon: AlertCircle, color: '#d97706' },
+                    { id: 'dispatched', label: 'Dispatched', count: orderCounts.dispatched, icon: Truck, color: '#16a34a' },
+                    { id: 'pickup-pending', label: 'Counter Pickup', count: orderCounts.pickupPending, icon: ShieldCheck, color: '#0284c7' },
+                    { id: 'completed', label: 'Completed', count: 0, icon: CheckCircle2, color: '#059669' },
                     ...(orderCounts.cancelPending > 0 ? [
-                      { id: 'cancel-pending', label: '⚠️ Cancel Requests', count: orderCounts.cancelPending, icon: AlertTriangle, color: '#dc2626' }
+                      { id: 'cancel-pending', label: 'Cancel Requests', count: orderCounts.cancelPending, icon: AlertTriangle, color: '#dc2626' }
                     ] : []),
-                    { id: 'cancelled', label: '❌ Cancelled', count: 0, icon: XCircle, color: '#64748b' }
+                    { id: 'cancelled', label: 'Cancelled', count: 0, icon: XCircle, color: '#64748b' }
                   ].map(chip => {
                     const isSelected = orderStatusFilter === chip.id;
                     const IconComp = chip.icon;
