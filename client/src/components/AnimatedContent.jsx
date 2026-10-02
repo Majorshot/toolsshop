@@ -86,18 +86,19 @@ const AnimatedContent = ({
       }
     };
 
-    const st = ScrollTrigger.create({
+    let st = null;
+    st = ScrollTrigger.create({
       trigger: el,
       scroller: scrollerTarget || undefined,
       start: `top ${startPct}%`,
       once: true,
       onEnter: () => tl.play(),
-      onRefresh: () => {
-        if (st.progress > 0) tl.play();
+      onRefresh: (self) => {
+        if (self && self.progress > 0) tl.play();
       }
     });
 
-    if (st.progress > 0) {
+    if (st && st.progress > 0) {
       tl.play();
     } else {
       checkAndPlay();
@@ -110,7 +111,7 @@ const AnimatedContent = ({
     return () => {
       cancelAnimationFrame(rafId);
       clearTimeout(timeoutId);
-      st.kill();
+      if (st) st.kill();
       tl.kill();
     };
   }, [
