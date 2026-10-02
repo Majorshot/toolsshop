@@ -301,13 +301,13 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
             <div className="hero-pro-couriers-marquee-wrap">
               <div className="hero-pro-couriers-track">
                 {/* Primary Partner Logos (Visible on both desktop & mobile) */}
-                {COURIER_PARTNERS.map(partner => (
+                {COURIER_PARTNERS.filter(partner => partner.id !== 'bluedart').map(partner => (
                   <div key={partner.id} className="hero-pro-courier-box" title={partner.name}>
                     <CourierLogo partner={partner} size="md" showName={false} bordered={false} />
                   </div>
                 ))}
                 {/* Duplicated Partner Logos for Seamless Infinite Marquee Carousel on Mobile */}
-                {COURIER_PARTNERS.map(partner => (
+                {COURIER_PARTNERS.filter(partner => partner.id !== 'bluedart').map(partner => (
                   <div key={`dup-${partner.id}`} className="hero-pro-courier-box hero-pro-courier-duplicate" title={partner.name}>
                     <CourierLogo partner={partner} size="md" showName={false} bordered={false} />
                   </div>
