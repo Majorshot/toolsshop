@@ -20,10 +20,13 @@ import {
   Grid,
   Zap,
   Tag,
-  ShoppingCart
+  ShoppingCart,
+  Truck
 } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
 import AnimatedContent from '../components/AnimatedContent';
+import CourierLogo from '../components/CourierLogo';
+import { COURIER_PARTNERS } from '../utils/courierPartners';
 import { api } from '../services/api';
 
 // Helper to assign a relevant icon to any dynamic category
@@ -199,134 +202,220 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
 
   return (
     <div className="home-page-root">
-      {/* SECTION 1: Vibrant Commercial Power Tools Hero Banner */}
+      {/* SECTION 1: Vibrant Commercial Ad Hero Banner */}
       {currentProduct && (
         <section
-          className="hero-colorful-banner"
+          className="hero-ad-banner"
           onTouchStart={handleHeroTouchStart}
           onTouchMove={handleHeroTouchMove}
           onTouchEnd={handleHeroTouchEnd}
         >
-          {/* Ambient Colorful Light Flares */}
+          {/* Ambient Lighting Flares */}
           <div className="hero-flare hero-flare-1" />
           <div className="hero-flare hero-flare-2" />
-          <div className="hero-flare hero-flare-3" />
 
-          <div className="hero-colorful-container">
-            {/* Left Content Side: Deal Badge, Title, Price, Buy Buttons */}
-            <div className="hero-colorful-content">
-              {/* Promotional Top Tag */}
-              <div className="hero-promo-badge">
-                <span className="hero-promo-icon">⚡</span>
-                <span>SPECIAL STORE OFFER</span>
-                {currentProduct.brand && (
-                  <span className="hero-promo-brand">• {currentProduct.brand.toUpperCase()}</span>
-                )}
+          <div className="hero-ad-container">
+            {/* Top Ad Banner Header Bar */}
+            <div className="hero-ad-header">
+              <div className="hero-ad-top-pill">
+                <Flame size={14} className="hero-ad-flame" />
+                <span>VARIATHU POWER TOOLS • KOZHENCHERRY</span>
+                <span className="hero-ad-dot">•</span>
+                <span className="hero-ad-highlight">DIRECT STORE PRICING</span>
               </div>
-
-              {/* Product Title */}
-              <h1 className="hero-colorful-title">
-                {currentProduct.name}
+              <h1 className="hero-ad-headline">
+                Heavy Duty Power Tools at <span className="hero-highlight-yellow">Affordable Direct Prices</span>
               </h1>
+              <p className="hero-ad-subtext">
+                Authorized showroom for IBELL, Bosch, DongCheng & Makita. Delivering genuine equipment directly to your doorstep across Kerala!
+              </p>
+            </div>
 
-              {/* Price Block */}
-              <div className="hero-colorful-price-wrap">
-                <div className="hero-colorful-price-main">
-                  <span className="hero-colorful-price-now">
-                    ₹{currentProduct.price?.toLocaleString('en-IN')}
-                  </span>
-                  {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
-                    <span className="hero-colorful-price-mrp">
-                      ₹{currentProduct.originalPrice?.toLocaleString('en-IN')}
+            {/* Ad Content Grid: Left Product Deal Card, Right All Kerala Delivery & Affordable Price Showcase */}
+            <div className="hero-ad-grid">
+              {/* Product Deal Spotlight Card (Clean White Surface to avoid square image clash) */}
+              <div className="hero-deal-card">
+                <div className="hero-deal-card-header">
+                  <div className="hero-deal-badge">
+                    <span className="hero-deal-icon">⚡</span>
+                    <span>TODAY'S SPECIAL DEAL</span>
+                  </div>
+                  {currentProduct.brand && (
+                    <span className="hero-deal-brand">{currentProduct.brand.toUpperCase()}</span>
+                  )}
+                  {heroProducts.length > 1 && (
+                    <span className="hero-deal-counter">{activeSlide + 1} / {heroProducts.length}</span>
+                  )}
+                </div>
+
+                {/* Product Photo Stage */}
+                <Link
+                  to={`/product/${currentProduct.id || currentProduct._id}`}
+                  className="hero-deal-img-link"
+                  title={currentProduct.name}
+                >
+                  <img
+                    src={currentProduct.image || currentProduct.images?.[0]}
+                    alt={currentProduct.name}
+                    className="hero-deal-img"
+                    key={currentProduct.id || currentProduct._id}
+                  />
+                </Link>
+
+                {/* Product Title */}
+                <h2 className="hero-deal-title">
+                  {currentProduct.name}
+                </h2>
+
+                {/* Affordable Price Block */}
+                <div className="hero-deal-pricing">
+                  <div className="hero-deal-prices">
+                    <span className="hero-deal-price-current">
+                      ₹{currentProduct.price?.toLocaleString('en-IN')}
+                    </span>
+                    {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
+                      <span className="hero-deal-price-mrp">
+                        MRP ₹{currentProduct.originalPrice?.toLocaleString('en-IN')}
+                      </span>
+                    )}
+                  </div>
+
+                  {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price ? (
+                    <span className="hero-deal-savings-tag">
+                      SAVE ₹{(currentProduct.originalPrice - currentProduct.price).toLocaleString('en-IN')} (
+                      {currentProduct.discount || `${Math.round(((currentProduct.originalPrice - currentProduct.price) / currentProduct.originalPrice) * 100)}% OFF`}
+                      )
+                    </span>
+                  ) : (
+                    <span className="hero-deal-direct-tag">
+                      Affordable Direct Price
                     </span>
                   )}
                 </div>
 
-                {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
-                  <span className="hero-colorful-discount-badge">
-                    {currentProduct.discount || `${Math.round(((currentProduct.originalPrice - currentProduct.price) / currentProduct.originalPrice) * 100)}% OFF`}
-                  </span>
+                {/* Fast Action Buttons */}
+                <div className="hero-deal-actions">
+                  <Link
+                    to={`/product/${currentProduct.id || currentProduct._id}`}
+                    className="hero-deal-btn-buy"
+                    id="hero-buy-now-btn"
+                  >
+                    <ShoppingCart size={18} />
+                    <span>BUY NOW</span>
+                    <ArrowRight size={17} />
+                  </Link>
+
+                  <a
+                    href={`https://wa.me/919447559333?text=${encodeURIComponent(`Hello Variathu Power Tools Kozhencherry, I want to purchase *${currentProduct.name}* (Special Offer: ₹${currentProduct.price}). Is this in stock for delivery?`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hero-deal-btn-wa"
+                    id="hero-whatsapp-btn"
+                    title="Order on WhatsApp"
+                  >
+                    <MessageCircle size={18} />
+                    <span>ORDER ON WHATSAPP</span>
+                  </a>
+                </div>
+
+                {/* Deal Carousel Arrows & Dots */}
+                {heroProducts.length > 1 && (
+                  <div className="hero-deal-nav">
+                    <button
+                      type="button"
+                      className="hero-deal-arrow"
+                      onClick={() => setActiveSlide(prev => (prev - 1 + heroProducts.length) % heroProducts.length)}
+                      aria-label="Previous Deal"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <div className="hero-deal-dots">
+                      {heroProducts.map((_, idx) => (
+                        <button
+                          key={idx}
+                          className={`hero-deal-dot ${activeSlide === idx ? 'active' : ''}`}
+                          onClick={() => setActiveSlide(idx)}
+                          aria-label={`Deal ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="hero-deal-arrow"
+                      onClick={() => setActiveSlide(prev => (prev + 1) % heroProducts.length)}
+                      aria-label="Next Deal"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
                 )}
               </div>
 
-              {/* Action Buttons: Buy Now & WhatsApp */}
-              <div className="hero-colorful-btn-row">
-                <Link
-                  to={`/product/${currentProduct.id || currentProduct._id}`}
-                  className="hero-btn-buy-now"
-                  id="hero-buy-now-btn"
-                >
-                  <ShoppingCart size={19} />
-                  <span>BUY NOW</span>
-                  <ArrowRight size={18} />
-                </Link>
+              {/* Right Side: All Kerala Delivery Box & Affordable Pricing Pillars */}
+              <div className="hero-ad-sidebar">
+                {/* 1. All Kerala Doorstep Delivery Box with Partner Logos */}
+                <div className="hero-kerala-delivery-card">
+                  <div className="hero-delivery-badge-row">
+                    <div className="hero-delivery-icon-circle">
+                      <Truck size={22} />
+                    </div>
+                    <div>
+                      <div className="hero-delivery-lead">ALL KERALA DOORSTEP DELIVERY</div>
+                      <div className="hero-delivery-sub">Express safe delivery across all 14 districts</div>
+                    </div>
+                  </div>
 
-                <a
-                  href={`https://wa.me/919447559333?text=${encodeURIComponent(`Hello Variathu Power Tools Kozhencherry, I want to purchase *${currentProduct.name}* (Special Price: ₹${currentProduct.price}). Is this available at Poyanil Building?`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hero-btn-whatsapp"
-                  id="hero-whatsapp-btn"
-                  title="Order on WhatsApp"
-                >
-                  <MessageCircle size={19} />
-                  <span>ORDER ON WHATSAPP</span>
-                </a>
+                  {/* Delivery Partner Logos Row */}
+                  <div className="hero-delivery-partners-grid">
+                    {COURIER_PARTNERS.map(partner => (
+                      <div key={partner.id} className="hero-partner-badge" title={partner.tagline || partner.name}>
+                        <CourierLogo partner={partner} size="sm" showName={false} bordered={false} />
+                        <span className="hero-partner-label">{partner.shortName || partner.name}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hero-delivery-perks-list">
+                    <div className="hero-delivery-perk">
+                      <CheckCircle2 size={15} className="hero-check-icon" />
+                      <span>Live Courier AWB Tracking Provided</span>
+                    </div>
+                    <div className="hero-delivery-perk">
+                      <CheckCircle2 size={15} className="hero-check-icon" />
+                      <span>Heavy Machinery & Parcel Transport</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Affordable Pricing & Genuine Guarantee Badges */}
+                <div className="hero-ad-pillars">
+                  <div className="hero-pillar-item">
+                    <div className="hero-pillar-icon">💰</div>
+                    <div className="hero-pillar-text">
+                      <div className="hero-pillar-title">Affordable Pricing</div>
+                      <div className="hero-pillar-desc">Direct showroom wholesale rates, no middleman markup</div>
+                    </div>
+                  </div>
+
+                  <div className="hero-pillar-item">
+                    <div className="hero-pillar-icon">🛡️</div>
+                    <div className="hero-pillar-text">
+                      <div className="hero-pillar-title">100% Genuine Tools</div>
+                      <div className="hero-pillar-desc">Official Kerala GST Tax Invoice & manufacturer warranty</div>
+                    </div>
+                  </div>
+
+                  <div className="hero-pillar-item">
+                    <div className="hero-pillar-icon">📍</div>
+                    <div className="hero-pillar-text">
+                      <div className="hero-pillar-title">Direct Counter Pickup</div>
+                      <div className="hero-pillar-desc">Poyanil Building, Kozhencherry — ready for instant trial</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            {/* Right / Image Side: Floating Glow & Large Product Photo */}
-            <div className="hero-colorful-image-stage">
-              <div className="hero-image-aura" />
-
-              <Link
-                to={`/product/${currentProduct.id || currentProduct._id}`}
-                className="hero-image-clickable"
-                title={currentProduct.name}
-              >
-                <img
-                  src={currentProduct.image || currentProduct.images?.[0]}
-                  alt={currentProduct.name}
-                  className="hero-colorful-img"
-                  key={currentProduct.id || currentProduct._id}
-                />
-              </Link>
             </div>
           </div>
-
-          {/* Carousel Navigation: Arrows & Indicator Dots */}
-          {heroProducts.length > 1 && (
-            <div className="hero-colorful-controls">
-              <button
-                type="button"
-                className="hero-nav-arrow-btn"
-                onClick={() => setActiveSlide(prev => (prev - 1 + heroProducts.length) % heroProducts.length)}
-                aria-label="Previous product"
-              >
-                <ChevronLeft size={20} />
-              </button>
-
-              <div className="hero-nav-dots">
-                {heroProducts.map((_, idx) => (
-                  <button
-                    key={idx}
-                    className={`hero-nav-dot ${activeSlide === idx ? 'active' : ''}`}
-                    onClick={() => setActiveSlide(idx)}
-                    aria-label={`Slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
-
-              <button
-                type="button"
-                className="hero-nav-arrow-btn"
-                onClick={() => setActiveSlide(prev => (prev + 1) % heroProducts.length)}
-                aria-label="Next product"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
         </section>
       )}
 
