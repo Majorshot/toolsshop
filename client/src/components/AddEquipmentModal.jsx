@@ -50,6 +50,7 @@ export const AddEquipmentModal = ({
   const { confirm } = useConfirm();
   const fileInputRef = useRef(null);
   const sessionUploadedUrls = useRef(new Set());
+  const formColRef = useRef(null);
 
   // Clean production form state
   const [form, setForm] = useState({
@@ -83,9 +84,28 @@ export const AddEquipmentModal = ({
   const [showOutsideClickTip, setShowOutsideClickTip] = useState(false);
   const tipTimeoutRef = useRef(null);
 
+  // Smooth wheel scroll forwarding: hovering over the fixed preview smoothly scrolls the form if preview doesn't need to scroll
+  const handlePreviewWheel = (e) => {
+    if (!formColRef.current) return;
+    const target = e.currentTarget;
+    const isScrollable = target.scrollHeight > target.clientHeight;
+    if (isScrollable) {
+      const atTop = target.scrollTop <= 0 && e.deltaY < 0;
+      const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 1 && e.deltaY > 0;
+      if (!atTop && !atBottom) {
+        return; // Allow the preview container to scroll itself
+      }
+    }
+    formColRef.current.scrollTop += e.deltaY;
+  };
+
   // Initialize or Reset Form when modal opens or editingProduct changes
   useEffect(() => {
     if (!isOpen) return;
+
+    if (formColRef.current) {
+      formColRef.current.scrollTop = 0;
+    }
 
     if (editingProduct) {
       // Editing existing real MongoDB product
@@ -557,8 +577,8 @@ export const AddEquipmentModal = ({
 
         {/* Modal Body: Split Form & Live Customer Card Preview */}
         <div className="eq-modal-body">
-          {/* Left Column: Form Controls */}
-          <div className="eq-form-col">
+          {/* Left Column: Form Controls (scrolls independently) */}
+          <div className="eq-form-col" ref={formColRef}>
             {/* SECTION 1: Product Identity */}
             <div className="eq-section-card">
               <div className="eq-section-header">
@@ -1142,8 +1162,8 @@ export const AddEquipmentModal = ({
             </div>
           </div>
 
-          {/* Right Column: Real-time Live Customer Card Preview */}
-          <div className="eq-preview-col">
+          {/* Right Column: Real-time Live Customer Card Preview (stays fixed) */}
+          <div className="eq-preview-col" onWheel={handlePreviewWheel}>
             <div className="eq-preview-header">
               <h4 className="eq-preview-title">
                 <Eye size={14} style={{ color: '#ea580c' }} />

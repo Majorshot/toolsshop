@@ -68,6 +68,7 @@
   border-radius: 20px;
   width: 100%;
   max-width: 1060px;
+  height: min(92vh, 880px);
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -97,6 +98,7 @@
   padding: 16px 24px;
   border-bottom: 1px solid #f1f5f9;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .eq-modal-header-left {
@@ -175,29 +177,76 @@
 }
 
 
-/* Modal Body: Split Layout */
+/* Modal Body: Split Layout - Left side scrolls independently, Right preview stays fixed */
 .eq-modal-body {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 22px;
-  padding: 22px 24px;
-  overflow-y: auto;
+  padding: 20px 24px 16px;
+  overflow: hidden;
   flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 940px) {
+  .eq-modal-dialog {
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
+  }
+
   .eq-modal-body {
     grid-template-columns: 1fr;
     gap: 20px;
     padding: 16px;
+    overflow-y: auto;
+  }
+
+  .eq-form-col {
+    overflow-y: visible !important;
+    height: auto !important;
+    padding-right: 0 !important;
+  }
+
+  .eq-preview-col {
+    overflow-y: visible !important;
+    height: auto !important;
+    padding-right: 0 !important;
   }
 }
 
-/* Form Column */
+/* Form Column - Independently Scrollable Left Pane */
 .eq-form-col {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  min-height: 0;
+  padding-right: 10px;
+  padding-bottom: 16px;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.eq-form-col::-webkit-scrollbar {
+  width: 6px;
+}
+
+.eq-form-col::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 9999px;
+}
+
+.eq-form-col::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.eq-form-col::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Form Section Cards */
@@ -502,11 +551,33 @@
 }
 
 
-/* Right Column: Live Card Preview */
+/* Right Column: Live Card Preview - Fixed in viewport while form scrolls */
 .eq-preview-col {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  min-height: 0;
+  padding-right: 4px;
+  padding-bottom: 12px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #e2e8f0 transparent;
+}
+
+.eq-preview-col::-webkit-scrollbar {
+  width: 4px;
+}
+
+.eq-preview-col::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.eq-preview-col::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 9999px;
 }
 
 .eq-preview-header {
@@ -698,6 +769,7 @@
   justify-content: space-between;
   gap: 12px;
   z-index: 20;
+  flex-shrink: 0;
 }
 
 .eq-btn-cancel {
