@@ -1010,7 +1010,7 @@ export const CheckoutPage = () => {
         phone: user?.phone || loginForm.phone,
         email: user?.email || loginForm.email
       };
-      const res = await applyCoupon(couponInput.trim(), userIdent);
+      const res = await applyCoupon(couponInput.trim(), userIdent, subtotal);
       if (res && res.success) {
         setCouponInput('');
       } else {
@@ -1057,7 +1057,7 @@ export const CheckoutPage = () => {
         phone: cleanAccountPhone,
         email: user?.email
       };
-      const vRes = await verifyCouponWithPhone(userIdent, { silent: true });
+      const vRes = await verifyCouponWithPhone(userIdent, { silent: true, customSubtotal: subtotal });
       if (vRes && !vRes.valid) {
         const msg = vRes.message || 'This coupon has already been redeemed by your account.';
         setErrorMsg(msg);

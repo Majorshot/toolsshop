@@ -43,7 +43,7 @@ export const CartPage = ({ onOpenCheckout }) => {
   const handleApplyCoupon = (e) => {
     e.preventDefault();
     if (!inputCoupon.trim()) return;
-    applyCoupon(inputCoupon);
+    applyCoupon(inputCoupon, '', subtotal);
   };
 
   const getWhatsAppCartUrl = () => {
@@ -386,7 +386,7 @@ export const CartPage = ({ onOpenCheckout }) => {
                   />
                   <button
                     type="button"
-                    onClick={() => verifyCouponWithPhone(verifyPhoneInput)}
+                    onClick={() => verifyCouponWithPhone(verifyPhoneInput, { customSubtotal: subtotal })}
                     style={{
                       padding: '0 16px',
                       background: '#ea580c',

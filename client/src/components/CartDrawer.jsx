@@ -42,7 +42,7 @@ export const CartDrawer = ({ onOpenCheckout }) => {
   const handleApplyCoupon = (e) => {
     e.preventDefault();
     if (!inputCoupon.trim()) return;
-    applyCoupon(inputCoupon);
+    applyCoupon(inputCoupon, '', subtotal);
   };
 
   const handleProceedCheckout = () => {
@@ -346,7 +346,7 @@ export const CartDrawer = ({ onOpenCheckout }) => {
                       />
                       <button
                         type="button"
-                        onClick={() => verifyCouponWithPhone(verifyPhoneDrawerInput)}
+                        onClick={() => verifyCouponWithPhone(verifyPhoneDrawerInput, { customSubtotal: subtotal })}
                         style={{
                           padding: '0 10px',
                           background: '#ea580c',

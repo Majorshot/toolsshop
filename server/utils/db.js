@@ -1475,11 +1475,11 @@ const db = {
       };
     }
 
-    // 2. Minimum Cart Amount Check
+    // 2. Minimum Order Amount Check
     if (coupon.minOrderAmount && orderSubtotal < coupon.minOrderAmount) {
       return {
         valid: false,
-        message: `Cart total must be at least ₹${coupon.minOrderAmount.toLocaleString('en-IN')} to apply this coupon`
+        message: `Order amount must be at least ₹${coupon.minOrderAmount.toLocaleString('en-IN')} to apply this coupon`
       };
     }
 

@@ -284,7 +284,32 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const applyCoupon = async (code, userIdent = '') => {
+  // Get active checkout subtotal (custom passed-in subtotal, current cart subtotal, or direct "Buy Now" subtotal)
+  const getCheckoutSubtotal = (customSubtotal = null) => {
+    if (customSubtotal !== null && customSubtotal !== undefined && !isNaN(Number(customSubtotal))) {
+      return Number(customSubtotal);
+    }
+    const cartSum = (cartRef.current || cart || []).reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0);
+    if (cartSum > 0) return cartSum;
+
+    try {
+      const bn = sessionStorage.getItem('vpt_buy_now');
+      if (bn) {
+        const parsed = JSON.parse(bn);
+        if (parsed && typeof parsed === 'object') {
+          const itemPrice = Number(parsed.price || 0);
+          const itemQty = Number(parsed.quantity || 1);
+          if (itemPrice > 0) {
+            return itemPrice * itemQty;
+          }
+        }
+      }
+    } catch {}
+
+    return 0;
+  };
+
+  const applyCoupon = async (code, userIdent = '', customSubtotal = null) => {
     const cleanCode = (code || '').trim().toUpperCase();
     if (!cleanCode) {
       showToast("Please enter a coupon code");
@@ -292,12 +317,12 @@ export const CartProvider = ({ children }) => {
     }
 
     try {
-      const currentSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const effectiveSubtotal = getCheckoutSubtotal(customSubtotal);
       const userPayload = typeof userIdent === 'object'
         ? userIdent
         : { phone: (userIdent || '').replace(/[^0-9]/g, '').slice(-10) };
 
-      const res = await api.validateCoupon(cleanCode, currentSubtotal, userPayload);
+      const res = await api.validateCoupon(cleanCode, effectiveSubtotal, userPayload);
 
       if (res && res.valid) {
         setActiveCoupon({
@@ -330,7 +355,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const verifyCouponWithPhone = async (userIdent, { silent = false } = {}) => {
+  const verifyCouponWithPhone = async (userIdent, { silent = false, customSubtotal = null } = {}) => {
     if (!activeCoupon) return { valid: true };
     const userPayload = typeof userIdent === 'object'
       ? userIdent
@@ -348,7 +373,8 @@ export const CartProvider = ({ children }) => {
     }
 
     try {
-      const res = await api.validateCoupon(activeCoupon.code, subtotal, userPayload);
+      const effectiveSubtotal = getCheckoutSubtotal(customSubtotal);
+      const res = await api.validateCoupon(activeCoupon.code, effectiveSubtotal, userPayload);
       if (res && res.valid) {
         setActiveCoupon(prev => ({
           ...prev,
@@ -385,25 +411,46 @@ export const CartProvider = ({ children }) => {
     showToast("Coupon removed");
   };
 
-  // Auto-validate minimum order amount if cart subtotal changes
+  // Auto-validate minimum order amount if checkout subtotal changes
   useEffect(() => {
-    if (cart.length === 0 && activeCoupon) {
+    let hasBuyNow = false;
+    let buyNowSubtotal = 0;
+    try {
+      const bn = sessionStorage.getItem('vpt_buy_now');
+      if (bn) {
+        const parsed = JSON.parse(bn);
+        if (parsed && typeof parsed === 'object') {
+          hasBuyNow = true;
+          buyNowSubtotal = Number(parsed.price || 0) * Number(parsed.quantity || 1);
+        }
+      }
+    } catch {}
+
+    const effectiveSubtotal = (cart.length === 0 && hasBuyNow) ? buyNowSubtotal : subtotal;
+
+    if (cart.length === 0 && !hasBuyNow && activeCoupon) {
       setActiveCoupon(null);
       setCouponCode('');
       setAppliedDiscount(0);
+    } else if (activeCoupon && activeCoupon.minOrderAmount && effectiveSubtotal > 0 && effectiveSubtotal < activeCoupon.minOrderAmount) {
+      setActiveCoupon(null);
+      setCouponCode('');
+      setAppliedDiscount(0);
+      showToast(`Coupon removed: Order subtotal fell below ₹${activeCoupon.minOrderAmount.toLocaleString('en-IN')}`);
     }
-  }, [cart.length, activeCoupon]);
+  }, [cart.length, subtotal, activeCoupon]);
 
   // Calculations
   const totalItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
+  const effectiveSubtotalForDiscount = subtotal > 0 ? subtotal : getCheckoutSubtotal();
   let discountAmount = 0;
   if (activeCoupon) {
     if (activeCoupon.discountType === 'flat') {
-      discountAmount = Math.min(subtotal, Number(activeCoupon.discountValue) || 0);
+      discountAmount = Math.min(effectiveSubtotalForDiscount, Number(activeCoupon.discountValue) || 0);
     } else {
-      discountAmount = Math.round((subtotal * (Number(activeCoupon.discountValue) || 0)) / 100);
+      discountAmount = Math.round((effectiveSubtotalForDiscount * (Number(activeCoupon.discountValue) || 0)) / 100);
     }
   }
 
@@ -438,6 +485,7 @@ export const CartProvider = ({ children }) => {
         applyCoupon,
         removeCoupon,
         verifyCouponWithPhone,
+        getCheckoutSubtotal,
         recordDeviceCouponRedemption,
         finalTotal,
         toastMessage,

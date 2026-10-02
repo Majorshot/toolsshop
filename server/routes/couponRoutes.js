@@ -36,11 +36,11 @@ router.post('/', requireStoreOwner, async (req, res) => {
   }
 });
 
-// POST /api/coupons/validate - Validate coupon against cart total & account/phone/email eligibility
+// POST /api/coupons/validate - Validate coupon against checkout subtotal & account/phone/email eligibility
 router.post('/validate', async (req, res) => {
   try {
     const code = req.body.code;
-    const subtotal = req.body.subtotal ?? req.body.cartSubtotal ?? 0;
+    const subtotal = req.body.subtotal ?? req.body.orderSubtotal ?? req.body.cartSubtotal ?? 0;
     const userIdent = {
       customerId: req.body.customerId,
       phone: req.body.phone || '',

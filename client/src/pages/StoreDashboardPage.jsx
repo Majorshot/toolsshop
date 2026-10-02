@@ -5581,7 +5581,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </strong>
                     </div>
                     <div>
-                      <span style={{ color: '#64748b', display: 'block' }}>Min Cart</span>
+                      <span style={{ color: '#64748b', display: 'block' }}>Min Order</span>
                       <strong style={{ fontSize: '0.84rem', color: '#0f172a' }}>
                         {coupon.minOrderAmount ? `₹${coupon.minOrderAmount.toLocaleString('en-IN')}` : '₹0'}
                       </strong>
@@ -8086,12 +8086,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                  Minimum Order Cart Value (₹)
+                  Minimum Order Amount (₹)
                 </label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="0 for any cart value, or 3000"
+                  placeholder="0 for any order value, or 3000"
                   value={couponForm.minOrderAmount}
                   onChange={(e) => setCouponForm({ ...couponForm, minOrderAmount: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
