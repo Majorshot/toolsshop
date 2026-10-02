@@ -5,6 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  CheckCircle2,
+  Flame,
   Wrench,
   Package,
   Phone,
@@ -171,78 +173,220 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
 
   return (
     <div className="home-page-root">
-      {/* SECTION 1: Full Widescreen Real Product Banner from Backend */}
+      {/* SECTION 1: Full Widescreen Real Product Showcase Banner */}
       {currentProduct && (
         <section className="hero-widescreen-section">
+          {/* Ambient Lighting Orbs / Atmospheric Mesh Background */}
+          <div className="hero-ambient-glow hero-glow-primary" />
+          <div className="hero-ambient-glow hero-glow-warm" />
+          <div className="hero-ambient-glow hero-glow-accent" />
+          <div className="hero-ambient-grid" />
+
           <div className="hero-widescreen-slider">
             {heroProducts.map((p, idx) => (
               <div
                 key={p.id || p._id || idx}
                 className={`hero-widescreen-slide ${activeSlide === idx ? 'active' : ''}`}
               >
+                {/* 50/50 Right Image Container */}
                 <div className="hero-widescreen-img-wrap">
+                  <div className="hero-img-spotlight" />
                   <img
                     src={p.image || p.images?.[0]}
                     alt={p.name}
                     className="hero-widescreen-img"
                   />
+                  {/* Floating feature badge on the product image */}
+                  <div className="hero-floating-spec-badge">
+                    <span className="hero-floating-dot" />
+                    <div>
+                      <strong>Ready for Dispatch</strong>
+                      <span>Poyanil Junction • Express Kerala Delivery</span>
+                    </div>
+                  </div>
                 </div>
+
                 <div className="hero-widescreen-scrim" />
               </div>
             ))}
 
-            {/* Left 50% Content on Solid Black Side */}
+            {/* Left 50% Content on Rich Illuminated Side */}
             <div className="hero-widescreen-left-content">
-              <AnimatedContent distance={40} direction="vertical" duration={0.8} delay={0.1}>
+              {/* Top Badges Row */}
+              <AnimatedContent distance={25} direction="vertical" duration={0.6} delay={0.05}>
+                <div className="hero-widescreen-badges">
+                  <span className="hero-badge-pill-live">
+                    <span className="hero-live-beacon" />
+                    <span>FEATURED EQUIPMENT</span>
+                  </span>
+
+                  {currentProduct.brand && (
+                    <span className="hero-badge-pill-brand">
+                      <Zap size={12} />
+                      <span>AUTHORIZED {currentProduct.brand.toUpperCase()}</span>
+                    </span>
+                  )}
+
+                  {currentProduct.badge && (
+                    <span className="hero-badge-pill-hot">
+                      <Flame size={12} />
+                      <span>{currentProduct.badge.toUpperCase()}</span>
+                    </span>
+                  )}
+                </div>
+              </AnimatedContent>
+
+              {/* Title with High-Impact Typography */}
+              <AnimatedContent distance={35} direction="vertical" duration={0.7} delay={0.12}>
                 <h1 className="hero-widescreen-title" title={currentProduct.name}>
                   {formatHeroProductName(currentProduct.name)}
                 </h1>
               </AnimatedContent>
 
-              <AnimatedContent distance={30} direction="vertical" duration={0.8} delay={0.25}>
+              {/* High-Converting Price & Buyer Value Card */}
+              <AnimatedContent distance={25} direction="vertical" duration={0.7} delay={0.2}>
+                <div className="hero-widescreen-price-card">
+                  <div className="hero-price-row">
+                    <div className="hero-price-group">
+                      <span className="hero-price-label">DIRECT STORE PRICE</span>
+                      <span className="hero-price-val">
+                        ₹{currentProduct.price?.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
+                      <div className="hero-price-discount-wrap">
+                        <span className="hero-price-mrp">
+                          ₹{currentProduct.originalPrice?.toLocaleString('en-IN')}
+                        </span>
+                        <span className="hero-price-save-tag">
+                          {currentProduct.discount || `Save ₹${(currentProduct.originalPrice - currentProduct.price).toLocaleString('en-IN')}`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="hero-price-perks">
+                    <span className="hero-perk-item">
+                      <ShieldCheck size={13} style={{ color: '#22c55e' }} />
+                      <span>Official GST Tax Invoice</span>
+                    </span>
+                    <span className="hero-perk-item">
+                      <CheckCircle2 size={13} style={{ color: '#f59e0b' }} />
+                      <span>Factory Sourced Warranty</span>
+                    </span>
+                  </div>
+                </div>
+              </AnimatedContent>
+
+              {/* Description Subtext */}
+              <AnimatedContent distance={20} direction="vertical" duration={0.7} delay={0.28}>
                 <p className="hero-widescreen-subtext">
                   {currentProduct.description
-                    ? (currentProduct.description.length > 155 ? currentProduct.description.slice(0, 155) + '...' : currentProduct.description)
+                    ? (currentProduct.description.length > 145 ? currentProduct.description.slice(0, 145) + '...' : currentProduct.description)
                     : 'Certified heavy-duty machinery with official factory warranty & dedicated in-house clinic repair support.'}
                 </p>
               </AnimatedContent>
 
-              <AnimatedContent distance={25} direction="vertical" duration={0.7} delay={0.4}>
+              {/* Action Buttons: View Details & WhatsApp Inquiry */}
+              <AnimatedContent distance={20} direction="vertical" duration={0.7} delay={0.36}>
                 <div className="hero-widescreen-actions">
                   <Link
                     to={`/product/${currentProduct.id || currentProduct._id}`}
                     className="hero-widescreen-cta-btn"
                     id="home-inspect-current-tool-btn"
                   >
-                    <span>View • ₹{currentProduct.price?.toLocaleString('en-IN')}</span>
-                    <ArrowRight size={18} />
+                    <span>View Equipment Details</span>
+                    <ArrowRight size={17} />
                   </Link>
+
+                  <a
+                    href={`https://wa.me/919447559333?text=${encodeURIComponent(`Hello Variathu Power Tools Kozhencherry, I am interested in ${currentProduct.name} (₹${currentProduct.price}). Is this in stock?`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hero-widescreen-whatsapp-btn"
+                    id="home-hero-whatsapp-btn"
+                    title="Inquire on WhatsApp"
+                  >
+                    <MessageCircle size={17} />
+                    <span>Inquire on WhatsApp</span>
+                  </a>
+                </div>
+              </AnimatedContent>
+
+              {/* Buyer Reassurance Trust Strip */}
+              <AnimatedContent distance={15} direction="vertical" duration={0.7} delay={0.44}>
+                <div className="hero-widescreen-trust-strip">
+                  <div className="hero-trust-item">
+                    <ShieldCheck size={14} className="hero-trust-icon-shield" />
+                    <span>100% Genuine Brands</span>
+                  </div>
+                  <div className="hero-trust-item">
+                    <Wrench size={14} className="hero-trust-icon-wrench" />
+                    <span>In-House Service Clinic</span>
+                  </div>
+                  <div className="hero-trust-item">
+                    <Package size={14} className="hero-trust-icon-package" />
+                    <span>1-Hr Store Pickup</span>
+                  </div>
                 </div>
               </AnimatedContent>
             </div>
 
-            {/* Bottom-Right / Slide Controls & Live Product Preview */}
+            {/* Bottom-Right / Carousel Controls & Thumbnails */}
             {heroProducts.length > 1 && (
-              <AnimatedContent distance={30} direction="vertical" duration={0.8} delay={0.45} className="hero-widescreen-controls">
-                <div className="hero-widescreen-dots">
+              <AnimatedContent distance={25} direction="vertical" duration={0.8} delay={0.4} className="hero-widescreen-controls">
+                {/* Previous & Next Arrow Buttons */}
+                <div className="hero-carousel-nav-row">
+                  <button
+                    type="button"
+                    className="hero-carousel-arrow-btn"
+                    onClick={() => setActiveSlide(prev => (prev - 1 + heroProducts.length) % heroProducts.length)}
+                    aria-label="Previous Equipment"
+                    title="Previous Slide"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="hero-carousel-arrow-btn"
+                    onClick={() => setActiveSlide(prev => (prev + 1) % heroProducts.length)}
+                    aria-label="Next Equipment"
+                    title="Next Slide"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+
+                  <div className="hero-widescreen-dots">
+                    {heroProducts.map((p, idx) => (
+                      <button
+                        key={p.id || p._id || idx}
+                        className={`hero-widescreen-dot-btn ${activeSlide === idx ? 'active' : ''}`}
+                        onClick={() => setActiveSlide(idx)}
+                        aria-label={`Slide ${idx + 1}`}
+                        title={p.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Interactive Mini-Thumbnails of Featured Tools */}
+                <div className="hero-widescreen-thumbnails no-scrollbar">
                   {heroProducts.map((p, idx) => (
                     <button
                       key={p.id || p._id || idx}
-                      className={`hero-widescreen-dot-btn ${activeSlide === idx ? 'active' : ''}`}
+                      type="button"
+                      className={`hero-thumb-card ${activeSlide === idx ? 'active' : ''}`}
                       onClick={() => setActiveSlide(idx)}
-                      aria-label={`Slide ${idx + 1}`}
                       title={p.name}
-                    />
+                    >
+                      <img src={p.image || p.images?.[0]} alt={p.name} className="hero-thumb-img" />
+                      <div className="hero-thumb-info">
+                        <span className="hero-thumb-brand">{p.brand || 'Equipment'}</span>
+                        <span className="hero-thumb-price">₹{p.price?.toLocaleString('en-IN')}</span>
+                      </div>
+                    </button>
                   ))}
-                </div>
-
-                <div className="hero-widescreen-slide-preview">
-                  <span className="hero-widescreen-slide-tag">
-                    {currentProduct.brand} • ₹{currentProduct.price?.toLocaleString('en-IN')}
-                  </span>
-                  <span className="hero-widescreen-slide-title">
-                    {currentProduct.name}
-                  </span>
                 </div>
               </AnimatedContent>
             )}
