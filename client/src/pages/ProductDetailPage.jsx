@@ -4,7 +4,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle, CheckCircle2, 
   Package, Truck, Zap, ArrowLeft, ChevronRight, ChevronLeft, Share2, Award, 
-  RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers, Maximize2, ZoomIn, ZoomOut, Camera, X, Ban
+  RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers, Maximize2, ZoomIn, ZoomOut, Camera, X, Ban,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { api } from '../services/api';
@@ -26,6 +27,7 @@ export const ProductDetailPage = () => {
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   // Full Screen Lightbox & Mobile Slider state
   const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
@@ -42,6 +44,7 @@ export const ProductDetailPage = () => {
     setError(null);
     setActiveImgIdx(0);
     setQuantity(1);
+    setIsDescExpanded(false);
 
     async function loadData() {
       try {
@@ -240,6 +243,7 @@ export const ProductDetailPage = () => {
   const closeFullScreen = () => {
     setIsFullScreenOpen(false);
     setIsZoomed(false);
+    setActiveImgIdx(fullScreenIdx);
   };
 
   const nextFullScreenImage = (e) => {
@@ -376,6 +380,8 @@ export const ProductDetailPage = () => {
   const discountAmount = product.originalPrice && product.originalPrice > product.price 
     ? product.originalPrice - product.price 
     : 0;
+
+  const isLongDesc = Boolean(product?.description && product.description.length > 180);
 
   const categoryLabel = product.category ? product.category.replace(/-/g, ' ') : 'Equipment';
 
@@ -570,24 +576,68 @@ export const ProductDetailPage = () => {
               {/* Thumbnail Strip (on left) */}
               {galleryImages.length > 1 && (
                 <div className="desktop-thumbnails-strip">
-                  {galleryImages.map((imgUrl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setActiveImgIdx(idx)}
-                      onMouseEnter={() => setActiveImgIdx(idx)}
-                      className={`desktop-thumb-btn ${activeImgIdx === idx ? 'active' : ''}`}
-                      title={`View photo ${idx + 1}`}
-                    >
-                      <img
-                        src={imgUrl}
-                        alt={`Thumbnail ${idx + 1}`}
-                        onError={(e) => {
-                          e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
-                        }}
-                      />
-                    </button>
-                  ))}
+                  {galleryImages.length <= 5 ? (
+                    galleryImages.map((imgUrl, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveImgIdx(idx)}
+                        onMouseEnter={() => setActiveImgIdx(idx)}
+                        className={`desktop-thumb-btn ${activeImgIdx === idx ? 'active' : ''}`}
+                        title={`View photo ${idx + 1}`}
+                      >
+                        <img
+                          src={imgUrl}
+                          alt={`Thumbnail ${idx + 1}`}
+                          onError={(e) => {
+                            e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                          }}
+                        />
+                      </button>
+                    ))
+                  ) : (
+                    <>
+                      {galleryImages.slice(0, 4).map((imgUrl, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setActiveImgIdx(idx)}
+                          onMouseEnter={() => setActiveImgIdx(idx)}
+                          className={`desktop-thumb-btn ${activeImgIdx === idx ? 'active' : ''}`}
+                          title={`View photo ${idx + 1}`}
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`Thumbnail ${idx + 1}`}
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                            }}
+                          />
+                        </button>
+                      ))}
+
+                      {/* 5th slot: "+X Photos" button to open full screen image viewer */}
+                      <button
+                        type="button"
+                        onClick={() => openFullScreen(activeImgIdx >= 4 ? activeImgIdx : 4)}
+                        className={`desktop-thumb-btn desktop-thumb-more-btn ${activeImgIdx >= 4 ? 'active' : ''}`}
+                        title={`Click to view all ${galleryImages.length} photos in full screen`}
+                        id="btn-desktop-more-images"
+                      >
+                        <img
+                          src={galleryImages[4]}
+                          alt="More photos"
+                          onError={(e) => {
+                            e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                          }}
+                        />
+                        <div className="desktop-thumb-more-overlay">
+                          <span className="desktop-thumb-more-count">+{galleryImages.length - 4}</span>
+                          <span className="desktop-thumb-more-label">Photos</span>
+                        </div>
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -673,9 +723,9 @@ export const ProductDetailPage = () => {
 
                   <span 
                     style={{ 
-                      background: '#ecfdf5', 
-                      color: '#15803d', 
-                      border: '1px solid #86efac', 
+                      background: '#fef2f2', 
+                      color: '#dc2626', 
+                      border: '1px solid #fecaca', 
                       padding: '2px 8px', 
                       borderRadius: '6px', 
                       fontSize: '0.78rem', 
@@ -689,7 +739,7 @@ export const ProductDetailPage = () => {
             </div>
 
             {discountAmount > 0 && (
-              <p style={{ color: '#16a34a', fontSize: '0.84rem', fontWeight: '700', margin: '4px 0 0' }}>
+              <p style={{ color: '#dc2626', fontSize: '0.84rem', fontWeight: '700', margin: '4px 0 0' }}>
                 You save: {formatPrice(discountAmount)} ({Math.round((discountAmount / product.originalPrice) * 100)}%)
               </p>
             )}
@@ -963,14 +1013,37 @@ export const ProductDetailPage = () => {
           </div>
 
           {/* Description Section */}
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
-              Product Overview
-            </h3>
-            <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.65, margin: 0 }}>
-              {product.description}
-            </p>
-          </div>
+          {product.description && (
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
+                Product Overview
+              </h3>
+              <div className="pdp-description-wrapper">
+                <div 
+                  className={`pdp-description-content ${!isDescExpanded && isLongDesc ? 'collapsed' : ''}`}
+                >
+                  <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.65, margin: 0 }}>
+                    {product.description}
+                  </p>
+                </div>
+                {!isDescExpanded && isLongDesc && (
+                  <div className="pdp-description-fade" />
+                )}
+              </div>
+
+              {isLongDesc && (
+                <button
+                  type="button"
+                  onClick={() => setIsDescExpanded(!isDescExpanded)}
+                  className="pdp-desc-toggle-btn"
+                  id="btn-toggle-description"
+                >
+                  <span>{isDescExpanded ? 'View Less' : 'View More'}</span>
+                  {isDescExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Features Highlights Bullet Points */}
           {product.features && product.features.length > 0 && (
