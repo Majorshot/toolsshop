@@ -63,6 +63,21 @@ export const COURIER_PARTNERS = [
     trackingUrl: 'https://www.delhivery.com/',
     awbPlaceholder: 'e.g. 142985720193',
     generateAwb: () => `${Math.floor(100000000000 + Math.random() * 900000000000)}`
+  },
+  {
+    id: 'bluedart',
+    name: 'Blue Dart Express',
+    shortName: 'Blue Dart',
+    badge: 'BLUE DART',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Dart_logo.svg/1200px-Blue_Dart_logo.svg.png',
+    color: '#0047ba',
+    bg: '#eff6ff',
+    border: '#bfdbfe',
+    tagline: 'South Asia Express Air & Surface Delivery',
+    portalUrl: 'https://www.bluedart.com/',
+    trackingUrl: 'https://www.bluedart.com/',
+    awbPlaceholder: 'e.g. 8492019481',
+    generateAwb: () => `${Math.floor(1000000000 + Math.random() * 9000000000)}`
   }
 ];
 
