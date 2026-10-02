@@ -8,7 +8,15 @@ const whatsappService = require('../services/whatsappService');
 router.get('/', requireStoreOwner, async (req, res) => {
   try {
     const jobs = await db.getRepairJobs();
-    res.json(jobs);
+    // Auto-heal any jobs where handover was verified, ensuring status is strictly "Handed Over"
+    const cleaned = jobs.map(j => {
+      if (j.handoverVerified && j.status !== 'Handed Over') {
+        db.updateRepairJob(j.id || j.jobId || j._id, { status: 'Handed Over' }).catch(() => {});
+        return { ...j, status: 'Handed Over' };
+      }
+      return j;
+    });
+    res.json(cleaned);
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to retrieve repair jobs' });
   }
@@ -57,15 +65,31 @@ router.post('/', requireStoreOwner, async (req, res) => {
 router.put('/:id', requireStoreOwner, async (req, res) => {
   try {
     const oldJob = await db.getRepairJobById(req.params.id);
+    if (!oldJob) {
+      return res.status(404).json({ success: false, message: 'Repair job not found' });
+    }
+
+    const wasAlreadyHandedOver = Boolean(oldJob.handoverVerified) || oldJob.status === 'Handed Over';
+    // If ticket was already handed over to the customer, protect against accidental stage changes:
+    if (wasAlreadyHandedOver && req.body.status && req.body.status !== 'Handed Over') {
+      if (!req.body.forceReopen) {
+        // Prevent accidental downgrade and lock status to Handed Over
+        req.body.status = 'Handed Over';
+        req.body.handoverVerified = true;
+      }
+    }
+
     const updated = await db.updateRepairJob(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Repair job not found' });
     }
 
-    // When status changes to "Repaired & Ready", automatically send WhatsApp with collection OTP to customer!
+    // When status changes to "Repaired & Ready", automatically send WhatsApp with collection OTP to customer
+    // NEVER send if the job was already handed over to the customer!
     const newStatusLower = (req.body.status || updated.status || '').toLowerCase();
     const oldStatusLower = (oldJob?.status || '').toLowerCase();
-    if ((newStatusLower.includes('repaired') || newStatusLower.includes('ready')) &&
+    if (!wasAlreadyHandedOver &&
+        (newStatusLower.includes('repaired') || newStatusLower.includes('ready')) &&
         (!oldStatusLower.includes('ready') && !oldStatusLower.includes('repaired'))) {
       whatsappService.sendRepairReadyWhatsApp(updated).catch(err => {
         console.warn(`[WhatsApp API] Async repair ready WhatsApp notice error for #${updated.jobId}:`, err.message);

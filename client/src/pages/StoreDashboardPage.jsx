@@ -1307,7 +1307,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (!isSilent) setLoadingRepairs(true);
     try {
       const res = await api.getRepairJobs();
-      setRepairs(Array.isArray(res) ? res : (res.data || []));
+      const raw = Array.isArray(res) ? res : (res.data || []);
+      // Client-side auto-heal: if a job was handed over / handoverVerified, ensure status is "Handed Over"
+      const cleaned = raw.map(j => {
+        if (j.handoverVerified && j.status !== 'Handed Over') {
+          api.updateRepairJob(j.id || j.jobId || j._id, { status: 'Handed Over' }).catch(() => {});
+          return { ...j, status: 'Handed Over' };
+        }
+        return j;
+      });
+      setRepairs(cleaned);
     } catch (err) {
       console.error("Failed to load repairs:", err);
     } finally {
@@ -1592,6 +1601,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const handleUpdateRepairStatus = async (job, newStatus) => {
+    // Prevent accidental status changes on tickets already handed over to the customer
+    if (job.handoverVerified || job.status === 'Handed Over') {
+      showNotification('ℹ️ This repair ticket has already been handed over to the customer.');
+      return;
+    }
+
     try {
       const targetId = job.id || job.jobId || job._id;
       await api.updateRepairJob(targetId, { status: newStatus });
@@ -1684,13 +1699,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const getWhatsAppRepairText = (job) => {
+    const isJobHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
     const cleanPhone = (job.customerPhone || '').replace(/[^0-9]/g, '');
     let text = `Hello ${job.customerName},\n`;
     text += `Update regarding your tool repair at *Variathu Power Tools Kozhencherry*:\n\n`;
     text += `🔧 *Tool:* ${job.toolBrand ? job.toolBrand + ' ' : ''}${job.toolModel}\n`;
     text += `📋 *Job Ticket:* ${job.jobId}\n`;
-    text += `🚦 *Status:* ${job.status.toUpperCase()}\n`;
-    if (job.status === 'Handed Over' || job.handoverVerified) {
+    text += `🚦 *Status:* ${isJobHandedOver ? 'HANDED OVER & CLOSED' : (job.status || '').toUpperCase()}\n`;
+    if (isJobHandedOver) {
       const finalBill = Number(job.finalCost || job.estimatedCost || 0);
       const advance = Number(job.advancePaid || 0);
       const balance = Math.max(0, finalBill - advance);
@@ -2611,7 +2627,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <span>📦 Active Pending: <strong style={{ color: orderCounts.all > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.all}</strong></span>
               <span>🚚 Undispatched: <strong style={{ color: orderCounts.undispatched > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.undispatched}</strong></span>
               <span>🏬 Pickup Pending: <strong style={{ color: '#0f172a' }}>{orderCounts.pickupPending}</strong></span>
-              <span>🔧 Workshop: <strong style={{ color: '#0f172a' }}>{repairs.filter(r => r.status !== 'Handed Over').length}</strong> jobs</span>
+              <span>🔧 Workshop: <strong style={{ color: '#0f172a' }}>{repairs.filter(r => r.status !== 'Handed Over' && !r.handoverVerified).length}</strong> jobs</span>
             </div>
             <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
               Orders brought above the fold • Click 'Expand Reports' for full details
@@ -2688,11 +2704,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <div className="store-metric-split-list">
                 <div className="store-metric-split-item">
                   <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● In Workshop</span>
-                  <span className="store-metric-item-value">{repairs.filter(r => r.status !== 'Handed Over').length} <small>jobs</small></span>
+                  <span className="store-metric-item-value">{repairs.filter(r => r.status !== 'Handed Over' && !r.handoverVerified).length} <small>jobs</small></span>
                 </div>
                 <div className="store-metric-split-item">
                   <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● Ready for Pickup</span>
-                  <span className="store-metric-item-value" style={{ color: '#16a34a' }}>{repairs.filter(r => r.status === 'Repaired & Ready').length} <small>ready</small></span>
+                  <span className="store-metric-item-value" style={{ color: '#16a34a' }}>{repairs.filter(r => r.status === 'Repaired & Ready' && !r.handoverVerified).length} <small>ready</small></span>
                 </div>
               </div>
             </div>
@@ -2807,7 +2823,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 title="Workshop & Repairs"
                 subtitle="Machinery clinic service queue, job estimates & counter handover OTPs"
                 Icon={Wrench}
-                badge={`${repairs.filter(r => r.status !== 'Handed Over').length} active jobs`}
+                badge={`${repairs.filter(r => r.status !== 'Handed Over' && !r.handoverVerified).length} active jobs`}
                 badgeBg="#d1fae5"
                 badgeColor="#065f46"
                 iconColor="#10b981"
@@ -5757,7 +5773,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredRepairs.map(job => (
+              {filteredRepairs.map(job => {
+                const isHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
+                return (
                 <div
                   key={job.id || job.jobId || job._id}
                   style={{
@@ -5769,7 +5787,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   id={`repair-row-${job.jobId}`}
                 >
                   {/* Ready for pickup OTP Banner - OTP is secret, NEVER shown on dashboard! */}
-                  {job.status === 'Repaired & Ready' && !job.handoverVerified && (
+                  {job.status === 'Repaired & Ready' && !isHandedOver && (
                     <div
                       style={{
                         background: '#eff6ff',
@@ -5828,7 +5846,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   )}
 
-                  {job.handoverVerified && (
+                  {isHandedOver && (
                     <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', padding: '10px 14px', borderRadius: '8px', marginBottom: '14px', fontSize: '0.82rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <CheckCircle2 size={16} style={{ color: '#16a34a' }} />
                       <span>✅ Machine collected by customer at Poyanil counter. Ticket closed.</span>
@@ -5858,7 +5876,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                        {job.status === 'Handed Over' ? 'Bill: ' : 'Est: '}{formatPrice(job.finalCost || job.estimatedCost || 0)}
+                        {isHandedOver ? 'Bill: ' : 'Est: '}{formatPrice(job.finalCost || job.estimatedCost || 0)}
                       </span>
                       {job.advancePaid > 0 && (
                         <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700' }}>
@@ -5885,46 +5903,52 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     )}
                   </div>
 
-                  {/* Status Stepper - Only 2 stages: Received and Repaired & Ready */}
+                  {/* Status Stepper - Options 1 & 2 are hidden once handed over to customer */}
                   <div style={{ marginBottom: '14px' }}>
                     <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                      Workshop Progress Stage (Click to update):
+                      {isHandedOver ? 'Workshop Ticket Status:' : 'Workshop Progress Stage (Click to update):'}
                     </span>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                      {['Received', 'Repaired & Ready'].map((st, sidx) => {
-                        const isCurrent = job.status === st;
-                        return (
-                          <button
-                            key={st}
-                            type="button"
-                            onClick={() => handleUpdateRepairStatus(job, st)}
-                            style={{
-                              padding: '7px 16px',
-                              borderRadius: '8px',
-                              border: isCurrent ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
-                              background: isCurrent ? '#ea580c' : '#ffffff',
-                              color: isCurrent ? '#ffffff' : '#475569',
-                              fontSize: '0.78rem',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              boxShadow: isCurrent ? '0 2px 8px rgba(234, 88, 12, 0.25)' : 'none',
-                              transition: 'all 0.15s'
-                            }}
-                          >
-                            <span>{sidx + 1}. {st}</span>
-                          </button>
-                        );
-                      })}
-                      {job.handoverVerified && (
-                        <span style={{ padding: '6px 12px', background: '#dcfce7', border: '1px solid #86efac', color: '#15803d', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <CheckCircle2 size={14} />
-                          <span>3. Handed Over to Customer</span>
+
+                    {isHandedOver ? (
+                      /* When handed over, DO NOT SHOW stages 1 & 2! Only show completed badge */
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ padding: '8px 14px', background: '#dcfce7', border: '1.5px solid #86efac', color: '#15803d', borderRadius: '8px', fontSize: '0.82rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle2 size={15} />
+                          <span>3. Handed Over to Customer • Ticket Closed</span>
                         </span>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      /* Only show stages 1 & 2 if NOT handed over! */
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        {['Received', 'Repaired & Ready'].map((st, sidx) => {
+                          const isCurrent = job.status === st;
+                          return (
+                            <button
+                              key={st}
+                              type="button"
+                              onClick={() => handleUpdateRepairStatus(job, st)}
+                              style={{
+                                padding: '7px 16px',
+                                borderRadius: '8px',
+                                border: isCurrent ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                                background: isCurrent ? '#ea580c' : '#ffffff',
+                                color: isCurrent ? '#ffffff' : '#475569',
+                                fontSize: '0.78rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: isCurrent ? '0 2px 8px rgba(234, 88, 12, 0.25)' : 'none',
+                                transition: 'all 0.15s'
+                              }}
+                            >
+                              <span>{sidx + 1}. {st}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Action Buttons */}
@@ -5996,7 +6020,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>
