@@ -205,10 +205,20 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
 
   return (
     <div className="home-page-root">
-      {/* SECTION 1: Professional Power Tools Store Hero Banner (Matching Exact Design) */}
+      {/* SECTION 1: Professional Power Tools Store Hero Banner with Tilted Fade Overlay */}
       <section className="hero-pro-section">
+        {/* Background Hero Image with Seamless Tilted Fade */}
+        <div className="hero-pro-backdrop-wrap">
+          <img
+            src="/hero.png"
+            alt="Quality Power Tools at Affordable Prices"
+            className="hero-pro-backdrop-img"
+          />
+          <div className="hero-pro-tilted-fade" />
+        </div>
+
         <div className="hero-pro-container">
-          {/* Main 2-Column Hero Grid: Left Content, Right 1:1 Aspect Ratio Hero Image */}
+          {/* Main 2-Column Hero Grid: Left Content, Right Visual Spacer */}
           <div className="hero-pro-grid">
             {/* Left Content Side */}
             <div className="hero-pro-content">
@@ -272,16 +282,8 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
               </div>
             </div>
 
-            {/* Right Hero Image Side (1:1 Aspect Ratio /hero.png) */}
-            <div className="hero-pro-image-col">
-              <div className="hero-pro-image-stage">
-                <img
-                  src="/hero.png"
-                  alt="Quality Power Tools at Affordable Prices"
-                  className="hero-pro-img"
-                />
-              </div>
-            </div>
+            {/* Right Spacer for Desktop (reveals image through the tilted fade) */}
+            <div className="hero-pro-spacer-col" aria-hidden="true" />
           </div>
 
           {/* Bottom Floating Delivery Card */}
