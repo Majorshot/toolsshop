@@ -1194,92 +1194,363 @@ header.main-site-header {
   color: #facc15;
 }
 
-/* Mobile & Tablet Responsiveness */
-@media (max-width: 900px) {
-  .hero-widescreen-slider {
-    min-height: 520px;
-    height: auto;
-    padding: 24px 0 32px;
-    align-items: flex-end;
+/* ==========================================================================
+   MOBILE & TABLET HERO SECTION (< 900px)
+   ========================================================================== */
+
+@media (min-width: 900px) {
+  .hero-mobile-view {
+    display: none !important;
+  }
+  .hero-desktop-view {
+    display: block;
+  }
+}
+
+@media (max-width: 899px) {
+  .hero-desktop-view {
+    display: none !important;
   }
 
-  .hero-widescreen-img-wrap {
-    width: 100%;
-    height: 100%;
-    opacity: 0.85;
+  .hero-widescreen-section {
+    padding: 14px 12px 24px;
+    background: #070a10;
+    overflow: hidden;
+    position: relative;
+    border-radius: 0 0 20px 20px;
   }
 
-  .hero-widescreen-img {
-    object-fit: contain;
-    object-position: center 10%;
-    padding: 16px 16px 260px 16px;
-  }
-
-  .hero-widescreen-scrim {
-    background: linear-gradient(
-      180deg,
-      rgba(7, 10, 16, 0.08) 0%,
-      rgba(7, 10, 16, 0.3) 25%,
-      rgba(7, 10, 16, 0.88) 52%,
-      #070a10 82%
-    );
-  }
-
-  .hero-widescreen-left-content {
-    width: 100%;
-    max-width: 100%;
-    padding: 0 20px;
-    justify-content: flex-end;
-    align-items: flex-start;
-  }
-
-  .hero-widescreen-title {
-    font-size: clamp(1.3rem, 4.5vw, 1.65rem);
-    line-height: 1.22;
-    margin-bottom: 10px;
-  }
-
-  .hero-widescreen-price-card {
-    width: 100%;
-    max-width: 100%;
-    padding: 10px 14px;
-    margin-bottom: 12px;
-  }
-
-  .hero-price-val {
-    font-size: 1.6rem;
-  }
-
-  .hero-widescreen-subtext {
-    font-size: 0.82rem;
-    line-height: 1.45;
-    margin-bottom: 14px;
-  }
-
-  .hero-widescreen-actions {
-    width: 100%;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .hero-widescreen-cta-btn,
-  .hero-widescreen-whatsapp-btn {
-    flex: 1;
-    justify-content: center;
-    padding: 11px 16px;
-    font-size: 0.85rem;
-  }
-
-  .hero-widescreen-trust-strip {
+  .hero-mobile-view {
+    display: flex;
+    flex-direction: column;
     gap: 12px;
+    width: 100%;
+    position: relative;
+    z-index: 5;
   }
 
-  .hero-trust-item {
+  /* 1. Mobile Top Badges Bar */
+  .hero-mobile-top-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* 2. Mobile Product Showcase Stage Card */
+  .hero-mobile-stage-card {
+    position: relative;
+    width: 100%;
+    background: radial-gradient(circle at 50% 45%, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 14px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  .hero-mobile-glow {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 220px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(249, 115, 22, 0.3) 0%, rgba(220, 38, 38, 0.1) 50%, transparent 80%);
+    filter: blur(28px);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .hero-mobile-dispatch-pill {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    padding: 3.5px 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #e2e8f0;
+  }
+
+  .hero-mobile-img-link {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 190px;
+    margin: 4px 0 6px;
+    text-decoration: none;
+  }
+
+  .hero-mobile-product-img {
+    max-width: 92%;
+    max-height: 185px;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.65));
+    transition: transform 0.3s ease;
+  }
+
+  .hero-mobile-carousel-controls {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+
+  .hero-mobile-arrow-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .hero-mobile-arrow-btn:active {
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(0.92);
+  }
+
+  .hero-mobile-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .hero-mobile-dot {
+    width: 16px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.22);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.25s ease;
+  }
+
+  .hero-mobile-dot.active {
+    width: 32px;
+    background: #f97316;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.85);
+  }
+
+  /* 3. Mobile Product Info */
+  .hero-mobile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .hero-mobile-title {
+    font-size: 1.25rem;
+    font-weight: 850;
+    line-height: 1.24;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* 4. Price Box */
+  .hero-mobile-price-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .hero-mobile-price-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .hero-mobile-price-main {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-mobile-price-lbl {
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+
+  .hero-mobile-price-num {
+    font-size: 1.62rem;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ffffff 0%, #ffedd5 55%, #fdba74 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1.1;
+  }
+
+  .hero-mobile-mrp-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .hero-mobile-mrp-val {
+    font-size: 0.86rem;
+    color: #94a3b8;
+    text-decoration: line-through;
+    font-family: var(--font-mono);
+  }
+
+  .hero-mobile-price-perks {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* 5. Mobile Actions */
+  .hero-mobile-actions {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .hero-mobile-cta-btn {
+    flex: 1.4;
+    background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+    color: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 800;
+    padding: 12px 14px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+    box-shadow: 0 4px 18px rgba(234, 88, 12, 0.45);
+    white-space: nowrap;
+  }
+
+  .hero-mobile-whatsapp-btn {
+    flex: 1;
+    background: rgba(37, 211, 102, 0.16);
+    border: 1px solid rgba(37, 211, 102, 0.45);
+    color: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 700;
+    padding: 12px 10px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  /* 6. Mobile Trust Strip */
+  .hero-mobile-trust-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 6px;
+    padding: 4px 0;
+  }
+
+  /* 7. Mobile Thumbnails Switcher Row */
+  .hero-mobile-thumbs-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 2px;
+    width: 100%;
+  }
+
+  .hero-mobile-thumb-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    padding: 5px 9px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+
+  .hero-mobile-thumb-pill.active {
+    background: rgba(30, 41, 59, 0.98);
+    border-color: #f97316;
+    box-shadow: 0 0 12px rgba(249, 115, 22, 0.4);
+  }
+
+  .hero-mobile-thumb-pill img {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #0f172a;
+  }
+
+  .hero-mobile-thumb-txt {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+
+  .hero-mobile-thumb-name {
+    font-size: 0.64rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+
+  .hero-mobile-thumb-cost {
     font-size: 0.74rem;
-  }
-
-  .hero-widescreen-controls {
-    display: none;
+    font-weight: 800;
+    color: #facc15;
   }
 }
 

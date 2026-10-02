@@ -111,6 +111,31 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
 
   const currentProduct = heroProducts[activeSlide % (heroProducts.length || 1)] || products[0];
 
+  // Mobile Touch Swipe Handlers for Hero Carousel
+  const heroTouchStartX = useRef(0);
+  const heroTouchEndX = useRef(0);
+
+  const handleHeroTouchStart = (e) => {
+    heroTouchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleHeroTouchMove = (e) => {
+    heroTouchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleHeroTouchEnd = () => {
+    const diff = heroTouchStartX.current - heroTouchEndX.current;
+    if (Math.abs(diff) > 35) {
+      if (diff > 0) {
+        // Swiped left -> next slide
+        setActiveSlide(prev => (prev + 1) % heroProducts.length);
+      } else {
+        // Swiped right -> prev slide
+        setActiveSlide(prev => (prev - 1 + heroProducts.length) % heroProducts.length);
+      }
+    }
+  };
+
   const handleScrollCategories = (direction) => {
     if (categoryScrollRef.current) {
       const scrollOffset = direction === 'left' ? -280 : 280;
@@ -182,7 +207,9 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
           <div className="hero-ambient-glow hero-glow-accent" />
           <div className="hero-ambient-grid" />
 
-          <div className="hero-widescreen-slider">
+          {/* ================= DESKTOP WIDESCREEN VIEW (>= 900px) ================= */}
+          <div className="hero-desktop-view">
+            <div className="hero-widescreen-slider">
             {heroProducts.map((p, idx) => (
               <div
                 key={p.id || p._id || idx}
@@ -390,6 +417,193 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
                 </div>
               </AnimatedContent>
             )}
+            </div>
+          </div>
+
+          {/* ================= MOBILE HERO VIEW (< 900px) ================= */}
+          <div className="hero-mobile-view">
+            {/* 1. Top Badges Bar */}
+            <div className="hero-mobile-top-bar">
+              <span className="hero-badge-pill-live">
+                <span className="hero-live-beacon" />
+                <span>FEATURED</span>
+              </span>
+
+              {currentProduct.brand && (
+                <span className="hero-badge-pill-brand">
+                  <Zap size={11} />
+                  <span>{currentProduct.brand.toUpperCase()}</span>
+                </span>
+              )}
+
+              {currentProduct.badge && (
+                <span className="hero-badge-pill-hot">
+                  <Flame size={11} />
+                  <span>{currentProduct.badge.toUpperCase()}</span>
+                </span>
+              )}
+            </div>
+
+            {/* 2. Stage Card with Illuminated Product Image & Touch Swipe */}
+            <div
+              className="hero-mobile-stage-card"
+              onTouchStart={handleHeroTouchStart}
+              onTouchMove={handleHeroTouchMove}
+              onTouchEnd={handleHeroTouchEnd}
+            >
+              <div className="hero-mobile-glow" />
+
+              <div className="hero-mobile-dispatch-pill">
+                <span className="hero-floating-dot" />
+                <span>Ready for Dispatch</span>
+              </div>
+
+              <Link
+                to={`/product/${currentProduct.id || currentProduct._id}`}
+                className="hero-mobile-img-link"
+                title={currentProduct.name}
+              >
+                <img
+                  src={currentProduct.image || currentProduct.images?.[0]}
+                  alt={currentProduct.name}
+                  className="hero-mobile-product-img"
+                />
+              </Link>
+
+              {heroProducts.length > 1 && (
+                <div className="hero-mobile-carousel-controls">
+                  <button
+                    type="button"
+                    className="hero-mobile-arrow-btn"
+                    onClick={() => setActiveSlide(prev => (prev - 1 + heroProducts.length) % heroProducts.length)}
+                    aria-label="Previous tool"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  <div className="hero-mobile-dots">
+                    {heroProducts.map((_, idx) => (
+                      <button
+                        key={idx}
+                        className={`hero-mobile-dot ${activeSlide === idx ? 'active' : ''}`}
+                        onClick={() => setActiveSlide(idx)}
+                        aria-label={`Slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="hero-mobile-arrow-btn"
+                    onClick={() => setActiveSlide(prev => (prev + 1) % heroProducts.length)}
+                    aria-label="Next tool"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Product Info & Title */}
+            <div className="hero-mobile-info">
+              <h1 className="hero-mobile-title">
+                {currentProduct.name}
+              </h1>
+
+              {/* 4. Price Box */}
+              <div className="hero-mobile-price-box">
+                <div className="hero-mobile-price-top">
+                  <div className="hero-mobile-price-main">
+                    <span className="hero-mobile-price-lbl">DIRECT STORE PRICE</span>
+                    <span className="hero-mobile-price-num">
+                      ₹{currentProduct.price?.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
+                    <div className="hero-mobile-mrp-group">
+                      <span className="hero-mobile-mrp-val">
+                        ₹{currentProduct.originalPrice?.toLocaleString('en-IN')}
+                      </span>
+                      <span className="card-discount-badge" style={{ position: 'static' }}>
+                        {currentProduct.discount || `${Math.round(((currentProduct.originalPrice - currentProduct.price) / currentProduct.originalPrice) * 100)}% OFF`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="hero-mobile-price-perks">
+                  <span className="hero-perk-item">
+                    <ShieldCheck size={12} style={{ color: '#22c55e' }} />
+                    <span>Official GST Invoice</span>
+                  </span>
+                  <span className="hero-perk-item">
+                    <CheckCircle2 size={12} style={{ color: '#f59e0b' }} />
+                    <span>Factory Warranty</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* 5. Action Buttons */}
+              <div className="hero-mobile-actions">
+                <Link
+                  to={`/product/${currentProduct.id || currentProduct._id}`}
+                  className="hero-mobile-cta-btn"
+                  id="btn-hero-mobile-view"
+                >
+                  <span>View Details</span>
+                  <ArrowRight size={16} />
+                </Link>
+
+                <a
+                  href={`https://wa.me/919447559333?text=${encodeURIComponent(`Hello Variathu Power Tools Kozhencherry, I am interested in ${currentProduct.name} (₹${currentProduct.price}). Is this in stock?`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hero-mobile-whatsapp-btn"
+                  id="btn-hero-mobile-wa"
+                  title="WhatsApp Inquiry"
+                >
+                  <MessageCircle size={17} />
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+
+              {/* 6. Trust Reassurance Strip */}
+              <div className="hero-mobile-trust-strip">
+                <div className="hero-trust-item">
+                  <ShieldCheck size={13} className="hero-trust-icon-shield" />
+                  <span>100% Genuine</span>
+                </div>
+                <div className="hero-trust-item">
+                  <Wrench size={13} className="hero-trust-icon-wrench" />
+                  <span>Service Clinic</span>
+                </div>
+                <div className="hero-trust-item">
+                  <Package size={13} className="hero-trust-icon-package" />
+                  <span>1-Hr Pickup</span>
+                </div>
+              </div>
+
+              {/* 7. Quick Switcher Mini Thumbnails (if > 1 product) */}
+              {heroProducts.length > 1 && (
+                <div className="hero-mobile-thumbs-row no-scrollbar">
+                  {heroProducts.map((p, idx) => (
+                    <button
+                      key={p.id || p._id || idx}
+                      type="button"
+                      className={`hero-mobile-thumb-pill ${activeSlide === idx ? 'active' : ''}`}
+                      onClick={() => setActiveSlide(idx)}
+                    >
+                      <img src={p.image || p.images?.[0]} alt={p.name} />
+                      <div className="hero-mobile-thumb-txt">
+                        <span className="hero-mobile-thumb-name">{p.brand || 'Tool'}</span>
+                        <span className="hero-mobile-thumb-cost">₹{p.price?.toLocaleString('en-IN')}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </section>
       )}
