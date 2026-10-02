@@ -687,6 +687,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [coupons, setCoupons] = useState([]);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [isAddCouponModalOpen, setIsAddCouponModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState(null);
   const [couponForm, setCouponForm] = useState({
     code: '',
     description: '',
@@ -1510,6 +1511,36 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     });
   };
 
+  const handleOpenCreateCoupon = () => {
+    setEditingCoupon(null);
+    setCouponForm({
+      code: '',
+      description: '',
+      discountType: 'percentage',
+      discountValue: '',
+      minOrderAmount: 0,
+      usageLimitPerUser: 1,
+      maxTotalUses: '',
+      active: true
+    });
+    setIsAddCouponModalOpen(true);
+  };
+
+  const handleEditCoupon = (coupon) => {
+    setEditingCoupon(coupon);
+    setCouponForm({
+      code: coupon.code || '',
+      description: coupon.description || '',
+      discountType: coupon.discountType || 'percentage',
+      discountValue: coupon.discountValue !== undefined ? String(coupon.discountValue) : '',
+      minOrderAmount: coupon.minOrderAmount !== undefined ? coupon.minOrderAmount : 0,
+      usageLimitPerUser: coupon.usageLimitPerUser !== undefined ? Number(coupon.usageLimitPerUser) : 1,
+      maxTotalUses: coupon.maxTotalUses ? String(coupon.maxTotalUses) : '',
+      active: coupon.active !== undefined ? Boolean(coupon.active) : true
+    });
+    setIsAddCouponModalOpen(true);
+  };
+
   const handleSaveCoupon = async (e) => {
     if (e) e.preventDefault();
     const cleanCode = (couponForm.code || '').trim().toUpperCase();
@@ -1524,7 +1555,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
     setIsSubmittingCoupon(true);
     try {
-      await api.createCoupon({
+      const couponPayload = {
         code: cleanCode,
         description: couponForm.description,
         discountType: couponForm.discountType,
@@ -1533,9 +1564,18 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         usageLimitPerUser: Number(couponForm.usageLimitPerUser) || 0,
         maxTotalUses: Number(couponForm.maxTotalUses) || 0,
         active: Boolean(couponForm.active)
-      });
-      showNotification(`🎉 Coupon "${cleanCode}" created successfully!`);
+      };
+
+      if (editingCoupon) {
+        const targetId = editingCoupon.id || editingCoupon._id;
+        await api.updateCoupon(targetId, couponPayload);
+        showNotification(`✅ Coupon "${cleanCode}" updated successfully!`);
+      } else {
+        await api.createCoupon(couponPayload);
+        showNotification(`🎉 Coupon "${cleanCode}" created successfully!`);
+      }
       setIsAddCouponModalOpen(false);
+      setEditingCoupon(null);
       setCouponForm({
         code: '',
         description: '',
@@ -5490,7 +5530,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
               <button
                 type="button"
-                onClick={() => setIsAddCouponModalOpen(true)}
+                onClick={handleOpenCreateCoupon}
                 className="btn-hero-clean"
                 style={{ padding: '8px 16px', fontSize: '0.84rem' }}
                 id="btn-new-coupon-modal"
@@ -5595,6 +5635,30 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleEditCoupon(coupon)}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        color: '#334155',
+                        borderRadius: '6px',
+                        fontSize: '0.76rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease'
+                      }}
+                      id={`btn-edit-coupon-${coupon.code}`}
+                      title="Edit coupon settings and rules"
+                    >
+                      <Edit3 size={13} style={{ color: '#ea580c' }} />
+                      <span>Edit</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleDeleteCoupon(coupon)}
@@ -7970,12 +8034,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Percent size={20} style={{ color: '#ea580c' }} />
                 <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                  Create Discount Coupon
+                  {editingCoupon ? 'Edit Discount Coupon' : 'Create Discount Coupon'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setIsAddCouponModalOpen(false)}
+                onClick={() => { setIsAddCouponModalOpen(false); setEditingCoupon(null); }}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
               >
                 <X size={20} />
@@ -8070,12 +8134,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                    Global Cap (Orders Budget)
+                    Total Usage Cap (Max Orders)
                   </label>
                   <input
                     type="number"
                     min="0"
-                    placeholder="0 for unlimited (or 50)"
+                    placeholder="0 for unlimited (or e.g. 50)"
                     value={couponForm.maxTotalUses}
                     onChange={(e) => setCouponForm({ ...couponForm, maxTotalUses: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
@@ -8114,7 +8178,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
                 <button
                   type="button"
-                  onClick={() => setIsAddCouponModalOpen(false)}
+                  onClick={() => { setIsAddCouponModalOpen(false); setEditingCoupon(null); }}
                   style={{ padding: '9px 16px', background: '#f1f5f9', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', cursor: 'pointer' }}
                 >
                   Cancel
@@ -8126,7 +8190,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   style={{ padding: '9px 20px', fontSize: '0.84rem' }}
                   id="btn-submit-coupon"
                 >
-                  {isSubmittingCoupon ? 'Creating...' : 'Save & Publish Coupon'}
+                  {isSubmittingCoupon ? 'Saving...' : editingCoupon ? 'Save Changes' : 'Save & Publish Coupon'}
                 </button>
               </div>
             </form>
