@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass, Zap, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -12,6 +12,7 @@ import GlideSelect from '../components/GlideSelect';
 import RubberSegment from '../components/RubberSegment';
 import AddEquipmentModal from '../components/AddEquipmentModal';
 import CourierLogo from '../components/CourierLogo';
+import { getBadgeConfig } from '../components/ProductCard';
 import { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner } from '../utils/courierPartners';
 import { startOverviewTour, startOrdersTour, startInventoryTour, startRepairsTour, startCancellationsTour, startCustomersTour, startCouponsTour } from '../services/tourService';
 
@@ -2074,6 +2075,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       (p.name || '').toLowerCase().includes(q) ||
       (p.brand || '').toLowerCase().includes(q) ||
       (p.category || '').toLowerCase().includes(q) ||
+      (p.badge || '').toLowerCase().includes(q) ||
+      (p.specs?.warranty || '').toLowerCase().includes(q) ||
       (p.id || '').toLowerCase().includes(q);
 
     // 2. Company / Brand Filter
@@ -5006,7 +5009,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           ) : (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {pagedProducts.map((prod) => (
+              {pagedProducts.map((prod) => {
+                const badgeConfig = getBadgeConfig(prod.badge);
+                const warrantyText = prod.specs?.warranty || prod.warranty;
+                return (
                 <div
                   key={prod.id}
                   className="store-product-item-card"
@@ -5042,6 +5048,113 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         </h4>
                         <ExternalLink size={13} className="store-product-ext-icon" />
                       </a>
+
+                      {/* Storefront Highlight Ribbon, Warranty & Cordless Badges */}
+                      {(badgeConfig || (warrantyText && warrantyText !== 'No Warranty') || warrantyText === 'No Warranty' || prod.cordless) && (
+                        <div className="store-product-badges-row" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', margin: '3px 0 6px' }}>
+                          {/* Highlight Ribbon Pill (e.g. Pro Choice, Best Seller, New Arrival, etc.) */}
+                          {badgeConfig && (
+                            <span
+                              className="store-product-badge-pill"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '0.72rem',
+                                padding: '2px 8px',
+                                borderRadius: '5px',
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer',
+                                ...badgeConfig.pillStyle
+                              }}
+                              onClick={() => openEditProduct(prod)}
+                              title={`Storefront Highlight Ribbon: ${badgeConfig.label} (Click Full Edit to change)`}
+                            >
+                              {badgeConfig.icon}
+                              <span>{badgeConfig.label}</span>
+                            </span>
+                          )}
+
+                          {/* Official Warranty Badge */}
+                          {warrantyText && warrantyText !== 'No Warranty' && (
+                            <span
+                              className="store-product-warranty-pill"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '0.72rem',
+                                color: '#16a34a',
+                                background: '#f0fdf4',
+                                border: '1px solid #bbf7d0',
+                                padding: '2px 8px',
+                                borderRadius: '5px',
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => openEditProduct(prod)}
+                              title={`Warranty Coverage: ${warrantyText} (Click to edit)`}
+                            >
+                              <ShieldCheck size={11} strokeWidth={2.2} />
+                              <span>{warrantyText}</span>
+                            </span>
+                          )}
+
+                          {/* No Warranty Pill */}
+                          {warrantyText === 'No Warranty' && (
+                            <span
+                              className="store-product-warranty-pill-none"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '0.7rem',
+                                color: '#64748b',
+                                background: '#f1f5f9',
+                                border: '1px solid #e2e8f0',
+                                padding: '2px 7px',
+                                borderRadius: '5px',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => openEditProduct(prod)}
+                              title="No Warranty selected (Click to edit)"
+                            >
+                              <Shield size={11} strokeWidth={2} />
+                              <span>No Warranty</span>
+                            </span>
+                          )}
+
+                          {/* Cordless Badge */}
+                          {prod.cordless && (
+                            <span
+                              className="store-product-cordless-pill"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '0.72rem',
+                                color: '#0284c7',
+                                background: '#f0f9ff',
+                                border: '1px solid #bae6fd',
+                                padding: '2px 8px',
+                                borderRadius: '5px',
+                                fontWeight: '700',
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => openEditProduct(prod)}
+                              title="Cordless Battery Equipment (Click to edit)"
+                            >
+                              <Zap size={11} strokeWidth={2.5} />
+                              <span>Cordless</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       <div className="store-product-stock-wrap">
                         {/* Feature 2: Quick Inline Stock Stepper */}
                         <div className="store-stock-stepper">
@@ -5165,7 +5278,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             {/* Inventory Segment-based Pagination Bar */}
