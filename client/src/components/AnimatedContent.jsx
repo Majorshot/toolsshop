@@ -76,19 +76,40 @@ const AnimatedContent = ({
       clearProps: 'transform'
     });
 
+    // Check if element is already within the visible viewport so it never stays stuck invisible
+    const checkAndPlay = () => {
+      if (!ref.current) return;
+      const rect = ref.current.getBoundingClientRect();
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top <= vh * (1 - threshold + 0.05) && rect.bottom >= 0) {
+        tl.play();
+      }
+    };
+
     const st = ScrollTrigger.create({
       trigger: el,
       scroller: scrollerTarget || undefined,
       start: `top ${startPct}%`,
       once: true,
-      onEnter: () => tl.play()
+      onEnter: () => tl.play(),
+      onRefresh: () => {
+        if (st.progress > 0) tl.play();
+      }
     });
 
     if (st.progress > 0) {
       tl.play();
+    } else {
+      checkAndPlay();
     }
 
+    // Safety checks: ensure any element currently visible in viewport triggers even if no scroll event occurred
+    const rafId = requestAnimationFrame(checkAndPlay);
+    const timeoutId = setTimeout(checkAndPlay, 100);
+
     return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timeoutId);
       st.kill();
       tl.kill();
     };

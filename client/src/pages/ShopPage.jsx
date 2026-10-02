@@ -807,20 +807,20 @@ export const ShopPage = ({
           </div>
         ) : (
           <>
-            <div className="product-grid">
-              {displayedProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((product, idx) => (
-                <AnimatedContent
+            <div
+              className="product-grid"
+              key={`grid-${sortBy}-${currentPage}-${activeCategory}-${activeBrand}-${priceFilter}-${inStockOnly}`}
+            >
+              {displayedProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((product) => (
+                <div
                   key={product.id || product._id}
-                  distance={35}
-                  delay={(idx % 8) * 0.05}
-                  duration={0.6}
                   style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
                 >
                   <ProductCard
                     product={product}
                     onSelectProduct={onSelectProduct}
                   />
-                </AnimatedContent>
+                </div>
               ))}
             </div>
 
