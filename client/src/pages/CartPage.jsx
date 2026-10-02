@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Plus, Minus, ArrowRight, MessageCircle, Tag, ShoppingBag, MapPin, Truck, CheckCircle2, ChevronRight, X, Phone } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import AnimatedContent from '../components/AnimatedContent';
 
 export const CartPage = ({ onOpenCheckout }) => {
@@ -25,6 +26,7 @@ export const CartPage = ({ onOpenCheckout }) => {
     applyCoupon,
     finalTotal
   } = useCart();
+  const { user, isLoggedIn } = useAuth();
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [verifyPhoneInput, setVerifyPhoneInput] = useState('');
@@ -43,7 +45,8 @@ export const CartPage = ({ onOpenCheckout }) => {
   const handleApplyCoupon = (e) => {
     e.preventDefault();
     if (!inputCoupon.trim()) return;
-    applyCoupon(inputCoupon, '', subtotal);
+    const userIdent = user ? { customerId: user.id || user._id, phone: user.phone, email: user.email } : '';
+    applyCoupon(inputCoupon, userIdent, subtotal);
   };
 
   const getWhatsAppCartUrl = () => {
@@ -349,8 +352,8 @@ export const CartPage = ({ onOpenCheckout }) => {
               </button>
             </div>
 
-            {/* Single-Use Phone Verification Prompt */}
-            {activeCoupon.requiresPhone && (
+            {/* Single-Use Phone Verification Prompt (only for guest users without account) */}
+            {activeCoupon.requiresPhone && !isLoggedIn && !user?.id && !user?.phone && (
               <div
                 style={{
                   background: '#fefce8',

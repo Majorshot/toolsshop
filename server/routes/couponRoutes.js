@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
-const { requireStoreOwner } = require('../utils/auth');
+const { requireStoreOwner, extractToken, verifyToken } = require('../utils/auth');
 
 // GET /api/coupons - List all coupons
 router.get('/', async (req, res) => {
@@ -41,10 +41,17 @@ router.post('/validate', async (req, res) => {
   try {
     const code = req.body.code;
     const subtotal = req.body.subtotal ?? req.body.orderSubtotal ?? req.body.cartSubtotal ?? 0;
+
+    let authUser = null;
+    const token = extractToken(req);
+    if (token) {
+      authUser = verifyToken(token);
+    }
+
     const userIdent = {
-      customerId: req.body.customerId,
-      phone: req.body.phone || '',
-      email: req.body.email || ''
+      customerId: req.body.customerId || authUser?.id || authUser?._id,
+      phone: req.body.phone || authUser?.phone || '',
+      email: req.body.email || authUser?.email || ''
     };
     const result = await db.validateCoupon(code, Number(subtotal) || 0, userIdent);
     if (!result.valid) {

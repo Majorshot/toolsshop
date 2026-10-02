@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Trash2, Plus, Minus, ArrowRight, MessageCircle, Tag, ShoppingBag, MapPin, Truck, Phone, CheckCircle2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export const CartDrawer = ({ onOpenCheckout }) => {
   const {
@@ -25,6 +26,7 @@ export const CartDrawer = ({ onOpenCheckout }) => {
     applyCoupon,
     finalTotal
   } = useCart();
+  const { user, isLoggedIn } = useAuth();
 
   const [inputCoupon, setInputCoupon] = useState('');
   const [verifyPhoneDrawerInput, setVerifyPhoneDrawerInput] = useState('');
@@ -42,7 +44,8 @@ export const CartDrawer = ({ onOpenCheckout }) => {
   const handleApplyCoupon = (e) => {
     e.preventDefault();
     if (!inputCoupon.trim()) return;
-    applyCoupon(inputCoupon, '', subtotal);
+    const userIdent = user ? { customerId: user.id || user._id, phone: user.phone, email: user.email } : '';
+    applyCoupon(inputCoupon, userIdent, subtotal);
   };
 
   const handleProceedCheckout = () => {
@@ -320,7 +323,7 @@ export const CartDrawer = ({ onOpenCheckout }) => {
                   </button>
                 </div>
 
-                {activeCoupon.requiresPhone && (
+                {activeCoupon.requiresPhone && !isLoggedIn && !user?.phone && !user?.id && (
                   <div style={{ margin: '0 18px 10px', background: '#fefce8', border: '1px solid #fde047', borderRadius: '8px', padding: '8px 10px' }}>
                     <div style={{ fontSize: '0.72rem', color: '#854d0e', fontWeight: '700', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Phone size={12} style={{ color: '#ea580c' }} />

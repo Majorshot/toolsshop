@@ -309,6 +309,31 @@ export const CartProvider = ({ children }) => {
     return 0;
   };
 
+  // Helper to extract complete user identity (merges currently logged in user context)
+  const getEffectiveUserIdent = (userIdent = null) => {
+    const defaultCustomerId = user?.id || user?._id || null;
+    const defaultPhone = (user?.phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const defaultEmail = (user?.email || '').trim().toLowerCase();
+
+    if (userIdent && typeof userIdent === 'object') {
+      return {
+        customerId: userIdent.customerId || userIdent.id || userIdent._id || defaultCustomerId,
+        phone: (userIdent.phone || userIdent.customerPhone || defaultPhone || '').replace(/[^0-9]/g, '').slice(-10),
+        email: (userIdent.email || defaultEmail || '').trim().toLowerCase()
+      };
+    }
+
+    const explicitPhone = (typeof userIdent === 'string' && userIdent.trim().length > 0)
+      ? userIdent.replace(/[^0-9]/g, '').slice(-10)
+      : '';
+
+    return {
+      customerId: defaultCustomerId,
+      phone: explicitPhone || defaultPhone || '',
+      email: defaultEmail || ''
+    };
+  };
+
   const applyCoupon = async (code, userIdent = '', customSubtotal = null) => {
     const cleanCode = (code || '').trim().toUpperCase();
     if (!cleanCode) {
@@ -318,22 +343,25 @@ export const CartProvider = ({ children }) => {
 
     try {
       const effectiveSubtotal = getCheckoutSubtotal(customSubtotal);
-      const userPayload = typeof userIdent === 'object'
-        ? userIdent
-        : { phone: (userIdent || '').replace(/[^0-9]/g, '').slice(-10) };
+      const userPayload = getEffectiveUserIdent(userIdent);
 
       const res = await api.validateCoupon(cleanCode, effectiveSubtotal, userPayload);
 
       if (res && res.valid) {
+        // If customer is already signed in (has customerId or valid 10-digit phone), treat as verified immediately
+        const isAlreadyIdentified = Boolean(userPayload.customerId || (userPayload.phone && userPayload.phone.length === 10));
+        const requiresPhone = Boolean(res.requiresPhone) && !isAlreadyIdentified;
+        const verifiedPhone = isAlreadyIdentified ? (userPayload.phone || '') : (res.requiresPhone ? '' : (userPayload.phone || ''));
+
         setActiveCoupon({
           ...res.coupon,
-          requiresPhone: Boolean(res.requiresPhone),
-          verifiedPhone: res.requiresPhone ? '' : (userPayload.phone || '')
+          requiresPhone,
+          verifiedPhone
         });
         setAppliedDiscount(res.coupon.discountType === 'flat' ? res.coupon.discountValue : res.coupon.discountValue);
         setCouponCode(cleanCode);
 
-        if (res.requiresPhone) {
+        if (requiresPhone) {
           showToast(`📱 Please sign in or enter your mobile number to verify this single-use coupon.`);
           return { success: true, requiresPhone: true, message: "Please sign in to verify this single-use offer for your account." };
         } else {
@@ -357,9 +385,7 @@ export const CartProvider = ({ children }) => {
 
   const verifyCouponWithPhone = async (userIdent, { silent = false, customSubtotal = null } = {}) => {
     if (!activeCoupon) return { valid: true };
-    const userPayload = typeof userIdent === 'object'
-      ? userIdent
-      : { phone: (userIdent || '').replace(/[^0-9]/g, '').slice(-10) };
+    const userPayload = getEffectiveUserIdent(userIdent);
 
     const cleanPhone = userPayload.phone || '';
     if (!userPayload.customerId && cleanPhone.length !== 10) {
@@ -460,6 +486,20 @@ export const CartProvider = ({ children }) => {
       showToast(`Coupon removed: Order subtotal fell below ₹${activeCoupon.minOrderAmount.toLocaleString('en-IN')}`);
     }
   }, [cart.length, subtotal, activeCoupon]);
+
+  // Auto-verify single-use coupon if user is logged in or logs in
+  useEffect(() => {
+    if (activeCoupon && activeCoupon.requiresPhone && user) {
+      const userPayload = getEffectiveUserIdent();
+      if (userPayload.customerId || (userPayload.phone && userPayload.phone.length === 10)) {
+        setActiveCoupon(prev => ({
+          ...prev,
+          requiresPhone: false,
+          verifiedPhone: userPayload.phone || prev?.verifiedPhone || ''
+        }));
+      }
+    }
+  }, [user, activeCoupon?.code, activeCoupon?.requiresPhone]);
 
   return (
     <CartContext.Provider
