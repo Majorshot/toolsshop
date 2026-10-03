@@ -315,12 +315,14 @@ export const CheckoutModal = ({ onClose }) => {
 
         setIsProcessingPayment(true);
 
+        const customerEmail = (formData.email || user?.email || '').trim();
         const rzpOrderRes = await api.createRazorpayOrder(
           finalTotal,
           `rcpt_${Date.now().toString().slice(-6)}`,
           {
             customer_name: formData.name.trim(),
             customer_phone: cleanPhone,
+            customer_email: customerEmail,
             delivery_type: deliveryType
           }
         );
@@ -338,10 +340,12 @@ export const CheckoutModal = ({ onClose }) => {
           prefill: {
             name: formData.name.trim(),
             contact: cleanPhone,
-            email: formData.email.trim()
+            email: customerEmail
           },
+          ...(customerEmail ? { readonly: { email: true, contact: true } } : {}),
           notes: {
             customerId: String(user?.id || ''),
+            customerEmail: customerEmail,
             address: formData.address || 'Poyanil Building, Kozhencherry, Kerala - 689641',
             district: formData.district || 'Pathanamthitta',
             pincode: formData.pincode || '689641'

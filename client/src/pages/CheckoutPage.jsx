@@ -1125,16 +1125,16 @@ export const CheckoutPage = () => {
           throw new Error(msg);
         }
 
-        setIsProcessingPayment(true);
-
         return new Promise(async (resolve, reject) => {
           try {
+            const customerEmail = (user?.email || loginForm?.email || '').trim();
             const rzpOrderRes = await api.createRazorpayOrder(
               finalTotal,
               `rcpt_${Date.now().toString().slice(-6)}`,
               {
                 customer_name: user?.name?.trim() || recipientName,
                 customer_phone: cleanAccountPhone,
+                customer_email: customerEmail,
                 delivery_type: deliveryType
               }
             );
@@ -1152,10 +1152,12 @@ export const CheckoutPage = () => {
               prefill: {
                 name: user?.name?.trim() || recipientName,
                 contact: cleanAccountPhone,
-                email: (user?.email || '').trim()
+                email: customerEmail
               },
+              ...(customerEmail ? { readonly: { email: true, contact: true } } : {}),
               notes: {
                 customerId: String(user?.id || user?._id || ''),
+                customerEmail: customerEmail,
                 recipientName,
                 recipientPhone,
                 address: formattedDeliveryAddress,
