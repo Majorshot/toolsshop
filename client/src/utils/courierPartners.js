@@ -88,8 +88,20 @@ export const resolveCourierConfig = resolveCourierPartner;
 export const getCourierTrackingLink = (courierNameOrObj = '', awb = '') => {
   const cfg = resolveCourierPartner(courierNameOrObj);
   const cleanAwb = String(awb || '').trim();
-  if (cfg.id === 'delhivery' && cleanAwb) {
-    return `https://www.delhivery.com/tracking?tracking_id=${encodeURIComponent(cleanAwb)}`;
+  if (cleanAwb) {
+    if (cfg.id === 'delhivery') {
+      return `https://www.delhivery.com/tracking?tracking_id=${encodeURIComponent(cleanAwb)}`;
+    }
+    if (cfg.id === 'dtdc') {
+      return `https://track.dtdc.com/ctrk-tracking/ctrk-tracking.html?action=Search&strCnNo=${encodeURIComponent(cleanAwb)}`;
+    }
+    if (cfg.id === 'tpc') {
+      return `https://www.tpcindia.com/Track.aspx?ConsignmentNo=${encodeURIComponent(cleanAwb)}`;
+    }
+    if (cfg.id === 'aps') {
+      return 'https://www.apscargo.com/index';
+    }
   }
   return cfg.trackingUrl || cfg.portalUrl || 'https://www.dtdc.com/track-your-shipment/';
 };
+

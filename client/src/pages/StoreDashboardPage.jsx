@@ -13,7 +13,7 @@ import RubberSegment from '../components/RubberSegment';
 import AddEquipmentModal from '../components/AddEquipmentModal';
 import CourierLogo from '../components/CourierLogo';
 import { getBadgeConfig } from '../components/ProductCard';
-import { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner } from '../utils/courierPartners';
+import { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner, getCourierTrackingLink } from '../utils/courierPartners';
 import { startOverviewTour, startOrdersTour, startInventoryTour, startRepairsTour, startCancellationsTour, startCustomersTour, startCouponsTour } from '../services/tourService';
 
 const ORDER_DATE_OPTIONS = [
@@ -67,7 +67,7 @@ const STATUS_OPTIONS = [
   'Completed'
 ];
 
-export { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner };
+export { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner, getCourierTrackingLink };
 
 export const StoreDashboardPage = ({ onProductUpdated }) => {
   const { user, logout } = useAuth();
@@ -513,6 +513,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   );
 
   const handleApproveCancellationRequest = async (order) => {
+    const isPaid = order.paymentStatus === 'PAID';
+    const confirmMsg = isPaid
+      ? `Are you sure you want to APPROVE cancellation for Order #${order.id}?\n\n💰 Amount to Refund: ${formatPrice(order.totalAmount)}\n💳 Payment: ${order.paymentMethod || 'Online'}\n\nThis will cancel the order and automatically issue an instant refund to the customer.`
+      : `Are you sure you want to APPROVE cancellation for Order #${order.id}?\n\nThis was Cash on Delivery (no online payment refund required).`;
+    if (!window.confirm(confirmMsg)) return;
+
     setApprovingCancelId(order.id);
     try {
       const res = await api.cancelOrder(order.id, {
@@ -536,6 +542,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const handleRejectCancellationRequest = async (order) => {
+    if (!window.confirm(`Are you sure you want to REJECT customer cancellation request for Order #${order.id}?\n\nThe order will remain active for courier delivery.`)) {
+      return;
+    }
     setRejectingCancelId(order.id);
     try {
       const res = await api.rejectCancellation(order.id);
@@ -734,6 +743,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [selectedOrderForLabel, setSelectedOrderForLabel] = useState(null);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
   const [copiedOrderId, setCopiedOrderId] = useState(false);
+  const [copiedCancelAwb, setCopiedCancelAwb] = useState(null);
+  const [copiedCancelOrderId, setCopiedCancelOrderId] = useState(null);
 
   // Inline Stock & Price Editing
   const [editingPriceId, setEditingPriceId] = useState(null);
@@ -6529,146 +6540,542 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {pendingCancellationRequests.map((order) => {
                 const courierCfg = resolveCourierConfig(order.courierPartner);
+                const trackingUrl = getCourierTrackingLink(order.courierPartner, order.awb);
+                const isPaid = order.paymentStatus === 'PAID';
+                const items = order.items || [];
+                const itemCount = items.reduce((acc, it) => acc + (it.quantity || 1), 0);
+                const itemsSubtotal = items.reduce((acc, it) => acc + ((it.price || 0) * (it.quantity || 1)), 0);
+                const destAddress = [
+                  order.customer?.address,
+                  order.customer?.landmark,
+                  order.customer?.district || order.customer?.city,
+                  order.customer?.pincode ? `PIN: ${order.customer.pincode}` : ''
+                ].filter(Boolean).join(', ');
+
+                const cancelWaMessage = `Hello ${order.customer?.name || ''}, this is Variathu Power Tools regarding your cancellation request for order #${order.id}.${order.courierPartner ? ` Dispatched via ${courierCfg.name}.` : ''}${order.awb ? ` Consignment AWB: ${order.awb}.` : ''}`;
+                const waLink = `https://wa.me/${(order.customer?.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(cancelWaMessage)}`;
+
                 return (
                   <div
                     key={order.id}
                     style={{
-                      background: '#fffbeb',
-                      border: '1.5px solid #fde68a',
-                      borderRadius: '14px',
-                      padding: '20px',
-                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.08)'
+                      background: '#ffffff',
+                      border: '1.5px solid #fed7aa',
+                      borderLeft: '5px solid #ea580c',
+                      borderRadius: '16px',
+                      padding: '22px',
+                      boxShadow: '0 4px 20px rgba(234, 88, 12, 0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '16px'
                     }}
                     id={`cancel-request-${order.id}`}
                   >
-                    {/* Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                          <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>{order.id}</strong>
+                    {/* 1. Header: Order ID, Status Badges, Pricing */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '1.15rem', fontWeight: '900', color: '#0f172a', fontFamily: 'var(--font-mono)', letterSpacing: '-0.01em' }}>
+                            {order.id}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(order.id);
+                              setCopiedCancelOrderId(order.id);
+                              setTimeout(() => setCopiedCancelOrderId(null), 2000);
+                            }}
+                            style={{
+                              background: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              color: copiedCancelOrderId === order.id ? '#15803d' : '#475569',
+                              padding: '2px 7px',
+                              borderRadius: '6px',
+                              fontSize: '0.72rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title="Copy Order ID"
+                          >
+                            {copiedCancelOrderId === order.id ? <Check size={11} style={{ color: '#16a34a' }} /> : <Copy size={11} />}
+                            <span>{copiedCancelOrderId === order.id ? 'Copied' : 'Copy'}</span>
+                          </button>
+
                           <span
                             style={{
                               background: '#fef3c7',
                               color: '#b45309',
                               border: '1px solid #fde68a',
-                              padding: '2px 10px',
+                              padding: '3px 10px',
                               borderRadius: '9999px',
                               fontSize: '0.72rem',
-                              fontWeight: '800'
+                              fontWeight: '800',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
                             }}
                           >
                             ⏳ CANCELLATION REQUESTED
                           </span>
-                          {order.paymentStatus === 'PAID' && (
-                            <span style={{ background: '#ecfdf5', color: '#15803d', border: '1px solid #86efac', padding: '2px 10px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: '800' }}>
-                              PAID (Refund Required)
+
+                          {isPaid ? (
+                            <span style={{ background: '#ecfdf5', color: '#15803d', border: '1px solid #86efac', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: '800' }}>
+                              💳 PAID ONLINE ({formatPrice(order.totalAmount)} Refund Required)
+                            </span>
+                          ) : (
+                            <span style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: '800' }}>
+                              💵 CASH ON DELIVERY (No Refund Required)
                             </span>
                           )}
                         </div>
-                        <span style={{ fontSize: '0.78rem', color: '#64748b', display: 'block' }}>
-                          Customer: <strong>{order.customer?.name || 'Unknown'}</strong> • Phone: <strong>{order.customer?.phone || 'N/A'}</strong>
-                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '0.76rem', color: '#64748b' }}>
+                          <span>Placed: <strong>{new Date(order.createdAt || order.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(order.createdAt || order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong></span>
+                          <span>&bull;</span>
+                          <span style={{ color: '#ea580c', fontWeight: '700' }}>
+                            Requested: {order.cancellationRequestedAt ? `${new Date(order.cancellationRequestedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Recently'}
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                          ₹{Number(order.totalAmount).toLocaleString('en-IN')}
+
+                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                          {formatPrice(order.totalAmount)}
                         </span>
-                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                          {order.paymentMethod}
+                        <span style={{ fontSize: '0.74rem', color: '#64748b', background: '#f8fafc', padding: '2px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                          {order.paymentMethod || 'Online Payment'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedOrderForDetails(order)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#0284c7',
+                            fontSize: '0.74rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            padding: '2px 0 0 0',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <FileText size={12} />
+                          <span>Full Order Breakdown &rarr;</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. Customer Reason & Immediate Contact Bar */}
+                    <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '12px', padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#b45309', fontWeight: '800', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          <AlertTriangle size={15} style={{ color: '#d97706' }} />
+                          <span>Customer's Cancellation Reason</span>
+                        </div>
+                        {order.cancellationRequestedAt && (
+                          <span style={{ fontSize: '0.72rem', color: '#92400e', fontWeight: '600' }}>
+                            Requested on {new Date(order.cancellationRequestedAt).toLocaleDateString()} at {new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ color: '#78350f', fontWeight: '700', fontSize: '0.92rem', lineHeight: 1.5, fontStyle: 'italic', marginBottom: '12px', padding: '8px 14px', background: '#ffffff', borderRadius: '8px', border: '1px solid #fef3c7' }}>
+                        "{order.cancellationRequestReason || order.cancellationReason || 'No cancellation reason specified by customer'}"
+                      </div>
+
+                      {/* Customer Contact Bar */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '8px', borderTop: '1px dashed #fde68a', fontSize: '0.78rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ color: '#78350f' }}>Buyer:</span>
+                          <strong style={{ color: '#0f172a' }}>{order.customer?.name || 'Customer'}</strong>
+                          <span style={{ color: '#cbd5e1' }}>•</span>
+                          <span style={{ color: '#475569' }}>Phone: <strong>{order.customer?.phone || 'N/A'}</strong></span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {order.customer?.phone && (
+                            <a
+                              href={`tel:${order.customer.phone}`}
+                              style={{
+                                background: '#ffffff',
+                                border: '1px solid #cbd5e1',
+                                color: '#0f172a',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.74rem',
+                                fontWeight: '700',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Phone size={12} style={{ color: '#ea580c' }} />
+                              <span>Call Customer</span>
+                            </a>
+                          )}
+                          {order.customer?.phone && (
+                            <a
+                              href={waLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                background: '#ecfdf5',
+                                border: '1px solid #a7f3d0',
+                                color: '#15803d',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.74rem',
+                                fontWeight: '800',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <MessageCircle size={12} />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Courier & AWB Info */}
-                    <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                      <CourierLogo partner={order.courierPartner} size="sm" />
-                      <div style={{ fontSize: '0.82rem', color: '#0f172a' }}>
-                        <strong>{courierCfg.name}</strong>
-                        {order.awb && (
-                          <span style={{ marginLeft: '10px', fontFamily: 'var(--font-mono)', color: '#0369a1', fontWeight: '700' }}>
-                            AWB: {order.awb}
+                    {/* 3. Delivery Partner & Live Courier Tracking Card */}
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <CourierLogo partner={order.courierPartner} size="sm" />
+                          <div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{courierCfg.name}</span>
+                              <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#0369a1', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                                {courierCfg.badge}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                              {courierCfg.tagline || 'Express Surface Logistics'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* AWB and Track Button CTA */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          {order.awb ? (
+                            <>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#ffffff', border: '1.5px solid #cbd5e1', padding: '5px 10px', borderRadius: '8px' }}>
+                                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700' }}>AWB:</span>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '900', color: '#0369a1', fontSize: '0.86rem' }}>
+                                  {order.awb}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(order.awb);
+                                    setCopiedCancelAwb(order.id);
+                                    setTimeout(() => setCopiedCancelAwb(null), 2000);
+                                  }}
+                                  style={{
+                                    background: copiedCancelAwb === order.id ? '#dcfce7' : '#f1f5f9',
+                                    border: `1px solid ${copiedCancelAwb === order.id ? '#86efac' : '#cbd5e1'}`,
+                                    color: copiedCancelAwb === order.id ? '#15803d' : '#475569',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    fontSize: '0.68rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                  }}
+                                  title="Copy Consignment AWB"
+                                >
+                                  {copiedCancelAwb === order.id ? <Check size={11} /> : <Copy size={11} />}
+                                  <span>{copiedCancelAwb === order.id ? 'Copied' : 'Copy'}</span>
+                                </button>
+                              </div>
+
+                              <a
+                                href={trackingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                                  color: '#ffffff',
+                                  padding: '7px 14px',
+                                  borderRadius: '8px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: '800',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.15)',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                title={`Open live shipment tracking on ${courierCfg.name}`}
+                              >
+                                <Truck size={14} style={{ color: '#38bdf8' }} />
+                                <span>Track on {courierCfg.badge || 'Courier'}</span>
+                                <ExternalLink size={12} />
+                              </a>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                              No AWB assigned yet
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Destination Shipping Address */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '0.76rem', color: '#475569' }}>
+                        <MapPin size={13} style={{ color: '#ea580c', flexShrink: 0, marginTop: '2px' }} />
+                        <div>
+                          <strong style={{ color: '#0f172a' }}>Shipping Destination:</strong>{' '}
+                          {destAddress || 'Address on file'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 4. Ordered Products Information (Complete Detail at a Glance) */}
+                    <div style={{ background: '#ffffff', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.84rem', fontWeight: '800', color: '#0f172a' }}>
+                          <Package size={15} style={{ color: '#ea580c' }} />
+                          <span>Purchased Products ({items.length} {items.length === 1 ? 'product' : 'products'}, {itemCount} total units)</span>
+                        </div>
+                        <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          Inspect items before approving refund
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {items.map((item, idx) => {
+                          const matchedProd = products.find(p =>
+                            (p.id && item.id && String(p.id) === String(item.id)) ||
+                            (p._id && item.id && String(p._id) === String(item.id)) ||
+                            (p.id && item.product && String(p.id) === String(item.product)) ||
+                            (p._id && item.product && String(p._id) === String(item.product)) ||
+                            (p.name && item.name && p.name.toLowerCase() === item.name.toLowerCase())
+                          );
+                          const displayImg = item.image || matchedProd?.image || 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=120&q=80';
+                          const brand = item.brand || matchedProd?.brand || '';
+                          const qty = item.quantity || 1;
+                          const unitPrice = item.price || 0;
+                          const lineTotal = unitPrice * qty;
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '12px',
+                                padding: '10px 12px',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '10px',
+                                flexWrap: 'wrap'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: '240px', flex: 1 }}>
+                                {/* Product Image */}
+                                <div style={{
+                                  width: '52px',
+                                  height: '52px',
+                                  borderRadius: '8px',
+                                  background: '#ffffff',
+                                  border: '1px solid #cbd5e1',
+                                  padding: '2px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                  overflow: 'hidden'
+                                }}>
+                                  <img
+                                    src={displayImg}
+                                    alt={item.name}
+                                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=120&q=80'; }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                  />
+                                </div>
+
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                                    {brand && (
+                                      <span style={{
+                                        fontSize: '0.64rem',
+                                        fontWeight: '900',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.04em',
+                                        color: '#ea580c',
+                                        background: '#fff7ed',
+                                        padding: '1px 5px',
+                                        borderRadius: '3px',
+                                        border: '1px solid #fed7aa'
+                                      }}>
+                                        {brand}
+                                      </span>
+                                    )}
+                                    {matchedProd?.category && (
+                                      <span style={{ fontSize: '0.66rem', color: '#64748b', background: '#ffffff', border: '1px solid #e2e8f0', padding: '1px 5px', borderRadius: '3px' }}>
+                                        {matchedProd.category}
+                                      </span>
+                                    )}
+                                    {matchedProd?.stock !== undefined && (
+                                      <span style={{ fontSize: '0.66rem', color: matchedProd.stock > 0 ? '#166534' : '#dc2626', background: matchedProd.stock > 0 ? '#ecfdf5' : '#fef2f2', padding: '1px 5px', borderRadius: '3px' }}>
+                                        📦 Stock: {matchedProd.stock}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a', lineHeight: 1.3, marginBottom: '2px' }}>
+                                    {item.name}
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.72rem', color: '#64748b' }}>
+                                    <span>Unit: <strong>{formatPrice(unitPrice)}</strong></span>
+                                    {(item.id || item.product || matchedProd?.id) && (
+                                      <>
+                                        <span>&bull;</span>
+                                        <a
+                                          href={`/product/${item.id || item.product || matchedProd?.id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                                        >
+                                          View in Store <ExternalLink size={9} />
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Quantity and Line Total */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+                                <span style={{
+                                  background: '#0f172a',
+                                  color: '#ffffff',
+                                  fontSize: '0.76rem',
+                                  fontWeight: '800',
+                                  padding: '3px 9px',
+                                  borderRadius: '6px',
+                                  fontFamily: 'var(--font-mono)'
+                                }}>
+                                  Qty: ×{qty}
+                                </span>
+
+                                <span style={{
+                                  fontSize: '0.94rem',
+                                  fontWeight: '900',
+                                  color: '#0f172a',
+                                  fontFamily: 'var(--font-mono)',
+                                  minWidth: '75px',
+                                  textAlign: 'right'
+                                }}>
+                                  {formatPrice(lineTotal)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Price Breakdown Strip */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', fontSize: '0.78rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', color: '#64748b' }}>
+                          <span>Subtotal: <strong style={{ color: '#0f172a' }}>{formatPrice(itemsSubtotal)}</strong></span>
+                          <span>&bull;</span>
+                          <span>Delivery: <strong style={{ color: order.deliveryFee ? '#0f172a' : '#16a34a' }}>{order.deliveryFee ? formatPrice(order.deliveryFee) : 'FREE'}</strong></span>
+                          {order.discountAmount > 0 && (
+                            <>
+                              <span>&bull;</span>
+                              <span style={{ color: '#16a34a' }}>Discount: <strong>-{formatPrice(order.discountAmount)}</strong></span>
+                            </>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700' }}>
+                            {isPaid ? 'Refund Amount on Approval:' : 'Order Total:'}
                           </span>
-                        )}
+                          <span style={{ fontSize: '1.05rem', fontWeight: '900', color: isPaid ? '#dc2626' : '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                            {formatPrice(order.totalAmount)}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Customer Reason */}
-                    {(order.cancellationRequestReason || order.cancellationReason) && (
-                      <div style={{ background: '#ffffff', border: '1.5px solid #fde68a', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', fontSize: '0.86rem' }}>
-                        <span style={{ color: '#b45309', fontWeight: '800', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
-                          Customer's Cancellation Reason
-                        </span>
-                        <span style={{ color: '#78350f', fontWeight: '700', lineHeight: 1.5, display: 'block', fontStyle: 'italic' }}>
-                          "{order.cancellationRequestReason || order.cancellationReason}"
-                        </span>
+                    {/* 5. Guidance Tip & Decision Action Buttons */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', paddingTop: '4px' }}>
+                      <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', padding: '6px 12px', borderRadius: '8px', maxWidth: '580px', lineHeight: 1.4 }}>
+                        💡 <strong>Store Manager Tip:</strong> Check the live courier tracking above. If the parcel is already out for delivery or near destination, contact the buyer before approving to avoid unnecessary return courier shipping fees.
                       </div>
-                    )}
 
-                    {/* Request timestamp */}
-                    {order.cancellationRequestedAt && (
-                      <div style={{ fontSize: '0.74rem', color: '#a16207', marginBottom: '14px' }}>
-                        Requested on: {new Date(order.cancellationRequestedAt).toLocaleDateString()} at {new Date(order.cancellationRequestedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectCancellationRequest(order)}
+                          disabled={rejectingCancelId === order.id || approvingCancelId === order.id}
+                          style={{
+                            background: '#ffffff',
+                            border: '1.5px solid #cbd5e1',
+                            color: '#475569',
+                            padding: '10px 18px',
+                            borderRadius: '8px',
+                            fontSize: '0.84rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            opacity: (rejectingCancelId === order.id || approvingCancelId === order.id) ? 0.6 : 1,
+                            transition: 'all 0.15s ease'
+                          }}
+                          id={`btn-reject-cancel-${order.id}`}
+                        >
+                          <X size={15} />
+                          <span>{rejectingCancelId === order.id ? 'Rejecting...' : 'Reject Request'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleApproveCancellationRequest(order)}
+                          disabled={approvingCancelId === order.id || rejectingCancelId === order.id}
+                          style={{
+                            background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                            border: 'none',
+                            color: '#ffffff',
+                            padding: '10px 20px',
+                            borderRadius: '8px',
+                            fontSize: '0.84rem',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 10px rgba(220, 38, 38, 0.25)',
+                            opacity: (approvingCancelId === order.id || rejectingCancelId === order.id) ? 0.6 : 1,
+                            transition: 'all 0.15s ease'
+                          }}
+                          id={`btn-approve-cancel-${order.id}`}
+                        >
+                          <CheckCircle2 size={15} />
+                          <span>{approvingCancelId === order.id ? 'Processing Cancel & Refund...' : (isPaid ? 'Approve Cancel & Refund' : 'Approve Cancellation')}</span>
+                        </button>
                       </div>
-                    )}
-
-                    {/* Ordered Items Summary */}
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '14px' }}>
-                      <strong>Items:</strong> {order.items?.map(i => `${i.name} (×${i.quantity})`).join(', ')}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleRejectCancellationRequest(order)}
-                        disabled={rejectingCancelId === order.id || approvingCancelId === order.id}
-                        style={{
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          color: '#475569',
-                          padding: '9px 16px',
-                          borderRadius: '8px',
-                          fontSize: '0.84rem',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          opacity: (rejectingCancelId === order.id || approvingCancelId === order.id) ? 0.6 : 1
-                        }}
-                        id={`btn-reject-cancel-${order.id}`}
-                      >
-                        <X size={14} />
-                        <span>{rejectingCancelId === order.id ? 'Rejecting...' : 'Reject Request'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleApproveCancellationRequest(order)}
-                        disabled={approvingCancelId === order.id || rejectingCancelId === order.id}
-                        style={{
-                          background: '#dc2626',
-                          border: 'none',
-                          color: '#ffffff',
-                          padding: '9px 18px',
-                          borderRadius: '8px',
-                          fontSize: '0.84rem',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 2px 8px rgba(220, 38, 38, 0.2)',
-                          opacity: (approvingCancelId === order.id || rejectingCancelId === order.id) ? 0.6 : 1
-                        }}
-                        id={`btn-approve-cancel-${order.id}`}
-                      >
-                        <CheckCircle2 size={14} />
-                        <span>{approvingCancelId === order.id ? 'Processing Cancel & Refund...' : 'Approve Cancel & Refund'}</span>
-                      </button>
                     </div>
                   </div>
                 );
