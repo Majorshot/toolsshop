@@ -76,7 +76,8 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
 
   const badgeConfig = getBadgeConfig(product?.badge);
 
-  const handleCardClick = () => {
+  const handleCardClick = (e) => {
+    if (e && (e.defaultPrevented || e.isDefaultPrevented?.())) return;
     if (isPreview) return;
     try {
       if (prodKey) {

@@ -311,6 +311,7 @@ export default function GlideSelect({
   const pillRef = useRef(null);
   const instant = useRef(false);
   const closeTimer = useRef(undefined);
+  const lastClosedTime = useRef(0);
   const generatedId = useId();
   const selectId = idProp || generatedId;
   const S = SIZES[size] ?? SIZES.md;
@@ -383,6 +384,7 @@ export default function GlideSelect({
   };
 
   const close = mode => {
+    lastClosedTime.current = Date.now();
     setActive(null);
     clearTimeout(closeTimer.current);
     const el = menuRef.current;
@@ -402,6 +404,7 @@ export default function GlideSelect({
       close('instant');
       return;
     }
+    lastClosedTime.current = Date.now();
     setActive(i);
     if (it.value !== current) {
       if (value === undefined) setInner(it.value);
@@ -412,7 +415,7 @@ export default function GlideSelect({
       }
       if (!viaKey && rootRef.current) rootRef.current.dataset.swap = '';
     }
-    close('instant');
+    close('pop');
     triggerRef.current?.focus({ preventScroll: true });
   };
 
@@ -443,14 +446,33 @@ export default function GlideSelect({
     } else if (k.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) go(typeaheadIndex(items, cur, k));
   };
 
+  // Close when tapping outside & record timestamp so click is swallowed
   useEffect(() => {
     if (phase === 'closed') return undefined;
     const onDown = e => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) close('pop');
+      if (rootRef.current && !rootRef.current.contains(e.target)) {
+        lastClosedTime.current = Date.now();
+        close('pop');
+      }
     };
     document.addEventListener('pointerdown', onDown, true);
     return () => document.removeEventListener('pointerdown', onDown, true);
   }, [phase]);
+
+  // Global ghost-click suppressor on window: intercepts synthetic clicks on underlying elements
+  useEffect(() => {
+    const onWindowClickCapture = e => {
+      if (Date.now() - lastClosedTime.current < 450) {
+        if (rootRef.current && !rootRef.current.contains(e.target)) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation?.();
+        }
+      }
+    };
+    window.addEventListener('click', onWindowClickCapture, true);
+    return () => window.removeEventListener('click', onWindowClickCapture, true);
+  }, []);
 
   useEffect(() => {
     if (disabled && phase !== 'closed') close('instant');
@@ -540,6 +562,10 @@ export default function GlideSelect({
           if (phase === 'open') close('pop');
           else open(false);
         }}
+        onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         onKeyDown={onTriggerKey}
       >
         <span
@@ -588,12 +614,8 @@ export default function GlideSelect({
                 aria-selected={i === selected}
                 data-index={i}
                 className="gs-option-row"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  pick(i, false);
-                }}
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   pick(i, false);
                 }}
