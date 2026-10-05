@@ -300,7 +300,7 @@ export const GstInvoiceModal = ({
           <style>
             @page {
               size: A4 portrait;
-              margin: 12mm 14mm;
+              margin: 6mm;
             }
             * {
               box-sizing: border-box;
@@ -318,7 +318,7 @@ export const GstInvoiceModal = ({
               print-color-adjust: exact !important;
             }
             .invoice-wrapper {
-              width: 182mm;
+              width: 100%;
               border: 1.5px solid #000000 !important;
               box-sizing: border-box !important;
               background: #ffffff;
@@ -790,14 +790,14 @@ export const GstInvoiceModal = ({
               </tbody>
             </table>
 
-            {/* 5. ITEMS TABLE: Sl.No | Item Description | HSN | Rate | Qty | Amount (84mm) */}
+            {/* 5. ITEMS TABLE: Sl.No | Item Description | HSN | Rate | Qty | Amount (120mm) */}
             <table
               style={{
                 width: '100%',
                 borderCollapse: 'collapse',
                 tableLayout: 'fixed',
                 fontSize: '8.4pt',
-                height: '84mm',
+                height: '120mm',
                 borderLeft: '1.5px solid #000000',
                 borderRight: '1.5px solid #000000'
               }}
@@ -833,7 +833,7 @@ export const GstInvoiceModal = ({
                 ))}
 
                 {/* Fixed space filler row with all vertical column lines continuous and intact */}
-                <tr style={{ height: `${Math.max(15, 55.5 - (invoiceLines.length * 6.5))}mm` }}>
+                <tr style={{ height: `${Math.max(15, 91.5 - (invoiceLines.length * 6.5))}mm` }}>
                   <td style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000' }}>&nbsp;</td>
                   <td style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000' }}>&nbsp;</td>
                   <td style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000' }}>&nbsp;</td>
