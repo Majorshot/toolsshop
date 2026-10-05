@@ -103,6 +103,13 @@ export const CheckoutModal = ({ onClose }) => {
     }
   }, [user, isCustomerLoggedIn]);
 
+  // If delivery mode is courier delivery (not store pickup), ensure Cash on Delivery is disabled
+  useEffect(() => {
+    if (deliveryType !== 'store-pickup' && formData.paymentMethod === 'cash') {
+      setFormData(prev => ({ ...prev, paymentMethod: 'razorpay' }));
+    }
+  }, [deliveryType, formData.paymentMethod]);
+
   // Live Kerala Pincode Serviceability Check
   useEffect(() => {
     if (deliveryType === 'kerala-courier' && formData.pincode && formData.pincode.trim().length === 6) {
@@ -277,6 +284,11 @@ export const CheckoutModal = ({ onClose }) => {
     setIsSubmitting(true);
 
     try {
+      if (deliveryType !== 'store-pickup' && formData.paymentMethod === 'cash') {
+        setErrorMsg('Cash on Delivery is not available for delivery. Please pay online via Razorpay/UPI.');
+        setIsSubmitting(false);
+        return;
+      }
       const isPrepaid = formData.paymentMethod === 'razorpay';
       const orderPayload = {
         customerId: user?.id,
@@ -392,8 +404,11 @@ export const CheckoutModal = ({ onClose }) => {
         return;
       }
 
-      // Cash on Delivery / Counter Pickup Handover
-      const cashMethod = deliveryType === 'store-pickup' ? 'PAY_AT_STORE' : 'COD';
+      // Counter Pickup Handover (Cash on delivery is disabled for courier delivery)
+      if (deliveryType !== 'store-pickup') {
+        throw new Error('Cash on Delivery is not available for courier delivery. Please pay online via Razorpay/UPI.');
+      }
+      const cashMethod = 'PAY_AT_STORE';
       const result = await api.createOrder({
         ...orderPayload,
         paymentMethod: cashMethod,
@@ -1104,7 +1119,7 @@ export const CheckoutModal = ({ onClose }) => {
                     <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', display: 'block', marginBottom: '6px' }}>
                       Choose Payment Method:
                     </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: deliveryType === 'store-pickup' ? '1fr 1fr' : '1fr', gap: '10px' }}>
                       <div
                         onClick={() => setFormData({ ...formData, paymentMethod: 'razorpay' })}
                         style={{
@@ -1119,21 +1134,23 @@ export const CheckoutModal = ({ onClose }) => {
                         <span style={{ fontSize: '0.72rem', color: '#64748b' }}>UPI, Cards, NetBanking</span>
                       </div>
 
-                      <div
-                        onClick={() => setFormData({ ...formData, paymentMethod: 'cash' })}
-                        style={{
-                          border: formData.paymentMethod === 'cash' ? '2px solid #ea580c' : '1.5px solid #cbd5e1',
-                          background: formData.paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
-                          borderRadius: '8px',
-                          padding: '10px 12px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <strong style={{ fontSize: '0.84rem', color: '#0f172a', display: 'block' }}>💵 Cash / Counter</strong>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
-                          {deliveryType === 'store-pickup' ? 'Pay at store counter' : 'Cash on Delivery (COD)'}
-                        </span>
-                      </div>
+                      {deliveryType === 'store-pickup' && (
+                        <div
+                          onClick={() => setFormData({ ...formData, paymentMethod: 'cash' })}
+                          style={{
+                            border: formData.paymentMethod === 'cash' ? '2px solid #ea580c' : '1.5px solid #cbd5e1',
+                            background: formData.paymentMethod === 'cash' ? '#fff7ed' : '#ffffff',
+                            borderRadius: '8px',
+                            padding: '10px 12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <strong style={{ fontSize: '0.84rem', color: '#0f172a', display: 'block' }}>💵 Pay at Counter</strong>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                            Pay at store counter during pickup
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

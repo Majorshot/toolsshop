@@ -4,7 +4,7 @@ import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, Ref
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
-import GstInvoiceModal from '../components/GstInvoiceModal';
+import GstInvoiceModal, { getFinancialYearCode, buildInvoiceNumber, extractBillNumber } from '../components/GstInvoiceModal';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm, SpringModal } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
@@ -288,7 +288,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [dispatchModalOrder, setDispatchModalOrder] = useState(null);
   const [dispatchForm, setDispatchForm] = useState({
     courierPartner: 'DTDC Express',
-    awb: ''
+    awb: '',
+    billNumber: '',
+    motorVehicleNo: '',
+    eWayBillNo: ''
   });
 
   // Store Cancel Order & Auto-Refund Modal State
@@ -589,12 +592,27 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     const cfg = resolveCourierConfig(partner);
     const finalAwb = dispatchForm.awb.trim() || cfg.generateAwb();
 
+    const rawBill = (dispatchForm.billNumber || '').trim();
+    if (!rawBill) {
+      alert('Please enter the Shop Physical Bill / Invoice Number (e.g. 03630) before dispatching.');
+      return;
+    }
+
+    const orderDate = dispatchModalOrder.date ? new Date(dispatchModalOrder.date) : new Date();
+    const finalInvoiceNumber = buildInvoiceNumber(rawBill, orderDate);
+
     try {
       await api.updateOrderStatus(dispatchModalOrder.id, 'Dispatched via Courier', {
         courierPartner: partner,
-        awb: finalAwb
+        awb: finalAwb,
+        invoiceNumber: finalInvoiceNumber,
+        billNumber: rawBill,
+        dispatchDocNo: finalInvoiceNumber,
+        motorVehicleNo: dispatchForm.motorVehicleNo?.trim() || '',
+        eWayBillNo: dispatchForm.eWayBillNo?.trim() || '',
+        dispatchDate: new Date().toISOString()
       });
-      showNotification(`Order ${dispatchModalOrder.id} dispatched via ${partner}! (AWB: ${finalAwb})`);
+      showNotification(`Order ${dispatchModalOrder.id} dispatched! (Invoice: ${finalInvoiceNumber}, AWB: ${finalAwb})`);
       setDispatchModalOrder(null);
       loadOrders();
     } catch (err) {
@@ -720,6 +738,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     toolBrand: 'Bosch',
     customBrand: '',
     toolModel: '',
+    jobCardNumber: '',
     serialNumber: '',
     issueDescription: '',
     estimatedCost: '',
@@ -731,6 +750,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [verifyingRepairId, setVerifyingRepairId] = useState(null);
   const [editingRepairJob, setEditingRepairJob] = useState(null);
   const [editRepairForm, setEditRepairForm] = useState({
+    jobCardNumber: '',
     estimatedCost: '',
     advancePaid: '',
     technicianNotes: '',
@@ -745,6 +765,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [copiedOrderId, setCopiedOrderId] = useState(false);
   const [copiedCancelAwb, setCopiedCancelAwb] = useState(null);
   const [copiedCancelOrderId, setCopiedCancelOrderId] = useState(null);
+  const [unmaskedRepairOtps, setUnmaskedRepairOtps] = useState({});
 
   // Inline Stock & Price Editing
   const [editingPriceId, setEditingPriceId] = useState(null);
@@ -1259,6 +1280,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     setTimeout(() => setNotification(''), 3000);
   };
 
+  const [copiedAwbOrderId, setCopiedAwbOrderId] = useState(null);
+
+  const handleCopyAwb = (e, awbText, orderId) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!awbText) return;
+    const cleanAwb = String(awbText).trim();
+    navigator.clipboard.writeText(cleanAwb);
+    setCopiedAwbOrderId(orderId);
+    showNotification(`Copied AWB "${cleanAwb}" to clipboard!`);
+    setTimeout(() => {
+      setCopiedAwbOrderId(prev => (prev === orderId ? null : prev));
+    }, 2000);
+  };
+
   const loadOrders = async (options = {}) => {
     const isSilent = Boolean(options && options.silent);
     if (!isSilent) setLoadingOrders(true);
@@ -1623,6 +1658,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         customerPhone: repairForm.customerPhone.trim(),
         toolBrand: finalBrand,
         toolModel: repairForm.toolModel.trim(),
+        jobCardNumber: (repairForm.jobCardNumber || '').trim(),
         serialNumber: repairForm.serialNumber.trim(),
         issueDescription: repairForm.issueDescription.trim(),
         estimatedCost: Number(repairForm.estimatedCost) || 0,
@@ -1637,6 +1673,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         toolBrand: 'Bosch',
         customBrand: '',
         toolModel: '',
+        jobCardNumber: '',
         serialNumber: '',
         issueDescription: '',
         estimatedCost: '',
@@ -1717,6 +1754,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const handleOpenEditRepair = (job) => {
     setEditingRepairJob(job);
     setEditRepairForm({
+      jobCardNumber: job.jobCardNumber || '',
       estimatedCost: job.finalCost || job.estimatedCost || '',
       advancePaid: job.advancePaid || '',
       technicianNotes: job.technicianNotes || '',
@@ -1733,6 +1771,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       const costNum = Number(editRepairForm.estimatedCost) || 0;
       const advNum = Number(editRepairForm.advancePaid) || 0;
       await api.updateRepairJob(targetId, {
+        jobCardNumber: (editRepairForm.jobCardNumber || '').trim(),
         estimatedCost: costNum,
         finalCost: costNum,
         advancePaid: advNum,
@@ -1755,7 +1794,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     let text = `Hello ${job.customerName},\n`;
     text += `Update regarding your tool repair at *Variathu Power Tools Kozhencherry*:\n\n`;
     text += `🔧 *Tool:* ${job.toolBrand ? job.toolBrand + ' ' : ''}${job.toolModel}\n`;
-    text += `📋 *Job Ticket:* ${job.jobId}\n`;
+    text += `📋 *Job Ticket:* ${job.jobId}${job.jobCardNumber ? ` (Job Card: ${job.jobCardNumber})` : ''}\n`;
     text += `🚦 *Status:* ${isJobHandedOver ? 'HANDED OVER & CLOSED' : (job.status || '').toUpperCase()}\n`;
     if (isJobHandedOver) {
       const finalBill = Number(job.finalCost || job.estimatedCost || 0);
@@ -1795,7 +1834,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       const modelMatch = (job.toolModel || '').toLowerCase().includes(q);
       const brandMatch = (job.toolBrand || '').toLowerCase().includes(q);
       const idMatch = (job.jobId || '').toLowerCase().includes(q);
-      return nameMatch || phoneMatch || modelMatch || brandMatch || idMatch;
+      const jobCardMatch = (job.jobCardNumber || '').toLowerCase().includes(q);
+      return nameMatch || phoneMatch || modelMatch || brandMatch || idMatch || jobCardMatch;
     });
   }, [repairs, repairsSearch]);
 
@@ -1873,15 +1913,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     showNotification('✅ Exported orders CSV for accountant / Tally filing!');
   };
 
+  const openDispatchModal = (targetOrder) => {
+    if (!targetOrder) return;
+    const cfg = resolveCourierConfig(targetOrder.courierPartner);
+    const existingBill = targetOrder.billNumber || extractBillNumber(targetOrder.invoiceNumber, targetOrder.date);
+    setDispatchForm({
+      courierPartner: cfg.name,
+      awb: targetOrder.awb || '',
+      billNumber: existingBill || '',
+      motorVehicleNo: targetOrder.motorVehicleNo || '',
+      eWayBillNo: targetOrder.eWayBillNo || ''
+    });
+    setDispatchModalOrder(targetOrder);
+  };
+
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     const targetOrder = orders.find(o => o.id === orderId);
     if (newStatus.toLowerCase().includes('dispatch') && targetOrder && targetOrder.deliveryType !== 'store-pickup') {
-      const cfg = resolveCourierConfig(targetOrder.courierPartner);
-      setDispatchForm({
-        courierPartner: cfg.name,
-        awb: targetOrder.awb || ''
-      });
-      setDispatchModalOrder(targetOrder);
+      openDispatchModal(targetOrder);
       return;
     }
 
@@ -3981,8 +4030,24 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                     {isOrderCompleted(order) ? `✅ Delivered • ${order.courierPartner || 'Courier'}` : (order.awb && order.awb.trim()) ? (order.courierPartner || 'Dispatched') : 'Needs Dispatch'}
                                   </span>
                                   {order.awb && (
-                                    <div style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-                                      AWB: {order.awb}
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '1px 6px', borderRadius: '4px', fontFamily: 'var(--font-mono)', fontWeight: '700', marginTop: '3px' }}>
+                                      <span>AWB: {order.awb}</span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleCopyAwb(e, order.awb, order.id)}
+                                        style={{
+                                          background: 'none',
+                                          border: 'none',
+                                          padding: '1px',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          color: copiedAwbOrderId === order.id ? '#15803d' : '#2563eb'
+                                        }}
+                                        title="Copy AWB to clipboard"
+                                      >
+                                        {copiedAwbOrderId === order.id ? <Check size={11} /> : <Copy size={11} />}
+                                      </button>
                                     </div>
                                   )}
                                 </div>
@@ -4451,9 +4516,55 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                     </span>
                                     <CourierLogo partner={order.courierPartner} size="xs" />
                                     {order.awb && (
-                                      <span style={{ fontFamily: 'var(--font-mono)', background: '#ffffff', border: '1px solid #cbd5e1', padding: '1px 6px', borderRadius: '4px', fontSize: '0.74rem', color: '#0f172a', fontWeight: '700' }}>
-                                        AWB: {order.awb}
-                                      </span>
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '5px',
+                                          background: '#eff6ff',
+                                          border: '1px solid #bfdbfe',
+                                          padding: '2px 7px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.75rem',
+                                          fontFamily: 'var(--font-mono)',
+                                          fontWeight: '800',
+                                          color: '#1d4ed8'
+                                        }}
+                                      >
+                                        <span>AWB: {order.awb}</span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleCopyAwb(e, order.awb, order.id)}
+                                          style={{
+                                            background: copiedAwbOrderId === order.id ? '#dcfce7' : '#ffffff',
+                                            border: `1px solid ${copiedAwbOrderId === order.id ? '#86efac' : '#cbd5e1'}`,
+                                            padding: '1.5px 6px',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '3px',
+                                            fontSize: '0.68rem',
+                                            fontWeight: '700',
+                                            color: copiedAwbOrderId === order.id ? '#15803d' : '#1e40af',
+                                            transition: 'all 0.15s ease'
+                                          }}
+                                          title="Copy AWB Tracking Number to clipboard"
+                                          id={`btn-copy-awb-deliv-${order.id}`}
+                                        >
+                                          {copiedAwbOrderId === order.id ? (
+                                            <>
+                                              <Check size={11} style={{ color: '#16a34a' }} />
+                                              <span>Copied!</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Copy size={11} />
+                                              <span>Copy</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
                                     )}
                                     {courierCfg?.portalUrl && (
                                       <a
@@ -4469,9 +4580,55 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                 ) : hasAwb ? (
                                   <div style={{ marginTop: '4px', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                     <CourierLogo partner={order.courierPartner} size="xs" />
-                                    <span style={{ fontFamily: 'var(--font-mono)', background: '#ffffff', border: '1px solid #cbd5e1', padding: '1px 6px', borderRadius: '4px', fontSize: '0.74rem', color: '#0f172a', fontWeight: '700' }}>
-                                      AWB: {order.awb}
-                                    </span>
+                                    <div
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        background: '#eff6ff',
+                                        border: '1px solid #bfdbfe',
+                                        padding: '2px 7px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.75rem',
+                                        fontFamily: 'var(--font-mono)',
+                                        fontWeight: '800',
+                                        color: '#1d4ed8'
+                                      }}
+                                    >
+                                      <span>AWB: {order.awb}</span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleCopyAwb(e, order.awb, order.id)}
+                                        style={{
+                                          background: copiedAwbOrderId === order.id ? '#dcfce7' : '#ffffff',
+                                          border: `1px solid ${copiedAwbOrderId === order.id ? '#86efac' : '#cbd5e1'}`,
+                                          padding: '1.5px 6px',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '3px',
+                                          fontSize: '0.68rem',
+                                          fontWeight: '700',
+                                          color: copiedAwbOrderId === order.id ? '#15803d' : '#1e40af',
+                                          transition: 'all 0.15s ease'
+                                        }}
+                                        title="Copy AWB Tracking Number to clipboard"
+                                        id={`btn-copy-awb-${order.id}`}
+                                      >
+                                        {copiedAwbOrderId === order.id ? (
+                                          <>
+                                            <Check size={11} style={{ color: '#16a34a' }} />
+                                            <span>Copied!</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy size={11} />
+                                            <span>Copy</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
                                     {courierCfg?.portalUrl && (
                                       <a
                                         href={courierCfg.portalUrl}
@@ -4612,14 +4769,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                             {!isPickup && !isCancelled && !hasAwb && !isOrderCompleted(order) && (
                               <button
                                 type="button"
-                                onClick={() => {
-                                  const cfg = resolveCourierConfig(order.courierPartner);
-                                  setDispatchForm({
-                                    courierPartner: cfg.name,
-                                    awb: order.awb || ''
-                                  });
-                                  setDispatchModalOrder(order);
-                                }}
+                                onClick={() => openDispatchModal(order)}
                                 className="btn-store-action btn-store-primary"
                                 id={`btn-dispatch-order-${order.id}`}
                                 title="Assign Courier Partner & Enter Consignment AWB"
@@ -4657,14 +4807,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const cfg = resolveCourierConfig(order.courierPartner);
-                                    setDispatchForm({
-                                      courierPartner: cfg.name,
-                                      awb: order.awb || ''
-                                    });
-                                    setDispatchModalOrder(order);
-                                  }}
+                                  onClick={() => openDispatchModal(order)}
                                   className="btn-store-action"
                                   title="Edit Courier Partner / AWB"
                                 >
@@ -5766,7 +5909,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
               <input
                 type="text"
-                placeholder="Search repairs by customer name, phone, tool brand, model, or ticket ID (e.g. VPT-REP-2433)..."
+                placeholder="Search repairs by customer name, phone, tool brand, model, ticket ID, or job card..."
                 value={repairsSearch}
                 onChange={(e) => setRepairsSearch(e.target.value)}
                 style={{
@@ -5889,35 +6032,109 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         </div>
                       </div>
 
-                      <form onSubmit={(e) => handleVerifyRepairOtp(e, job)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="text"
-                          maxLength={6}
-                          placeholder="4-Digit OTP"
-                          value={repairOtpInputs[job.id || job.jobId || job._id] || ''}
-                          onChange={(e) => setRepairOtpInputs({ ...repairOtpInputs, [job.id || job.jobId || job._id]: e.target.value })}
-                          style={{
-                            width: '110px',
-                            padding: '7px 10px',
-                            textAlign: 'center',
-                            fontSize: '0.92rem',
-                            fontWeight: '800',
-                            letterSpacing: '0.15em',
-                            fontFamily: 'var(--font-mono)',
-                            background: '#ffffff',
-                            border: '2px solid #cbd5e1',
-                            borderRadius: '6px'
-                          }}
-                        />
-                        <button
-                          type="submit"
-                          disabled={verifyingRepairId === (job.id || job.jobId || job._id)}
-                          className="btn-hero-clean"
-                          style={{ padding: '7px 14px', fontSize: '0.78rem' }}
-                        >
-                          {verifyingRepairId === (job.id || job.jobId || job._id) ? 'Verifying...' : 'Verify & Deliver'}
-                        </button>
-                      </form>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <form onSubmit={(e) => handleVerifyRepairOtp(e, job)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="text"
+                            maxLength={6}
+                            placeholder="4-Digit OTP"
+                            value={repairOtpInputs[job.id || job.jobId || job._id] || ''}
+                            onChange={(e) => setRepairOtpInputs({ ...repairOtpInputs, [job.id || job.jobId || job._id]: e.target.value })}
+                            style={{
+                              width: '110px',
+                              padding: '7px 10px',
+                              textAlign: 'center',
+                              fontSize: '0.92rem',
+                              fontWeight: '800',
+                              letterSpacing: '0.15em',
+                              fontFamily: 'var(--font-mono)',
+                              background: '#ffffff',
+                              border: '2px solid #cbd5e1',
+                              borderRadius: '6px'
+                            }}
+                            id={`input-repair-otp-${job.id || job.jobId || job._id}`}
+                          />
+                          <button
+                            type="submit"
+                            disabled={verifyingRepairId === (job.id || job.jobId || job._id)}
+                            className="btn-hero-clean"
+                            style={{ padding: '7px 14px', fontSize: '0.78rem' }}
+                            id={`btn-verify-repair-${job.id || job.jobId || job._id}`}
+                          >
+                            {verifyingRepairId === (job.id || job.jobId || job._id) ? 'Verifying...' : 'Verify & Deliver'}
+                          </button>
+                        </form>
+
+                        {/* Tiny Admin Masked OTP - Click to Reveal / Auto-Fill */}
+                        {job.handoverOtp && (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ color: '#64748b', fontSize: '0.66rem' }}>Admin OTP:</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const jobKey = job.id || job.jobId || job._id;
+                                const isRevealed = !unmaskedRepairOtps[jobKey];
+                                setUnmaskedRepairOtps(prev => ({ ...prev, [jobKey]: isRevealed }));
+                                if (isRevealed && !repairOtpInputs[jobKey]) {
+                                  setRepairOtpInputs(prev => ({ ...prev, [jobKey]: job.handoverOtp }));
+                                }
+                              }}
+                              style={{
+                                background: unmaskedRepairOtps[job.id || job.jobId || job._id] ? '#fef3c7' : '#f8fafc',
+                                border: `1px dashed ${unmaskedRepairOtps[job.id || job.jobId || job._id] ? '#f59e0b' : '#cbd5e1'}`,
+                                color: unmaskedRepairOtps[job.id || job.jobId || job._id] ? '#b45309' : '#64748b',
+                                padding: '1.5px 6px',
+                                borderRadius: '4px',
+                                fontSize: '0.66rem',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                fontFamily: 'var(--font-mono)',
+                                transition: 'all 0.15s ease'
+                              }}
+                              title={unmaskedRepairOtps[job.id || job.jobId || job._id] ? "Click to mask OTP" : "Click to view masked customer OTP (Admin override)"}
+                              id={`btn-reveal-repair-otp-${job.id || job.jobId || job._id}`}
+                            >
+                              {unmaskedRepairOtps[job.id || job.jobId || job._id] ? (
+                                <>
+                                  <EyeOff size={10} style={{ color: '#d97706' }} />
+                                  <span>{job.handoverOtp}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Eye size={10} />
+                                  <span>••••</span>
+                                </>
+                              )}
+                            </button>
+
+                            {unmaskedRepairOtps[job.id || job.jobId || job._id] && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const jobKey = job.id || job.jobId || job._id;
+                                  setRepairOtpInputs(prev => ({ ...prev, [jobKey]: job.handoverOtp }));
+                                }}
+                                style={{
+                                  background: '#dbeafe',
+                                  border: '1px solid #bfdbfe',
+                                  color: '#1d4ed8',
+                                  padding: '1.5px 6px',
+                                  borderRadius: '3px',
+                                  fontSize: '0.65rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer'
+                                }}
+                                title="Auto-fill OTP into the input field"
+                              >
+                                Auto Fill
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -5934,6 +6151,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: '800', background: '#0f172a', color: '#ffffff', padding: '2px 8px', borderRadius: '4px' }}>
                           {job.jobId}
                         </span>
+                        {job.jobCardNumber && (
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: '800', background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '4px' }} title="Physical Job Card Slip Number">
+                            JC: {job.jobCardNumber}
+                          </span>
+                        )}
                         <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                           {job.toolBrand ? `${job.toolBrand} ` : ''}{job.toolModel}
                         </h3>
@@ -7925,18 +8147,22 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {/* ========================================================================= */}
       {/* MODAL: DISPATCH ORDER VIA DTDC / THE PROFESSIONAL COURIERS                 */}
       {/* ========================================================================= */}
+      {/* COURIER DISPATCH MODAL WITH FIXED HEADER & FOOTER + SCROLLABLE BODY */}
+      {/* ========================================================================= */}
       {dispatchModalOrder && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(15, 23, 42, 0.78)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px'
+            padding: '16px',
+            overflowY: 'auto'
           }}
           onClick={() => setDispatchModalOrder(null)}
         >
@@ -7944,181 +8170,361 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             style={{
               background: '#ffffff',
               borderRadius: '16px',
-              maxWidth: '560px',
+              maxWidth: '580px',
               width: '100%',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              border: '1px solid #e2e8f0',
-              padding: '24px'
+              maxHeight: 'min(92vh, 760px)',
+              boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.4)',
+              border: '1px solid #cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+            {/* 1. STICKY HEADER - ALWAYS VISIBLE */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '14px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                background: '#ffffff',
+                flexShrink: 0
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#f0f9ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#eff6ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Truck size={20} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: 0, lineHeight: 1.25 }}>
                     Dispatch Courier Shipment
                   </h3>
                   <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                    Order ID: <strong>{dispatchModalOrder.id}</strong> • {dispatchModalOrder.customer?.name}
+                    Order ID: <strong style={{ color: '#0f172a' }}>{dispatchModalOrder.id}</strong> • {dispatchModalOrder.customer?.name}
                   </span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setDispatchModalOrder(null)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', cursor: 'pointer' }}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                title="Close dispatch modal"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleConfirmDispatch} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Destination Box */}
-              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
-                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
-                  Ship To Destination
-                </span>
-                <div style={{ fontWeight: '700', color: '#0f172a' }}>
-                  {dispatchModalOrder.customer?.address || 'Doorstep Delivery'}
+            {/* 2. FORM WITH SCROLLABLE CONTENT BODY & STICKY FOOTER */}
+            <form
+              onSubmit={handleConfirmDispatch}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                minHeight: 0,
+                overflow: 'hidden'
+              }}
+            >
+              {/* Scrollable Form Fields Body */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                  padding: '16px 20px',
+                  overflowY: 'auto',
+                  flex: 1,
+                  overscrollBehavior: 'contain'
+                }}
+              >
+                {/* Destination Box */}
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.82rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                    Ship To Destination
+                  </span>
+                  <div style={{ fontWeight: '700', color: '#0f172a' }}>
+                    {dispatchModalOrder.customer?.address || 'Doorstep Delivery'}
+                  </div>
+                  <div style={{ color: '#475569', fontSize: '0.76rem' }}>
+                    District: {dispatchModalOrder.customer?.district || 'Kerala'} • PIN: {dispatchModalOrder.customer?.pincode || '689641'}
+                  </div>
                 </div>
-                <div style={{ color: '#475569', fontSize: '0.76rem' }}>
-                  District: {dispatchModalOrder.customer?.district || 'Kerala'} • PIN: {dispatchModalOrder.customer?.pincode || '689641'}
-                </div>
-              </div>
 
-              {/* Select Courier Partner (4 Partners) */}
-              <div>
-                <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700', display: 'block', marginBottom: '8px' }}>
-                  Select Logistics Partner *
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px' }}>
-                  {COURIER_PARTNERS.map(cp => {
-                    const isSelected = dispatchForm.courierPartner === cp.name;
-                    return (
-                      <div
-                        key={cp.id}
-                        onClick={() => {
-                          setDispatchForm(prev => ({
-                            ...prev,
-                            courierPartner: cp.name,
-                            awb: prev.awb ? prev.awb : cp.generateAwb()
-                          }));
-                        }}
-                        style={{
-                          padding: '12px 14px',
-                          borderRadius: '10px',
-                          border: isSelected ? `2px solid ${cp.color}` : '1.5px solid #e2e8f0',
-                          background: isSelected ? cp.bg : '#ffffff',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '8px'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <div
-                            style={{
-                              height: '34px',
-                              background: '#ffffff',
-                              borderRadius: '6px',
-                              padding: '2px 8px',
-                              border: '1px solid #e2e8f0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                            }}
-                          >
-                            <img
-                              src={cp.logo}
-                              alt={cp.name}
-                              style={{ maxHeight: '26px', maxWidth: '120px', objectFit: 'contain' }}
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                          </div>
-                          <span style={{ fontSize: '0.68rem', fontWeight: '900', padding: '2px 6px', borderRadius: '4px', background: isSelected ? cp.color : '#f1f5f9', color: isSelected ? '#ffffff' : '#475569' }}>
-                            {cp.badge}
-                          </span>
-                        </div>
-                        <div>
-                          <strong style={{ color: isSelected ? cp.color : '#0f172a', fontSize: '0.86rem', display: 'block', marginBottom: '2px' }}>{cp.name}</strong>
-                          <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', lineHeight: 1.3 }}>{cp.tagline}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                {/* Physical Shop Invoice / Bill Number (Mandatory as per shop workflow) */}
+                <div style={{ background: '#eff6ff', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #93c5fd' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#1e3a8a', fontWeight: '800' }}>
+                      Shop Counter Invoice / Bill Number *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const autoNum = String(dispatchModalOrder.id || '').replace(/[^0-9]/g, '').slice(-5).padStart(5, '0') || '03630';
+                        setDispatchForm(prev => ({ ...prev, billNumber: autoNum }));
+                      }}
+                      style={{ fontSize: '0.72rem', color: '#1d4ed8', background: '#dbeafe', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer', fontWeight: '700' }}
+                    >
+                      + Auto Fill
+                    </button>
+                  </div>
 
-              {/* Consignment AWB input */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700' }}>
-                    Consignment / AWB / LR Number *
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div
+                      style={{
+                        padding: '9px 12px',
+                        background: '#133886',
+                        color: '#ffffff',
+                        fontWeight: '800',
+                        fontSize: '0.88rem',
+                        borderRadius: '8px 0 0 8px',
+                        border: '1px solid #133886',
+                        letterSpacing: '0.5px',
+                        whiteSpace: 'nowrap',
+                        userSelect: 'none'
+                      }}
+                    >
+                      VP/{getFinancialYearCode(dispatchModalOrder.date || new Date())}/
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={dispatchForm.billNumber}
+                      onChange={(e) => setDispatchForm({ ...dispatchForm, billNumber: e.target.value.replace(/[^0-9a-zA-Z]/g, '') })}
+                      placeholder="03630"
+                      style={{
+                        flex: 1,
+                        padding: '9px 12px',
+                        border: '1.5px solid #2563eb',
+                        borderRadius: '0 8px 8px 0',
+                        fontSize: '0.95rem',
+                        color: '#0f172a',
+                        fontFamily: 'var(--font-mono)',
+                        fontWeight: '800',
+                        background: '#ffffff'
+                      }}
+                      id="input-dispatch-bill-number"
+                      autoFocus
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap', gap: '4px' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#1e40af' }}>
+                      Type the 4-5 digit physical bill number (e.g. <strong>03630</strong>). FY ({getFinancialYearCode(dispatchModalOrder.date || new Date())}) updates automatically per year.
+                    </span>
+                    {dispatchForm.billNumber && (
+                      <span style={{ fontSize: '0.72rem', color: '#1e3a8a', fontWeight: '800', background: '#dbeafe', padding: '1px 6px', borderRadius: '4px' }}>
+                        Invoice: VP/{getFinancialYearCode(dispatchModalOrder.date || new Date())}/{dispatchForm.billNumber}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Select Courier Partner (4 Partners) */}
+                <div>
+                  <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700', display: 'block', marginBottom: '8px' }}>
+                    Select Logistics Partner *
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const cfg = resolveCourierConfig(dispatchForm.courierPartner);
-                      setDispatchForm(prev => ({ ...prev, awb: cfg.generateAwb() }));
-                    }}
-                    style={{ fontSize: '0.72rem', color: '#0284c7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700' }}
-                  >
-                    + Auto-Generate Sample AWB
-                  </button>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '10px' }}>
+                    {COURIER_PARTNERS.map(cp => {
+                      const isSelected = dispatchForm.courierPartner === cp.name;
+                      return (
+                        <div
+                          key={cp.id}
+                          onClick={() => {
+                            setDispatchForm(prev => ({
+                              ...prev,
+                              courierPartner: cp.name,
+                              awb: prev.awb ? prev.awb : cp.generateAwb()
+                            }));
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            border: isSelected ? `2px solid ${cp.color}` : '1.5px solid #e2e8f0',
+                            background: isSelected ? cp.bg : '#ffffff',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                            <div
+                              style={{
+                                height: '32px',
+                                background: '#ffffff',
+                                borderRadius: '6px',
+                                padding: '2px 8px',
+                                border: '1px solid #e2e8f0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                              }}
+                            >
+                              <img
+                                src={cp.logo}
+                                alt={cp.name}
+                                style={{ maxHeight: '24px', maxWidth: '115px', objectFit: 'contain' }}
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            </div>
+                            <span style={{ fontSize: '0.68rem', fontWeight: '900', padding: '2px 6px', borderRadius: '4px', background: isSelected ? cp.color : '#f1f5f9', color: isSelected ? '#ffffff' : '#475569' }}>
+                              {cp.badge}
+                            </span>
+                          </div>
+                          <div>
+                            <strong style={{ color: isSelected ? cp.color : '#0f172a', fontSize: '0.84rem', display: 'block', marginBottom: '2px' }}>{cp.name}</strong>
+                            <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', lineHeight: 1.3 }}>{cp.tagline}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <input
-                  type="text"
-                  required
-                  value={dispatchForm.awb}
-                  onChange={(e) => setDispatchForm({ ...dispatchForm, awb: e.target.value })}
-                  placeholder={resolveCourierConfig(dispatchForm.courierPartner).awbPlaceholder}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    color: '#0f172a',
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: '700'
-                  }}
-                  id="input-dispatch-awb"
-                />
-                <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                  Enter the consignment / LR number from your physical receipt (DTDC, Professional, Alleppey, or Delhivery).
-                </span>
+                {/* Consignment AWB input */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700' }}>
+                      Consignment / AWB / LR Number *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cfg = resolveCourierConfig(dispatchForm.courierPartner);
+                        setDispatchForm(prev => ({ ...prev, awb: cfg.generateAwb() }));
+                      }}
+                      style={{ fontSize: '0.72rem', color: '#0284c7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '700' }}
+                    >
+                      + Auto-Generate Sample AWB
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    required
+                    value={dispatchForm.awb}
+                    onChange={(e) => setDispatchForm({ ...dispatchForm, awb: e.target.value })}
+                    placeholder={resolveCourierConfig(dispatchForm.courierPartner).awbPlaceholder}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      fontSize: '0.9rem',
+                      color: '#0f172a',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: '700'
+                    }}
+                    id="input-dispatch-awb"
+                  />
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Enter the consignment / LR number from your physical receipt (DTDC, Professional, Alleppey, or Delhivery).
+                  </span>
+                </div>
+
+                {/* Optional Vehicle & e-Way Bill Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                      Motor Vehicle No. (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={dispatchForm.motorVehicleNo || ''}
+                      onChange={(e) => setDispatchForm({ ...dispatchForm, motorVehicleNo: e.target.value })}
+                      placeholder="KL-03-AB-1234"
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.74rem', color: '#475569', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
+                      e-Way Bill No. (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={dispatchForm.eWayBillNo || ''}
+                      onChange={(e) => setDispatchForm({ ...dispatchForm, eWayBillNo: e.target.value })}
+                      placeholder="e.g. 231000998877"
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+              {/* 3. STICKY ACTION FOOTER - ALWAYS VISIBLE */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '12px 20px',
+                  borderTop: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  flexShrink: 0
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => setDispatchModalOrder(null)}
-                  style={{ padding: '9px 16px', background: '#f1f5f9', border: 'none', borderRadius: '8px', fontSize: '0.84rem', fontWeight: '700', color: '#475569', cursor: 'pointer' }}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    fontWeight: '700',
+                    color: '#475569',
+                    cursor: 'pointer'
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   style={{
-                    padding: '9px 20px',
+                    padding: '8px 20px',
                     background: '#ea580c',
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '0.84rem',
-                    fontWeight: '700',
+                    fontWeight: '800',
                     color: '#ffffff',
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(234, 88, 12, 0.3)'
                   }}
                   id="btn-confirm-dispatch"
                 >
@@ -8589,17 +8995,34 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                  Serial Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. SN-849204"
-                  value={repairForm.serialNumber}
-                  onChange={(e) => setRepairForm({ ...repairForm, serialNumber: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                    Job Card Number (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. JC-1042 or 0482"
+                    value={repairForm.jobCardNumber || ''}
+                    onChange={(e) => setRepairForm({ ...repairForm, jobCardNumber: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', fontFamily: 'var(--font-mono)' }}
+                    id="input-repair-job-card"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                    Serial Number (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SN-849204"
+                    value={repairForm.serialNumber}
+                    onChange={(e) => setRepairForm({ ...repairForm, serialNumber: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
+                    id="input-repair-serial"
+                  />
+                </div>
               </div>
 
               <div>
@@ -8741,6 +9164,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
 
             <form onSubmit={handleSaveEditRepair} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                  Job Card Number (Physical Tag / Slip No)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. JC-1042 or 0482"
+                  value={editRepairForm.jobCardNumber || ''}
+                  onChange={(e) => setEditRepairForm({ ...editRepairForm, jobCardNumber: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', fontFamily: 'var(--font-mono)' }}
+                  id="input-edit-repair-job-card"
+                />
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
@@ -9514,9 +9951,58 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                           {selectedOrderForDetails.awb && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                               <span style={{ color: '#64748b' }}>AWB Track No:</span>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', color: '#ea580c' }}>{selectedOrderForDetails.awb}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', color: '#ea580c' }}>{selectedOrderForDetails.awb}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopyAwb(e, selectedOrderForDetails.awb, selectedOrderForDetails.id)}
+                                  style={{
+                                    background: copiedAwbOrderId === selectedOrderForDetails.id ? '#dcfce7' : '#ffffff',
+                                    border: `1px solid ${copiedAwbOrderId === selectedOrderForDetails.id ? '#86efac' : '#cbd5e1'}`,
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '0.68rem',
+                                    fontWeight: '700',
+                                    color: copiedAwbOrderId === selectedOrderForDetails.id ? '#15803d' : '#2563eb',
+                                    transition: 'all 0.15s ease'
+                                  }}
+                                  title="Copy AWB Tracking Number to clipboard"
+                                >
+                                  {copiedAwbOrderId === selectedOrderForDetails.id ? (
+                                    <>
+                                      <Check size={11} style={{ color: '#16a34a' }} />
+                                      <span>Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy size={11} />
+                                      <span>Copy</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           )}
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+                            <span style={{ color: '#64748b' }}>Shop Tax Invoice:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong style={{ fontFamily: 'var(--font-mono)', color: '#133886' }}>
+                                {selectedOrderForDetails.invoiceNumber || `VP/${getFinancialYearCode(selectedOrderForDetails.date)}/${selectedOrderForDetails.billNumber || 'Auto'}`}
+                              </strong>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOrderForInvoice(selectedOrderForDetails)}
+                                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '1px 6px', fontSize: '0.68rem', fontWeight: '700', cursor: 'pointer', color: '#133886' }}
+                              >
+                                View / Change
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

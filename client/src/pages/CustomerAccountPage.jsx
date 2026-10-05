@@ -40,27 +40,6 @@ export const CustomerAccountPage = () => {
   const [loading, setLoading] = useState(true);
   const [copiedAwb, setCopiedAwb] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null); // Selected order for GST Invoice modal
-  const [customerCancelOrder, setCustomerCancelOrder] = useState(null);
-  const [cancellingOrder, setCancellingOrder] = useState(false);
-  const [cancelFeedback, setCancelFeedback] = useState(null);
-
-  const [cancelReasonPreset, setCancelReasonPreset] = useState('');
-  const [cancelReasonCustom, setCancelReasonCustom] = useState('');
-
-  const CANCELLATION_REASONS = [
-    'Ordered by mistake / wrong model',
-    'Found lower price elsewhere',
-    'Delivery time is too long',
-    'Want to change delivery address or phone',
-    'Specifications don’t fit requirements',
-    'Other reason'
-  ];
-
-  const handleOpenCustomerCancelModal = (order) => {
-    setCustomerCancelOrder(order);
-    setCancelReasonPreset('');
-    setCancelReasonCustom('');
-  };
 
   // Address & Profile Management (Verified Customer Account)
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -472,65 +451,6 @@ export const CustomerAccountPage = () => {
       setProfileError(err.message || 'Failed to resend code');
     } finally {
       setSavingProfile(false);
-    }
-  };
-
-  // Determine if cancel should be instant or request-based
-  const isCancelOrderDispatched = (order) => {
-    return Boolean(order?.awb && String(order.awb).trim() !== '') || (order?.status || '').toLowerCase().includes('dispatch');
-  };
-
-  const handleConfirmCustomerCancel = async () => {
-    if (!customerCancelOrder) return;
-    
-    let finalReason = cancelReasonCustom.trim();
-    if (cancelReasonPreset) {
-      finalReason = finalReason ? `${cancelReasonPreset}: ${finalReason}` : cancelReasonPreset;
-    }
-    if (!finalReason) {
-      finalReason = 'Customer requested cancellation from account dashboard';
-    }
-
-    setCancellingOrder(true);
-    try {
-      const targetOrderId = customerCancelOrder.id || customerCancelOrder._id;
-      if (isCancelOrderDispatched(customerCancelOrder)) {
-        // Dispatched order → submit cancellation request
-        const res = await api.requestCancellation(targetOrderId, {
-          reason: finalReason
-        });
-        try {
-          const bc = new BroadcastChannel('vpt_orders_channel');
-          bc.postMessage({ type: 'CANCEL_REQUESTED', orderId: targetOrderId });
-          bc.close();
-        } catch (e) {}
-        setCustomerCancelOrder(null);
-        setCancelReasonPreset('');
-        setCancelReasonCustom('');
-        setCancelFeedback(res.message || 'Cancellation request submitted. Awaiting store approval.');
-        setTimeout(() => setCancelFeedback(null), 8000);
-      } else {
-        // Non-dispatched order → instant cancel
-        const res = await api.cancelOrder(targetOrderId, {
-          reason: finalReason,
-          cancelledBy: 'customer'
-        });
-        try {
-          const bc = new BroadcastChannel('vpt_orders_channel');
-          bc.postMessage({ type: 'ORDER_UPDATED', orderId: targetOrderId });
-          bc.close();
-        } catch (e) {}
-        setCustomerCancelOrder(null);
-        setCancelReasonPreset('');
-        setCancelReasonCustom('');
-        setCancelFeedback(res.message || 'Order cancelled successfully.');
-        setTimeout(() => setCancelFeedback(null), 6000);
-      }
-      loadCustomerOrders();
-    } catch (err) {
-      alert(`Failed: ${err.message}`);
-    } finally {
-      setCancellingOrder(false);
     }
   };
 
@@ -1315,32 +1235,8 @@ export const CustomerAccountPage = () => {
               </div>
             </div>
 
-            {/* Action Buttons: Cancel, GST Invoice, WhatsApp & Collapse */}
+            {/* Action Buttons: GST Invoice, WhatsApp & Collapse */}
             <div className="customer-order-actions-bar">
-              {!isCancelled && !hasPendingCancelRequest && !isCompleted && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenCustomerCancelModal(order)}
-                  style={{
-                    background: isDispatched ? '#fffbeb' : '#ffffff',
-                    border: `1px solid ${isDispatched ? '#fde68a' : '#fecaca'}`,
-                    color: isDispatched ? '#b45309' : '#dc2626',
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    fontSize: '0.82rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                  title={isDispatched ? 'Request cancellation for dispatched order (requires store approval)' : 'Cancel order and get immediate automatic refund if paid online'}
-                  id={`btn-customer-cancel-${order.id}`}
-                >
-                  {isDispatched ? <AlertCircle size={15} /> : <XCircle size={15} />}
-                  <span>{isDispatched ? 'Request Cancellation' : 'Cancel Order'}</span>
-                </button>
-              )}
 
               {/* Show GST Tax Invoice ONLY if order is Dispatched or Completed (Never for Cancelled or Pre-dispatch) */}
               {!isCancelled && (isDispatched || isCompleted) && (
@@ -1875,7 +1771,7 @@ export const CustomerAccountPage = () => {
                 Your Ordered Products & Live Status
               </h2>
               <p className="customer-orders-subtitle">
-                Showing all {orders.length} orders. Click any product card to view full delivery pass, courier tracking, GST invoice, and cancellation.
+                Showing all {orders.length} orders. Click any product card to view full delivery pass, courier tracking, and GST tax invoice.
               </p>
             </div>
 
@@ -2189,180 +2085,11 @@ export const CustomerAccountPage = () => {
         <GstInvoiceModal
           order={invoiceOrder}
           onClose={() => setInvoiceOrder(null)}
-          defaultCopy="Original for Recipient"
+          defaultCopy="ORIGINAL"
           showCopySelector={false}
         />
       )}
-      {/* Customer Cancel / Request Cancellation Modal */}
-      {customerCancelOrder && (
-        <div className="modal-overlay" onClick={() => !cancellingOrder && setCustomerCancelOrder(null)}>
-          <div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '500px', padding: '24px', textAlign: 'left' }}
-            id="modal-customer-cancel-order"
-          >
-            {(() => {
-              const isDispatchedModal = isCancelOrderDispatched(customerCancelOrder);
-              const hasReasonProvided = Boolean(cancelReasonPreset || cancelReasonCustom.trim());
 
-              return (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: isDispatchedModal ? '#fef3c7' : '#fee2e2', color: isDispatchedModal ? '#b45309' : '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {isDispatchedModal ? <AlertCircle size={22} /> : <XCircle size={22} />}
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-                        {isDispatchedModal ? 'Request Cancellation' : 'Cancel Order'} {customerCancelOrder.id || customerCancelOrder._id}?
-                      </h3>
-                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                        Total Amount: {formatPrice(customerCancelOrder.totalAmount)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {isDispatchedModal ? (
-                    <>
-                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.84rem', color: '#92400e' }}>
-                        <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                          <span>📦 Order Already Dispatched</span>
-                        </div>
-                        This order has been dispatched via courier <strong>(AWB: {customerCancelOrder.awb})</strong>. Your cancellation request will be sent to the store manager with your reason for prompt review.
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {customerCancelOrder.paymentStatus === 'PAID' ? (
-                        <div style={{ background: '#ecfdf5', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', marginBottom: '14px', fontSize: '0.84rem', color: '#166534' }}>
-                          <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                            <span>⚡ Instant Online Refund Guaranteed</span>
-                          </div>
-                          Because you paid online via Razorpay/UPI, a <strong>full refund of {formatPrice(customerCancelOrder.totalAmount)}</strong> will be automatically refunded to your original payment account.
-                        </div>
-                      ) : (
-                        <p style={{ fontSize: '0.86rem', color: '#475569', marginBottom: '14px' }}>
-                          Are you sure you want to cancel this order? This will cancel your equipment reservation at our Poyanil Building counter.
-                        </p>
-                      )}
-                    </>
-                  )}
-
-                  {/* CANCELLATION REASON SECTION */}
-                  <div style={{ marginBottom: '18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
-                    <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a', display: 'block', marginBottom: '8px' }}>
-                      Select Reason for Cancellation <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-
-                    {/* Quick Preset Chips */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
-                      {CANCELLATION_REASONS.map((preset) => {
-                        const isSelected = cancelReasonPreset === preset;
-                        return (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setCancelReasonPreset(isSelected ? '' : preset)}
-                            style={{
-                              fontSize: '0.75rem',
-                              fontWeight: isSelected ? '800' : '600',
-                              padding: '5px 11px',
-                              borderRadius: '20px',
-                              border: `1.5px solid ${isSelected ? '#dc2626' : '#cbd5e1'}`,
-                              background: isSelected ? '#fee2e2' : '#ffffff',
-                              color: isSelected ? '#b91c1c' : '#475569',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease'
-                            }}
-                          >
-                            {preset}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Custom Reason Textarea */}
-                    <div>
-                      <textarea
-                        rows={2}
-                        value={cancelReasonCustom}
-                        onChange={(e) => setCancelReasonCustom(e.target.value)}
-                        placeholder="Write additional details or specific reason (optional if chip selected)..."
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          border: '1.5px solid #cbd5e1',
-                          borderRadius: '8px',
-                          fontSize: '0.82rem',
-                          color: '#0f172a',
-                          resize: 'vertical',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                          fontFamily: 'inherit',
-                          lineHeight: 1.4,
-                          background: '#ffffff'
-                        }}
-                        id="input-customer-cancel-reason"
-                      />
-                      <span style={{ fontSize: '0.71rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
-                        ℹ️ This reason will appear in the store manager dashboard and your email confirmation.
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCustomerCancelOrder(null);
-                        setCancelReasonPreset('');
-                        setCancelReasonCustom('');
-                      }}
-                      disabled={cancellingOrder}
-                      style={{
-                        background: '#f1f5f9',
-                        border: '1px solid #cbd5e1',
-                        color: '#475569',
-                        padding: '9px 16px',
-                        borderRadius: '8px',
-                        fontSize: '0.84rem',
-                        fontWeight: '700',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Keep Order
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleConfirmCustomerCancel}
-                      disabled={cancellingOrder || !hasReasonProvided}
-                      style={{
-                        background: !hasReasonProvided ? '#94a3b8' : (isDispatchedModal ? '#b45309' : '#dc2626'),
-                        border: 'none',
-                        color: '#ffffff',
-                        padding: '9px 18px',
-                        borderRadius: '8px',
-                        fontSize: '0.84rem',
-                        fontWeight: '800',
-                        cursor: hasReasonProvided ? 'pointer' : 'not-allowed',
-                        boxShadow: hasReasonProvided ? (isDispatchedModal ? '0 2px 8px rgba(180, 83, 9, 0.25)' : '0 2px 8px rgba(220, 38, 38, 0.25)') : 'none',
-                        transition: 'all 0.15s ease'
-                      }}
-                      id="btn-confirm-customer-cancel"
-                      title={!hasReasonProvided ? 'Please select or write a cancellation reason first' : ''}
-                    >
-                      {cancellingOrder
-                        ? (isDispatchedModal ? 'Submitting Request...' : 'Processing Refund...')
-                        : (isDispatchedModal ? 'Submit Cancellation Request' : 'Yes, Cancel & Refund')}
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
 
       {/* Comprehensive Manage Addresses & Profile Modal */}
       {showAddressModal && (
@@ -3191,30 +2918,7 @@ export const CustomerAccountPage = () => {
         </div>
       )}
 
-      {/* Cancellation Feedback Toast */}
-      {cancelFeedback && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            background: '#0f172a',
-            color: '#ffffff',
-            padding: '14px 20px',
-            borderRadius: '10px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-            fontSize: '0.86rem',
-            fontWeight: '600',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}
-        >
-          <CheckCircle2 size={18} style={{ color: '#10b981' }} />
-          <span>{cancelFeedback}</span>
-        </div>
-      )}
+
         </div>
       </div>
     </div>

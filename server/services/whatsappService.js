@@ -285,7 +285,7 @@ const sendRepairTicketCreatedWhatsApp = async (job) => {
 Dear *${job.customerName || 'Valued Customer'}*,
 We have received your machine for servicing & repair at our Kozhencherry workshop clinic.
 
-🏷️ *Ticket ID:* *${job.jobId}*
+🏷️ *Ticket ID:* *${job.jobId}*${job.jobCardNumber ? `\n📑 *Job Card No:* *${job.jobCardNumber}*` : ''}
 ⚙️ *Tool Model:* *${brandModel}*
 ${job.serialNumber ? `🔖 *Serial No:* ${job.serialNumber}\n` : ''}⚠️ *Reported Issue:* ${job.issueDescription || 'Inspection / Servicing'}
 ${estCost > 0 ? `💰 *Estimated Bill:* ₹${estCost.toLocaleString('en-IN')}\n` : ''}${advance > 0 ? `💵 *Advance Paid:* ₹${advance.toLocaleString('en-IN')}\n` : ''}
@@ -316,7 +316,7 @@ const sendRepairReadyWhatsApp = async (job) => {
 Dear *${job.customerName || 'Customer'}*,
 Great news! Your power tool has been thoroughly repaired, safety-tested, and is ready for pickup at our showroom counter.
 
-🏷️ *Ticket ID:* *${job.jobId}*
+🏷️ *Ticket ID:* *${job.jobId}*${job.jobCardNumber ? `\n📑 *Job Card No:* *${job.jobCardNumber}*` : ''}
 ⚙️ *Equipment:* *${brandModel}*
 ${job.technicianNotes ? `📝 *Work Done:* ${job.technicianNotes}\n` : ''}💰 *Total Bill:* ₹${finalBill.toLocaleString('en-IN')}${advance > 0 ? ` (Advance Paid: ₹${advance.toLocaleString('en-IN')})` : ''}
 ${balance > 0 ? `💵 *Balance to Pay at Counter:* *₹${balance.toLocaleString('en-IN')}*\n` : ''}
@@ -349,7 +349,7 @@ const sendRepairDeliveredWhatsApp = async (job) => {
 Dear *${job.customerName || 'Valued Customer'}*,
 Your power tool has been successfully tested and collected from our showroom counter!
 
-🏷️ *Ticket ID:* *${job.jobId}*
+🏷️ *Ticket ID:* *${job.jobId}*${job.jobCardNumber ? `\n📑 *Job Card No:* *${job.jobCardNumber}*` : ''}
 ⚙️ *Machine:* *${brandModel}*
 ${job.serialNumber ? `🔖 *Serial No:* ${job.serialNumber}\n` : ''}📅 *Handover Date:* ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
 
@@ -383,7 +383,7 @@ const sendRepairEstimateUpdatedWhatsApp = async (job, prevCost) => {
 *Repair Estimate & Service Update* ⚙️
 
 Dear *${job.customerName || 'Valued Customer'}*,
-During technical inspection of your machine (*${brandModel}* - Ticket *${job.jobId}*), our workshop technician updated the service diagnosis:
+During technical inspection of your machine (*${brandModel}* - Ticket *${job.jobId}*${job.jobCardNumber ? ` / Job Card *${job.jobCardNumber}*` : ''}), our workshop technician updated the service diagnosis:
 
 ${job.technicianNotes ? `📝 *Technician Work / Replaced Parts:*\n${job.technicianNotes}\n\n` : ''}💰 *Billing Breakdown:*
 • Revised Estimate: *₹${currentCost.toLocaleString('en-IN')}*${prevNumber > 0 && prevNumber !== currentCost ? ` (Previous: ₹${prevNumber.toLocaleString('en-IN')})` : ''}

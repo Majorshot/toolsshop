@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X, Plus, Trash2, ShieldCheck, Upload, Image as ImageIcon,
   Zap, Check, Battery, Truck, Percent, Eye, Wrench, Shield,
-  Loader2, CloudUpload
+  Loader2, CloudUpload, Hash, Clock, Sparkles
 } from 'lucide-react';
 import GlideSelect from './GlideSelect';
 import { useConfirm } from './SpringModal';
@@ -20,11 +20,30 @@ const BADGE_OPTIONS = [
 ];
 
 const WARRANTY_OPTIONS = [
+  '3 Months Onsite Warranty',
+  '6 Months Offline Warranty',
   '6 Months Warranty',
   '1 Year Official Warranty',
   '2 Years Heavy Duty Warranty',
   '3 Years Pro Warranty',
   'No Warranty'
+];
+
+const COMMON_HSN_CODES = [
+  { code: '84672900', label: 'Power Tools (Drills, Grinders, Saws)' },
+  { code: '84679900', label: 'Tool Parts & Spares' },
+  { code: '84798950', label: 'Machinery & Pressure Washers' },
+  { code: '8501', label: 'Electric Motors & Pumps' },
+  { code: '8207', label: 'Blades, Drill Bits & Attachments' },
+  { code: '996812', label: 'Freight & Courier Services' }
+];
+
+const CUSTOM_WARRANTY_TYPES = [
+  'Onsite Warranty',
+  'Offline Warranty',
+  'Official Warranty',
+  'Replacement Guarantee',
+  'Service Guarantee'
 ];
 
 export const AddEquipmentModal = ({
@@ -61,6 +80,7 @@ export const AddEquipmentModal = ({
     originalPrice: '',
     stock: 10,
     deliveryCost: 0,
+    hsnCode: '84672900',
     image: '',
     images: [],
     description: '',
@@ -69,9 +89,16 @@ export const AddEquipmentModal = ({
     specs: {
       power: '',
       voltage: '',
-      warranty: '1 Year Official Warranty'
+      warranty: '1 Year Official Warranty',
+      hsnCode: '84672900'
     }
   });
+
+  // Custom Warranty Builder state
+  const [customWarrantyNumber, setCustomWarrantyNumber] = useState('3');
+  const [customWarrantyUnit, setCustomWarrantyUnit] = useState('Months');
+  const [customWarrantyType, setCustomWarrantyType] = useState('Onsite Warranty');
+  const [showCustomWarrantyBuilder, setShowCustomWarrantyBuilder] = useState(false);
 
   const [newImageUrl, setNewImageUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,6 +140,9 @@ export const AddEquipmentModal = ({
         ? editingProduct.images.filter(Boolean)
         : (editingProduct.image ? [editingProduct.image] : []);
 
+      const existingWarranty = editingProduct.specs?.warranty || editingProduct.warranty || '1 Year Official Warranty';
+      const existingHsn = editingProduct.hsnCode || editingProduct.hsn || editingProduct.specs?.hsnCode || '84672900';
+
       setForm({
         name: editingProduct.name || '',
         brand: editingProduct.brand || (taxonomy.brands?.[0] || 'Bosch'),
@@ -121,6 +151,7 @@ export const AddEquipmentModal = ({
         originalPrice: editingProduct.originalPrice || '',
         stock: editingProduct.stock !== undefined ? editingProduct.stock : 10,
         deliveryCost: editingProduct.deliveryCost !== undefined ? editingProduct.deliveryCost : 0,
+        hsnCode: existingHsn,
         image: editingProduct.image || existingImages[0] || '',
         images: existingImages,
         description: editingProduct.description || '',
@@ -129,9 +160,15 @@ export const AddEquipmentModal = ({
         specs: {
           power: editingProduct.specs?.power || '',
           voltage: editingProduct.specs?.voltage || '',
-          warranty: editingProduct.specs?.warranty || '1 Year Official Warranty'
+          warranty: existingWarranty,
+          hsnCode: existingHsn
         }
       });
+
+      // If existing warranty is non-standard, auto-open the custom warranty builder
+      if (existingWarranty && !WARRANTY_OPTIONS.includes(existingWarranty)) {
+        setShowCustomWarrantyBuilder(true);
+      }
     } else {
       // Adding new equipment - start clean
       const defaultBrand = taxonomy.brands?.[0] || 'Bosch';
@@ -145,6 +182,7 @@ export const AddEquipmentModal = ({
         originalPrice: '',
         stock: 10,
         deliveryCost: 0,
+        hsnCode: '84672900',
         image: '',
         images: [],
         description: '',
@@ -153,9 +191,11 @@ export const AddEquipmentModal = ({
         specs: {
           power: '',
           voltage: '',
-          warranty: '1 Year Official Warranty'
+          warranty: '1 Year Official Warranty',
+          hsnCode: '84672900'
         }
       });
+      setShowCustomWarrantyBuilder(false);
     }
   }, [isOpen, editingProduct, taxonomy]);
 
@@ -191,15 +231,27 @@ export const AddEquipmentModal = ({
   // Check if form has unsaved modifications
   const isFormDirty = useMemo(() => {
     if (!editingProduct) {
-      return Boolean(form.name.trim() || form.price || form.description.trim() || form.images.length > 0);
+      return Boolean(
+        form.name.trim() ||
+        form.price ||
+        form.description.trim() ||
+        form.images.length > 0 ||
+        (form.hsnCode && form.hsnCode !== '84672900') ||
+        (form.specs?.warranty && form.specs.warranty !== '1 Year Official Warranty')
+      );
     }
+    const origHsn = editingProduct.hsnCode || editingProduct.hsn || editingProduct.specs?.hsnCode || '84672900';
+    const origWarranty = editingProduct.specs?.warranty || editingProduct.warranty || '1 Year Official Warranty';
     return (
       form.name !== (editingProduct.name || '') ||
       String(form.price) !== String(editingProduct.price || '') ||
       String(form.originalPrice || '') !== String(editingProduct.originalPrice || '') ||
       Number(form.stock) !== Number(editingProduct.stock || 0) ||
+      Number(form.deliveryCost || 0) !== Number(editingProduct.deliveryCost || 0) ||
       form.brand !== editingProduct.brand ||
-      form.category !== editingProduct.category
+      form.category !== editingProduct.category ||
+      form.hsnCode !== origHsn ||
+      form.specs?.warranty !== origWarranty
     );
   }, [form, editingProduct]);
 
@@ -403,6 +455,7 @@ export const AddEquipmentModal = ({
   const previewProduct = useMemo(() => {
     const rawImgs = Array.isArray(form.images) ? form.images : (form.image ? [form.image] : []);
     const primaryImg = rawImgs[0] || form.image || '';
+    const currentWarranty = form.specs?.warranty || '1 Year Official Warranty';
 
     return {
       id: editingProduct?.id || editingProduct?._id || 'preview-tool',
@@ -419,10 +472,13 @@ export const AddEquipmentModal = ({
       cordless: Boolean(form.cordless),
       badge: form.badge || '',
       image: primaryImg,
+      hsnCode: form.hsnCode || '84672900',
+      warranty: currentWarranty,
       specs: {
         power: form.specs?.power || '',
         voltage: form.specs?.voltage || '',
-        warranty: form.specs?.warranty || '1 Year Official Warranty'
+        warranty: currentWarranty,
+        hsnCode: form.hsnCode || '84672900'
       },
       deliveryCost: Number(form.deliveryCost || 0)
     };
@@ -454,6 +510,8 @@ export const AddEquipmentModal = ({
       const primaryImage = cleanedImages[0] || form.image || '';
 
       const discountTag = discountStats ? `${discountStats.percent}% OFF` : undefined;
+      const currentWarranty = form.specs?.warranty || '1 Year Official Warranty';
+      const cleanHsn = (form.hsnCode || '84672900').trim();
 
       const payload = {
         name: form.name.trim(),
@@ -464,6 +522,8 @@ export const AddEquipmentModal = ({
         discount: discountTag,
         stock: Number(form.stock || 0),
         deliveryCost: Number(form.deliveryCost || 0),
+        hsnCode: cleanHsn,
+        warranty: currentWarranty,
         image: primaryImage,
         images: cleanedImages.length > 0 ? cleanedImages : (primaryImage ? [primaryImage] : []),
         description: form.description || '',
@@ -472,7 +532,8 @@ export const AddEquipmentModal = ({
         specs: {
           power: form.specs?.power || '',
           voltage: form.specs?.voltage || '',
-          warranty: form.specs?.warranty || '1 Year Official Warranty'
+          warranty: currentWarranty,
+          hsnCode: cleanHsn
         }
       };
 
@@ -489,6 +550,7 @@ export const AddEquipmentModal = ({
           originalPrice: '',
           stock: 10,
           deliveryCost: 0,
+          hsnCode: '84672900',
           image: '',
           images: [],
           description: '',
@@ -497,9 +559,11 @@ export const AddEquipmentModal = ({
           specs: {
             power: '',
             voltage: '',
-            warranty: '1 Year Official Warranty'
+            warranty: '1 Year Official Warranty',
+            hsnCode: '84672900'
           }
         }));
+        setShowCustomWarrantyBuilder(false);
       } else {
         onClose();
       }
@@ -910,6 +974,68 @@ export const AddEquipmentModal = ({
                   </div>
                 </div>
               </div>
+
+              {/* Statutory HSN / SAC Code for GST Billing & Invoicing */}
+              <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label className="eq-field-label" htmlFor="input-tool-hsn" style={{ margin: 0 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Hash size={13} style={{ color: '#ea580c' }} />
+                      <span>HSN / SAC Code (Statutory GST) <span className="req">*</span></span>
+                    </span>
+                  </label>
+                  <span style={{ fontSize: '0.68rem', color: '#15803d', fontWeight: '800', background: '#dcfce7', border: '1px solid #bbf7d0', padding: '2px 7px', borderRadius: '4px' }}>
+                    Prints on GST Bill
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    id="input-tool-hsn"
+                    type="text"
+                    required
+                    placeholder="e.g. 84672900"
+                    value={form.hsnCode}
+                    onChange={(e) => setForm({ ...form, hsnCode: e.target.value.replace(/\s+/g, '') })}
+                    className="eq-input"
+                    style={{ flex: 1, fontFamily: 'monospace', fontWeight: '800', letterSpacing: '0.06em', fontSize: '0.92rem' }}
+                  />
+                  {form.hsnCode !== '84672900' && (
+                    <button
+                      type="button"
+                      className="eq-btn-cancel"
+                      style={{ padding: '7px 12px', fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                      onClick={() => setForm({ ...form, hsnCode: '84672900' })}
+                      title="Reset to default power tools HSN (84672900)"
+                    >
+                      Reset Default
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ fontSize: '0.71rem', color: '#64748b', marginTop: '6px', lineHeight: 1.4 }}>
+                  Assigned HSN code will appear on official tax invoices, cash bills, and transport waybills:
+                </div>
+
+                {/* Quick HSN Selection Chips */}
+                <div className="eq-chips-wrap" style={{ marginTop: '8px' }}>
+                  {COMMON_HSN_CODES.map(item => (
+                    <button
+                      key={item.code}
+                      type="button"
+                      className={`eq-chip-btn ${form.hsnCode === item.code ? 'active' : ''}`}
+                      style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+                      onClick={() => setForm({ ...form, hsnCode: item.code })}
+                      title={item.label}
+                    >
+                      <span style={{ fontFamily: 'monospace', fontWeight: '800' }}>{item.code}</span>
+                      <span style={{ opacity: 0.8, fontSize: '0.68rem', fontWeight: 'normal' }}>
+                        – {item.label.split('(')[0].trim()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* SECTION 3: Equipment Photos */}
@@ -1089,11 +1215,36 @@ export const AddEquipmentModal = ({
               </div>
 
 
-              {/* Warranty Quick Chips */}
+              {/* Warranty Coverage & Custom Warranty Selector */}
               <div>
-                <label className="eq-field-label">
-                  <span>Warranty Coverage</span>
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label className="eq-field-label" style={{ margin: 0 }}>
+                    <span>Warranty Coverage</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomWarrantyBuilder(prev => !prev)}
+                    style={{
+                      background: showCustomWarrantyBuilder ? '#fff7ed' : '#f8fafc',
+                      border: `1px solid ${showCustomWarrantyBuilder ? '#fdba74' : '#e2e8f0'}`,
+                      color: showCustomWarrantyBuilder ? '#ea580c' : '#475569',
+                      padding: '3px 9px',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Sparkles size={12} />
+                    <span>{showCustomWarrantyBuilder ? 'Hide Custom Builder' : '+ Add Custom Warranty'}</span>
+                  </button>
+                </div>
+
+                {/* Preset Warranty Chips */}
                 <div className="eq-chips-wrap">
                   {WARRANTY_OPTIONS.map(w => (
                     <button
@@ -1106,7 +1257,170 @@ export const AddEquipmentModal = ({
                       <span>{w}</span>
                     </button>
                   ))}
+
+                  {/* Active Custom Badge Chip if current warranty is not one of presets */}
+                  {form.specs?.warranty && !WARRANTY_OPTIONS.includes(form.specs.warranty) && (
+                    <span
+                      className="eq-chip-btn active"
+                      style={{ background: '#059669', borderColor: '#059669' }}
+                    >
+                      <ShieldCheck size={12} />
+                      <span>Custom: {form.specs.warranty}</span>
+                    </span>
+                  )}
                 </div>
+
+                {/* CUSTOM WARRANTY BUILDER CARD */}
+                {showCustomWarrantyBuilder && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '14px',
+                    background: '#fff7ed',
+                    border: '1.5px dashed #fdba74',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    animation: 'eqFadeIn 0.2s ease-out'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Clock size={15} style={{ color: '#ea580c' }} />
+                        <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#9a3412' }}>
+                          Custom Warranty Creator
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '0.68rem', color: '#c2410c', fontWeight: '600' }}>
+                        e.g., "3 Months Onsite", "6 Months Offline"
+                      </span>
+                    </div>
+
+                    {/* Controls: Duration Number, Unit, and Type */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px 110px 1fr', gap: '8px' }}>
+                      {/* Number Input */}
+                      <div>
+                        <label style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9a3412', display: 'block', marginBottom: '4px' }}>
+                          Number
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="120"
+                          value={customWarrantyNumber}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCustomWarrantyNumber(val);
+                            if (val) {
+                              const updated = `${val} ${customWarrantyUnit} ${customWarrantyType}`.trim();
+                              setForm(prev => ({ ...prev, specs: { ...prev.specs, warranty: updated } }));
+                            }
+                          }}
+                          className="eq-input"
+                          style={{ padding: '6px 8px', fontSize: '0.82rem', fontWeight: '800', textAlign: 'center' }}
+                        />
+                      </div>
+
+                      {/* Unit Selector */}
+                      <div>
+                        <label style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9a3412', display: 'block', marginBottom: '4px' }}>
+                          Period Unit
+                        </label>
+                        <select
+                          value={customWarrantyUnit}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCustomWarrantyUnit(val);
+                            const updated = `${customWarrantyNumber} ${val} ${customWarrantyType}`.trim();
+                            setForm(prev => ({ ...prev, specs: { ...prev.specs, warranty: updated } }));
+                          }}
+                          className="eq-input"
+                          style={{ padding: '6px 8px', fontSize: '0.8rem', fontWeight: '700' }}
+                        >
+                          <option value="Months">Months</option>
+                          <option value="Years">Years</option>
+                          <option value="Days">Days</option>
+                        </select>
+                      </div>
+
+                      {/* Type Quick Selector */}
+                      <div>
+                        <label style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9a3412', display: 'block', marginBottom: '4px' }}>
+                          Service Type
+                        </label>
+                        <select
+                          value={customWarrantyType}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setCustomWarrantyType(val);
+                            const updated = `${customWarrantyNumber} ${customWarrantyUnit} ${val}`.trim();
+                            setForm(prev => ({ ...prev, specs: { ...prev.specs, warranty: updated } }));
+                          }}
+                          className="eq-input"
+                          style={{ padding: '6px 8px', fontSize: '0.8rem', fontWeight: '700' }}
+                        >
+                          {CUSTOM_WARRANTY_TYPES.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Quick Popular Combinations */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.68rem', color: '#9a3412', fontWeight: '700' }}>Quick Presets:</span>
+                      {[
+                        { num: '3', unit: 'Months', type: 'Onsite Warranty' },
+                        { num: '6', unit: 'Months', type: 'Offline Warranty' },
+                        { num: '18', unit: 'Months', type: 'Onsite Warranty' },
+                        { num: '5', unit: 'Years', type: 'Service Guarantee' }
+                      ].map((preset, idx) => {
+                        const fullStr = `${preset.num} ${preset.unit} ${preset.type}`;
+                        const isSelected = form.specs?.warranty === fullStr;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setCustomWarrantyNumber(preset.num);
+                              setCustomWarrantyUnit(preset.unit);
+                              setCustomWarrantyType(preset.type);
+                              setForm(prev => ({ ...prev, specs: { ...prev.specs, warranty: fullStr } }));
+                            }}
+                            style={{
+                              background: isSelected ? '#ea580c' : '#ffffff',
+                              color: isSelected ? '#ffffff' : '#9a3412',
+                              border: `1px solid ${isSelected ? '#ea580c' : '#fdba74'}`,
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {preset.num} {preset.unit} {preset.type.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Direct Custom Text Input for full custom freedom */}
+                    <div>
+                      <label style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9a3412', display: 'block', marginBottom: '4px' }}>
+                        Custom Warranty Text (Directly Editable):
+                      </label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. 3 Months Onsite Warranty"
+                          value={form.specs?.warranty || ''}
+                          onChange={(e) => setForm({ ...form, specs: { ...form.specs, warranty: e.target.value } })}
+                          className="eq-input"
+                          style={{ flex: 1, padding: '7px 10px', fontSize: '0.82rem', fontWeight: '700', background: '#ffffff' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Description */}
@@ -1160,10 +1474,16 @@ export const AddEquipmentModal = ({
                   {Number(form.deliveryCost) === 0 ? '🚚 Free Express Delivery' : `📦 ₹${form.deliveryCost} Delivery`}
                 </strong>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Statutory HSN:</span>
+                <strong style={{ fontFamily: 'monospace', color: '#0f172a', background: '#e2e8f0', padding: '1px 5px', borderRadius: '4px' }}>
+                  {form.hsnCode || '84672900'}
+                </strong>
+              </div>
               {form.specs?.warranty && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Warranty:</span>
-                  <strong>{form.specs.warranty}</strong>
+                  <strong style={{ color: '#16a34a' }}>{form.specs.warranty}</strong>
                 </div>
               )}
             </div>

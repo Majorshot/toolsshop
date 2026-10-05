@@ -1,10 +1,37 @@
 const dns = require('dns');
 try {
-  if (process.platform === 'win32' || (!process.env.RENDER && process.env.NODE_ENV !== 'production')) {
-    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+  if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
   }
 } catch (e) {
   console.warn("DNS server setup notice:", e.message);
+}
+
+/**
+ * Robust DNS lookup helper for MongoDB Atlas connections.
+ * Attempts system lookup first, then fails over to direct c-ares IPv4 lookup
+ * using Google/Cloudflare public resolvers to avoid local Windows DNS timeouts.
+ */
+function robustLookup(hostname, options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  dns.lookup(hostname, options, (err, address, family) => {
+    if (!err && address) {
+      return callback(null, address, family);
+    }
+    dns.resolve4(hostname, (resErr, addresses) => {
+      if (!resErr && addresses && addresses.length > 0) {
+        if (typeof options === 'object' && options && options.all) {
+          return callback(null, addresses.map(addr => ({ address: addr, family: 4 })));
+        }
+        return callback(null, addresses[0], 4);
+      }
+      return callback(err || resErr);
+    });
+  });
 }
 
 const crypto = require('crypto');
@@ -93,8 +120,10 @@ const productSchema = new mongoose.Schema({
   deliveryCost: { type: Number, default: 0 },
   description: String,
   specs: Object,
-  features: [String]
-}, { timestamps: true });
+  features: [String],
+  hsnCode: { type: String, default: '84672900' },
+  warranty: String
+}, { timestamps: true, strict: false });
 
 // High Performance Indexes for 1,000+ Products
 productSchema.index({ category: 1, brand: 1, price: 1 });
@@ -128,7 +157,15 @@ const orderSchema = new mongoose.Schema({
   cancellationReason: String,
   cancellationRequested: { type: Boolean, default: false },
   cancellationRequestedAt: String,
-  cancellationRequestReason: String
+  cancellationRequestReason: String,
+  invoiceNumber: String,
+  billNumber: String,
+  dispatchDate: String,
+  eWayBillNo: String,
+  motorVehicleNo: String,
+  deliveryNo: String,
+  dispatchDocNo: String,
+  termsOfDelivery: String
 }, { timestamps: true, strict: false });
 
 // Performance Indexes for Orders
@@ -199,6 +236,7 @@ const couponSchema = new mongoose.Schema({
 
 const repairSchema = new mongoose.Schema({
   jobId: { type: String, unique: true },
+  jobCardNumber: { type: String, default: '' },
   customerName: { type: String, required: true },
   customerPhone: { type: String, required: true },
   toolBrand: String,
@@ -218,7 +256,7 @@ const repairSchema = new mongoose.Schema({
   handoverVerified: { type: Boolean, default: false },
   completedAt: String,
   createdAt: { type: String, default: () => new Date().toISOString() }
-}, { timestamps: true });
+}, { timestamps: true, strict: false });
 
 repairSchema.index({ customerPhone: 1 });
 repairSchema.index({ status: 1, createdAt: -1 });
@@ -549,33 +587,96 @@ async function backfillCustomersFromOrdersAndRepairs() {
 let isMongoConnected = false;
 let lastAtlasError = null;
 let reconnectTimer = null;
+let isConnecting = false;
+
+// Attach lifecycle event listeners to mongoose.connection
+mongoose.connection.on('connected', () => {
+  isMongoConnected = true;
+  lastAtlasError = null;
+  console.log("====================================================");
+  console.log("  >>> CONNECTED TO MONGODB ATLAS CLUSTER! <<<");
+  console.log("  Database: variathupowertools (Atlas Cloud)");
+  console.log("  Strict MongoDB Mode Active - Zero Mock/Hardcoded Data");
+  console.log("====================================================");
+  if (reconnectTimer) {
+    clearInterval(reconnectTimer);
+    reconnectTimer = null;
+  }
+});
+
+mongoose.connection.on('error', (err) => {
+  isMongoConnected = false;
+  lastAtlasError = err.message || 'Mongoose connection error';
+  console.warn('[MongoDB Atlas] Event: Connection error:', lastAtlasError);
+  scheduleMongoReconnect();
+});
+
+mongoose.connection.on('disconnected', () => {
+  isMongoConnected = false;
+  console.warn('[MongoDB Atlas] Event: Disconnected from Atlas cluster.');
+  scheduleMongoReconnect();
+});
 
 async function tryConnectMongo() {
-  const mongoUri = process.env.MONGODB_URI;
-  if (!mongoUri) {
+  if (isConnecting) return false;
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    isMongoConnected = true;
+    lastAtlasError = null;
+    return true;
+  }
+
+  isConnecting = true;
+  const primaryUri = process.env.MONGODB_URI;
+  const directUri = process.env.MONGODB_DIRECT_URI;
+
+  if (!primaryUri && !directUri) {
     lastAtlasError = "MONGODB_URI environment variable is missing";
+    isConnecting = false;
     return false;
   }
 
-  try {
-    if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(mongoUri, {
-        serverSelectionTimeoutMS: 6000,
-        maxPoolSize: 50,
-        minPoolSize: 5,
-        socketTimeoutMS: 30000
-      });
-    }
-    if (mongoose.connection.readyState === 1) {
-      isMongoConnected = true;
-      lastAtlasError = null;
-      console.log("====================================================");
-      console.log("  >>> CONNECTED TO MONGODB ATLAS CLUSTER! <<<");
-      console.log("  Database: variathupowertools (Atlas Cloud)");
-      console.log("  Strict MongoDB Mode Active - Zero Mock/Hardcoded Data");
-      console.log("====================================================");
+  const connectionOptions = {
+    serverSelectionTimeoutMS: 6000,
+    maxPoolSize: 50,
+    minPoolSize: 5,
+    socketTimeoutMS: 30000,
+    lookup: robustLookup
+  };
 
-      // Seed initial product catalog to MongoDB Atlas if empty
+  let connected = false;
+
+  // 1. Try primary URI (SRV) first
+  if (primaryUri) {
+    try {
+      await mongoose.connect(primaryUri, connectionOptions);
+      connected = (mongoose.connection.readyState === 1);
+    } catch (err) {
+      console.warn("Primary MongoDB URI connection failed:", err.message);
+      lastAtlasError = err.message;
+    }
+  }
+
+  // 2. If primary failed, failover to direct replica set URI
+  if (!connected && directUri && directUri !== primaryUri) {
+    try {
+      console.log("Failing over to direct replica set URI...");
+      await mongoose.disconnect().catch(() => {});
+      await mongoose.connect(directUri, connectionOptions);
+      connected = (mongoose.connection.readyState === 1);
+    } catch (directErr) {
+      console.error("Direct replica set connection failed:", directErr.message);
+      lastAtlasError = directErr.message;
+    }
+  }
+
+  isConnecting = false;
+
+  if (connected) {
+    isMongoConnected = true;
+    lastAtlasError = null;
+
+    // Seed initial product catalog to MongoDB Atlas if empty
+    try {
       const prodCount = await ProductModel.countDocuments();
       if (prodCount === 0) {
         await ProductModel.insertMany(seedProducts);
@@ -602,45 +703,54 @@ async function tryConnectMongo() {
       // Auto-migrate & backfill customer CRM directory from past orders/repairs if empty
       await backfillCustomersFromOrdersAndRepairs();
       await reconcileCustomerMetrics();
-
-      if (reconnectTimer) {
-        clearInterval(reconnectTimer);
-        reconnectTimer = null;
-      }
-      return true;
+    } catch (postConnectErr) {
+      console.warn("Post-connection seed/migration notice:", postConnectErr.message);
     }
-    isMongoConnected = false;
-    return false;
-  } catch (err) {
-    isMongoConnected = false;
-    lastAtlasError = err.message || 'Connection failed';
-    console.error("MongoDB Atlas connection error:", lastAtlasError);
-    return false;
+
+    if (reconnectTimer) {
+      clearInterval(reconnectTimer);
+      reconnectTimer = null;
+    }
+    return true;
   }
+
+  isMongoConnected = false;
+  return false;
+}
+
+function scheduleMongoReconnect() {
+  if (reconnectTimer) return;
+  console.warn("Awaiting MongoDB Atlas connection. Auto-retry every 5 seconds...");
+  reconnectTimer = setInterval(async () => {
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      isMongoConnected = true;
+      clearInterval(reconnectTimer);
+      reconnectTimer = null;
+      return;
+    }
+    const success = await tryConnectMongo();
+    if (success && reconnectTimer) {
+      clearInterval(reconnectTimer);
+      reconnectTimer = null;
+    }
+  }, 5000);
 }
 
 async function initDB() {
   const connected = await tryConnectMongo();
   if (!connected) {
-    console.warn("Awaiting MongoDB Atlas connection. Auto-retry every 5 seconds...");
-    if (!reconnectTimer) {
-      reconnectTimer = setInterval(async () => {
-        if (!isMongoConnected) {
-          const success = await tryConnectMongo();
-          if (success && reconnectTimer) {
-            clearInterval(reconnectTimer);
-            reconnectTimer = null;
-          }
-        }
-      }, 5000);
-    }
+    scheduleMongoReconnect();
   }
 }
 
 function ensureMongoConnected() {
-  if (!isMongoConnected || mongoose.connection.readyState !== 1) {
-    throw new Error(`MongoDB Atlas is not connected (${lastAtlasError || 'Connection pending'}). Please verify internet/Atlas access.`);
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    isMongoConnected = true;
+    lastAtlasError = null;
+    return;
   }
+  scheduleMongoReconnect();
+  throw new Error(`MongoDB Atlas is not connected (${lastAtlasError || 'Connection pending'}). Auto-reconnecting in background.`);
 }
 
 // High-Speed In-Memory Micro-Cache (TTL = 30s) with instant real-time invalidation on any inventory/order mutation
@@ -1178,13 +1288,41 @@ const db = {
     const updateFields = { status };
     if (extra.courierPartner !== undefined) updateFields.courierPartner = extra.courierPartner;
     if (extra.awb !== undefined) updateFields.awb = extra.awb;
+    if (extra.invoiceNumber !== undefined) updateFields.invoiceNumber = extra.invoiceNumber;
+    if (extra.billNumber !== undefined) updateFields.billNumber = extra.billNumber;
+    if (extra.dispatchDate !== undefined) updateFields.dispatchDate = extra.dispatchDate;
+    if (extra.eWayBillNo !== undefined) updateFields.eWayBillNo = extra.eWayBillNo;
+    if (extra.motorVehicleNo !== undefined) updateFields.motorVehicleNo = extra.motorVehicleNo;
+    if (extra.deliveryNo !== undefined) updateFields.deliveryNo = extra.deliveryNo;
+    if (extra.dispatchDocNo !== undefined) updateFields.dispatchDocNo = extra.dispatchDocNo;
+    if (extra.termsOfDelivery !== undefined) updateFields.termsOfDelivery = extra.termsOfDelivery;
+
     const sLower = (status || '').toLowerCase();
     if (sLower.includes('complet') || sLower.includes('deliver')) {
       updateFields.deliveredAt = new Date().toISOString();
       updateFields.completedAt = new Date().toISOString();
     }
+    if (sLower.includes('dispatch') || sLower.includes('shipp')) {
+      updateFields.dispatchedAt = new Date().toISOString();
+    }
 
     const query = buildOrderQuery(orderId);
+
+    return await OrderModel.findOneAndUpdate(query, updateFields, { new: true }).lean();
+  },
+
+  async updateOrderInvoice(orderId, invoiceData = {}) {
+    ensureMongoConnected();
+    const query = buildOrderQuery(orderId);
+    const updateFields = {};
+    if (invoiceData.invoiceNumber !== undefined) updateFields.invoiceNumber = invoiceData.invoiceNumber;
+    if (invoiceData.billNumber !== undefined) updateFields.billNumber = invoiceData.billNumber;
+    if (invoiceData.dispatchDate !== undefined) updateFields.dispatchDate = invoiceData.dispatchDate;
+    if (invoiceData.eWayBillNo !== undefined) updateFields.eWayBillNo = invoiceData.eWayBillNo;
+    if (invoiceData.motorVehicleNo !== undefined) updateFields.motorVehicleNo = invoiceData.motorVehicleNo;
+    if (invoiceData.deliveryNo !== undefined) updateFields.deliveryNo = invoiceData.deliveryNo;
+    if (invoiceData.dispatchDocNo !== undefined) updateFields.dispatchDocNo = invoiceData.dispatchDocNo;
+    if (invoiceData.termsOfDelivery !== undefined) updateFields.termsOfDelivery = invoiceData.termsOfDelivery;
 
     return await OrderModel.findOneAndUpdate(query, updateFields, { new: true }).lean();
   },
@@ -1628,6 +1766,7 @@ const db = {
     const newJob = {
       id: `rep-${Date.now().toString().slice(-6)}`,
       jobId,
+      jobCardNumber: (jobData.jobCardNumber || '').trim(),
       customerName: jobData.customerName,
       customerPhone: jobData.customerPhone,
       toolBrand: jobData.toolBrand || 'Bosch',
@@ -1804,7 +1943,11 @@ const db = {
   // STATUS & RECONNECT
   // ==========================================
   getStatus() {
-    const connected = isMongoConnected && (mongoose.connection && mongoose.connection.readyState === 1);
+    const connected = Boolean(mongoose.connection && mongoose.connection.readyState === 1);
+    if (connected) {
+      isMongoConnected = true;
+      lastAtlasError = null;
+    }
     return {
       isMongoConnected: connected,
       activeEngine: connected ? 'MongoDB Atlas Cloud' : 'Disconnected (Awaiting Network)',

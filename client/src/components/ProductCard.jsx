@@ -201,9 +201,9 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
           )}
 
           {/* Official Warranty Pill */}
-          {(!product.cordless || !badgeConfig) && product.specs?.warranty !== 'No Warranty' && (
+          {(!product.cordless || !badgeConfig) && (product.specs?.warranty || product.warranty) && (product.specs?.warranty || product.warranty) !== 'No Warranty' && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '1.5px 6px', borderRadius: '4px', fontWeight: '600', whiteSpace: 'nowrap' }}>
-              <ShieldCheck size={11} /> {badgeConfig ? (product.specs?.warranty || 'Warranty').replace(/Official\s+/i, '') : (product.specs?.warranty || 'Official Warranty')}
+              <ShieldCheck size={11} /> {badgeConfig ? ((product.specs?.warranty || product.warranty || 'Warranty')).replace(/Official\s+/i, '') : (product.specs?.warranty || product.warranty || 'Official Warranty')}
             </span>
           )}
         </div>

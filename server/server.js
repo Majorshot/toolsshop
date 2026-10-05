@@ -1,7 +1,8 @@
 const dns = require('dns');
 try {
-  if (process.platform === 'win32' || (!process.env.RENDER && process.env.NODE_ENV !== 'production')) {
-    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1', '1.0.0.1']);
+  if (dns.setDefaultResultOrder) {
+    dns.setDefaultResultOrder('ipv4first');
   }
 } catch (e) {
   console.warn("DNS setup notice:", e.message);
@@ -56,6 +57,21 @@ app.use(cors({
     if (!origin) return callback(null, true);
     // In local development with no ALLOWED_ORIGINS configured, allow local hosts
     if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true);
+
+    // Support wildcard patterns in ALLOWED_ORIGINS (e.g. *.vercel.app)
+    const matchesWildcard = allowedOrigins.some(pattern => {
+      if (pattern.startsWith('*.')) {
+        try {
+          const host = new URL(origin).hostname;
+          const suffix = pattern.slice(2);
+          return host === suffix || host.endsWith('.' + suffix);
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    });
+    if (matchesWildcard) return callback(null, true);
 
     // Validate preview branch deployments of this repository specifically
     const isApprovedVercelApp = /^https:\/\/(variathupowertools|toolsshop|variathu)(-[a-z0-9-]+)?\.vercel\.app$/.test(origin);

@@ -74,11 +74,34 @@ router.get('/customer/:identifier', optionalAuth, async (req, res) => {
 // PUT update order status (Strict Admin / Store Owner)
 router.put('/:id/status', requireStoreOwner, async (req, res) => {
   try {
-    const { status, courierPartner, awb } = req.body;
+    const {
+      status,
+      courierPartner,
+      awb,
+      invoiceNumber,
+      billNumber,
+      dispatchDate,
+      eWayBillNo,
+      motorVehicleNo,
+      deliveryNo,
+      dispatchDocNo,
+      termsOfDelivery
+    } = req.body;
     if (!status) {
       return res.status(400).json({ success: false, message: "Status is required" });
     }
-    const updated = await db.updateOrderStatus(req.params.id, status, { courierPartner, awb });
+    const updated = await db.updateOrderStatus(req.params.id, status, {
+      courierPartner,
+      awb,
+      invoiceNumber,
+      billNumber,
+      dispatchDate,
+      eWayBillNo,
+      motorVehicleNo,
+      deliveryNo,
+      dispatchDocNo,
+      termsOfDelivery
+    });
     if (!updated) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
@@ -127,6 +150,19 @@ router.put('/:id/status', requireStoreOwner, async (req, res) => {
     res.json({ success: true, message: "Order status updated successfully", data: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to update order status' });
+  }
+});
+
+// PUT update order invoice details directly (Store Owner)
+router.put('/:id/invoice', requireStoreOwner, async (req, res) => {
+  try {
+    const updated = await db.updateOrderInvoice(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+    res.json({ success: true, message: "Invoice details updated successfully", data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to update invoice details' });
   }
 });
 
@@ -198,8 +234,15 @@ router.post('/', optionalAuth, async (req, res) => {
 
     const authoritativeTotal = Math.max(0, calculatedSubtotal - verifiedDiscount + authoritativeDeliveryFee);
 
-    // Prevent client from setting paymentStatus to PAID on normal COD/Pickup orders
+    // Enforce payment rules: Cash on Delivery is disabled for courier delivery orders
     const normalizedMethod = (paymentMethod || 'COD').toUpperCase();
+    if (!isStorePickup && (normalizedMethod === 'COD' || normalizedMethod.includes('CASH'))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cash on Delivery is not available for home delivery. Please complete payment online via Razorpay/UPI.'
+      });
+    }
+
     const isCashOrPickup = normalizedMethod === 'COD' || normalizedMethod === 'PAY_AT_STORE';
 
     const order = await db.createOrder({
@@ -300,27 +343,15 @@ router.post('/:id/pay', requireStoreOwner, async (req, res) => {
   }
 });
 
-// POST cancel order with automatic refund (Customer Owner or Store Owner)
-router.post('/:id/cancel', optionalAuth, async (req, res) => {
+// POST cancel order with automatic refund (Strict Admin / Store Owner Only)
+router.post('/:id/cancel', requireStoreOwner, async (req, res) => {
   try {
     const order = await db.getOrderById(req.params.id);
     if (!order) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    // Authorization: User must be store owner or the customer who placed the order
-    if (req.user) {
-      const isStoreOwner = req.user.role === 'store';
-      const userPhone = String(req.user.phone || '').replace(/[^0-9]/g, '').slice(-10);
-      const orderPhone = String(order.customer?.phone || '').replace(/[^0-9]/g, '').slice(-10);
-      const isOwner = String(req.user.id || req.user._id || '') === String(order.customerId || '') || (Boolean(userPhone) && userPhone === orderPhone);
-
-      if (!isStoreOwner && !isOwner) {
-        return res.status(403).json({ success: false, message: "You are not authorized to cancel this order." });
-      }
-    }
-
-    const { reason, cancelledBy } = req.body || {};
+    const { reason, cancelledBy = 'store' } = req.body || {};
     const result = await db.cancelOrder(req.params.id, { reason, cancelledBy });
     if (!result.success) {
       return res.status(400).json(result);

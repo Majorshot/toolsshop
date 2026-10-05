@@ -321,6 +321,20 @@ export const api = {
     return await res.json();
   },
 
+  // Admin: Update order invoice details
+  async updateOrderInvoice(orderId, invoiceData = {}) {
+    const res = await authFetch(`${API_BASE}/orders/${orderId}/invoice`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(invoiceData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to update order invoice');
+    }
+    return await res.json();
+  },
+
   // Cancel order with automatic online refund
   async cancelOrder(orderId, options = {}) {
     const res = await authFetch(`${API_BASE}/orders/${orderId}/cancel`, {

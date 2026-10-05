@@ -7,15 +7,26 @@ const whatsappService = require('../services/whatsappService');
 // GET /api/repairs - Get all repair jobs (Admin only)
 router.get('/', requireStoreOwner, async (req, res) => {
   try {
+    const crypto = require('crypto');
     const jobs = await db.getRepairJobs();
-    // Auto-heal any jobs where handover was verified, ensuring status is strictly "Handed Over"
-    const cleaned = jobs.map(j => {
+    // Auto-heal any jobs where handover was verified or where handoverOtp is missing
+    const cleaned = await Promise.all(jobs.map(async j => {
+      let updates = null;
       if (j.handoverVerified && j.status !== 'Handed Over') {
-        db.updateRepairJob(j.id || j.jobId || j._id, { status: 'Handed Over' }).catch(() => {});
-        return { ...j, status: 'Handed Over' };
+        updates = updates || {};
+        updates.status = 'Handed Over';
+      }
+      if (!j.handoverOtp) {
+        updates = updates || {};
+        updates.handoverOtp = String(crypto.randomInt(1000, 10000));
+      }
+      if (updates) {
+        const targetId = j.id || j.jobId || j._id;
+        await db.updateRepairJob(targetId, updates).catch(() => {});
+        return { ...j, ...updates };
       }
       return j;
-    });
+    }));
     res.json(cleaned);
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to retrieve repair jobs' });

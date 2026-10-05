@@ -1071,7 +1071,9 @@ export const ProductDetailPage = () => {
               </div>
               <div>
                 <Award size={18} style={{ color: '#eab308', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '700', display: 'block' }}>Official Warranty</span>
+                <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '700', display: 'block' }}>
+                  {product.specs?.warranty || product.warranty || 'Official Warranty'}
+                </span>
               </div>
             </div>
           </div>

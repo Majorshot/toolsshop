@@ -170,6 +170,13 @@ export const CheckoutPage = () => {
   // Payment method selection ('razorpay' or 'cash')
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
 
+  // If delivery mode is courier delivery (not store pickup), ensure Cash on Delivery is disabled
+  useEffect(() => {
+    if (deliveryType !== 'store-pickup' && paymentMethod === 'cash') {
+      setPaymentMethod('razorpay');
+    }
+  }, [deliveryType, paymentMethod]);
+
   // Inline Step 1 Login State (Account Phone is Primary)
   const [loginForm, setLoginForm] = useState({
     name: '',
@@ -1068,6 +1075,12 @@ export const CheckoutPage = () => {
     setIsSubmitting(true);
 
     try {
+      if (deliveryType !== 'store-pickup' && paymentMethod === 'cash') {
+        setErrorMsg('Cash on Delivery is not available for home delivery. Please complete payment online via Razorpay/UPI.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const isPrepaid = paymentMethod === 'razorpay';
       const recipientName = deliveryType === 'store-pickup'
         ? (user?.name || 'Customer')
@@ -1225,8 +1238,11 @@ export const CheckoutPage = () => {
         });
       }
 
-      // Cash on Delivery / Counter Pickup Handover
-      const cashMethod = deliveryType === 'store-pickup' ? 'PAY_AT_STORE' : 'COD';
+      // Counter Pickup Handover (Cash on delivery is disabled for courier delivery)
+      if (deliveryType !== 'store-pickup') {
+        throw new Error('Cash on Delivery is not available for courier delivery. Please pay online via Razorpay/UPI.');
+      }
+      const cashMethod = 'PAY_AT_STORE';
       const result = await api.createOrder({
         ...orderPayload,
         paymentMethod: cashMethod,
@@ -3188,7 +3204,11 @@ export const CheckoutPage = () => {
                   </div>
 
                   {/* Payment Options Radio Cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: deliveryType === 'store-pickup' ? 'repeat(auto-fit, minmax(240px, 1fr))' : '1fr',
+                    gap: '10px'
+                  }}>
                     {/* Razorpay Online */}
                     <div
                       onClick={() => setPaymentMethod('razorpay')}
@@ -3220,52 +3240,52 @@ export const CheckoutPage = () => {
                             ⚡ Razorpay Online
                           </span>
                         </div>
-                        <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.68rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px', flexShrink: 0 }}>
-                          Recommended
-                        </span>
                       </div>
                       <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, paddingLeft: '28px', lineHeight: '1.4' }}>
                         UPI (GPay, PhonePe, Paytm), Cards, NetBanking. Instant digital receipt.
                       </p>
                     </div>
 
-                    {/* Cash on Delivery / Counter */}
-                    <div
-                      onClick={() => setPaymentMethod('cash')}
-                      style={{
-                        border: paymentMethod === 'cash' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
-                        borderRadius: '12px',
-                        padding: '14px 16px',
-                        cursor: 'pointer',
-                        background: paymentMethod === 'cash' ? '#fffaf5' : '#ffffff',
-                        transition: 'all 0.15s ease',
-                        boxShadow: paymentMethod === 'cash' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{
-                            width: '18px',
-                            height: '18px',
-                            borderRadius: '50%',
-                            border: paymentMethod === 'cash' ? '5px solid #ea580c' : '2px solid #cbd5e1',
-                            background: '#ffffff',
-                            flexShrink: 0,
-                            transition: 'all 0.15s ease'
-                          }} />
-                          <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
-                            💵 {deliveryType === 'store-pickup' ? 'Pay at Counter' : 'Cash on Delivery (COD)'}
-                          </span>
+                    {/* Pay at Counter (Only available for Store Pickup) */}
+                    {deliveryType === 'store-pickup' && (
+                      <div
+                        onClick={() => setPaymentMethod('cash')}
+                        style={{
+                          border: paymentMethod === 'cash' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '14px 16px',
+                          cursor: 'pointer',
+                          background: paymentMethod === 'cash' ? '#fffaf5' : '#ffffff',
+                          transition: 'all 0.15s ease',
+                          boxShadow: paymentMethod === 'cash' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '50%',
+                              border: paymentMethod === 'cash' ? '5px solid #ea580c' : '2px solid #cbd5e1',
+                              background: '#ffffff',
+                              flexShrink: 0,
+                              transition: 'all 0.15s ease'
+                            }} />
+                            <span style={{ fontWeight: '800', fontSize: '0.92rem', color: '#0f172a' }}>
+                              💵 Pay at Counter
+                            </span>
+                          </div>
                         </div>
+                        <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, paddingLeft: '28px', lineHeight: '1.4' }}>
+                          Pay at Poyanil Building during equipment pickup.
+                        </p>
                       </div>
-                      <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0, paddingLeft: '28px', lineHeight: '1.4' }}>
-                        {deliveryType === 'store-pickup' ? 'Pay at Poyanil Building during equipment pickup.' : 'Pay cash to courier partner upon delivery.'}
-                      </p>
-                    </div>
+                    )}
                   </div>
+
 
                   {/* Promo Coupon Box */}
                   <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
