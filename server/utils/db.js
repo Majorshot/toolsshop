@@ -122,7 +122,8 @@ const productSchema = new mongoose.Schema({
   specs: Object,
   features: [String],
   hsnCode: { type: String, default: '84672900' },
-  warranty: String
+  warranty: String,
+  couponCode: { type: String, default: '' }
 }, { timestamps: true, strict: false });
 
 // High Performance Indexes for 1,000+ Products
@@ -160,6 +161,7 @@ const orderSchema = new mongoose.Schema({
   cancellationRequestReason: String,
   invoiceNumber: String,
   billNumber: String,
+  serialNumbers: { type: Object, default: () => ({}) },
   dispatchDate: String,
   eWayBillNo: String,
   motorVehicleNo: String,
@@ -1296,6 +1298,8 @@ const db = {
     if (extra.deliveryNo !== undefined) updateFields.deliveryNo = extra.deliveryNo;
     if (extra.dispatchDocNo !== undefined) updateFields.dispatchDocNo = extra.dispatchDocNo;
     if (extra.termsOfDelivery !== undefined) updateFields.termsOfDelivery = extra.termsOfDelivery;
+    if (extra.serialNumbers !== undefined) updateFields.serialNumbers = extra.serialNumbers;
+    if (extra.items !== undefined) updateFields.items = extra.items;
 
     const sLower = (status || '').toLowerCase();
     if (sLower.includes('complet') || sLower.includes('deliver')) {
@@ -1323,6 +1327,8 @@ const db = {
     if (invoiceData.deliveryNo !== undefined) updateFields.deliveryNo = invoiceData.deliveryNo;
     if (invoiceData.dispatchDocNo !== undefined) updateFields.dispatchDocNo = invoiceData.dispatchDocNo;
     if (invoiceData.termsOfDelivery !== undefined) updateFields.termsOfDelivery = invoiceData.termsOfDelivery;
+    if (invoiceData.serialNumbers !== undefined) updateFields.serialNumbers = invoiceData.serialNumbers;
+    if (invoiceData.items !== undefined) updateFields.items = invoiceData.items;
 
     return await OrderModel.findOneAndUpdate(query, updateFields, { new: true }).lean();
   },

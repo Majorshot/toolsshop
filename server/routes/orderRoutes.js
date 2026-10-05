@@ -85,7 +85,9 @@ router.put('/:id/status', requireStoreOwner, async (req, res) => {
       motorVehicleNo,
       deliveryNo,
       dispatchDocNo,
-      termsOfDelivery
+      termsOfDelivery,
+      serialNumbers,
+      items
     } = req.body;
     if (!status) {
       return res.status(400).json({ success: false, message: "Status is required" });
@@ -100,7 +102,9 @@ router.put('/:id/status', requireStoreOwner, async (req, res) => {
       motorVehicleNo,
       deliveryNo,
       dispatchDocNo,
-      termsOfDelivery
+      termsOfDelivery,
+      serialNumbers,
+      items
     });
     if (!updated) {
       return res.status(404).json({ success: false, message: "Order not found" });
@@ -215,7 +219,10 @@ router.post('/', optionalAuth, async (req, res) => {
         brand: dbProduct.brand,
         price: price,
         quantity: qty,
-        image: dbProduct.image || item.image || ''
+        image: dbProduct.image || item.image || '',
+        hsnCode: dbProduct.hsnCode || dbProduct.specs?.hsnCode || (dbProduct.category === 'parts' ? '84679900' : '84672900'),
+        category: dbProduct.category || '',
+        serialNumber: item.serialNumber || ''
       });
     }
 

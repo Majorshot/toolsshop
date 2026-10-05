@@ -808,6 +808,28 @@ export const ProductDetailPage = () => {
               </p>
             )}
 
+            {product.couponCode && (
+              <div 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '6px', 
+                  background: '#eff6ff', 
+                  border: '1px solid #bfdbfe', 
+                  color: '#1d4ed8', 
+                  padding: '6px 12px', 
+                  borderRadius: '8px', 
+                  fontSize: '0.82rem', 
+                  fontWeight: '700', 
+                  marginTop: '8px' 
+                }}
+              >
+                <span>🏷️ Special Offer: Apply coupon</span>
+                <strong style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', background: '#dbeafe', padding: '1px 6px', borderRadius: '4px' }}>{product.couponCode}</strong>
+                <span>at checkout</span>
+              </div>
+            )}
+
             <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0 0' }}>
               Inclusive of all taxes • Official GST Tax Invoice provided
             </p>

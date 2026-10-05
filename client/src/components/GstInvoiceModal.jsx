@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Printer, ShieldCheck, Download, Edit3, Check, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, ShieldCheck, Download, Edit3, Check, RotateCcw, Hash } from 'lucide-react';
 import { api } from '../services/api';
 
 /**
@@ -122,6 +122,7 @@ export function formatInvoiceDate(date) {
 
 export const GstInvoiceModal = ({
   order,
+  products = [],
   onClose,
   defaultCopy = 'ORIGINAL',
   showCopySelector = false,
@@ -131,6 +132,62 @@ export const GstInvoiceModal = ({
   const [isEditingInvoiceNo, setIsEditingInvoiceNo] = useState(false);
   const [manualBillInput, setManualBillInput] = useState('');
   const [isSavingInvoiceNo, setIsSavingInvoiceNo] = useState(false);
+
+  // Serial numbers state
+  const [isEditingSerials, setIsEditingSerials] = useState(false);
+  const [manualSerials, setManualSerials] = useState({});
+  const [isSavingSerials, setIsSavingSerials] = useState(false);
+
+  // Dynamic catalog products for genuine HSN code resolution
+  const [allProducts, setAllProducts] = useState(products || []);
+
+  useEffect(() => {
+    if (products && products.length > 0) {
+      setAllProducts(products);
+    } else {
+      api.getProducts().then(res => {
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        setAllProducts(list);
+      }).catch(() => {});
+    }
+  }, [products]);
+
+  useEffect(() => {
+    if (!order) return;
+    const init = {};
+    if (Array.isArray(order.items)) {
+      order.items.forEach((it, idx) => {
+        const key = it.id || String(idx);
+        init[key] = it.serialNumber || order.serialNumbers?.[key] || order.serialNumbers?.[it.id] || order.serialNumbers?.[idx] || '';
+      });
+    }
+    setManualSerials(init);
+  }, [order]);
+
+  const handleSaveSerials = async () => {
+    setIsSavingSerials(true);
+    try {
+      const updatedItems = (order.items || []).map((it, idx) => {
+        const key = it.id || String(idx);
+        return {
+          ...it,
+          serialNumber: (manualSerials[key] || '').trim()
+        };
+      });
+      await api.updateOrderInvoice(order.id, {
+        serialNumbers: manualSerials,
+        items: updatedItems
+      });
+      order.serialNumbers = manualSerials;
+      order.items = updatedItems;
+      if (onOrderUpdated) onOrderUpdated(order);
+      setIsEditingSerials(false);
+    } catch (err) {
+      alert(`Failed to save serial numbers: ${err.message}`);
+    } finally {
+      setIsSavingSerials(false);
+    }
+  };
 
   if (!order) return null;
 
@@ -181,10 +238,21 @@ export const GstInvoiceModal = ({
     const cgst = Math.round((taxableAmount * 0.09) * 100) / 100;
     const sgst = Math.round((taxableAmount * 0.09) * 100) / 100;
 
+    // Fetch genuine HSN from product data if missing on order item
+    const matchedProduct = (Array.isArray(allProducts) && allProducts.length > 0)
+      ? allProducts.find(p => String(p.id) === String(it.id) || (p.name && it.name && p.name.trim().toLowerCase() === it.name.trim().toLowerCase()))
+      : null;
+
+    const itemHsn = it.hsnCode || it.hsn || it.specs?.hsnCode || matchedProduct?.hsnCode || matchedProduct?.specs?.hsnCode || (it.category === 'parts' || matchedProduct?.category === 'parts' ? '84679900' : '84672900');
+
+    const key = it.id || String(idx);
+    const serialNum = (manualSerials[key] !== undefined ? manualSerials[key] : (it.serialNumber || order.serialNumbers?.[key] || order.serialNumbers?.[it.id] || order.serialNumbers?.[idx] || '')).trim();
+
     return {
       slNo: idx + 1,
-      name: (it.name || 'Power Tool Equipment').toUpperCase(),
-      hsn: it.hsnCode || it.hsn || it.specs?.hsnCode || (it.category === 'parts' ? '84679900' : '84672900'),
+      name: (it.name || matchedProduct?.name || 'Power Tool Equipment').toUpperCase(),
+      hsn: itemHsn,
+      serialNumber: serialNum,
       quantity: Number(it.quantity || 1),
       rate: taxableUnit,
       taxableAmount,
@@ -448,6 +516,33 @@ export const GstInvoiceModal = ({
               </button>
             )}
 
+            {/* Serial Numbers Edit Button */}
+            {showCopySelector && !isEditingSerials && (
+              <button
+                type="button"
+                onClick={() => setIsEditingSerials(true)}
+                style={{
+                  border: '1px solid #cbd5e1',
+                  background: '#f8fafc',
+                  color: '#0f172a',
+                  fontWeight: '700',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  fontSize: '0.76rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+                id="btn-edit-serial-numbers"
+              >
+                <Hash size={13} />
+                <span>
+                  {items.some((it, idx) => (manualSerials[it.id || String(idx)] || it.serialNumber)) ? 'Edit S/N' : 'Add S/N'}
+                </span>
+              </button>
+            )}
+
             {showCopySelector && isEditingInvoiceNo && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', padding: '3px 6px', borderRadius: '6px' }}>
                 <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#133886' }}>VP/{currentFy}/</span>
@@ -567,6 +662,128 @@ export const GstInvoiceModal = ({
             </button>
           </div>
         </div>
+
+        {/* Serial Numbers Manual Entry Panel (Hidden during printing) */}
+        {showCopySelector && isEditingSerials && (
+          <div
+            className="no-print"
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '16px'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Hash size={15} style={{ color: '#133886' }} />
+                <span style={{ fontSize: '0.84rem', fontWeight: '800', color: '#0f172a' }}>
+                  Product Serial Numbers (S/N)
+                </span>
+                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                  (Prints directly below product name on GST invoice)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingSerials(false)}
+                style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px 4px' }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {items.map((it, idx) => {
+                const key = it.id || String(idx);
+                const pName = it.name || `Item #${idx + 1}`;
+                return (
+                  <div
+                    key={key}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      padding: '8px 12px'
+                    }}
+                  >
+                    <div style={{ flex: '1', minWidth: '0' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {pName}
+                      </div>
+                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                        Qty: {it.quantity || 1} • {it.hsnCode || it.hsn ? `HSN: ${it.hsnCode || it.hsn}` : 'Power Tool'}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: '700', color: '#475569' }}>S/N:</span>
+                      <input
+                        type="text"
+                        placeholder="e.g. SN-88392019"
+                        value={manualSerials[key] || ''}
+                        onChange={(e) => setManualSerials({ ...manualSerials, [key]: e.target.value })}
+                        style={{
+                          width: '180px',
+                          padding: '6px 10px',
+                          fontSize: '0.78rem',
+                          fontWeight: '600',
+                          border: '1px solid #94a3b8',
+                          borderRadius: '4px',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => setIsEditingSerials(false)}
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '6px 14px',
+                  fontSize: '0.76rem',
+                  fontWeight: '600',
+                  color: '#475569',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSerials}
+                disabled={isSavingSerials}
+                style={{
+                  background: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 16px',
+                  fontSize: '0.76rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Check size={13} />
+                <span>{isSavingSerials ? 'Saving...' : 'Save Serial Numbers'}</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ========================================================================= */}
         {/* AUTHENTIC A4 PAPER SHEET PREVIEW WITH SAFE BORDER / MARGINS               */}
@@ -822,9 +1039,16 @@ export const GstInvoiceModal = ({
               </thead>
               <tbody>
                 {invoiceLines.map((line) => (
-                  <tr key={line.slNo} style={{ height: '6.5mm' }}>
+                  <tr key={line.slNo} style={{ height: line.serialNumber ? '8.5mm' : '6.5mm' }}>
                     <td style={{ borderRight: '1px solid #000000', padding: '2px 4px', textAlign: 'center' }}>{line.slNo}</td>
-                    <td style={{ borderRight: '1px solid #000000', padding: '2px 8px', fontWeight: '700' }}>{line.name}</td>
+                    <td style={{ borderRight: '1px solid #000000', padding: '2px 8px', fontWeight: '700' }}>
+                      <div>{line.name}</div>
+                      {line.serialNumber && (
+                        <div style={{ fontSize: '6.8pt', color: '#64748b', fontWeight: '500', marginTop: '1px', letterSpacing: '0.02em' }}>
+                          S/N: {line.serialNumber}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ borderRight: '1px solid #000000', padding: '2px 4px', textAlign: 'center' }}>{line.hsn}</td>
                     <td style={{ borderRight: '1px solid #000000', padding: '2px 6px', textAlign: 'right' }}>{line.rate.toFixed(2)}</td>
                     <td style={{ borderRight: '1px solid #000000', padding: '2px 4px', textAlign: 'center' }}>{line.quantity.toFixed(2)} NOS</td>
@@ -833,7 +1057,7 @@ export const GstInvoiceModal = ({
                 ))}
 
                 {/* Fixed space filler row with all vertical column lines continuous and intact */}
-                <tr style={{ height: `${Math.max(15, 91.5 - (invoiceLines.length * 6.5))}mm` }}>
+                <tr style={{ height: `${Math.max(15, 91.5 - invoiceLines.reduce((sum, l) => sum + (l.serialNumber ? 8.5 : 6.5), 0))}mm` }}>
                   <td style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000' }}>&nbsp;</td>
                   <td style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000' }}>&nbsp;</td>
                   <td style={{ borderRight: '1px solid #000000', borderBottom: '1px solid #000000' }}>&nbsp;</td>

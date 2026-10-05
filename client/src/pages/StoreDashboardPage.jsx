@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass, Zap, Shield } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass, Zap, Shield, Hash } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -291,7 +291,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     awb: '',
     billNumber: '',
     motorVehicleNo: '',
-    eWayBillNo: ''
+    eWayBillNo: '',
+    serialNumbers: {}
   });
 
   // Store Cancel Order & Auto-Refund Modal State
@@ -601,6 +602,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     const orderDate = dispatchModalOrder.date ? new Date(dispatchModalOrder.date) : new Date();
     const finalInvoiceNumber = buildInvoiceNumber(rawBill, orderDate);
 
+    // Prepare updated items with serialNumber
+    const updatedItems = (dispatchModalOrder.items || []).map((it, idx) => {
+      const key = it.id || String(idx);
+      const sNum = (dispatchForm.serialNumbers?.[key] || it.serialNumber || '').trim();
+      return {
+        ...it,
+        serialNumber: sNum
+      };
+    });
+
     try {
       await api.updateOrderStatus(dispatchModalOrder.id, 'Dispatched via Courier', {
         courierPartner: partner,
@@ -610,7 +621,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         dispatchDocNo: finalInvoiceNumber,
         motorVehicleNo: dispatchForm.motorVehicleNo?.trim() || '',
         eWayBillNo: dispatchForm.eWayBillNo?.trim() || '',
-        dispatchDate: new Date().toISOString()
+        dispatchDate: new Date().toISOString(),
+        serialNumbers: dispatchForm.serialNumbers || {},
+        items: updatedItems
       });
       showNotification(`Order ${dispatchModalOrder.id} dispatched! (Invoice: ${finalInvoiceNumber}, AWB: ${finalAwb})`);
       setDispatchModalOrder(null);
@@ -1917,12 +1930,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (!targetOrder) return;
     const cfg = resolveCourierConfig(targetOrder.courierPartner);
     const existingBill = targetOrder.billNumber || extractBillNumber(targetOrder.invoiceNumber, targetOrder.date);
+    
+    // Initialize serial numbers map per product
+    const initialSerials = {};
+    if (Array.isArray(targetOrder.items)) {
+      targetOrder.items.forEach((it, idx) => {
+        const key = it.id || String(idx);
+        initialSerials[key] = it.serialNumber || targetOrder.serialNumbers?.[key] || targetOrder.serialNumbers?.[it.id] || targetOrder.serialNumbers?.[idx] || '';
+      });
+    }
+
     setDispatchForm({
       courierPartner: cfg.name,
       awb: targetOrder.awb || '',
       billNumber: existingBill || '',
       motorVehicleNo: targetOrder.motorVehicleNo || '',
-      eWayBillNo: targetOrder.eWayBillNo || ''
+      eWayBillNo: targetOrder.eWayBillNo || '',
+      serialNumbers: initialSerials
     });
     setDispatchModalOrder(targetOrder);
   };
@@ -7162,6 +7186,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         }}
         editingProduct={editingProduct}
         taxonomy={taxonomy}
+        coupons={coupons}
         onSaveProduct={handleSaveProduct}
         showAddBrandInline={showAddBrandInline}
         setShowAddBrandInline={setShowAddBrandInline}
@@ -8332,6 +8357,79 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   </div>
                 </div>
 
+                {/* Product Serial Numbers (S/N) for Delivery & GST Bill */}
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', color: '#0f172a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                      <Hash size={13} style={{ color: '#2563eb' }} />
+                      <span>Product Serial Numbers (S/N)</span>
+                    </label>
+                    <span style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: '700', background: '#dcfce7', border: '1px solid #bbf7d0', padding: '1px 6px', borderRadius: '4px' }}>
+                      Prints on GST Bill & Warranty
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(dispatchModalOrder.items || []).map((it, idx) => {
+                      const key = it.id || String(idx);
+                      const prodName = it.name || 'Equipment Item';
+                      return (
+                        <div
+                          key={key}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '10px',
+                            background: '#ffffff',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #e2e8f0'
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: '700', fontSize: '0.8rem', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={prodName}>
+                              {prodName}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
+                              Qty: {it.quantity || 1} {it.brand ? `• ${it.brand}` : ''}
+                            </div>
+                          </div>
+                          <div style={{ width: '180px', flexShrink: 0 }}>
+                            <input
+                              type="text"
+                              placeholder="Enter S/N (e.g. SN84920)"
+                              value={dispatchForm.serialNumbers?.[key] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setDispatchForm(prev => ({
+                                  ...prev,
+                                  serialNumbers: {
+                                    ...(prev.serialNumbers || {}),
+                                    [key]: val
+                                  }
+                                }));
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '6px 8px',
+                                border: '1.5px solid #94a3b8',
+                                borderRadius: '6px',
+                                fontSize: '0.78rem',
+                                fontWeight: '700',
+                                fontFamily: 'monospace',
+                                color: '#0f172a',
+                                background: '#ffffff',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Select Courier Partner (4 Partners) */}
                 <div>
                   <label style={{ fontSize: '0.78rem', color: '#334155', fontWeight: '700', display: 'block', marginBottom: '8px' }}>
@@ -9272,9 +9370,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       {selectedOrderForInvoice && (
         <GstInvoiceModal
           order={selectedOrderForInvoice}
+          products={products}
           onClose={() => setSelectedOrderForInvoice(null)}
           defaultCopy="Original for Recipient"
           showCopySelector={true}
+          onOrderUpdated={(updated) => {
+            setSelectedOrderForInvoice(updated);
+            loadOrders({ silent: true });
+          }}
         />
       )}
 

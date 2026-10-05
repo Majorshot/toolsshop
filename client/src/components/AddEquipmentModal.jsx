@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X, Plus, Trash2, ShieldCheck, Upload, Image as ImageIcon,
   Zap, Check, Battery, Truck, Percent, Eye, Wrench, Shield,
-  Loader2, CloudUpload, Hash, Clock, Sparkles
+  Loader2, CloudUpload, Hash, Clock, Sparkles, Tag
 } from 'lucide-react';
 import GlideSelect from './GlideSelect';
 import { useConfirm } from './SpringModal';
@@ -51,6 +51,7 @@ export const AddEquipmentModal = ({
   onClose,
   editingProduct,
   taxonomy,
+  coupons = [],
   onSaveProduct,
   // Inline brand / category creation
   showAddBrandInline,
@@ -70,6 +71,18 @@ export const AddEquipmentModal = ({
   const fileInputRef = useRef(null);
   const sessionUploadedUrls = useRef(new Set());
   const formColRef = useRef(null);
+  const [storeCoupons, setStoreCoupons] = useState(coupons || []);
+
+  useEffect(() => {
+    if (coupons && coupons.length > 0) {
+      setStoreCoupons(coupons);
+    } else if (isOpen) {
+      api.getCoupons().then(res => {
+        const raw = Array.isArray(res) ? res : (res?.data || []);
+        setStoreCoupons(raw);
+      }).catch(() => {});
+    }
+  }, [coupons, isOpen]);
 
   // Clean production form state
   const [form, setForm] = useState({
@@ -81,6 +94,7 @@ export const AddEquipmentModal = ({
     stock: 10,
     deliveryCost: 0,
     hsnCode: '84672900',
+    couponCode: '',
     image: '',
     images: [],
     description: '',
@@ -152,6 +166,7 @@ export const AddEquipmentModal = ({
         stock: editingProduct.stock !== undefined ? editingProduct.stock : 10,
         deliveryCost: editingProduct.deliveryCost !== undefined ? editingProduct.deliveryCost : 0,
         hsnCode: existingHsn,
+        couponCode: editingProduct.couponCode || '',
         image: editingProduct.image || existingImages[0] || '',
         images: existingImages,
         description: editingProduct.description || '',
@@ -183,6 +198,7 @@ export const AddEquipmentModal = ({
         stock: 10,
         deliveryCost: 0,
         hsnCode: '84672900',
+        couponCode: '',
         image: '',
         images: [],
         description: '',
@@ -236,12 +252,14 @@ export const AddEquipmentModal = ({
         form.price ||
         form.description.trim() ||
         form.images.length > 0 ||
+        form.couponCode ||
         (form.hsnCode && form.hsnCode !== '84672900') ||
         (form.specs?.warranty && form.specs.warranty !== '1 Year Official Warranty')
       );
     }
     const origHsn = editingProduct.hsnCode || editingProduct.hsn || editingProduct.specs?.hsnCode || '84672900';
     const origWarranty = editingProduct.specs?.warranty || editingProduct.warranty || '1 Year Official Warranty';
+    const origCoupon = editingProduct.couponCode || '';
     return (
       form.name !== (editingProduct.name || '') ||
       String(form.price) !== String(editingProduct.price || '') ||
@@ -251,6 +269,7 @@ export const AddEquipmentModal = ({
       form.brand !== editingProduct.brand ||
       form.category !== editingProduct.category ||
       form.hsnCode !== origHsn ||
+      (form.couponCode || '') !== origCoupon ||
       form.specs?.warranty !== origWarranty
     );
   }, [form, editingProduct]);
@@ -473,6 +492,7 @@ export const AddEquipmentModal = ({
       badge: form.badge || '',
       image: primaryImg,
       hsnCode: form.hsnCode || '84672900',
+      couponCode: form.couponCode ? form.couponCode.trim().toUpperCase() : '',
       warranty: currentWarranty,
       specs: {
         power: form.specs?.power || '',
@@ -512,6 +532,7 @@ export const AddEquipmentModal = ({
       const discountTag = discountStats ? `${discountStats.percent}% OFF` : undefined;
       const currentWarranty = form.specs?.warranty || '1 Year Official Warranty';
       const cleanHsn = (form.hsnCode || '84672900').trim();
+      const cleanCoupon = (form.couponCode || '').trim().toUpperCase();
 
       const payload = {
         name: form.name.trim(),
@@ -523,6 +544,7 @@ export const AddEquipmentModal = ({
         stock: Number(form.stock || 0),
         deliveryCost: Number(form.deliveryCost || 0),
         hsnCode: cleanHsn,
+        couponCode: cleanCoupon,
         warranty: currentWarranty,
         image: primaryImage,
         images: cleanedImages.length > 0 ? cleanedImages : (primaryImage ? [primaryImage] : []),
@@ -551,6 +573,7 @@ export const AddEquipmentModal = ({
           stock: 10,
           deliveryCost: 0,
           hsnCode: '84672900',
+          couponCode: '',
           image: '',
           images: [],
           description: '',
@@ -1035,6 +1058,75 @@ export const AddEquipmentModal = ({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Special Offer Coupon Code Option */}
+              <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <label className="eq-field-label" htmlFor="input-tool-coupon" style={{ margin: 0 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Tag size={13} style={{ color: '#2563eb' }} />
+                      <span>Offer Coupon Code (Product Specific)</span>
+                    </span>
+                  </label>
+                  {form.couponCode && (
+                    <span style={{ fontSize: '0.68rem', color: '#1d4ed8', fontWeight: '800', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '2px 7px', borderRadius: '4px' }}>
+                      Active Offer: {form.couponCode}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    id="input-tool-coupon"
+                    type="text"
+                    placeholder="e.g. DIWALI10, TOOL500 (type or click below)"
+                    value={form.couponCode}
+                    onChange={(e) => setForm({ ...form, couponCode: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })}
+                    className="eq-input"
+                    style={{ flex: 1, fontFamily: 'monospace', fontWeight: '800', letterSpacing: '0.06em', fontSize: '0.92rem' }}
+                  />
+                  {form.couponCode && (
+                    <button
+                      type="button"
+                      className="eq-btn-cancel"
+                      style={{ padding: '7px 12px', fontSize: '0.72rem', whiteSpace: 'nowrap' }}
+                      onClick={() => setForm({ ...form, couponCode: '' })}
+                      title="Clear coupon"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ fontSize: '0.71rem', color: '#64748b', marginTop: '6px', lineHeight: 1.4 }}>
+                  Attach a promotional coupon code specifically to this tool. Customers will see this offer highlighted on the product page.
+                </div>
+
+                {/* Available Store Coupons Chips */}
+                {Array.isArray(storeCoupons) && storeCoupons.length > 0 && (
+                  <div className="eq-chips-wrap" style={{ marginTop: '8px' }}>
+                    {storeCoupons.map(c => {
+                      const isActive = form.couponCode === c.code;
+                      const discountStr = c.discountType === 'flat' ? `₹${c.discountValue} OFF` : `${c.discountValue}% OFF`;
+                      return (
+                        <button
+                          key={c.code}
+                          type="button"
+                          className={`eq-chip-btn ${isActive ? 'active' : ''}`}
+                          style={{ fontSize: '0.72rem', padding: '4px 8px' }}
+                          onClick={() => setForm({ ...form, couponCode: isActive ? '' : c.code })}
+                          title={c.description || `${c.code}: ${discountStr}`}
+                        >
+                          <span style={{ fontFamily: 'monospace', fontWeight: '800' }}>🏷️ {c.code}</span>
+                          <span style={{ opacity: 0.85, fontSize: '0.68rem', fontWeight: '600', marginLeft: '4px' }}>
+                            ({discountStr})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 

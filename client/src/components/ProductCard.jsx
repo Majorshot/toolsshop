@@ -206,6 +206,13 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
               <ShieldCheck size={11} /> {badgeConfig ? ((product.specs?.warranty || product.warranty || 'Warranty')).replace(/Official\s+/i, '') : (product.specs?.warranty || product.warranty || 'Official Warranty')}
             </span>
           )}
+
+          {/* Offer Coupon Pill */}
+          {product.couponCode && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', color: '#1d4ed8', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '1.5px 6px', borderRadius: '4px', fontWeight: '700', whiteSpace: 'nowrap' }} title={`Special offer: Use coupon ${product.couponCode} at checkout`}>
+              <Tag size={10} /> {product.couponCode}
+            </span>
+          )}
         </div>
 
         {/* Pricing */}
