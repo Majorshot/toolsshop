@@ -277,8 +277,12 @@ export const LoginPage = () => {
     setLoading(true);
 
     try {
-      await login('store', identifier.trim(), password);
-      navigate('/admin');
+      const loggedUser = await login('store', identifier.trim(), password);
+      if (loggedUser?.staffRole === 'workshop_manager') {
+        navigate('/admin?tab=repairs');
+      } else {
+        navigate('/admin');
+      }
     } catch (err) {
       setError(err.message || 'Invalid store credentials. Please check your username and password.');
     } finally {
@@ -345,7 +349,7 @@ export const LoginPage = () => {
               {activeTab === 'store' ? (
                 <>
                   <ShieldCheck size={12} />
-                  <span>Store Administration Portal</span>
+                  <span>Store & Staff Administration Portal</span>
                 </>
               ) : customerStep === 'otp' ? (
                 <>
@@ -368,7 +372,7 @@ export const LoginPage = () => {
               margin: '0 0 6px'
             }}>
               {activeTab === 'store'
-                ? 'Store Manager Sign In'
+                ? 'Store & Staff Sign In'
                 : customerStep === 'otp'
                   ? 'Verify Security Code'
                   : authMode === 'register'
@@ -384,7 +388,7 @@ export const LoginPage = () => {
               lineHeight: 1.45
             }}>
               {activeTab === 'store'
-                ? 'Sign in to access inventory, orders & accounting analytics'
+                ? 'Authorized access for Store Owner, Managers, and Workshop Service Managers'
                 : customerStep === 'otp'
                   ? 'Enter the 6-digit verification code below to sign in'
                   : authMode === 'register'
@@ -555,7 +559,7 @@ export const LoginPage = () => {
                     color: '#475569',
                     marginBottom: '6px'
                   }}>
-                    Admin Email Address <span style={{ color: '#4f46e5' }}>*</span>
+                    Staff / Admin Email Address <span style={{ color: '#4f46e5' }}>*</span>
                   </label>
                   <div style={{ position: 'relative' }}>
                     <div style={{
@@ -572,7 +576,7 @@ export const LoginPage = () => {
                     </div>
                     <input
                       type="email"
-                      placeholder="admin@variathupowertools.com"
+                      placeholder="staff@gmail.com"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       onFocus={() => setFocusedField('identifier')}

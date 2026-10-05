@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass, Zap, Shield, Hash } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass, Zap, Shield, Hash, UserCheck, UserPlus, Briefcase, Mail, Key, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -155,25 +155,39 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   }, []);
 
+  const isWorkshopManager = user?.staffRole === 'workshop_manager';
+  const isStaffManager = user?.staffRole === 'manager';
+
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
-  const [activeTab, setActiveTabState] = useState(() => urlTab || 'overview');
+  const [activeTab, setActiveTabState] = useState(() => {
+    if (user?.staffRole === 'workshop_manager') return 'repairs';
+    return urlTab || 'overview';
+  });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Keep activeTab in sync with URL query param (?tab=overview, etc.)
+  // Workshop Manager is strictly locked to repairs
   useEffect(() => {
+    if (isWorkshopManager) {
+      if (activeTab !== 'repairs') {
+        setActiveTabState('repairs');
+      }
+      return;
+    }
     if (urlTab && urlTab !== activeTab) {
       setActiveTabState(urlTab);
     } else if (!urlTab && activeTab !== 'overview') {
       setActiveTabState('overview');
     }
-  }, [urlTab, activeTab]);
+  }, [urlTab, activeTab, isWorkshopManager]);
 
   const setActiveTab = useCallback((tabId) => {
+    if (isWorkshopManager && tabId !== 'repairs') return;
     setActiveTabState(tabId);
     setSearchParams({ tab: tabId });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [setSearchParams]);
+  }, [isWorkshopManager, setSearchParams]);
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -740,6 +754,29 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   });
   const [isSubmittingCoupon, setIsSubmittingCoupon] = useState(false);
 
+  // Staff & Team Management State
+  const [staffList, setStaffList] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffRoleFilter, setStaffRoleFilter] = useState('all');
+  const [isAddStaffModalOpen, setIsAddStaffModalOpen] = useState(false);
+  const [editingStaffMember, setEditingStaffMember] = useState(null);
+  const [staffForm, setStaffForm] = useState({
+    name: '',
+    phone: '',
+    role: 'technician',
+    email: '',
+    password: '',
+    specialization: '',
+    active: true
+  });
+  const [isSubmittingStaff, setIsSubmittingStaff] = useState(false);
+
+  // Derived active technicians list for dropdown selection in workshop repairs
+  const technicians = useMemo(() => {
+    return staffList.filter(s => s.role === 'technician' && s.active !== false);
+  }, [staffList]);
+
   // Workshop Repairs State
   const [repairs, setRepairs] = useState([]);
   const [loadingRepairs, setLoadingRepairs] = useState(false);
@@ -748,7 +785,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [repairForm, setRepairForm] = useState({
     customerName: '',
     customerPhone: '',
-    toolBrand: 'Bosch',
+    toolBrand: '',
     customBrand: '',
     toolModel: '',
     jobCardNumber: '',
@@ -756,7 +793,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     issueDescription: '',
     estimatedCost: '',
     advancePaid: '',
-    technicianNotes: ''
+    technicianNotes: '',
+    assignedTechnician: ''
   });
   const [isSubmittingRepair, setIsSubmittingRepair] = useState(false);
   const [repairOtpInputs, setRepairOtpInputs] = useState({});
@@ -767,6 +805,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     estimatedCost: '',
     advancePaid: '',
     technicianNotes: '',
+    assignedTechnician: '',
     sendWhatsApp: true
   });
   const [isSubmittingEditRepair, setIsSubmittingEditRepair] = useState(false);
@@ -789,8 +828,70 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   // Low Stock Hub
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
 
-  // Revenue Analytics Period Filter
-  const [analyticsPeriod, setAnalyticsPeriod] = useState('all'); // 'all' | 'month' | 'week' | 'today'
+  // Revenue Analytics Period Filter & Custom Date Range
+  const [analyticsPeriod, setAnalyticsPeriod] = useState('all'); // 'all' | 'month' | 'week' | 'today' | 'custom'
+  const [analyticsCustomStartDate, setAnalyticsCustomStartDate] = useState('');
+  const [analyticsCustomEndDate, setAnalyticsCustomEndDate] = useState('');
+
+  // Workshop Repairs Date Filter
+  const [repairsDateFilter, setRepairsDateFilter] = useState('all'); // 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'
+  const [repairsStartDate, setRepairsStartDate] = useState('');
+  const [repairsEndDate, setRepairsEndDate] = useState('');
+
+  // Customer Autocomplete for Workshop Inward Tool Logging
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  const [customerPhoneSuggestions, setCustomerPhoneSuggestions] = useState([]);
+  const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
+
+  // Dynamic brand list strictly fetched from backend taxonomy & store products catalog (Zero hardcoded defaults)
+  const allAvailableBrands = useMemo(() => {
+    const brandMap = new Map();
+    // 1. Add all brands configured in backend taxonomy (MongoDB Atlas)
+    (taxonomy?.brands || []).forEach(b => {
+      if (b && typeof b === 'string' && b.trim()) {
+        const key = b.trim().toLowerCase();
+        if (!brandMap.has(key)) {
+          brandMap.set(key, b.trim());
+        }
+      }
+    });
+    // 2. Add any active brands present in store products catalog
+    (products || []).forEach(p => {
+      if (p?.brand && typeof p.brand === 'string' && p.brand.trim()) {
+        const key = p.brand.trim().toLowerCase();
+        if (!brandMap.has(key)) {
+          brandMap.set(key, p.brand.trim());
+        }
+      }
+    });
+    return Array.from(brandMap.values()).sort((a, b) => a.localeCompare(b));
+  }, [taxonomy, products]);
+
+  // Sync initial brand selection once backend brands are loaded from API
+  useEffect(() => {
+    if (!repairForm.toolBrand && allAvailableBrands.length > 0) {
+      setRepairForm(prev => ({ ...prev, toolBrand: allAvailableBrands[0] }));
+    }
+  }, [allAvailableBrands, repairForm.toolBrand]);
+
+  // Suggested tool models based on selected brand
+  const availableModelsForBrand = useMemo(() => {
+    const selectedBrand = (repairForm.toolBrand || '').toLowerCase();
+    const models = new Set();
+    (products || []).forEach(p => {
+      if (!selectedBrand || (p.brand || '').toLowerCase() === selectedBrand) {
+        if (p.model && typeof p.model === 'string') models.add(p.model.trim());
+        if (p.name && typeof p.name === 'string') models.add(p.name.trim());
+      }
+    });
+    (repairs || []).forEach(r => {
+      if (!selectedBrand || (r.toolBrand || '').toLowerCase() === selectedBrand) {
+        if (r.toolModel && typeof r.toolModel === 'string') models.add(r.toolModel.trim());
+      }
+    });
+    return Array.from(models).slice(0, 40);
+  }, [products, repairs, repairForm.toolBrand]);
 
   // Space Optimizer: Collapsible Analytics Mode
   const [analyticsCollapsed, setAnalyticsCollapsed] = useState(() => {
@@ -933,12 +1034,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       navigate('/login');
       return;
     }
-    loadOrders();
+    const isWorkshop = user?.staffRole === 'workshop_manager';
+    if (!isWorkshop) {
+      loadOrders();
+      loadCoupons();
+    }
     loadProducts();
     loadTaxonomy();
-    loadCoupons();
-    loadRepairs();
     loadCustomers();
+    loadRepairs();
+    loadStaff();
   }, [user]);
 
   // Keep selectedOrderForDetails in sync whenever orders list updates
@@ -1396,6 +1501,19 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
+  const loadStaff = async () => {
+    setLoadingStaff(true);
+    try {
+      const res = await api.getStaff();
+      const list = Array.isArray(res) ? res : (res?.staff || []);
+      setStaffList(list);
+    } catch (err) {
+      console.error("Failed to load staff:", err);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
   const handleOpenCustomerHistoryModal = async (cust) => {
     setSelectedCustomerForModal(cust);
     setLoadingCustomerHistory(true);
@@ -1653,6 +1771,50 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
+  // Customer CRM Autocomplete & Selection Handlers for Inward Repair Tickets
+  const handleCustomerNameChange = (val) => {
+    setRepairForm(prev => ({ ...prev, customerName: val }));
+    if (!val || val.trim().length === 0) {
+      setCustomerSuggestions([]);
+      setShowCustomerSuggestions(false);
+      return;
+    }
+    const q = val.trim().toLowerCase();
+    const digits = val.replace(/[^0-9]/g, '');
+    const matches = (customers || []).filter(c => {
+      const nameMatch = (c.name || '').toLowerCase().includes(q);
+      const phoneMatch = digits.length >= 3 && (c.phone || '').includes(digits);
+      return nameMatch || phoneMatch;
+    }).slice(0, 6);
+    setCustomerSuggestions(matches);
+    setShowCustomerSuggestions(matches.length > 0);
+  };
+
+  const handleSelectCustomerSuggestion = (cust) => {
+    setRepairForm(prev => ({
+      ...prev,
+      customerName: cust.name || prev.customerName,
+      customerPhone: cust.phone || prev.customerPhone
+    }));
+    setShowCustomerSuggestions(false);
+    setShowPhoneSuggestions(false);
+  };
+
+  const handleCustomerPhoneChange = (val) => {
+    setRepairForm(prev => ({ ...prev, customerPhone: val }));
+    const digits = val.replace(/[^0-9]/g, '');
+    if (digits.length < 3) {
+      setCustomerPhoneSuggestions([]);
+      setShowPhoneSuggestions(false);
+      return;
+    }
+    const matches = (customers || []).filter(c =>
+      (c.phone || '').replace(/[^0-9]/g, '').includes(digits)
+    ).slice(0, 5);
+    setCustomerPhoneSuggestions(matches);
+    setShowPhoneSuggestions(matches.length > 0);
+  };
+
   // Feature 5: Workshop & Repair Handlers
   const handleSaveRepairJob = async (e) => {
     if (e) e.preventDefault();
@@ -1662,7 +1824,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
     const finalBrand = repairForm.toolBrand === 'Other'
       ? (repairForm.customBrand?.trim() || 'Other Brand')
-      : (repairForm.toolBrand || 'Bosch');
+      : (repairForm.toolBrand || allAvailableBrands[0] || 'Other Brand');
 
     setIsSubmittingRepair(true);
     try {
@@ -1676,14 +1838,33 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         issueDescription: repairForm.issueDescription.trim(),
         estimatedCost: Number(repairForm.estimatedCost) || 0,
         advancePaid: Number(repairForm.advancePaid) || 0,
-        technicianNotes: repairForm.technicianNotes.trim()
+        technicianNotes: repairForm.technicianNotes.trim(),
+        assignedTechnician: (repairForm.assignedTechnician || '').trim()
       });
-      showNotification(`🛠️ Repair Job #${res.job?.jobId || 'created'} logged! WhatsApp confirmation sent to customer.`);
+
+      // Auto-save new customer to CRM directory if not already existing
+      const cName = repairForm.customerName.trim();
+      const cPhone = repairForm.customerPhone.trim();
+      const cleanP = cPhone.replace(/[^0-9]/g, '').slice(-10);
+      const isKnown = (customers || []).some(c =>
+        (c.phone && c.phone.replace(/[^0-9]/g, '').slice(-10) === cleanP) ||
+        (c.name && c.name.toLowerCase() === cName.toLowerCase())
+      );
+      if (!isKnown && cName && cPhone) {
+        api.createCustomer({
+          name: cName,
+          phone: cPhone
+        }).catch(() => {});
+      }
+
+      showNotification(`🛠️ Repair Job #${res.job?.jobId || 'created'} logged! Saved to CRM & WhatsApp confirmation dispatched.`);
       setIsAddRepairModalOpen(false);
+      setShowCustomerSuggestions(false);
+      setShowPhoneSuggestions(false);
       setRepairForm({
         customerName: '',
         customerPhone: '',
-        toolBrand: 'Bosch',
+        toolBrand: allAvailableBrands[0] || '',
         customBrand: '',
         toolModel: '',
         jobCardNumber: '',
@@ -1691,9 +1872,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         issueDescription: '',
         estimatedCost: '',
         advancePaid: '',
-        technicianNotes: ''
+        technicianNotes: '',
+        assignedTechnician: ''
       });
       loadRepairs();
+      setTimeout(loadCustomers, 800);
     } catch (err) {
       showNotification(`Error: ${err.message}`);
     } finally {
@@ -1771,6 +1954,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       estimatedCost: job.finalCost || job.estimatedCost || '',
       advancePaid: job.advancePaid || '',
       technicianNotes: job.technicianNotes || '',
+      assignedTechnician: job.assignedTechnician || '',
       sendWhatsApp: true
     });
   };
@@ -1789,6 +1973,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         finalCost: costNum,
         advancePaid: advNum,
         technicianNotes: editRepairForm.technicianNotes.trim(),
+        assignedTechnician: (editRepairForm.assignedTechnician || '').trim(),
         sendWhatsAppUpdate: Boolean(editRepairForm.sendWhatsApp)
       });
       showNotification(`✅ Repair bill & parts updated! ${editRepairForm.sendWhatsApp ? 'WhatsApp notification sent to customer.' : ''}`);
@@ -1838,19 +2023,228 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   };
 
   const filteredRepairs = useMemo(() => {
-    if (!repairsSearch.trim()) return repairs;
-    const q = repairsSearch.trim().toLowerCase();
-    const digits = q.replace(/[^0-9]/g, '');
     return repairs.filter(job => {
-      const nameMatch = (job.customerName || '').toLowerCase().includes(q);
-      const phoneMatch = digits && (job.customerPhone || '').replace(/[^0-9]/g, '').includes(digits);
-      const modelMatch = (job.toolModel || '').toLowerCase().includes(q);
-      const brandMatch = (job.toolBrand || '').toLowerCase().includes(q);
-      const idMatch = (job.jobId || '').toLowerCase().includes(q);
-      const jobCardMatch = (job.jobCardNumber || '').toLowerCase().includes(q);
-      return nameMatch || phoneMatch || modelMatch || brandMatch || idMatch || jobCardMatch;
+      // 1. Date Filter (Presets: today, yesterday, week, month, or custom start/end date)
+      if (repairsDateFilter !== 'all') {
+        const rawDate = job.createdAt || job.loggedAt || job.updatedAt;
+        const jobDate = rawDate ? new Date(rawDate) : null;
+        if (jobDate && !isNaN(jobDate.getTime())) {
+          const now = new Date();
+          if (repairsDateFilter === 'today') {
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (jobDate < startOfToday) return false;
+          } else if (repairsDateFilter === 'yesterday') {
+            const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+            const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (jobDate < startOfYesterday || jobDate >= endOfYesterday) return false;
+          } else if (repairsDateFilter === 'week') {
+            const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            if (jobDate < sevenDaysAgo) return false;
+          } else if (repairsDateFilter === 'month') {
+            const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            if (jobDate < thirtyDaysAgo) return false;
+          } else if (repairsDateFilter === 'custom') {
+            if (repairsStartDate) {
+              const start = new Date(repairsStartDate);
+              start.setHours(0, 0, 0, 0);
+              if (jobDate < start) return false;
+            }
+            if (repairsEndDate) {
+              const end = new Date(repairsEndDate);
+              end.setHours(23, 59, 59, 999);
+              if (jobDate > end) return false;
+            }
+          }
+        }
+      }
+
+      // 2. Search Text / Keyword Filter
+      if (repairsSearch.trim()) {
+        const q = repairsSearch.trim().toLowerCase();
+        const digits = q.replace(/[^0-9]/g, '');
+        const nameMatch = (job.customerName || '').toLowerCase().includes(q);
+        const phoneMatch = digits && (job.customerPhone || '').replace(/[^0-9]/g, '').includes(digits);
+        const modelMatch = (job.toolModel || '').toLowerCase().includes(q);
+        const brandMatch = (job.toolBrand || '').toLowerCase().includes(q);
+        const idMatch = (job.jobId || '').toLowerCase().includes(q);
+        const jobCardMatch = (job.jobCardNumber || '').toLowerCase().includes(q);
+        if (!nameMatch && !phoneMatch && !modelMatch && !brandMatch && !idMatch && !jobCardMatch) {
+          return false;
+        }
+      }
+
+      return true;
     });
-  }, [repairs, repairsSearch]);
+  }, [repairs, repairsSearch, repairsDateFilter, repairsStartDate, repairsEndDate]);
+
+  // Workshop financial summary for the selected period / filters
+  const repairsFinancialSummary = useMemo(() => {
+    let totalEstOrBill = 0;
+    let totalAdvance = 0;
+    let openCount = 0;
+    let readyCount = 0;
+    let closedCount = 0;
+
+    filteredRepairs.forEach(job => {
+      totalEstOrBill += Number(job.finalCost || job.estimatedCost || 0);
+      totalAdvance += Number(job.advancePaid || 0);
+      if (job.status === 'Handed Over' || job.handoverVerified) {
+        closedCount++;
+      } else if (job.status === 'Ready for Pickup') {
+        readyCount++;
+      } else {
+        openCount++;
+      }
+    });
+
+    return {
+      totalEstOrBill,
+      totalAdvance,
+      balanceDue: Math.max(0, totalEstOrBill - totalAdvance),
+      openCount,
+      readyCount,
+      closedCount
+    };
+  }, [filteredRepairs]);
+
+  // Staff Directory Filtering
+  const filteredStaff = useMemo(() => {
+    return staffList.filter(member => {
+      if (staffRoleFilter !== 'all' && member.role !== staffRoleFilter) {
+        return false;
+      }
+      if (!staffSearch.trim()) return true;
+      const q = staffSearch.trim().toLowerCase();
+      const nameMatch = (member.name || '').toLowerCase().includes(q);
+      const emailMatch = (member.email || '').toLowerCase().includes(q);
+      const phoneMatch = (member.phone || '').includes(q);
+      const specMatch = (member.specialization || '').toLowerCase().includes(q);
+      return nameMatch || emailMatch || phoneMatch || specMatch;
+    });
+  }, [staffList, staffRoleFilter, staffSearch]);
+
+  const handleOpenAddStaff = () => {
+    setEditingStaffMember(null);
+    setStaffForm({
+      name: '',
+      phone: '',
+      role: 'technician',
+      email: '',
+      password: '',
+      specialization: '',
+      active: true
+    });
+    setIsAddStaffModalOpen(true);
+  };
+
+  const handleOpenEditStaff = (member) => {
+    setEditingStaffMember(member);
+    setStaffForm({
+      name: member.name || '',
+      phone: member.phone || '',
+      role: member.role || 'technician',
+      email: member.email || '',
+      password: '',
+      specialization: member.specialization || '',
+      active: member.active !== false
+    });
+    setIsAddStaffModalOpen(true);
+  };
+
+  const handleSaveStaff = async (e) => {
+    if (e) e.preventDefault();
+    if (!staffForm.name || !staffForm.name.trim()) {
+      showNotification('Please enter employee name.');
+      return;
+    }
+    if (staffForm.role !== 'technician') {
+      if (!staffForm.email || !staffForm.email.trim()) {
+        showNotification('Email is required for employee login portal.');
+        return;
+      }
+      if (!editingStaffMember && !staffForm.password) {
+        showNotification('Password is required for new login accounts.');
+        return;
+      }
+    }
+    setIsSubmittingStaff(true);
+    try {
+      const payload = {
+        name: staffForm.name.trim(),
+        phone: (staffForm.phone || '').trim(),
+        role: staffForm.role,
+        specialization: (staffForm.specialization || '').trim(),
+        active: Boolean(staffForm.active)
+      };
+      if (staffForm.role !== 'technician') {
+        payload.email = staffForm.email.trim().toLowerCase();
+        if (staffForm.password) {
+          payload.password = staffForm.password;
+        }
+      } else {
+        payload.email = '';
+        payload.password = '';
+      }
+
+      if (editingStaffMember) {
+        const targetId = editingStaffMember._id || editingStaffMember.id;
+        await api.updateStaff(targetId, payload);
+        showNotification(`✅ Employee "${payload.name}" updated successfully.`);
+      } else {
+        await api.createStaff(payload);
+        showNotification(`✅ New employee "${payload.name}" added successfully.`);
+      }
+      setIsAddStaffModalOpen(false);
+      setEditingStaffMember(null);
+      setStaffForm({
+        name: '',
+        phone: '',
+        role: 'technician',
+        email: '',
+        password: '',
+        specialization: '',
+        active: true
+      });
+      loadStaff();
+    } catch (err) {
+      showNotification(`Error: ${err.message}`);
+    } finally {
+      setIsSubmittingStaff(false);
+    }
+  };
+
+  const handleToggleStaffStatus = async (member) => {
+    const targetId = member._id || member.id;
+    const newActive = !member.active;
+    try {
+      await api.updateStaff(targetId, { active: newActive });
+      showNotification(`Employee "${member.name}" marked as ${newActive ? 'Active' : 'Inactive'}.`);
+      loadStaff();
+    } catch (err) {
+      showNotification(`Error: ${err.message}`);
+    }
+  };
+
+  const handleDeleteStaff = (member) => {
+    confirm({
+      title: `Delete Employee "${member.name}"?`,
+      description: `Are you sure you want to remove ${member.name} (${member.role === 'technician' ? 'Technician' : member.role === 'workshop_manager' ? 'Workshop Manager' : 'Store Manager'})? This cannot be undone.`,
+      confirmText: "Delete Employee",
+      cancelText: "Cancel",
+      variant: "danger",
+      iconType: "trash",
+      onConfirm: async () => {
+        try {
+          const targetId = member._id || member.id;
+          await api.deleteStaff(targetId);
+          showNotification(`Employee "${member.name}" deleted.`);
+          loadStaff();
+        } catch (err) {
+          showNotification(`Error: ${err.message}`);
+        }
+      }
+    });
+  };
 
   // Feature 6: Export Orders CSV
   const handleExportOrdersCSV = () => {
@@ -2095,7 +2489,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const now = new Date();
   const periodOrders = orders.filter(o => {
     if (analyticsPeriod === 'all') return true;
-    const orderDate = new Date(o.date || o.createdAt || now);
+    const rawDate = o.date || o.createdAt;
+    const orderDate = rawDate ? new Date(rawDate) : now;
     if (analyticsPeriod === 'today') {
       return orderDate.toDateString() === now.toDateString();
     }
@@ -2106,8 +2501,36 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     if (analyticsPeriod === 'month') {
       return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
     }
+    if (analyticsPeriod === 'custom') {
+      if (analyticsCustomStartDate) {
+        const start = new Date(analyticsCustomStartDate);
+        start.setHours(0, 0, 0, 0);
+        if (orderDate < start) return false;
+      }
+      if (analyticsCustomEndDate) {
+        const end = new Date(analyticsCustomEndDate);
+        end.setHours(23, 59, 59, 999);
+        if (orderDate > end) return false;
+      }
+      return true;
+    }
     return true;
   });
+
+  const analyticsPeriodLabel = useMemo(() => {
+    if (analyticsPeriod === 'today') return 'Today';
+    if (analyticsPeriod === 'week') return 'Past 7 Days';
+    if (analyticsPeriod === 'month') return 'This Month';
+    if (analyticsPeriod === 'custom') {
+      if (analyticsCustomStartDate && analyticsCustomEndDate) {
+        return `${analyticsCustomStartDate} to ${analyticsCustomEndDate}`;
+      }
+      if (analyticsCustomStartDate) return `From ${analyticsCustomStartDate}`;
+      if (analyticsCustomEndDate) return `Up to ${analyticsCustomEndDate}`;
+      return 'Custom Range';
+    }
+    return 'All Time';
+  }, [analyticsPeriod, analyticsCustomStartDate, analyticsCustomEndDate]);
 
   // Split into active and cancelled/refunded
   const activePeriodOrders = periodOrders.filter(o => !isCancelledOrder(o));
@@ -2281,70 +2704,87 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     );
   }
 
-  const sidebarNavItems = [
-    {
-      id: 'overview',
-      title: 'Overview',
-      icon: LayoutDashboard,
-      selected: activeTab === 'overview',
-      onClick: () => setActiveTab('overview')
-    },
-    {
-      id: 'orders',
-      title: `Customer Orders${orderCounts.all > 0 ? ` (${orderCounts.all})` : ''}`,
-      icon: ShoppingBag,
-      notifs: orderCounts.all > 0 ? orderCounts.all : undefined,
-      notifsColor: '#ea580c',
-      selected: activeTab === 'orders',
-      onClick: () => setActiveTab('orders')
-    },
-    {
-      id: 'cancellations',
-      title: 'Cancel Requests',
-      icon: Ban,
-      notifs: pendingCancellationRequests.length > 0 ? pendingCancellationRequests.length : undefined,
-      notifsColor: '#dc2626',
-      selected: activeTab === 'cancellations',
-      onClick: () => setActiveTab('cancellations')
-    },
-    {
-      id: 'customers',
-      title: `Customers (${customers.length})`,
-      icon: Users,
-      selected: activeTab === 'customers',
-      onClick: () => setActiveTab('customers')
-    },
-    {
-      id: 'inventory',
-      title: `Inventory (${products.length})`,
-      icon: Package,
-      notifs: lowStockCount > 0 ? `${lowStockCount} low` : undefined,
-      notifsColor: '#ea580c',
-      selected: activeTab === 'inventory',
-      onClick: () => setActiveTab('inventory')
-    },
-    {
-      id: 'coupons',
-      title: `Coupons (${coupons.length})`,
-      icon: Tag,
-      selected: activeTab === 'coupons',
-      onClick: () => setActiveTab('coupons')
-    },
-    {
-      id: 'repairs',
-      title: `Repairs (${repairs.length})`,
-      icon: Wrench,
-      selected: activeTab === 'repairs',
-      onClick: () => setActiveTab('repairs')
-    },
-    {
-      id: 'taxonomy',
-      title: 'Categories & Brands',
-      icon: Layers,
-      selected: activeTab === 'taxonomy',
-      onClick: () => setActiveTab('taxonomy')
-    }
-  ];
+  const sidebarNavItems = isWorkshopManager
+    ? [
+        {
+          id: 'repairs',
+          title: `Repairs (${repairs.length})`,
+          icon: Wrench,
+          selected: true,
+          onClick: () => setActiveTab('repairs')
+        }
+      ]
+    : [
+        {
+          id: 'overview',
+          title: 'Overview',
+          icon: LayoutDashboard,
+          selected: activeTab === 'overview',
+          onClick: () => setActiveTab('overview')
+        },
+        {
+          id: 'orders',
+          title: `Customer Orders${orderCounts.all > 0 ? ` (${orderCounts.all})` : ''}`,
+          icon: ShoppingBag,
+          notifs: orderCounts.all > 0 ? orderCounts.all : undefined,
+          notifsColor: '#ea580c',
+          selected: activeTab === 'orders',
+          onClick: () => setActiveTab('orders')
+        },
+        {
+          id: 'cancellations',
+          title: 'Cancel Requests',
+          icon: Ban,
+          notifs: pendingCancellationRequests.length > 0 ? pendingCancellationRequests.length : undefined,
+          notifsColor: '#dc2626',
+          selected: activeTab === 'cancellations',
+          onClick: () => setActiveTab('cancellations')
+        },
+        {
+          id: 'customers',
+          title: `Customers (${customers.length})`,
+          icon: Users,
+          selected: activeTab === 'customers',
+          onClick: () => setActiveTab('customers')
+        },
+        {
+          id: 'inventory',
+          title: `Inventory (${products.length})`,
+          icon: Package,
+          notifs: lowStockCount > 0 ? `${lowStockCount} low` : undefined,
+          notifsColor: '#ea580c',
+          selected: activeTab === 'inventory',
+          onClick: () => setActiveTab('inventory')
+        },
+        {
+          id: 'coupons',
+          title: `Coupons (${coupons.length})`,
+          icon: Tag,
+          selected: activeTab === 'coupons',
+          onClick: () => setActiveTab('coupons')
+        },
+        {
+          id: 'repairs',
+          title: `Repairs (${repairs.length})`,
+          icon: Wrench,
+          selected: activeTab === 'repairs',
+          onClick: () => setActiveTab('repairs')
+        },
+        {
+          id: 'taxonomy',
+          title: 'Categories & Brands',
+          icon: Layers,
+          selected: activeTab === 'taxonomy',
+          onClick: () => setActiveTab('taxonomy')
+        },
+        {
+          id: 'staff',
+          title: `Staff Management${staffList.length > 0 ? ` (${staffList.length})` : ''}`,
+          icon: UserCheck,
+          selected: activeTab === 'staff',
+          onClick: () => setActiveTab('staff')
+        }
+      ];
 
   const sidebarBottomNavItems = [
     {
@@ -2368,7 +2808,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         open={mobileSidebarOpen}
         setOpen={setMobileSidebarOpen}
         title="Variathu Store"
-        subtitle="Store Owner Portal"
+        subtitle={isWorkshopManager ? "Workshop Manager" : isStaffManager ? "Store Manager" : "Store Owner Portal"}
         items={sidebarNavItems}
         bottomItems={sidebarBottomNavItems}
         onTitleClick={() => navigate('/')}
@@ -2668,7 +3108,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 { value: 'today', label: 'Today' },
                 { value: 'week', label: 'This Week' },
                 { value: 'month', label: 'This Month' },
-                { value: 'all', label: 'All Time' }
+                { value: 'all', label: 'All Time' },
+                { value: 'custom', label: 'Custom' }
               ]}
               value={analyticsPeriod}
               onChange={(val) => setAnalyticsPeriod(val)}
@@ -2731,6 +3172,82 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
         </div>
 
+        {/* Custom Date Range Picker when Custom Period is selected */}
+        {analyticsPeriod === 'custom' && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '10px 14px',
+            background: '#f8fafc',
+            border: '1.5px solid #cbd5e1',
+            borderRadius: '10px',
+            marginTop: '12px',
+            flexWrap: 'wrap'
+          }}>
+            <Calendar size={16} style={{ color: '#ea580c' }} />
+            <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#0f172a' }}>Filter Financials by Date:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '600' }}>From:</label>
+              <input
+                type="date"
+                value={analyticsCustomStartDate}
+                onChange={(e) => setAnalyticsCustomStartDate(e.target.value)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.82rem',
+                  background: '#ffffff',
+                  color: '#0f172a'
+                }}
+                id="input-analytics-start-date"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '600' }}>To:</label>
+              <input
+                type="date"
+                value={analyticsCustomEndDate}
+                onChange={(e) => setAnalyticsCustomEndDate(e.target.value)}
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.82rem',
+                  background: '#ffffff',
+                  color: '#0f172a'
+                }}
+                id="input-analytics-end-date"
+              />
+            </div>
+            {(analyticsCustomStartDate || analyticsCustomEndDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAnalyticsCustomStartDate('');
+                  setAnalyticsCustomEndDate('');
+                }}
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  padding: '5px 12px',
+                  fontSize: '0.76rem',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  fontWeight: '700'
+                }}
+              >
+                Clear Dates
+              </button>
+            )}
+            <span style={{ fontSize: '0.76rem', color: '#0284c7', fontWeight: '600', marginLeft: 'auto' }}>
+              Showing {activePeriodOrders.length} active order{activePeriodOrders.length === 1 ? '' : 's'} ({formatPrice(periodRevenue)})
+            </span>
+          </div>
+        )}
+
         {analyticsCollapsed ? (
           <div style={{
             display: 'flex',
@@ -2747,7 +3264,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             border: '1px solid #e2e8f0'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <span>💰 Revenue: <strong style={{ color: '#0f172a' }}>{formatPrice(periodRevenue)}</strong> <small style={{ color: '#64748b' }}>({analyticsPeriod === 'all' ? 'All Time' : analyticsPeriod === 'today' ? 'Today' : analyticsPeriod === 'week' ? 'Past 7 Days' : 'This Month'})</small></span>
+              <span>💰 Revenue: <strong style={{ color: '#0f172a' }}>{formatPrice(periodRevenue)}</strong> <small style={{ color: '#64748b' }}>({analyticsPeriodLabel})</small></span>
               <span>📦 Active Pending: <strong style={{ color: orderCounts.all > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.all}</strong></span>
               <span>🚚 Undispatched: <strong style={{ color: orderCounts.undispatched > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.undispatched}</strong></span>
               <span>🏬 Pickup Pending: <strong style={{ color: '#0f172a' }}>{orderCounts.pickupPending}</strong></span>
@@ -2762,7 +3279,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           <div className="store-analytics-grid">
             <div className="store-analytics-metric-card">
               <span className="store-metric-label">
-                Revenue ({analyticsPeriod === 'all' ? 'All Time' : analyticsPeriod === 'today' ? 'Today' : analyticsPeriod === 'week' ? 'Past 7 Days' : 'This Month'})
+                Revenue ({analyticsPeriodLabel})
               </span>
               <div className="store-metric-value-huge">
                 {formatPrice(periodRevenue)}
@@ -2974,6 +3491,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 actionColor="#ca8a04"
                 onClick={() => setActiveTab('taxonomy')}
               />
+
+              {/* Hub Card 8: Staff Management */}
+              <HoverDevCard
+                id="hub-card-staff"
+                title="Staff Management"
+                subtitle="Manage store employees, workshop technicians & managers"
+                Icon={UserCheck}
+                badge={`${staffList.length} Staff (${technicians.length} Technicians)`}
+                badgeBg="#e0e7ff"
+                badgeColor="#3730a3"
+                iconColor="#4f46e5"
+                iconBg="#eef2ff"
+                gradient="linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)"
+                actionText="Manage Staff"
+                actionColor="#4f46e5"
+                onClick={() => setActiveTab('staff')}
+              />
             </div>
           </div>
 
@@ -3152,6 +3686,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                    activeTab === 'inventory' ? 'Inventory & Stock' :
                    activeTab === 'coupons' ? 'Coupons & Discounts' :
                    activeTab === 'repairs' ? 'Workshop & Repairs' :
+                   activeTab === 'staff' ? 'Staff Management' :
                    'Categories & Brands'}
                 </span>
               </div>
@@ -5980,6 +6515,145 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             )}
           </div>
 
+          {/* Workshop Date Range Filter Bar (Feature 5) */}
+          <div style={{
+            marginBottom: '18px',
+            padding: '12px 16px',
+            background: '#f8fafc',
+            border: '1.5px solid #e2e8f0',
+            borderRadius: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
+                  <Calendar size={15} style={{ color: '#ea580c' }} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#1e293b' }}>Period Filter:</span>
+                </div>
+                {[
+                  { id: 'all', label: 'All Time' },
+                  { id: 'today', label: 'Today' },
+                  { id: 'yesterday', label: 'Yesterday' },
+                  { id: 'week', label: 'Past 7 Days' },
+                  { id: 'month', label: 'This Month' },
+                  { id: 'custom', label: 'Custom Range' }
+                ].map(p => {
+                  const isActive = repairsDateFilter === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setRepairsDateFilter(p.id)}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '20px',
+                        border: isActive ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                        background: isActive ? '#fff7ed' : '#ffffff',
+                        color: isActive ? '#ea580c' : '#475569',
+                        fontSize: '0.78rem',
+                        fontWeight: isActive ? '800' : '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      id={`btn-repair-period-${p.id}`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Live Count & Financial Summary */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+                <span style={{ color: '#0f172a', fontWeight: '700' }}>
+                  📋 <strong>{filteredRepairs.length}</strong> {filteredRepairs.length === 1 ? 'ticket' : 'tickets'}
+                </span>
+                <span style={{ color: '#16a34a', fontWeight: '700' }}>
+                  💰 Est/Bill: <strong>₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')}</strong>
+                </span>
+                <span style={{ color: '#0284c7', fontWeight: '700' }}>
+                  💵 Advance: <strong>₹{repairsFinancialSummary.totalAdvance.toLocaleString('en-IN')}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Custom Date Pickers when 'Custom Range' is active */}
+            {repairsDateFilter === 'custom' && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                paddingTop: '8px',
+                borderTop: '1px dashed #cbd5e1',
+                flexWrap: 'wrap'
+              }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#475569' }}>
+                  Select Dates:
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '600' }}>From:</label>
+                  <input
+                    type="date"
+                    value={repairsStartDate}
+                    onChange={(e) => setRepairsStartDate(e.target.value)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.8rem',
+                      background: '#ffffff',
+                      color: '#0f172a'
+                    }}
+                    id="input-repairs-start-date"
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <label style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '600' }}>To:</label>
+                  <input
+                    type="date"
+                    value={repairsEndDate}
+                    onChange={(e) => setRepairsEndDate(e.target.value)}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.8rem',
+                      background: '#ffffff',
+                      color: '#0f172a'
+                    }}
+                    id="input-repairs-end-date"
+                  />
+                </div>
+                {(repairsStartDate || repairsEndDate) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRepairsStartDate('');
+                      setRepairsEndDate('');
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '0.74rem',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      fontWeight: '700'
+                    }}
+                  >
+                    Clear Custom Dates
+                  </button>
+                )}
+                <span style={{ fontSize: '0.74rem', color: '#64748b', marginLeft: 'auto' }}>
+                  Showing repairs logged between {repairsStartDate || 'earliest'} and {repairsEndDate || 'latest'}
+                </span>
+              </div>
+            )}
+          </div>
+
           {loadingRepairs ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Loading workshop jobs...</div>
           ) : repairs.length === 0 ? (
@@ -6192,6 +6866,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                       <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '6px' }}>
                         Customer: <strong>{job.customerName}</strong> ({job.customerPhone}) • Logged: {new Date(job.createdAt).toLocaleDateString()}
+                      </div>
+
+                      <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {job.assignedTechnician ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '6px', fontSize: '0.76rem', fontWeight: '700' }} title="Assigned Workshop Floor Technician (Store Internal Data)">
+                            <span>🧑‍🔧 Floor Technician:</span>
+                            <strong>{job.assignedTechnician}</strong>
+                            <span style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: '500' }}>(Internal)</span>
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#64748b', padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '600' }} title="No floor technician assigned yet">
+                            <span>🧑‍🔧 Technician: Unassigned</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -7847,6 +8535,454 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         </div>
       )}
 
+      {/* TAB 8: STAFF MANAGEMENT */}
+      {activeTab === 'staff' && (
+        <div className="store-tab-content-card">
+          <div className="store-section-header" id="staff-section-header">
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <UserCheck size={22} style={{ color: '#ea580c' }} />
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                  Staff &amp; Employee Directory ({filteredStaff.length})
+                </h2>
+              </div>
+              <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '4px 0 0' }}>
+                Configure store staff, workshop floor mechanics, and workshop managers. Set login privileges and track internal workshop assignments.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={loadStaff}
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                title="Refresh staff list"
+              >
+                <RefreshCw size={14} className={loadingStaff ? 'animate-spin' : ''} />
+                <span>Refresh</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenAddStaff}
+                className="btn-hero-clean"
+                style={{ padding: '8px 16px', fontSize: '0.84rem' }}
+                id="btn-add-staff"
+              >
+                <Plus size={16} />
+                <span>Add Employee</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Key Metric Tiles */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Users size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Total Staff</span>
+                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0f172a' }}>{staffList.length}</div>
+              </div>
+            </div>
+
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Wrench size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Floor Technicians</span>
+                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#16a34a' }}>
+                  {staffList.filter(s => s.role === 'technician').length}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#fff7ed', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Workshop Managers</span>
+                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#ea580c' }}>
+                  {staffList.filter(s => s.role === 'workshop_manager').length}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#faf5ff', color: '#9333ea', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Briefcase size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Store Managers</span>
+                <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#9333ea' }}>
+                  {staffList.filter(s => s.role === 'manager').length}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Role Architectural Overview Guide */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '1.1rem' }}>🧑‍🔧</span>
+                <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>Technician (Workshop Floor)</strong>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#475569', lineHeight: 1.45 }}>
+                • <strong>No email or password needed</strong>.<br />
+                • Populates the dropdown in workshop inward tickets to track who worked on which tool.<br />
+                • <strong>Store internal data only:</strong> Name is never sent to customer WhatsApp messages.
+              </div>
+            </div>
+
+            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '1.1rem' }}>🔧</span>
+                <strong style={{ fontSize: '0.88rem', color: '#9a3412' }}>Workshop Manager</strong>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#9a3412', lineHeight: 1.45 }}>
+                • <strong>Logs in with Email &amp; Password</strong>.<br />
+                • <strong>Repairs page ONLY:</strong> Strictly restricted to workshop tickets, updating repair status, and customer collection OTP verification.
+              </div>
+            </div>
+
+            <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '10px', padding: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '1.1rem' }}>💼</span>
+                <strong style={{ fontSize: '0.88rem', color: '#6b21a8' }}>Store Manager</strong>
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#6b21a8', lineHeight: 1.45 }}>
+                • <strong>Logs in with Email &amp; Password</strong>.<br />
+                • <strong>Full Dashboard Access:</strong> Same administrative privileges as store owner across orders, stock inventory, customers, coupons, and repairs.
+              </div>
+            </div>
+          </div>
+
+          {/* Search Bar & Role Filter Tabs */}
+          <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+              <input
+                type="text"
+                placeholder="Search staff by name, phone, email, or specialization..."
+                value={staffSearch}
+                onChange={(e) => setStaffSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 38px 10px 36px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.86rem',
+                  background: '#ffffff',
+                  color: '#0f172a'
+                }}
+                id="input-search-staff"
+              />
+              {staffSearch && (
+                <button
+                  type="button"
+                  onClick={() => setStaffSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '22px',
+                    height: '22px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#64748b'
+                  }}
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Role Filter Segmented Pills */}
+            <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '10px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'all', label: `All (${staffList.length})` },
+                { id: 'technician', label: `Technicians (${staffList.filter(s => s.role === 'technician').length})` },
+                { id: 'workshop_manager', label: `Workshop (${staffList.filter(s => s.role === 'workshop_manager').length})` },
+                { id: 'manager', label: `Managers (${staffList.filter(s => s.role === 'manager').length})` }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setStaffRoleFilter(f.id)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '0.78rem',
+                    fontWeight: staffRoleFilter === f.id ? '800' : '600',
+                    background: staffRoleFilter === f.id ? '#ffffff' : 'transparent',
+                    color: staffRoleFilter === f.id ? '#0f172a' : '#64748b',
+                    boxShadow: staffRoleFilter === f.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Staff List Grid */}
+          {loadingStaff ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  border: '3px solid #e2e8f0',
+                  borderTopColor: '#ea580c',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                  margin: '0 auto 12px'
+                }}
+              />
+              <span style={{ fontSize: '0.86rem', fontWeight: '600' }}>Loading staff directory...</span>
+            </div>
+          ) : filteredStaff.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '50px 20px', background: '#f8fafc', borderRadius: '12px', border: '1.5px dashed #cbd5e1' }}>
+              <Users size={40} style={{ color: '#94a3b8', margin: '0 auto 10px' }} />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: '0 0 6px' }}>
+                No staff members found
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 auto 16px', maxWidth: '420px' }}>
+                {staffSearch || staffRoleFilter !== 'all'
+                  ? 'No employees match your search filter criteria. Try searching with a different keyword or filter.'
+                  : 'Get started by adding your workshop technicians, workshop managers, and store managers.'}
+              </p>
+              <button
+                type="button"
+                onClick={handleOpenAddStaff}
+                className="btn-hero-clean"
+                style={{ padding: '8px 18px', fontSize: '0.84rem' }}
+              >
+                <Plus size={16} />
+                <span>Add Employee</span>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+              {filteredStaff.map((member) => {
+                const isTech = member.role === 'technician';
+                const isWM = member.role === 'workshop_manager';
+                const isSM = member.role === 'manager';
+
+                const roleBadgeBg = isTech ? '#eff6ff' : isWM ? '#fff7ed' : '#faf5ff';
+                const roleBadgeBorder = isTech ? '#bfdbfe' : isWM ? '#fed7aa' : '#e9d5ff';
+                const roleBadgeColor = isTech ? '#1d4ed8' : isWM ? '#c2410c' : '#7e22ce';
+                const roleLabel = isTech ? '🛠️ Technician' : isWM ? '🔧 Workshop Manager' : '💼 Store Manager';
+                const avatarBg = isTech ? '#dbeafe' : isWM ? '#ffedd5' : '#ede9fe';
+                const avatarColor = isTech ? '#1e40af' : isWM ? '#9a3412' : '#6b21a8';
+
+                return (
+                  <div
+                    key={member._id || member.id}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      padding: '18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                      transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                    }}
+                    id={`staff-card-${member._id || member.id}`}
+                  >
+                    <div>
+                      {/* Top Header: Avatar + Name + Status */}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div
+                            style={{
+                              width: '44px',
+                              height: '44px',
+                              borderRadius: '50%',
+                              background: avatarBg,
+                              color: avatarColor,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: '900',
+                              fontSize: '1.1rem',
+                              flexShrink: 0
+                            }}
+                          >
+                            {(member.name || 'S').charAt(0).toUpperCase()}
+                          </div>
+
+                          <div>
+                            <h4 style={{ margin: '0 0 2px', fontSize: '0.96rem', fontWeight: '800', color: '#0f172a' }}>
+                              {member.name}
+                            </h4>
+                            {member.specialization ? (
+                              <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block' }}>
+                                {member.specialization}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                General Staff
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Active / Inactive Status Badge */}
+                        <span
+                          style={{
+                            fontSize: '0.7rem',
+                            fontWeight: '800',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            background: member.active !== false ? '#dcfce7' : '#f1f5f9',
+                            color: member.active !== false ? '#15803d' : '#64748b',
+                            border: `1px solid ${member.active !== false ? '#86efac' : '#cbd5e1'}`
+                          }}
+                        >
+                          {member.active !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+
+                      {/* Role Pill */}
+                      <div style={{ marginBottom: '12px' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '0.74rem',
+                            fontWeight: '800',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            background: roleBadgeBg,
+                            border: `1px solid ${roleBadgeBorder}`,
+                            color: roleBadgeColor
+                          }}
+                        >
+                          {roleLabel}
+                        </span>
+                      </div>
+
+                      {/* Contact & Access Specs */}
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155' }}>
+                          <Phone size={13} style={{ color: '#64748b', flexShrink: 0 }} />
+                          <span>Phone: <strong>{member.phone || 'Not recorded'}</strong></span>
+                        </div>
+
+                        {isTech ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#0369a1' }}>
+                            <Shield size={13} style={{ color: '#0284c7', flexShrink: 0 }} />
+                            <span>No login required &bull; Dropdown assignment only</span>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155' }}>
+                            <Mail size={13} style={{ color: '#64748b', flexShrink: 0 }} />
+                            <span>Login: <strong style={{ color: '#0f172a' }}>{member.email || 'No email set'}</strong></span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStaffStatus(member)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          fontSize: '0.76rem',
+                          fontWeight: '700',
+                          color: member.active !== false ? '#64748b' : '#16a34a',
+                          cursor: 'pointer',
+                          padding: '4px 6px'
+                        }}
+                      >
+                        {member.active !== false ? 'Deactivate' : 'Activate'}
+                      </button>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditStaff(member)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            color: '#1d4ed8',
+                            padding: '5px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.76rem',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                          id={`btn-edit-staff-${member._id || member.id}`}
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteStaff(member)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            color: '#dc2626',
+                            padding: '5px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.76rem',
+                            cursor: 'pointer'
+                          }}
+                          title="Delete staff member"
+                          id={`btn-delete-staff-${member._id || member.id}`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* MODAL: CUSTOMER PROFILE & PURCHASE HISTORY */}
       {selectedCustomerForModal && (
         <div
@@ -9001,49 +10137,178 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
             <form onSubmit={handleSaveRepairJob} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                    Customer Name *
-                  </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155' }}>
+                      Customer Name *
+                    </label>
+                    {repairForm.customerName.trim().length > 1 && (
+                      (customers || []).some(c => (c.name || '').toLowerCase() === repairForm.customerName.trim().toLowerCase()) ? (
+                        <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: '700', background: '#f0fdf4', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                          ✓ CRM Verified
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.7rem', color: '#ea580c', fontWeight: '700', background: '#fff7ed', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fed7aa' }}>
+                          ✨ New • Saves to CRM
+                        </span>
+                      )
+                    )}
+                  </div>
                   <input
                     type="text"
                     required
-                    placeholder="Customer full name"
+                    autoComplete="off"
+                    placeholder="Type name to search CRM or enter new..."
                     value={repairForm.customerName}
-                    onChange={(e) => setRepairForm({ ...repairForm, customerName: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
+                    onChange={(e) => handleCustomerNameChange(e.target.value)}
+                    onFocus={() => {
+                      if (repairForm.customerName.trim().length > 0) {
+                        handleCustomerNameChange(repairForm.customerName);
+                      }
+                    }}
+                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
                     id="input-repair-customer"
                   />
+
+                  {/* CRM Autocomplete Suggestions Dropdown */}
+                  {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        zIndex: 60,
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.18)',
+                        marginTop: '4px',
+                        maxHeight: '220px',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      <div style={{ padding: '6px 10px', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>CRM Contacts ({customerSuggestions.length})</span>
+                        <span style={{ color: '#0284c7' }}>Click to auto-fill</span>
+                      </div>
+                      {customerSuggestions.map((cust, idx) => (
+                        <div
+                          key={cust.id || cust._id || idx}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectCustomerSuggestion(cust);
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderBottom: idx < customerSuggestions.length - 1 ? '1px solid #f1f5f9' : 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#fff7ed'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                        >
+                          <div>
+                            <strong style={{ fontSize: '0.84rem', color: '#0f172a', display: 'block' }}>
+                              {cust.name}
+                            </strong>
+                            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                              📞 {cust.phone || 'No phone recorded'} {cust.city ? `• ${cust.city}` : ''}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.68rem', padding: '2px 6px', background: '#f1f5f9', borderRadius: '4px', color: '#475569', fontWeight: '600' }}>
+                            {cust.totalOrders ? `${cust.totalOrders} orders` : 'CRM Contact'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div>
+                <div style={{ position: 'relative' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
                     Customer Phone (WhatsApp) *
                   </label>
                   <input
                     type="text"
                     required
+                    autoComplete="off"
                     placeholder="e.g. +91 94471 88990"
                     value={repairForm.customerPhone}
-                    onChange={(e) => setRepairForm({ ...repairForm, customerPhone: e.target.value })}
+                    onChange={(e) => handleCustomerPhoneChange(e.target.value)}
                     style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
                     id="input-repair-phone"
                   />
+
+                  {/* Phone Autocomplete Dropdown */}
+                  {showPhoneSuggestions && customerPhoneSuggestions.length > 0 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        zIndex: 60,
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: '8px',
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.18)',
+                        marginTop: '4px',
+                        maxHeight: '180px',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      <div style={{ padding: '6px 10px', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        Matching Phone in CRM ({customerPhoneSuggestions.length})
+                      </div>
+                      {customerPhoneSuggestions.map((cust, idx) => (
+                        <div
+                          key={cust.id || cust._id || idx}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectCustomerSuggestion(cust);
+                          }}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderBottom: idx < customerPhoneSuggestions.length - 1 ? '1px solid #f1f5f9' : 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#fff7ed'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+                        >
+                          <div>
+                            <strong style={{ fontSize: '0.82rem', color: '#0f172a', display: 'block' }}>
+                              📞 {cust.phone}
+                            </strong>
+                            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                              👤 {cust.name}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '0.68rem', color: '#ea580c', fontWeight: '700' }}>Select</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
-                    Tool Brand
+                    Tool Brand ({allAvailableBrands.length} Store Brands)
                   </label>
                   <GlideSelect
                     id="select-repair-tool-brand"
                     options={[
-                      ...(taxonomy.brands || []).map(b => ({ value: b, label: b })),
-                      { value: 'Other', label: 'Other Brand' }
+                      ...allAvailableBrands.map(b => ({ value: b, label: b })),
+                      { value: 'Other', label: 'Other Brand (Specify)' }
                     ]}
-                    value={repairForm.toolBrand || 'Bosch'}
+                    value={repairForm.toolBrand || allAvailableBrands[0] || 'Other'}
                     onChange={(val) => setRepairForm({ ...repairForm, toolBrand: val })}
                     ariaLabel="Select tool brand for repair"
                     placeholder="Select Brand…"
@@ -9084,12 +10349,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   <input
                     type="text"
                     required
+                    list="repair-model-datalist"
                     placeholder="e.g. Bosch GDC 120 Marble Cutter"
                     value={repairForm.toolModel}
                     onChange={(e) => setRepairForm({ ...repairForm, toolModel: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
                     id="input-repair-model"
                   />
+                  <datalist id="repair-model-datalist">
+                    {availableModelsForBrand.map((m, idx) => (
+                      <option key={idx} value={m} />
+                    ))}
+                  </datalist>
+                  {availableModelsForBrand.length > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: '#64748b', display: 'block', marginTop: '3px' }}>
+                      💡 {availableModelsForBrand.length} catalog models suggested for {repairForm.toolBrand || 'selected brand'}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -9164,6 +10440,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                  Assigned Floor Technician (Store Internal Floor Data)
+                </label>
+                <select
+                  value={repairForm.assignedTechnician || ''}
+                  onChange={(e) => setRepairForm({ ...repairForm, assignedTechnician: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', background: '#fff' }}
+                  id="select-repair-technician"
+                >
+                  <option value="">-- Select Technician (Unassigned) --</option>
+                  {technicians.map(t => (
+                    <option key={t._id || t.id || t.name} value={t.name}>
+                      {t.name} {t.specialization ? `(${t.specialization})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  🔒 Internal record only. This technician name will NOT be sent in WhatsApp messages to the customer.
+                </span>
               </div>
 
               <div>
@@ -9315,6 +10613,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <strong style={{ fontSize: '0.95rem', color: '#ea580c', fontFamily: 'var(--font-mono)' }}>
                   ₹{Math.max(0, (Number(editRepairForm.estimatedCost) || 0) - (Number(editRepairForm.advancePaid) || 0)).toLocaleString('en-IN')}
                 </strong>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                  Assigned Floor Technician (Store Internal Floor Data)
+                </label>
+                <select
+                  value={editRepairForm.assignedTechnician || ''}
+                  onChange={(e) => setEditRepairForm({ ...editRepairForm, assignedTechnician: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', background: '#fff' }}
+                  id="select-edit-repair-technician"
+                >
+                  <option value="">-- Select Technician (Unassigned) --</option>
+                  {technicians.map(t => (
+                    <option key={t._id || t.id || t.name} value={t.name}>
+                      {t.name} {t.specialization ? `(${t.specialization})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                  🔒 Internal record only. This technician name will NOT be sent in WhatsApp messages to the customer.
+                </span>
               </div>
 
               <div>
@@ -10233,6 +11553,328 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ADD / EDIT STAFF MEMBER */}
+      {isAddStaffModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.72)',
+            backdropFilter: 'blur(5px)',
+            WebkitBackdropFilter: 'blur(5px)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            overflowY: 'auto'
+          }}
+          onClick={() => {
+            if (!isSubmittingStaff) {
+              setIsAddStaffModalOpen(false);
+              setEditingStaffMember(null);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '560px',
+              width: '100%',
+              maxHeight: 'min(92vh, 760px)',
+              boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.4)',
+              border: '1px solid #cbd5e1',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '16px 22px',
+                borderBottom: '1px solid #e2e8f0',
+                background: '#ffffff',
+                flexShrink: 0
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: '#fff7ed',
+                    color: '#ea580c',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}
+                >
+                  {editingStaffMember ? <Edit3 size={18} /> : <UserPlus size={18} />}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                    {editingStaffMember ? 'Edit Staff Member' : 'Add New Employee'}
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                    {editingStaffMember ? `Updating record for ${editingStaffMember.name}` : 'Register technicians, workshop managers, or store managers'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isSubmittingStaff) {
+                    setIsAddStaffModalOpen(false);
+                    setEditingStaffMember(null);
+                  }
+                }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}
+                title="Close modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form
+              onSubmit={handleSaveStaff}
+              style={{
+                padding: '20px 22px',
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+              }}
+              id="form-add-staff"
+            >
+              {/* Role Selection */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '800', color: '#334155', marginBottom: '8px' }}>
+                  Select Employee Role *
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                  {[
+                    {
+                      id: 'technician',
+                      icon: '🛠️',
+                      label: 'Technician',
+                      sub: 'Workshop Floor • No login'
+                    },
+                    {
+                      id: 'workshop_manager',
+                      icon: '🔧',
+                      label: 'Workshop Mgr',
+                      sub: 'Repairs Page Only • Login'
+                    },
+                    {
+                      id: 'manager',
+                      icon: '💼',
+                      label: 'Store Manager',
+                      sub: 'All Dashboard • Login'
+                    }
+                  ].map(r => {
+                    const isSelected = staffForm.role === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setStaffForm(prev => ({ ...prev, role: r.id }))}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          border: `2px solid ${isSelected ? '#ea580c' : '#e2e8f0'}`,
+                          background: isSelected ? '#fff7ed' : '#ffffff',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{r.icon}</span>
+                        <strong style={{ fontSize: '0.84rem', color: isSelected ? '#9a3412' : '#0f172a' }}>
+                          {r.label}
+                        </strong>
+                        <span style={{ fontSize: '0.68rem', color: isSelected ? '#c2410c' : '#64748b', marginTop: '2px' }}>
+                          {r.sub}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Employee Full Name */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                  Full Employee Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Biju Varghese / Thomas K."
+                  value={staffForm.name}
+                  onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.86rem' }}
+                  id="input-staff-name"
+                />
+              </div>
+
+              {/* Phone Number & Specialization */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9847012345"
+                    value={staffForm.phone}
+                    onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
+                    id="input-staff-phone"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>
+                    Specialization / Department
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Armature & Commutator"
+                    value={staffForm.specialization}
+                    onChange={(e) => setStaffForm({ ...staffForm, specialization: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem' }}
+                    id="input-staff-specialization"
+                  />
+                </div>
+              </div>
+
+              {/* Conditional Section: Login Credentials vs. Technician Information */}
+              {staffForm.role === 'technician' ? (
+                <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '10px', padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <Shield size={16} style={{ color: '#0284c7' }} />
+                    <strong style={{ fontSize: '0.82rem', color: '#0369a1' }}>
+                      No Email or Password Needed for Technicians
+                    </strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.76rem', color: '#475569', lineHeight: 1.45 }}>
+                    Technicians are workshop mechanics. This employee will automatically appear in the <strong>"Assigned Floor Technician"</strong> dropdown when logging inward tool repairs.
+                  </p>
+                  <div style={{ marginTop: '6px', fontSize: '0.74rem', color: '#0284c7', fontWeight: '600' }}>
+                    🔒 Customer Privacy Guard: The technician's name will strictly remain in store records and will NEVER be included in WhatsApp messages sent to customers.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: '#faf5ff', border: '1.5px solid #e9d5ff', borderRadius: '10px', padding: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <Key size={16} style={{ color: '#9333ea' }} />
+                    <strong style={{ fontSize: '0.84rem', color: '#6b21a8' }}>
+                      Login Credentials ({staffForm.role === 'workshop_manager' ? 'Workshop Manager' : 'Store Manager'})
+                    </strong>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                        Login Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="e.g. workshop@variathu.com"
+                        value={staffForm.email}
+                        onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                        style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', background: '#ffffff' }}
+                        id="input-staff-email"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                        {editingStaffMember ? 'New Password (leave blank to keep current)' : 'Account Password *'}
+                      </label>
+                      <input
+                        type="password"
+                        required={!editingStaffMember}
+                        placeholder={editingStaffMember ? 'Leave blank to keep existing password' : 'Create strong password for employee'}
+                        value={staffForm.password}
+                        onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                        style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '0.84rem', background: '#ffffff' }}
+                        id="input-staff-password"
+                      />
+                    </div>
+
+                    <div style={{ fontSize: '0.72rem', color: '#7e22ce' }}>
+                      {staffForm.role === 'workshop_manager'
+                        ? 'ℹ️ When this Workshop Manager signs in, they will ONLY have access to the Workshop Repairs page.'
+                        : 'ℹ️ When this Store Manager signs in, they will have full administrative dashboard access.'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Active Switch */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: '700', color: '#334155' }}>
+                <input
+                  type="checkbox"
+                  checked={staffForm.active}
+                  onChange={(e) => setStaffForm({ ...staffForm, active: e.target.checked })}
+                  style={{ width: '16px', height: '16px', accentColor: '#ea580c', cursor: 'pointer' }}
+                />
+                <span>Active Employee (available for workshop assignment &amp; portal access)</span>
+              </label>
+
+              {/* Footer Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                <button
+                  type="button"
+                  disabled={isSubmittingStaff}
+                  onClick={() => {
+                    setIsAddStaffModalOpen(false);
+                    setEditingStaffMember(null);
+                  }}
+                  style={{
+                    padding: '9px 16px',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.84rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    color: '#475569'
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingStaff}
+                  className="btn-hero-clean"
+                  style={{ padding: '9px 22px', fontSize: '0.84rem' }}
+                  id="btn-save-staff"
+                >
+                  {isSubmittingStaff ? 'Saving...' : editingStaffMember ? 'Update Employee' : 'Register Employee'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

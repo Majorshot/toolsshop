@@ -22,6 +22,7 @@ const shippingRoutes = require('./routes/shippingRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const repairRoutes = require('./routes/repairRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const staffRoutes = require('./routes/staffRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const emailService = require('./services/emailService');
 const { startKeepAliveService, getKeepAliveStatus } = require('./utils/keepAlive');
@@ -170,6 +171,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/repairs', repairRoutes);
+app.use('/api/staff', staffRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // Meta WhatsApp Cloud API Webhook verification & handler

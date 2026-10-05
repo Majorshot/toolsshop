@@ -253,6 +253,7 @@ const repairSchema = new mongoose.Schema({
     enum: ['Received', 'Diagnosing', 'Waiting for Spares', 'Repaired & Ready', 'Handed Over'],
     default: 'Received'
   },
+  assignedTechnician: { type: String, default: '' },
   technicianNotes: String,
   handoverOtp: { type: String, default: () => String(crypto.randomInt(1000, 10000)) },
   handoverVerified: { type: Boolean, default: false },
@@ -263,12 +264,32 @@ const repairSchema = new mongoose.Schema({
 repairSchema.index({ customerPhone: 1 });
 repairSchema.index({ status: 1, createdAt: -1 });
 
+const staffSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  phone: { type: String, default: '', trim: true },
+  role: { 
+    type: String, 
+    required: true, 
+    enum: ['technician', 'workshop_manager', 'manager'],
+    default: 'technician'
+  },
+  email: { type: String, default: '', lowercase: true, trim: true },
+  password: { type: String, default: '' },
+  specialization: { type: String, default: '', trim: true },
+  active: { type: Boolean, default: true },
+  createdAt: { type: String, default: () => new Date().toISOString() }
+}, { timestamps: true, strict: false });
+
+staffSchema.index({ email: 1 });
+staffSchema.index({ role: 1 });
+
 const ProductModel = mongoose.models.Product || mongoose.model('Product', productSchema);
 const OrderModel = mongoose.models.Order || mongoose.model('Order', orderSchema);
 const CustomerModel = mongoose.models.Customer || mongoose.model('Customer', customerSchema);
 const TaxonomyModel = mongoose.models.Taxonomy || mongoose.model('Taxonomy', taxonomySchema);
 const CouponModel = mongoose.models.Coupon || mongoose.model('Coupon', couponSchema);
 const RepairModel = mongoose.models.Repair || mongoose.model('Repair', repairSchema);
+const StaffModel = mongoose.models.Staff || mongoose.model('Staff', staffSchema);
 
 // Customer Sync & Migration Helpers
 function cleanCustomerPhone(phone = '') {
@@ -1783,6 +1804,7 @@ const db = {
       finalCost: Number(jobData.finalCost) || Number(jobData.estimatedCost) || 0,
       advancePaid: Number(jobData.advancePaid) || 0,
       status: jobData.status || 'Received',
+      assignedTechnician: (jobData.assignedTechnician || '').trim(),
       technicianNotes: jobData.technicianNotes || '',
       handoverOtp,
       handoverVerified: false,
@@ -1946,6 +1968,104 @@ const db = {
   },
 
   // ==========================================
+  // STAFF MANAGEMENT (Technician, Workshop Manager, Store Manager)
+  // ==========================================
+  async getStaffMembers(filter = {}) {
+    ensureMongoConnected();
+    const query = { ...filter };
+    return await StaffModel.find(query).select('-password').sort({ createdAt: -1 }).lean();
+  },
+
+  async getStaffMemberById(id, includePassword = false) {
+    ensureMongoConnected();
+    const isObjectId = mongoose.isValidObjectId(id);
+    const query = isObjectId ? { _id: id } : { id };
+    const q = StaffModel.findOne(query);
+    if (!includePassword) q.select('-password');
+    return await q.lean();
+  },
+
+  async getStaffMemberByEmail(email) {
+    ensureMongoConnected();
+    if (!email) return null;
+    return await StaffModel.findOne({ email: String(email).trim().toLowerCase() }).lean();
+  },
+
+  async createStaffMember(staffData) {
+    ensureMongoConnected();
+    const role = (staffData.role || 'technician').toLowerCase();
+    if (!['technician', 'workshop_manager', 'manager'].includes(role)) {
+      throw new Error("Invalid staff role. Allowed roles: technician, workshop_manager, manager");
+    }
+    if (!staffData.name || !staffData.name.trim()) {
+      throw new Error("Staff member name is required");
+    }
+
+    const cleanEmail = String(staffData.email || '').trim().toLowerCase();
+    const cleanPassword = String(staffData.password || '').trim();
+
+    // Manager and Workshop Manager require email and password
+    if (role === 'workshop_manager' || role === 'manager') {
+      if (!cleanEmail || !cleanEmail.includes('@')) {
+        throw new Error("A valid email address is required for manager login");
+      }
+      if (!cleanPassword || cleanPassword.length < 4) {
+        throw new Error("Password with at least 4 characters is required for login access");
+      }
+      const existing = await StaffModel.findOne({ email: cleanEmail });
+      if (existing) {
+        throw new Error(`A staff member with email "${cleanEmail}" already exists`);
+      }
+    }
+
+    const newStaff = new StaffModel({
+      name: staffData.name.trim(),
+      phone: String(staffData.phone || '').trim(),
+      role,
+      email: (role === 'workshop_manager' || role === 'manager') ? cleanEmail : '',
+      password: (role === 'workshop_manager' || role === 'manager') ? cleanPassword : '',
+      specialization: String(staffData.specialization || '').trim(),
+      active: staffData.active !== undefined ? Boolean(staffData.active) : true,
+      createdAt: new Date().toISOString()
+    });
+
+    const saved = await newStaff.save();
+    const resObj = saved.toObject();
+    delete resObj.password;
+    return resObj;
+  },
+
+  async updateStaffMember(id, updates) {
+    ensureMongoConnected();
+    const isObjectId = mongoose.isValidObjectId(id);
+    const query = isObjectId ? { _id: id } : { id };
+
+    // If email is changing, ensure uniqueness
+    if (updates.email) {
+      const cleanEmail = String(updates.email).trim().toLowerCase();
+      const conflict = await StaffModel.findOne({ email: cleanEmail, _id: { $ne: id } });
+      if (conflict) {
+        throw new Error(`Email "${cleanEmail}" is already used by another staff member`);
+      }
+      updates.email = cleanEmail;
+    }
+    // Only update password if provided
+    if (updates.password !== undefined && !updates.password) {
+      delete updates.password;
+    }
+
+    const updated = await StaffModel.findOneAndUpdate(query, { $set: updates }, { new: true }).select('-password').lean();
+    return updated;
+  },
+
+  async deleteStaffMember(id) {
+    ensureMongoConnected();
+    const isObjectId = mongoose.isValidObjectId(id);
+    const query = isObjectId ? { _id: id } : { id };
+    return await StaffModel.deleteOne(query);
+  },
+
+  // ==========================================
   // STATUS & RECONNECT
   // ==========================================
   getStatus() {
@@ -1970,6 +2090,7 @@ const db = {
 db.OrderModel = OrderModel;
 db.ProductModel = ProductModel;
 db.CustomerModel = CustomerModel;
+db.StaffModel = StaffModel;
 db.findOrCreateCustomer = findOrCreateCustomer;
 db.lookupCustomerByPhone = lookupCustomerByPhone;
 db.lookupCustomerByEmail = lookupCustomerByEmail;

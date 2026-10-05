@@ -35,7 +35,7 @@ router.post('/send-otp', async (req, res) => {
     const { purpose = 'login', name, email, phone } = req.body;
     const isEmailInput = rawInput.includes('@');
 
-    // 1. Check if user entered store admin email configured in backend (.env)
+    // 1. Check if user entered store admin email configured in backend (.env) or registered staff member
     const configuredAdminEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
 
     if (rawInput.toLowerCase() === configuredAdminEmail) {
@@ -43,9 +43,25 @@ router.post('/send-otp', async (req, res) => {
         success: true,
         requiresPassword: true,
         role: 'store',
+        staffRole: 'owner',
         email: configuredAdminEmail,
         message: 'Store Administrator detected'
       });
+    }
+
+    if (isEmailInput) {
+      const staffMember = await db.getStaffMemberByEmail(rawInput.toLowerCase());
+      if (staffMember && staffMember.active && (staffMember.role === 'workshop_manager' || staffMember.role === 'manager')) {
+        return res.json({
+          success: true,
+          requiresPassword: true,
+          role: 'store',
+          staffRole: staffMember.role,
+          name: staffMember.name,
+          email: staffMember.email,
+          message: `${staffMember.role === 'workshop_manager' ? 'Workshop Manager' : 'Store Manager'} detected`
+        });
+      }
     }
 
     let cleanPhone = '';
@@ -363,22 +379,19 @@ router.post('/login', async (req, res) => {
     const { role, identifier, password } = req.body;
 
     if (role === 'store') {
-      // Store Owner / Admin Login strictly against backend configured email (.env)
       const configuredEmail = (process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com').trim().toLowerCase();
       const validPass = process.env.STORE_ADMIN_PASSWORD || 'admin123';
       const inputEmail = String(identifier || '').trim().toLowerCase();
       const inputPass = String(password || '');
 
-      const isEmailValid = inputEmail === configuredEmail;
-      const isPasswordValid = safeCompare(inputPass, validPass);
-
-      // Strict constant-time credential comparison (prevents timing attacks & requires both email and password)
-      if (isEmailValid && isPasswordValid) {
+      // 1. Check primary store owner credentials
+      if (inputEmail === configuredEmail && safeCompare(inputPass, validPass)) {
         const token = generateToken({
           id: 'admin-01',
-          name: 'Store Manager',
+          name: 'Store Owner',
           email: configuredEmail,
-          role: 'store'
+          role: 'store',
+          staffRole: 'owner'
         });
 
         return res.json({
@@ -386,18 +399,46 @@ router.post('/login', async (req, res) => {
           token,
           user: {
             id: 'admin-01',
-            name: 'Store Manager',
+            name: 'Store Owner',
             email: configuredEmail,
             role: 'store',
+            staffRole: 'owner',
             shop: 'Variathu Power Tools, Kozhencherry'
           }
         });
-      } else {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid store credentials. Please check your admin username and password.'
-        });
       }
+
+      // 2. Check registered staff credentials (Store Manager & Workshop Manager)
+      const staffMember = await db.getStaffMemberByEmail(inputEmail);
+      if (staffMember && staffMember.active && (staffMember.role === 'manager' || staffMember.role === 'workshop_manager')) {
+        if (safeCompare(inputPass, staffMember.password)) {
+          const token = generateToken({
+            id: String(staffMember._id),
+            name: staffMember.name,
+            email: staffMember.email,
+            role: 'store',
+            staffRole: staffMember.role
+          });
+
+          return res.json({
+            success: true,
+            token,
+            user: {
+              id: String(staffMember._id),
+              name: staffMember.name,
+              email: staffMember.email,
+              role: 'store',
+              staffRole: staffMember.role,
+              shop: 'Variathu Power Tools, Kozhencherry'
+            }
+          });
+        }
+      }
+
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials. Please verify your staff email and password.'
+      });
     } else {
       // Customer sign-in strictly requires OTP verification
       return res.status(403).json({
@@ -414,14 +455,32 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     if (req.user.role === 'store') {
+      if (req.user.staffRole === 'manager' || req.user.staffRole === 'workshop_manager') {
+        const staffDoc = await db.getStaffMemberById(req.user.id);
+        if (staffDoc && staffDoc.active) {
+          return res.json({
+            success: true,
+            user: {
+              id: String(staffDoc._id),
+              name: staffDoc.name,
+              email: staffDoc.email,
+              role: 'store',
+              staffRole: staffDoc.role,
+              shop: 'Variathu Power Tools, Kozhencherry'
+            }
+          });
+        }
+      }
+
       const validEmail = process.env.STORE_ADMIN_EMAIL || 'admin@variathupowertools.com';
       return res.json({
         success: true,
         user: {
           id: 'admin-01',
-          name: 'Store Manager',
+          name: 'Store Owner',
           email: validEmail,
           role: 'store',
+          staffRole: 'owner',
           shop: 'Variathu Power Tools, Kozhencherry'
         }
       });

@@ -112,7 +112,7 @@ function requireAuth(req, res, next) {
 }
 
 /**
- * Middleware: Require Store Owner / Admin role
+ * Middleware: Require Store Owner / Admin role (Store Owner, Store Manager, Workshop Manager)
  */
 function requireStoreOwner(req, res, next) {
   const token = extractToken(req);
@@ -122,11 +122,26 @@ function requireStoreOwner(req, res, next) {
 
   const payload = verifyToken(token);
   if (!payload || payload.role !== 'store') {
-    return res.status(403).json({ success: false, message: 'Access denied. Store Owner privilege required.' });
+    return res.status(403).json({ success: false, message: 'Access denied. Store privilege required.' });
   }
 
   req.user = payload;
   next();
+}
+
+/**
+ * Middleware: Require Full Store Manager or Owner (Blocks workshop_manager from general store endpoints)
+ */
+function requireFullStoreManager(req, res, next) {
+  requireStoreOwner(req, res, () => {
+    if (req.user && req.user.staffRole === 'workshop_manager') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access restricted: Workshop Managers are authorized for Workshop Repairs only.'
+      });
+    }
+    next();
+  });
 }
 
 /**
@@ -164,6 +179,7 @@ module.exports = {
   extractToken,
   requireAuth,
   requireStoreOwner,
+  requireFullStoreManager,
   optionalAuth,
   safeCompare
 };

@@ -581,6 +581,47 @@ export const api = {
     return result;
   },
 
+  // Staff Management (Technician, Workshop Manager, Store Manager)
+  async getStaff(params = {}) {
+    const query = new URLSearchParams();
+    if (params.role) query.append('role', params.role);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const res = await authFetch(`${API_BASE}/staff${qs}`);
+    if (!res.ok) throw new Error('Failed to fetch staff members');
+    return await res.json();
+  },
+
+  async createStaff(data) {
+    const res = await authFetch(`${API_BASE}/staff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to create staff member');
+    return result;
+  },
+
+  async updateStaff(id, data) {
+    const res = await authFetch(`${API_BASE}/staff/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to update staff member');
+    return result;
+  },
+
+  async deleteStaff(id) {
+    const res = await authFetch(`${API_BASE}/staff/${id}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to delete staff member');
+    return result;
+  },
+
   // Customer Directory & CRM
   async getCustomers(params = {}) {
     const query = new URLSearchParams();
