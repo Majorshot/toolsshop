@@ -14,6 +14,8 @@ export const COURIER_PARTNERS = [
     bg: '#fef2f2',
     border: '#fca5a5',
     tagline: 'Fast Red & Blue Surface Express across Kerala',
+    deliveryMode: 'hub-pickup',
+    modeLabel: 'Nearest Hub Collection',
     portalUrl: 'https://www.dtdc.com/track-your-shipment/',
     trackingUrl: 'https://www.dtdc.com/track-your-shipment/',
     awbPlaceholder: 'e.g. D58291042',
@@ -29,6 +31,8 @@ export const COURIER_PARTNERS = [
     bg: '#f0f9ff',
     border: '#bae6fd',
     tagline: 'TPC India Domestic Courier Network',
+    deliveryMode: 'hub-pickup',
+    modeLabel: 'Nearest Hub Collection',
     portalUrl: 'https://www.tpcindia.com/',
     trackingUrl: 'https://www.tpcindia.com/',
     awbPlaceholder: 'e.g. KLB38920194',
@@ -44,6 +48,8 @@ export const COURIER_PARTNERS = [
     bg: '#ecfdf5',
     border: '#a7f3d0',
     tagline: 'Kerala Heavy Machinery & Parcel Logistics',
+    deliveryMode: 'hub-pickup',
+    modeLabel: 'Nearest Hub Collection',
     portalUrl: 'https://www.apscargo.com/index',
     trackingUrl: 'https://www.apscargo.com/index',
     awbPlaceholder: 'e.g. APS682914',
@@ -59,12 +65,20 @@ export const COURIER_PARTNERS = [
     bg: '#fffbeb',
     border: '#fde68a',
     tagline: 'Pan-India Express Surface Logistics',
+    deliveryMode: 'doorstep',
+    modeLabel: 'Doorstep Delivery',
     portalUrl: 'https://www.delhivery.com/',
     trackingUrl: 'https://www.delhivery.com/',
     awbPlaceholder: 'e.g. 142985720193',
     generateAwb: () => `${Math.floor(100000000000 + Math.random() * 900000000000)}`
   }
 ];
+
+export const COURIER_DELIVERY_POLICY = {
+  doorstepPartner: 'Delhivery',
+  hubPartners: ['Alleppey Parcel Service (APS)', 'DTDC Express', 'The Professional Couriers (TPC)'],
+  noticeText: 'Doorstep delivery is available exclusively via Delhivery. For APS Cargo, DTDC Express, and The Professional Couriers, packages must be collected from your nearest local hub/branch.'
+};
 
 export const resolveCourierPartner = (courierNameOrObj = '') => {
   if (courierNameOrObj && typeof courierNameOrObj === 'object' && courierNameOrObj.logo) {

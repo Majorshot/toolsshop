@@ -872,7 +872,7 @@ export const ProductDetailPage = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Truck size={15} style={{ color: '#0284c7' }} />
                   <span>
-                    <strong>Doorstep Courier:</strong>{' '}
+                    <strong>Express Courier:</strong>{' '}
                     {product.deliveryCost === 0 ? (
                       <span style={{ color: '#16a34a', fontWeight: '800' }}>FREE Delivery</span>
                     ) : (
@@ -885,7 +885,7 @@ export const ProductDetailPage = () => {
                   {COURIER_PARTNERS.map(cp => (
                     <div
                       key={cp.id}
-                      title={`${cp.name} - ${cp.tagline}`}
+                      title={`${cp.name} (${cp.id === 'delhivery' ? 'Doorstep Delivery' : 'Nearest Hub Collection'})`}
                       style={{
                         background: '#ffffff',
                         border: '1px solid #e2e8f0',
@@ -906,6 +906,9 @@ export const ProductDetailPage = () => {
                       />
                     </div>
                   ))}
+                </div>
+                <div style={{ marginLeft: '21px', fontSize: '0.73rem', color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '5px 10px', borderRadius: '6px', lineHeight: 1.4 }}>
+                  📍 <strong>Delivery Notice:</strong> Only <strong>Delhivery</strong> offers direct doorstep delivery. Shipments via <strong>APS (Alleppey Parcel), DTDC Express, or The Professional Couriers</strong> are collected from your nearest local hub.
                 </div>
               </div>
             </div>

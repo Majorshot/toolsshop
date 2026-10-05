@@ -1151,6 +1151,11 @@ export const CustomerAccountPage = () => {
                       Delivery Destination: <strong>{order.customer?.address || 'Customer Address'}, {order.customer?.district || 'Pathanamthitta'}, Kerala {order.customer?.pincode ? `• PIN: ${order.customer.pincode}` : ''}</strong>
                     </span>
                   </div>
+                  <div style={{ fontSize: '0.72rem', color: courierCfg.id === 'delhivery' ? '#15803d' : '#0369a1', background: courierCfg.id === 'delhivery' ? '#f0fdf4' : '#f0f9ff', padding: '4px 8px', borderRadius: '4px', border: `1px solid ${courierCfg.id === 'delhivery' ? '#bbf7d0' : '#bae6fd'}` }}>
+                    {courierCfg.id === 'delhivery'
+                      ? '🏠 Doorstep Delivery: Delhivery will deliver directly to your given shipping address.'
+                      : `🏢 Nearest Hub Collection: Dispatched via ${courierCfg.name}. Please collect the parcel from your nearest local booking hub/branch upon arrival.`}
+                  </div>
                 </div>
               </div>
             )}

@@ -2242,13 +2242,13 @@ export const CheckoutPage = () => {
                       </span>
                     </div>
                     <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 6px' }}>
-                      Fast delivery to your home or site across Kerala.
+                      Fast courier delivery to your home or nearest hub across Kerala.
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       {COURIER_PARTNERS.map(cp => (
                         <div
                           key={cp.id}
-                          title={cp.name}
+                          title={`${cp.name} (${cp.id === 'delhivery' ? 'Doorstep Delivery' : 'Nearest Hub Collection'})`}
                           style={{
                             background: '#ffffff',
                             border: '1px solid #e2e8f0',
@@ -2269,6 +2269,18 @@ export const CheckoutPage = () => {
                           />
                         </div>
                       ))}
+                    </div>
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '6px 8px',
+                      background: '#eff6ff',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '6px',
+                      fontSize: '0.72rem',
+                      color: '#1e40af',
+                      lineHeight: '1.35'
+                    }}>
+                      📍 <strong>Delivery Note:</strong> Only <strong>Delhivery</strong> offers doorstep delivery. Orders via <strong>APS, DTDC & The Professional Couriers</strong> must be collected from your nearest local hub.
                     </div>
                   </div>
                 </div>
@@ -2687,12 +2699,12 @@ export const CheckoutPage = () => {
                       <span>Select Delivery Method:</span>
                     </div>
                     <span style={{ fontSize: '0.74rem', color: deliveryType === 'kerala-courier' ? '#ea580c' : '#16a34a', fontWeight: '700' }}>
-                      {deliveryType === 'kerala-courier' ? 'Doorstep Courier' : 'Store Pickup'}
+                      {deliveryType === 'kerala-courier' ? 'Express Courier' : 'Store Pickup'}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {/* Option 1: Doorstep Courier Delivery */}
+                    {/* Option 1: Express Courier Delivery */}
                     <div
                       onClick={() => setDeliveryType('kerala-courier')}
                       style={{
@@ -2722,19 +2734,19 @@ export const CheckoutPage = () => {
                         }} />
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                            <span>Doorstep Courier Delivery</span>
+                            <span>Express Courier Delivery</span>
                             <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#0284c7', background: '#f0f9ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
                               Kerala
                             </span>
                           </div>
                           <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                            Fast parcel dispatch to your address
+                            Doorstep with Delhivery • Nearest hub pickup with APS, DTDC & Professional
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '6px', flexWrap: 'wrap' }}>
                             {COURIER_PARTNERS.map(cp => (
                               <div
                                 key={cp.id}
-                                title={cp.name}
+                                title={`${cp.name} (${cp.id === 'delhivery' ? 'Doorstep Delivery' : 'Nearest Hub Collection'})`}
                                 style={{
                                   background: '#ffffff',
                                   border: '1px solid #e2e8f0',
@@ -2755,6 +2767,18 @@ export const CheckoutPage = () => {
                                 />
                               </div>
                             ))}
+                          </div>
+                          <div style={{
+                            marginTop: '8px',
+                            padding: '6px 8px',
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            color: '#1e40af',
+                            lineHeight: '1.35'
+                          }}>
+                            📍 <strong>Delivery Notice:</strong> Only <strong>Delhivery</strong> provides doorstep delivery. Shipments via <strong>APS (Alleppey Parcel), DTDC, and The Professional Couriers</strong> must be collected from your nearest booking hub.
                           </div>
                         </div>
                       </div>

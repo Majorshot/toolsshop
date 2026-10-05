@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trash2, Plus, Minus, ArrowRight, MessageCircle, Tag, ShoppingBag, MapPin, Truck, CheckCircle2, ChevronRight, X, Phone } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, MessageCircle, Tag, ShoppingBag, MapPin, Truck, CheckCircle2, ChevronRight, X, Phone, Info } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedContent from '../components/AnimatedContent';
@@ -278,6 +278,29 @@ export const CartPage = ({ onOpenCheckout }) => {
                 </span>
               </div>
             </div>
+
+            {deliveryType === 'kerala-courier' && (
+              <div
+                style={{
+                  marginTop: '10px',
+                  background: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  fontSize: '0.73rem',
+                  color: '#1e40af',
+                  lineHeight: '1.4',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '6px'
+                }}
+              >
+                <Info size={14} style={{ color: '#2563eb', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong>Delivery Notice:</strong> Doorstep delivery is available only with <strong>Delhivery</strong>. Shipments via <strong>APS (Alleppey Parcel), DTDC, and The Professional Couriers</strong> must be collected from your nearest booking hub.
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Coupon Section */}

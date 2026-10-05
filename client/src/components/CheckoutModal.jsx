@@ -905,7 +905,7 @@ export const CheckoutModal = ({ onClose }) => {
                         {COURIER_PARTNERS.map(cp => (
                           <div
                             key={cp.id}
-                            title={cp.name}
+                            title={`${cp.name} (${cp.id === 'delhivery' ? 'Doorstep Delivery' : 'Nearest Hub Collection'})`}
                             style={{
                               background: '#ffffff',
                               border: '1px solid #e2e8f0',
@@ -927,6 +927,18 @@ export const CheckoutModal = ({ onClose }) => {
                           </div>
                         ))}
                       </div>
+                      <div style={{
+                        marginTop: '8px',
+                        padding: '6px 8px',
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '6px',
+                        fontSize: '0.71rem',
+                        color: '#1e40af',
+                        lineHeight: '1.35'
+                      }}>
+                        📍 <strong>Delivery Note:</strong> Doorstep delivery is via <strong>Delhivery</strong> only. For <strong>APS, DTDC & The Professional Couriers</strong>, parcel collection is at your nearest local hub.
+                      </div>
                     </div>
                   </div>
 
@@ -935,7 +947,7 @@ export const CheckoutModal = ({ onClose }) => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
                       <div>
                         <label style={{ fontSize: '0.76rem', color: '#475569', fontWeight: '700', display: 'block', marginBottom: '4px' }}>
-                          Doorstep Delivery Address *
+                          Delivery Address (Delhivery Doorstep / Hub Records) *
                         </label>
                         <input
                           type="text"
