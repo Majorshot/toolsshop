@@ -54,8 +54,11 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow server-to-server, mobile app or curl with no origin
-    if (!origin) return callback(null, true);
+    // Allow all vercel preview & production domains and local development
+    if (origin.endsWith('.vercel.app') || origin.includes('localhost')) {
+      return callback(null, true);
+    }
+
     // In local development with no ALLOWED_ORIGINS configured, allow local hosts
     if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return callback(null, true);
 

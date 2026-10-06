@@ -797,6 +797,30 @@ const db = {
   async getProducts(filters = {}, options = {}) {
     ensureMongoConnected();
 
+    // Auto-seed initial catalog if database was connected after startup
+    try {
+      const prodCheck = await ProductModel.countDocuments();
+      if (prodCheck === 0) {
+        await ProductModel.insertMany(seedProducts);
+        const taxCount = await TaxonomyModel.countDocuments();
+        if (taxCount === 0) {
+          await TaxonomyModel.create({
+            brands: ['Bosch', 'Makita', 'DeWalt', 'Dongcheng', 'HiKOKI', 'Stanley', 'IBELL', 'Stihl', 'Taparia'],
+            categories: [
+              { id: 'cordless', name: 'Cordless Tools' },
+              { id: 'grinders-cutters', name: 'Grinders & Cutters' },
+              { id: 'hammers', name: 'Hammer Drills' },
+              { id: 'woodworking', name: 'Woodworking' },
+              { id: 'washers-blowers', name: 'Washers & Blowers' },
+              { id: 'accessories', name: 'Accessories & Bits' }
+            ]
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Auto-seed catalog check notice:", e.message);
+    }
+
     const isDefaultQuery = 
       (!filters.category || filters.category === 'all') &&
       (!filters.brand || filters.brand === 'all') &&
