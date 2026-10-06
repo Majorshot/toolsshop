@@ -54,8 +54,13 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow all vercel preview & production domains and local development
-    if (origin.endsWith('.vercel.app') || origin.includes('localhost')) {
+    // Allow all vercel preview/production domains, custom company domains, and local development
+    if (
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.endsWith('variathupowertools.in') ||
+      origin.endsWith('variathupowertools.com')
+    ) {
       return callback(null, true);
     }
 
