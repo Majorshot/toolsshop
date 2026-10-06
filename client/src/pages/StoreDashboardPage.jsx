@@ -837,10 +837,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [analyticsCustomStartDate, setAnalyticsCustomStartDate] = useState('');
   const [analyticsCustomEndDate, setAnalyticsCustomEndDate] = useState('');
 
-  // Workshop Repairs Date Filter
+  // Workshop Repairs Date & Status Filters
   const [repairsDateFilter, setRepairsDateFilter] = useState('all'); // 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'
   const [repairsStartDate, setRepairsStartDate] = useState('');
   const [repairsEndDate, setRepairsEndDate] = useState('');
+  const [repairsStatusFilter, setRepairsStatusFilter] = useState('all'); // 'all' | 'in_progress' | 'ready' | 'handed_over'
 
   // Customer Autocomplete for Workshop Inward Tool Logging
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
@@ -2026,9 +2027,47 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   };
 
+  // Repair status counts across all jobs
+  const repairStatusCounts = useMemo(() => {
+    let inProgress = 0;
+    let ready = 0;
+    let handedOver = 0;
+    (repairs || []).forEach(job => {
+      const isClosed = Boolean(job.handoverVerified) || job.status === 'Handed Over';
+      const isJobReady = !isClosed && (job.status === 'Repaired & Ready' || job.status === 'Ready for Pickup');
+      if (isClosed) {
+        handedOver++;
+      } else if (isJobReady) {
+        ready++;
+      } else {
+        inProgress++;
+      }
+    });
+    return {
+      all: (repairs || []).length,
+      in_progress: inProgress,
+      ready: ready,
+      handed_over: handedOver
+    };
+  }, [repairs]);
+
   const filteredRepairs = useMemo(() => {
     return repairs.filter(job => {
-      // 1. Date Filter (Presets: today, yesterday, week, month, or custom start/end date)
+      // 1. Status Filter (e.g. 'in_progress' means tool is in workshop and not ready yet)
+      if (repairsStatusFilter !== 'all') {
+        const isHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
+        const isReady = !isHandedOver && (job.status === 'Repaired & Ready' || job.status === 'Ready for Pickup');
+        if (repairsStatusFilter === 'in_progress') {
+          // In progress means not ready and not closed
+          if (isHandedOver || isReady) return false;
+        } else if (repairsStatusFilter === 'ready') {
+          if (!isReady) return false;
+        } else if (repairsStatusFilter === 'handed_over') {
+          if (!isHandedOver) return false;
+        }
+      }
+
+      // 2. Date Filter (Presets: today, yesterday, week, month, or custom start/end date)
       if (repairsDateFilter !== 'all') {
         const rawDate = job.createdAt || job.loggedAt || job.updatedAt;
         const jobDate = rawDate ? new Date(rawDate) : null;
@@ -2062,7 +2101,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         }
       }
 
-      // 2. Search Text / Keyword Filter
+      // 3. Search Text / Keyword Filter
       if (repairsSearch.trim()) {
         const q = repairsSearch.trim().toLowerCase();
         const digits = q.replace(/[^0-9]/g, '');
@@ -2079,7 +2118,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       return true;
     });
-  }, [repairs, repairsSearch, repairsDateFilter, repairsStartDate, repairsEndDate]);
+  }, [repairs, repairsStatusFilter, repairsSearch, repairsDateFilter, repairsStartDate, repairsEndDate]);
 
   // Workshop financial summary for the selected period / filters
   const repairsFinancialSummary = useMemo(() => {
@@ -6466,6 +6505,73 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             </div>
           </div>
 
+          {/* Workshop Status Filter Chips (Quick status filtering: All, Repair in Progress (Not Ready), Ready, Handed Over) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'all', label: 'All Jobs', count: repairStatusCounts.all, icon: Layers, color: '#0f172a' },
+              { id: 'in_progress', label: 'Repair in Progress', badgeLabel: 'Not Ready', count: repairStatusCounts.in_progress, icon: Wrench, color: '#ea580c' },
+              { id: 'ready', label: 'Repaired & Ready', count: repairStatusCounts.ready, icon: CheckCircle2, color: '#16a34a' },
+              { id: 'handed_over', label: 'Handed Over', count: repairStatusCounts.handed_over, icon: ShieldCheck, color: '#64748b' }
+            ].map(chip => {
+              const isSelected = repairsStatusFilter === chip.id;
+              const IconComp = chip.icon;
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setRepairsStatusFilter(chip.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '9999px',
+                    fontSize: '0.8rem',
+                    fontWeight: isSelected ? '800' : '600',
+                    cursor: 'pointer',
+                    border: isSelected ? `1.5px solid ${chip.color}` : '1px solid #cbd5e1',
+                    background: isSelected ? chip.color : '#ffffff',
+                    color: isSelected ? '#ffffff' : '#334155',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.12)' : 'none'
+                  }}
+                  id={`btn-repair-status-${chip.id}`}
+                >
+                  <IconComp size={14} style={{ color: isSelected ? '#ffffff' : chip.color }} />
+                  <span>{chip.label}</span>
+                  {chip.badgeLabel && (
+                    <span
+                      style={{
+                        fontSize: '0.68rem',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        background: isSelected ? 'rgba(255,255,255,0.25)' : '#ffedd5',
+                        color: isSelected ? '#ffffff' : '#c2410c',
+                        fontWeight: '700',
+                        letterSpacing: '0.02em'
+                      }}
+                    >
+                      {chip.badgeLabel}
+                    </span>
+                  )}
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '2px 7px',
+                      borderRadius: '9999px',
+                      background: isSelected ? 'rgba(255, 255, 255, 0.22)' : '#f1f5f9',
+                      color: isSelected ? '#ffffff' : '#475569',
+                      fontWeight: '800',
+                      marginLeft: '2px'
+                    }}
+                  >
+                    {chip.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Workshop Search Bar */}
           <div style={{ marginBottom: '18px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
@@ -6512,7 +6618,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </button>
               )}
             </div>
-            {repairsSearch && (
+            {(repairsSearch || repairsStatusFilter !== 'all' || repairsDateFilter !== 'all') && (
               <span style={{ fontSize: '0.82rem', color: '#ea580c', fontWeight: '700', whiteSpace: 'nowrap' }}>
                 Showing {filteredRepairs.length} of {repairs.length} tickets
               </span>
@@ -6669,14 +6775,28 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           ) : filteredRepairs.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
               <strong style={{ fontSize: '0.95rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
-                No repair tickets found matching "{repairsSearch}"
+                {repairsStatusFilter === 'in_progress'
+                  ? 'No tools currently under repair (all machines are ready or closed)'
+                  : repairsStatusFilter === 'ready'
+                  ? 'No repair jobs currently ready for pickup'
+                  : repairsStatusFilter === 'handed_over'
+                  ? 'No handed over repair jobs found'
+                  : repairsSearch
+                  ? `No repair tickets found matching "${repairsSearch}"`
+                  : 'No repair tickets found for the selected filter'}
               </strong>
               <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '0 0 12px' }}>
-                Try searching by customer name, 10-digit mobile number, or tool name.
+                {repairsStatusFilter === 'in_progress'
+                  ? 'All inward machinery in this period are either repaired & ready for pickup or already handed over to customers.'
+                  : 'Try clearing your search or switching to "All Jobs".'}
               </p>
               <button
                 type="button"
-                onClick={() => setRepairsSearch('')}
+                onClick={() => {
+                  setRepairsSearch('');
+                  setRepairsStatusFilter('all');
+                  setRepairsDateFilter('all');
+                }}
                 style={{
                   background: '#ea580c',
                   color: '#ffffff',
@@ -6688,7 +6808,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   cursor: 'pointer'
                 }}
               >
-                Clear Search Filter
+                Clear All Filters
               </button>
             </div>
           ) : (
