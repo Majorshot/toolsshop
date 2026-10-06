@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
 import GstInvoiceModal, { getFinancialYearCode, buildInvoiceNumber, extractBillNumber } from '../components/GstInvoiceModal';
+import JobCardPrintModal from '../components/JobCardPrintModal';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { useConfirm, SpringModal } from '../components/SpringModal';
 import HoverDevCard from '../components/HoverDevCard';
@@ -814,10 +815,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   });
   const [isSubmittingEditRepair, setIsSubmittingEditRepair] = useState(false);
 
-  // Invoice & Shipping Label Printing State
+  // Invoice, Shipping Label & Workshop Job Card Printing State
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState(null);
   const [selectedOrderForLabel, setSelectedOrderForLabel] = useState(null);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
+  const [selectedJobForPrint, setSelectedJobForPrint] = useState(null);
   const [copiedOrderId, setCopiedOrderId] = useState(false);
   const [copiedCancelAwb, setCopiedCancelAwb] = useState(null);
   const [copiedCancelOrderId, setCopiedCancelOrderId] = useState(null);
@@ -1864,6 +1866,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       showNotification(`🛠️ Repair Job #${res.job?.jobId || 'created'} logged! Saved to CRM & WhatsApp confirmation dispatched.`);
       setIsAddRepairModalOpen(false);
+      if (res.job) {
+        setSelectedJobForPrint(res.job);
+      }
       setShowCustomerSuggestions(false);
       setShowPhoneSuggestions(false);
       setRepairForm({
@@ -7086,6 +7091,31 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                   {/* Action Buttons */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Print Job Card Button */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedJobForPrint(job)}
+                      style={{
+                        padding: '6px 14px',
+                        background: '#133886',
+                        border: 'none',
+                        color: '#ffffff',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 1px 4px rgba(19, 56, 134, 0.25)'
+                      }}
+                      id={`btn-print-jobcard-${job.jobId}`}
+                      title="Print official workshop job card slip for customer"
+                    >
+                      <Printer size={13} />
+                      <span>Print Job Card</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => handleOpenEditRepair(job)}
@@ -10822,6 +10852,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
             setSelectedOrderForInvoice(updated);
             loadOrders({ silent: true });
           }}
+        />
+      )}
+      {selectedJobForPrint && (
+        <JobCardPrintModal
+          job={selectedJobForPrint}
+          onClose={() => setSelectedJobForPrint(null)}
         />
       )}
 
