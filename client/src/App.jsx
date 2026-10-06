@@ -539,6 +539,9 @@ const MainApp = () => {
           />
         </Suspense>
       )}
+      {/* Vercel Web Analytics & Speed Insights */}
+      <Analytics />
+      <SpeedInsights route={location.pathname} />
     </div>
   );
 };
@@ -550,12 +553,11 @@ export default function App() {
         <CartProvider>
           <ConfirmationProvider>
             <MainApp />
-            <Analytics />
-            <SpeedInsights />
           </ConfirmationProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );
 }
+
 
