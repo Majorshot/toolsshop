@@ -2195,29 +2195,39 @@ export const CheckoutPage = () => {
                 </div>
 
                 {/* Delivery Mode: Store Pickup vs Courier */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div
                     onClick={() => setDeliveryType('store-pickup')}
                     style={{
                       border: deliveryType === 'store-pickup' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
-                      borderRadius: '10px',
-                      padding: '14px',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
                       cursor: 'pointer',
                       background: deliveryType === 'store-pickup' ? '#fff7ed' : '#ffffff',
-                      transition: 'all 0.15s ease'
+                      transition: 'all 0.15s ease',
+                      boxShadow: deliveryType === 'store-pickup' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: deliveryType === 'store-pickup' ? '5px solid #ea580c' : '2px solid #cbd5e1',
+                          background: '#ffffff',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }} />
                         <Building size={16} style={{ color: '#16a34a' }} />
                         Store Pickup
                       </span>
-                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px' }}>
+                      <span style={{ background: '#ecfdf5', color: '#16a34a', fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '9999px', border: '1px solid #bbf7d0' }}>
                         FREE
                       </span>
                     </div>
-                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: 0 }}>
-                      Collect at Poyanil Building, Kozhencherry.
+                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: 0, paddingLeft: '26px' }}>
+                      Collect at Poyanil Building, Kozhencherry, Kerala.
                     </p>
                   </div>
 
@@ -2225,26 +2235,39 @@ export const CheckoutPage = () => {
                     onClick={() => setDeliveryType('kerala-courier')}
                     style={{
                       border: deliveryType === 'kerala-courier' ? '2px solid #ea580c' : '1.5px solid #e2e8f0',
-                      borderRadius: '10px',
-                      padding: '14px',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
                       cursor: 'pointer',
                       background: deliveryType === 'kerala-courier' ? '#fff7ed' : '#ffffff',
-                      transition: 'all 0.15s ease'
+                      transition: 'all 0.15s ease',
+                      boxShadow: deliveryType === 'kerala-courier' ? '0 2px 8px rgba(234, 88, 12, 0.08)' : 'none'
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: deliveryType === 'kerala-courier' ? '5px solid #ea580c' : '2px solid #cbd5e1',
+                          background: '#ffffff',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }} />
                         <Truck size={16} style={{ color: '#0284c7' }} />
                         Express Courier
+                        <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#0284c7', background: '#f0f9ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                          Kerala
+                        </span>
                       </span>
-                      <span style={{ color: totalCourierFee === 0 ? '#16a34a' : '#ea580c', fontSize: '0.82rem', fontWeight: '800' }}>
+                      <span style={{ color: totalCourierFee === 0 ? '#16a34a' : '#ea580c', fontSize: '0.85rem', fontWeight: '800' }}>
                         {totalCourierFee === 0 ? 'FREE' : formatPrice(totalCourierFee)}
                       </span>
                     </div>
-                    <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '0 0 6px' }}>
+                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 8px', paddingLeft: '26px' }}>
                       Fast courier delivery to your home or nearest hub across Kerala.
                     </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', paddingLeft: '26px', marginBottom: '8px' }}>
                       {COURIER_PARTNERS.map(cp => (
                         <div
                           key={cp.id}
@@ -2253,8 +2276,8 @@ export const CheckoutPage = () => {
                             background: '#ffffff',
                             border: '1px solid #e2e8f0',
                             borderRadius: '4px',
-                            padding: '1px 6px',
-                            height: '22px',
+                            padding: '2px 8px',
+                            height: '24px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -2264,21 +2287,21 @@ export const CheckoutPage = () => {
                           <img
                             src={cp.logo}
                             alt={cp.name}
-                            style={{ maxHeight: '14px', maxWidth: '60px', objectFit: 'contain' }}
+                            style={{ maxHeight: '15px', maxWidth: '65px', objectFit: 'contain' }}
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         </div>
                       ))}
                     </div>
                     <div style={{
-                      marginTop: '8px',
-                      padding: '6px 8px',
+                      marginLeft: '26px',
+                      padding: '8px 10px',
                       background: '#eff6ff',
                       border: '1px solid #bfdbfe',
                       borderRadius: '6px',
-                      fontSize: '0.72rem',
+                      fontSize: '0.73rem',
                       color: '#1e40af',
-                      lineHeight: '1.35'
+                      lineHeight: '1.4'
                     }}>
                       📍 <strong>Delivery Note:</strong> Only <strong>Delhivery</strong> offers doorstep delivery. Orders via <strong>APS, DTDC & The Professional Couriers</strong> must be collected from your nearest local hub.
                     </div>

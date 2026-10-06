@@ -6710,7 +6710,7 @@ body.product-loading-active .main-footer-clean {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm;
+    margin: 7mm 7mm;
   }
 
   *, *::before, *::after {
@@ -6763,16 +6763,13 @@ body.product-loading-active .main-footer-clean {
 
   #printable-gst-invoice-content.unified-gst-invoice-sheet {
     width: 100% !important;
-    max-width: 190mm !important;
-    height: 278mm !important;
-    max-height: 278mm !important;
+    max-width: 100% !important;
+    height: auto !important;
     margin: 0 auto !important;
-    padding: 7mm 9mm !important;
-    border: 1.5px solid #0f172a !important;
+    padding: 0 !important;
+    border: 1.5px solid #000000 !important;
     background: #ffffff !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
+    display: block !important;
     page-break-after: avoid !important;
     page-break-before: avoid !important;
     page-break-inside: avoid !important;
@@ -7999,5 +7996,35 @@ body.product-loading-active .main-footer-clean {
   border-color: #fdba74;
   color: #9a3412;
   transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   GST INVOICE MODAL MOBILE HORIZONTAL SCROLL & A4 PRINT SYSTEM
+   ========================================================================== */
+.invoice-scroll-wrapper {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+.invoice-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.invoice-scroll-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.invoice-scroll-wrapper::-webkit-scrollbar-thumb {
+  background-color: #94a3b8;
+  border-radius: 999px;
+}
+
+@media (max-width: 640px) {
+  .invoice-paper-sheet {
+    padding: 10px 8px !important;
+  }
 }
 

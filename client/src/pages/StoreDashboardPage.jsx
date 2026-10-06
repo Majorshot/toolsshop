@@ -626,6 +626,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       };
     });
 
+    const isDelhivery = /delhivery/i.test(partner);
+    const deliveryTerms = isDelhivery ? 'DOORSTEP DELIVERY' : 'NEAREST HUB COLLECTION BY CUSTOMER';
+
     try {
       await api.updateOrderStatus(dispatchModalOrder.id, 'Dispatched via Courier', {
         courierPartner: partner,
@@ -633,6 +636,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         invoiceNumber: finalInvoiceNumber,
         billNumber: rawBill,
         dispatchDocNo: finalInvoiceNumber,
+        termsOfDelivery: deliveryTerms,
         motorVehicleNo: dispatchForm.motorVehicleNo?.trim() || '',
         eWayBillNo: dispatchForm.eWayBillNo?.trim() || '',
         dispatchDate: new Date().toISOString(),
