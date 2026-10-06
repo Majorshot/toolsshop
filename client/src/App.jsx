@@ -15,6 +15,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ErrorBoundary from './components/ErrorBoundary';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Robust lazy-load wrapper that auto-reloads if a new deployment changes chunk hashes
 const lazyWithRetry = (componentImport) =>
@@ -548,9 +550,12 @@ export default function App() {
         <CartProvider>
           <ConfirmationProvider>
             <MainApp />
+            <Analytics />
+            <SpeedInsights />
           </ConfirmationProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>
   );
 }
+
