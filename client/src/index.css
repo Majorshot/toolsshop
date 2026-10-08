@@ -8032,3 +8032,407 @@ body.product-loading-active .main-footer-clean {
   }
 }
 
+
+
+/* ==========================================================================
+   WORKSHOP REPAIRS MOBILE RESPONSIVE ENHANCEMENTS
+   ========================================================================== */
+
+/* Dedicated Subpage Top Header on Mobile */
+@media (max-width: 640px) {
+  .store-subpage-top-bar {
+    padding: 10px 12px !important;
+    gap: 10px !important;
+  }
+  .store-subpage-top-bar > div:first-child {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .store-subpage-top-bar > div:last-child {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px !important;
+  }
+  .store-subpage-top-bar > div:last-child button {
+    justify-content: center;
+    padding: 6px 8px !important;
+    font-size: 0.72rem !important;
+  }
+}
+
+/* Workshop Header Actions on Mobile */
+.repairs-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.repairs-refresh-btn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #0f172a;
+  transition: all 0.15s ease;
+}
+
+@media (max-width: 640px) {
+  .repairs-header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .repairs-header-actions .store-action-btn-tour,
+  .repairs-header-actions .repairs-refresh-btn {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 8px 10px !important;
+  }
+  .repairs-header-actions .repairs-log-tool-btn {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 10px 16px !important;
+  }
+}
+
+/* Horizontal Swipeable Status Chips on Mobile */
+.repairs-status-chips-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.repairs-status-chips-bar::-webkit-scrollbar {
+  display: none;
+}
+.repairs-status-chip-btn {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Search Bar & Counter */
+.repairs-search-container {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.repairs-search-input {
+  width: 100%;
+  padding: 10px 38px 10px 36px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 0.86rem;
+  background: #ffffff;
+  color: #0f172a;
+  box-sizing: border-box;
+}
+.repairs-search-counter {
+  font-size: 0.8rem;
+  color: #ea580c;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+  justify-content: space-between;
+}
+@media (min-width: 641px) {
+  .repairs-search-counter {
+    width: auto;
+    justify-content: flex-end;
+  }
+}
+
+/* Period Filter Bar */
+.repairs-period-bar {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.repairs-period-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.repairs-period-buttons-row::-webkit-scrollbar {
+  display: none;
+}
+.repairs-period-chips-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.repairs-period-pill {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.repairs-period-pill.active {
+  border: 1.5px solid #ea580c;
+  background: #fff7ed;
+  color: #ea580c;
+  font-weight: 800;
+}
+.repairs-period-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 6px;
+  font-size: 0.76rem;
+}
+@media (max-width: 520px) {
+  .repairs-period-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.repairs-stat-pill {
+  display: flex;
+  align-items: center;
+  justifyContent: space-between;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+.repairs-stat-pill.green {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.repairs-stat-pill.blue {
+  color: #0369a1;
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+.repairs-stat-pill.pending-btn {
+  cursor: pointer;
+  border: 1px solid;
+  font-weight: 800;
+  grid-column: span 1;
+}
+@media (max-width: 520px) {
+  .repairs-stat-pill.pending-btn {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Repair Ticket Card */
+.repair-ticket-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+}
+@media (min-width: 641px) {
+  .repair-ticket-card {
+    padding: 20px;
+  }
+}
+
+/* Ready for pickup OTP Banner */
+.repair-otp-banner {
+  background: #eff6ff;
+  border: 1.5px solid #93c5fd;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.repair-otp-action-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.repair-otp-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.repair-otp-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  font-family: var(--font-mono);
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+.repair-otp-verify-btn {
+  padding: 8px 14px !important;
+  font-size: 0.78rem !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+.repair-admin-otp-row {
+  display: flex;
+  align-items: center;
+  justifyContent: flex-end;
+  gap: 5px;
+  width: 100%;
+}
+
+/* Repair Card Main Header */
+.repair-card-main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.repair-card-info-col {
+  flex: 1;
+  min-width: 200px;
+}
+.repair-card-cost-col {
+  text-align: right;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .repair-card-main-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .repair-card-cost-col {
+    display: flex;
+    align-items: center;
+    justifyContent: space-between;
+    padding-top: 8px;
+    border-top: 1px dashed #cbd5e1;
+    text-align: left;
+  }
+}
+
+/* Workflow Stage Buttons */
+.repair-stage-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.repair-stage-btn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.repair-stage-btn.active {
+  border: 1.5px solid #ea580c;
+  background: #ea580c;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+}
+
+/* Action Buttons Grid on Card */
+.repair-card-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+@media (min-width: 641px) {
+  .repair-card-actions-grid {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    width: auto;
+  }
+}
+.repair-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.repair-action-btn.print-jc {
+  background: #133886;
+  border: 1px solid #133886;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(19, 56, 134, 0.2);
+}
+.repair-action-btn.edit-bill {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #0284c7;
+}
+.repair-action-btn.wa-status {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.repair-action-btn.delete-btn {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}

@@ -4109,7 +4109,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       {/* DEDICATED PAGE TOP HEADER (When NOT on Overview) */}
       {activeTab !== 'overview' && (
-        <div style={{
+        <div className="store-subpage-top-bar" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -7015,7 +7015,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="repairs-header-actions">
               <button
                 type="button"
                 onClick={() => startRepairsTour(true)}
@@ -7030,18 +7030,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <button
                 type="button"
                 onClick={loadRepairs}
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  fontSize: '0.82rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
+                className="repairs-refresh-btn"
+                id="btn-refresh-repairs"
               >
                 <RefreshCw size={14} />
                 <span>Refresh</span>
@@ -7050,7 +7040,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <button
                 type="button"
                 onClick={() => setIsAddRepairModalOpen(true)}
-                className="btn-hero-clean"
+                className="btn-hero-clean repairs-log-tool-btn"
                 style={{ padding: '8px 16px', fontSize: '0.84rem' }}
                 id="btn-new-repair-modal"
               >
@@ -7061,7 +7051,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           {/* Workshop Status Filter Chips (Quick status filtering: All, Repair in Progress (Not Ready), Ready, Handed Over) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <div className="repairs-status-chips-bar">
             {[
               { id: 'all', label: 'All Jobs', count: repairStatusCounts.all, icon: Layers, color: '#0f172a' },
               { id: 'in_progress', label: 'Repair in Progress', badgeLabel: 'Not Ready', count: repairStatusCounts.in_progress, icon: Wrench, color: '#ea580c' },
@@ -7085,6 +7075,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   key={chip.id}
                   type="button"
                   onClick={() => setRepairsStatusFilter(chip.id)}
+                  className="repairs-status-chip-btn"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -7138,23 +7129,15 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           {/* Workshop Search Bar */}
-          <div style={{ marginBottom: '18px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
+          <div className="repairs-search-container">
+            <div style={{ position: 'relative', flex: 1, minWidth: 0, width: '100%' }}>
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
               <input
                 type="text"
-                placeholder="Search repairs by customer name, phone, tool brand, model, ticket ID, or job card..."
+                placeholder="Search repairs by customer, phone, tool, job card..."
                 value={repairsSearch}
                 onChange={(e) => setRepairsSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 38px 10px 36px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #cbd5e1',
-                  fontSize: '0.86rem',
-                  background: '#ffffff',
-                  color: '#0f172a'
-                }}
+                className="repairs-search-input"
                 id="input-search-repairs"
               />
               {repairsSearch && (
@@ -7183,10 +7166,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </button>
               )}
             </div>
-            <div style={{ fontSize: '0.82rem', color: '#ea580c', fontWeight: '700', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>Showing {filteredRepairs.length === 0 ? 0 : `${(repairsPage - 1) * REPAIRS_PER_PAGE + 1}-${Math.min(repairsPage * REPAIRS_PER_PAGE, filteredRepairs.length)}`} of {filteredRepairs.length} tickets</span>
+            <div className="repairs-search-counter">
+              <span>Showing <strong>{filteredRepairs.length === 0 ? 0 : `${(repairsPage - 1) * REPAIRS_PER_PAGE + 1}-${Math.min(repairsPage * REPAIRS_PER_PAGE, filteredRepairs.length)}`}</strong> of <strong>{filteredRepairs.length}</strong> tickets</span>
               {repairs.length !== filteredRepairs.length && (
-                <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '600' }}>
+                <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '600' }}>
                   ({repairs.length} total)
                 </span>
               )}
@@ -7199,22 +7182,13 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
           </div>
 
           {/* Workshop Date Range Filter Bar (Feature 5) */}
-          <div style={{
-            marginBottom: '18px',
-            padding: '12px 16px',
-            background: '#f8fafc',
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '12px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
-                  <Calendar size={15} style={{ color: '#ea580c' }} />
-                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#1e293b' }}>Period Filter:</span>
-                </div>
+          <div className="repairs-period-bar">
+            <div className="repairs-period-buttons-row">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                <Calendar size={15} style={{ color: '#ea580c' }} />
+                <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#1e293b' }}>Period:</span>
+              </div>
+              <div className="repairs-period-chips-scroll">
                 {[
                   { id: 'all', label: 'All Time' },
                   { id: 'today', label: 'Today' },
@@ -7229,17 +7203,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       key={p.id}
                       type="button"
                       onClick={() => setRepairsDateFilter(p.id)}
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: '20px',
-                        border: isActive ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
-                        background: isActive ? '#fff7ed' : '#ffffff',
-                        color: isActive ? '#ea580c' : '#475569',
-                        fontSize: '0.78rem',
-                        fontWeight: isActive ? '800' : '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
+                      className={`repairs-period-pill ${isActive ? 'active' : ''}`}
                       id={`btn-repair-period-${p.id}`}
                     >
                       {p.label}
@@ -7247,45 +7211,36 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   );
                 })}
               </div>
+            </div>
 
-              {/* Live Count & Financial Summary */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
-                <span style={{ color: '#0f172a', fontWeight: '700' }}>
-                  📋 <strong>{filteredRepairs.length}</strong> {filteredRepairs.length === 1 ? 'ticket' : 'tickets'}
-                </span>
-                <span style={{ color: '#0f172a', fontWeight: '700' }}>
-                  💰 Billed: <strong>₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')}</strong>
-                </span>
-                <span style={{ color: '#16a34a', fontWeight: '700' }}>
-                  ✅ Collected: <strong>₹{repairsFinancialSummary.totalCollected.toLocaleString('en-IN')}</strong>
-                </span>
-                <span style={{ color: '#0284c7', fontWeight: '700' }}>
-                  💵 Advance: <strong>₹{repairsFinancialSummary.totalAdvance.toLocaleString('en-IN')}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setRepairsStatusFilter('revenue')}
-                  style={{
-                    background: repairsFinancialSummary.totalPending > 0 ? '#ffedd5' : '#f0fdf4',
-                    border: `1px solid ${repairsFinancialSummary.totalPending > 0 ? '#fdba74' : '#86efac'}`,
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    color: repairsFinancialSummary.totalPending > 0 ? '#c2410c' : '#166534',
-                    fontWeight: '800',
-                    fontSize: '0.76rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    transition: 'all 0.15s ease'
-                  }}
-                  title="Click to view Revenue & Accounts Ledger"
-                  id="btn-quick-view-revenue"
-                >
-                  <span>⏳ Pending:</span>
-                  <strong>₹{repairsFinancialSummary.totalPending.toLocaleString('en-IN')}</strong>
-                </button>
+            {/* Live Count & Financial Summary Grid */}
+            <div className="repairs-period-stats-grid">
+              <div className="repairs-stat-pill">
+                <span>📋 Tickets:</span>
+                <strong>{filteredRepairs.length}</strong>
               </div>
+              <div className="repairs-stat-pill">
+                <span>💰 Billed:</span>
+                <strong>₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')}</strong>
+              </div>
+              <div className="repairs-stat-pill green">
+                <span>✅ Realized:</span>
+                <strong>₹{repairsFinancialSummary.totalCollected.toLocaleString('en-IN')}</strong>
+              </div>
+              <div className="repairs-stat-pill blue">
+                <span>💵 Advance:</span>
+                <strong>₹{repairsFinancialSummary.totalAdvance.toLocaleString('en-IN')}</strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRepairsStatusFilter('revenue')}
+                className={`repairs-stat-pill pending-btn ${repairsFinancialSummary.totalPending > 0 ? 'orange' : 'green'}`}
+                title="Click to view Revenue & Accounts Ledger"
+                id="btn-quick-view-revenue"
+              >
+                <span>⏳ Pending:</span>
+                <strong>₹{repairsFinancialSummary.totalPending.toLocaleString('en-IN')}</strong>
+              </button>
             </div>
 
             {/* Custom Date Pickers when 'Custom Range' is active */}
@@ -8225,78 +8180,48 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 return (
                 <div
                   key={job.id || job.jobId || job._id}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '20px'
-                  }}
+                  className="repair-ticket-card"
                   id={`repair-row-${job.jobId}`}
                 >
-                  {/* Ready for pickup OTP Banner - OTP is secret, NEVER shown on dashboard! */}
+                  {/* Ready for pickup OTP Banner */}
                   {job.status === 'Repaired & Ready' && !isHandedOver && (
-                    <div
-                      style={{
-                        background: '#eff6ff',
-                        border: '1.5px solid #93c5fd',
-                        borderRadius: '10px',
-                        padding: '12px 16px',
-                        marginBottom: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <CheckCircle2 size={22} style={{ color: '#0284c7', flexShrink: 0 }} />
-                        <div>
-                          <strong style={{ fontSize: '0.9rem', color: '#0369a1', display: 'block' }}>
-                            Repaired &amp; Tested! Secret 4-Digit OTP Sent to Customer
+                    <div className="repair-otp-banner">
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <CheckCircle2 size={20} style={{ color: '#0284c7', flexShrink: 0, marginTop: '2px' }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong style={{ fontSize: '0.88rem', color: '#0369a1', display: 'block', lineHeight: 1.3 }}>
+                            Repaired &amp; Tested! Secret 4-Digit OTP Sent
                           </strong>
-                          <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-                            The secret collection code was sent to <strong>{job.customerName}</strong> ({job.customerPhone}) via WhatsApp. Enter customer's code below to release:
+                          <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', lineHeight: 1.35 }}>
+                            The collection code was sent to <strong>{job.customerName}</strong> ({job.customerPhone}) via WhatsApp. Enter below to release:
                           </div>
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                        <form onSubmit={(e) => handleVerifyRepairOtp(e, job)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="repair-otp-action-row">
+                        <form onSubmit={(e) => handleVerifyRepairOtp(e, job)} className="repair-otp-form">
                           <input
                             type="text"
                             maxLength={6}
                             placeholder="4-Digit OTP"
                             value={repairOtpInputs[job.id || job.jobId || job._id] || ''}
                             onChange={(e) => setRepairOtpInputs({ ...repairOtpInputs, [job.id || job.jobId || job._id]: e.target.value })}
-                            style={{
-                              width: '110px',
-                              padding: '7px 10px',
-                              textAlign: 'center',
-                              fontSize: '0.92rem',
-                              fontWeight: '800',
-                              letterSpacing: '0.15em',
-                              fontFamily: 'var(--font-mono)',
-                              background: '#ffffff',
-                              border: '2px solid #cbd5e1',
-                              borderRadius: '6px'
-                            }}
+                            className="repair-otp-input"
                             id={`input-repair-otp-${job.id || job.jobId || job._id}`}
                           />
                           <button
                             type="submit"
                             disabled={verifyingRepairId === (job.id || job.jobId || job._id)}
-                            className="btn-hero-clean"
-                            style={{ padding: '7px 14px', fontSize: '0.78rem' }}
+                            className="btn-hero-clean repair-otp-verify-btn"
                             id={`btn-verify-repair-${job.id || job.jobId || job._id}`}
                           >
                             {verifyingRepairId === (job.id || job.jobId || job._id) ? 'Verifying...' : 'Verify & Deliver'}
                           </button>
                         </form>
 
-                        {/* Tiny Admin Masked OTP - Click to Reveal / Auto-Fill */}
+                        {/* Tiny Admin Masked OTP */}
                         {job.handoverOtp && (
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <div className="repair-admin-otp-row">
                             <span style={{ color: '#64748b', fontSize: '0.66rem' }}>Admin OTP:</span>
                             <button
                               type="button"
@@ -8375,74 +8300,74 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.88rem', fontWeight: '800', background: '#0f172a', color: '#ffffff', padding: '2px 8px', borderRadius: '4px' }}>
+                  <div className="repair-card-main-header">
+                    <div className="repair-card-info-col">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: '800', background: '#0f172a', color: '#ffffff', padding: '2px 7px', borderRadius: '4px' }}>
                           {job.jobId}
                         </span>
                         {job.jobCardNumber && (
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem', fontWeight: '800', background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '4px' }} title="Physical Job Card Slip Number">
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: '800', background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd', padding: '2px 7px', borderRadius: '4px' }} title="Physical Job Card Slip Number">
                             JC: {job.jobCardNumber}
                           </span>
                         )}
-                        <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: 0 }}>
                           {job.toolBrand ? `${job.toolBrand} ` : ''}{job.toolModel}
                         </h3>
                         {job.serialNumber && (
-                          <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
                             S/N: {job.serialNumber}
                           </span>
                         )}
                       </div>
 
-                      <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '6px' }}>
+                      <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '4px', lineHeight: 1.35 }}>
                         Customer: <strong>{job.customerName}</strong> ({job.customerPhone}) • Logged: {new Date(job.createdAt).toLocaleDateString()}
                       </div>
 
-                      <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                         {job.assignedTechnician ? (() => {
                           const matchedStaff = (staffList || []).find(s => s.name && s.name.trim().toLowerCase() === job.assignedTechnician.trim().toLowerCase());
                           const department = job.assignedTechnicianDepartment || matchedStaff?.specialization;
                           return (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '6px', fontSize: '0.76rem', fontWeight: '700' }} title={`Assigned Workshop Floor Technician${department ? ` (${department})` : ''}`}>
-                              <span>🧑‍🔧 Floor Technician:</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', padding: '2px 7px', borderRadius: '5px', fontSize: '0.74rem', fontWeight: '700' }} title={`Assigned Workshop Floor Technician${department ? ` (${department})` : ''}`}>
+                              <span>🧑‍🔧 Tech:</span>
                               <strong>{job.assignedTechnician}</strong>
                               {department ? (
-                                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: '600' }}>({department})</span>
+                                <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: '600' }}>({department})</span>
                               ) : null}
                             </span>
                           );
                         })() : (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#64748b', padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '600' }} title="No floor technician assigned yet">
-                            <span>🧑‍🔧 Technician: Unassigned</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#64748b', padding: '2px 7px', borderRadius: '5px', fontSize: '0.72rem', fontWeight: '600' }} title="No floor technician assigned yet">
+                            <span>🧑‍🔧 Tech: Unassigned</span>
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
+                    <div className="repair-card-cost-col">
+                      <div style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
                         {isHandedOver ? 'Total: ' : 'Est: '}{formatPrice(job.finalCost || job.estimatedCost || 0)}
-                      </span>
+                      </div>
                       {isHandedOver ? (
-                        <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
-                          <CheckCircle2 size={12} style={{ color: '#16a34a' }} />
+                        <div style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '700', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <CheckCircle2 size={12} style={{ color: '#166534' }} />
                           <span>Paid in Full</span>
                         </div>
                       ) : (
-                        <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
                           {job.advancePaid > 0 && (
-                            <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700' }}>
-                              Advance Paid: {formatPrice(job.advancePaid)}
-                            </div>
+                            <span style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: '700', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '1px 6px', borderRadius: '4px' }}>
+                              Adv: {formatPrice(job.advancePaid)}
+                            </span>
                           )}
                           {((job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)) > 0 && (
-                            <div style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '700' }}>
-                              Balance Due: {formatPrice(Math.max(0, (job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)))}
-                            </div>
+                            <span style={{ fontSize: '0.72rem', color: '#c2410c', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', padding: '1px 6px', borderRadius: '4px' }}>
+                              Due: {formatPrice(Math.max(0, (job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)))}
+                            </span>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -8475,7 +8400,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </div>
                     ) : (
                       /* Only show stages 1 & 2 if NOT handed over! */
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div className="repair-stage-buttons-grid">
                         {['Received', 'Repaired & Ready'].map((st, sidx) => {
                           const isCurrent = job.status === st;
                           return (
@@ -8483,21 +8408,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                               key={st}
                               type="button"
                               onClick={() => handleUpdateRepairStatus(job, st)}
-                              style={{
-                                padding: '7px 16px',
-                                borderRadius: '8px',
-                                border: isCurrent ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
-                                background: isCurrent ? '#ea580c' : '#ffffff',
-                                color: isCurrent ? '#ffffff' : '#475569',
-                                fontSize: '0.78rem',
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                boxShadow: isCurrent ? '0 2px 8px rgba(234, 88, 12, 0.25)' : 'none',
-                                transition: 'all 0.15s'
-                              }}
+                              className={`repair-stage-btn ${isCurrent ? 'active' : ''}`}
                             >
                               <span>{sidx + 1}. {st}</span>
                             </button>
@@ -8508,7 +8419,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   </div>
 
                   {/* Action Buttons */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+                  <div className="repair-card-actions-grid">
                     {/* Print Job Card Button */}
                     <button
                       type="button"
@@ -8520,88 +8431,43 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                         }
                         setSelectedJobForPrint(enriched);
                       }}
-                      style={{
-                        padding: '6px 14px',
-                        background: '#133886',
-                        border: 'none',
-                        color: '#ffffff',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 1px 4px rgba(19, 56, 134, 0.25)'
-                      }}
+                      className="repair-action-btn print-jc"
                       id={`btn-print-jobcard-${job.jobId}`}
                       title="Print official workshop job card slip for customer"
                     >
                       <Printer size={13} />
-                      <span>Print Job Card</span>
+                      <span>Job Card</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleOpenEditRepair(job)}
-                      style={{
-                        padding: '6px 12px',
-                        background: '#eff6ff',
-                        border: '1px solid #bfdbfe',
-                        color: '#0284c7',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
+                      className="repair-action-btn edit-bill"
                       id={`btn-edit-repair-${job.jobId}`}
                       title="Update bill estimate, added spare parts, and notify customer via WhatsApp"
                     >
                       <Edit3 size={13} />
-                      <span>Update Bill &amp; Parts</span>
+                      <span>Update Bill</span>
                     </button>
 
                     <a
                       href={getWhatsAppRepairText(job)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        padding: '6px 12px',
-                        background: '#f0fdf4',
-                        border: '1px solid #bbf7d0',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        color: '#16a34a',
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
+                      className="repair-action-btn wa-status"
+                      id={`btn-whatsapp-status-${job.jobId}`}
+                      title="Notify customer on WhatsApp"
                     >
                       <MessageCircle size={13} />
-                      <span>WhatsApp Customer Status</span>
+                      <span>WhatsApp</span>
                     </a>
 
                     <button
                       type="button"
                       onClick={() => handleDeleteRepair(job)}
-                      style={{
-                        padding: '6px 12px',
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        color: '#dc2626',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
+                      className="repair-action-btn delete-btn"
+                      id={`btn-delete-repair-${job.jobId}`}
+                      title="Delete repair job ticket"
                     >
                       <Trash2 size={13} />
                       <span>Delete</span>
