@@ -95,14 +95,11 @@ export const CheckoutPage = () => {
   }, [isBuyNow, checkoutItems, cartSubtotal]);
 
   const totalCourierFee = useMemo(() => {
-    if (isBuyNow) {
-      return checkoutItems.reduce((sum, item) => {
-        const itemFee = typeof item.deliveryCost === 'number' ? item.deliveryCost : 120;
-        return sum + (itemFee * (item.quantity || 1));
-      }, 0);
-    }
-    return cartDeliveryFee;
-  }, [isBuyNow, checkoutItems, cartDeliveryFee]);
+    return (checkoutItems || []).reduce((sum, item) => {
+      const itemFee = typeof item.deliveryCost === 'number' ? item.deliveryCost : 120;
+      return sum + (itemFee * (item.quantity || 1));
+    }, 0);
+  }, [checkoutItems]);
 
   const deliveryFee = deliveryType === 'store-pickup' ? 0 : totalCourierFee;
 
@@ -118,11 +115,8 @@ export const CheckoutPage = () => {
   }, [activeCoupon, isBuyNow, subtotal, cartDiscountAmount]);
 
   const finalTotal = useMemo(() => {
-    if (isBuyNow) {
-      return Math.max(0, subtotal - discountAmount + deliveryFee);
-    }
-    return cartFinalTotal;
-  }, [isBuyNow, subtotal, discountAmount, deliveryFee, cartFinalTotal]);
+    return Math.max(0, subtotal - discountAmount + deliveryFee);
+  }, [subtotal, discountAmount, deliveryFee]);
 
   const updateQuantity = (itemId, newQty) => {
     if (isBuyNow && buyNowItem) {
