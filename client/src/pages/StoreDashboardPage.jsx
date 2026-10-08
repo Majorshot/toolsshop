@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, DollarSign, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass, Zap, Shield, Hash, UserCheck, UserPlus, Briefcase, Mail, Key, Lock } from 'lucide-react';
+import { ShieldCheck, Plus, Edit3, Trash2, ShoppingBag, IndianRupee, Package, RefreshCw, RotateCcw, CheckCircle2, Phone, MessageCircle, AlertCircle, AlertTriangle, X, Search, Tag, Layers, ArrowRight, Truck, ExternalLink, Globe, Printer, Download, Percent, Wrench, FileText, Check, Calendar, ArrowUpRight, BarChart3, Clock, Copy, XCircle, Ban, Users, Eye, EyeOff, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Volume2, VolumeX, MapPin, LogOut, LayoutDashboard, ArrowLeft, Menu, Compass, Zap, Shield, Hash, UserCheck, UserPlus, Briefcase, Mail, Key, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Barcode from '../components/Barcode';
@@ -2111,6 +2111,189 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // High-fidelity isolated A4 Workshop Revenue & Accounts Statement print generator
+  const printWorkshopRevenueStatement = () => {
+    if (!filteredRepairs || filteredRepairs.length === 0) {
+      toast.info('No repair records found for the selected filter period to print statement.');
+      return;
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    // Human-readable period label
+    let periodText = 'All-Time Records';
+    if (repairsDateFilter === 'today') {
+      periodText = 'Today (' + new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ')';
+    } else if (repairsDateFilter === 'yesterday') {
+      periodText = 'Yesterday';
+    } else if (repairsDateFilter === 'week') {
+      periodText = 'Past 7 Days';
+    } else if (repairsDateFilter === 'month') {
+      periodText = 'Current Month (' + new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) + ')';
+    } else if (repairsDateFilter === 'custom') {
+      periodText = 'Custom Period: ' + (repairsStartDate || 'Earliest') + ' to ' + (repairsEndDate || 'Latest');
+    }
+
+    const generatedAtText = new Date().toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const rowsHtml = filteredRepairs.map((j, idx) => {
+      const isClosed = Boolean(j.handoverVerified) || j.status === 'Handed Over';
+      const cost = Number(j.finalCost || j.estimatedCost || 0);
+      const advance = Number(j.advancePaid || 0);
+      const pending = isClosed ? 0 : Math.max(0, cost - advance);
+      const dateStr = j.createdAt
+        ? new Date(j.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '-';
+
+      const badgeClass = isClosed ? 'badge-green' : (pending > 0 ? 'badge-orange' : 'badge-blue');
+      const settlementLabel = isClosed ? 'Settled (Handed Over)' : (pending > 0 ? ('Pending ₹' + pending.toLocaleString('en-IN')) : 'Advance Settled');
+
+      const safeCust = (j.customerName || 'Walk-in Customer').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const safePhone = (j.customerPhone || '-').replace(/</g, '&lt;');
+      const safeBrand = (j.toolBrand || '').replace(/</g, '&lt;');
+      const safeModel = (j.toolModel || '').replace(/</g, '&lt;');
+      const safeTech = (j.assignedTechnician || 'Workshop Floor').replace(/</g, '&lt;');
+
+      return '<tr>' +
+        '<td style="text-align: center; color: #64748b; font-weight: 600;">' + (idx + 1) + '</td>' +
+        '<td><strong style="color: #0f172a;">' + (j.jobCardNumber || j.jobId || 'N/A') + '</strong>' +
+          (j.jobId && j.jobCardNumber ? '<div style="font-size: 6.8pt; color: #64748b;">' + j.jobId + '</div>' : '') +
+        '</td>' +
+        '<td>' + dateStr + '</td>' +
+        '<td><div style="font-weight: 700; color: #0f172a;">' + safeCust + '</div><div style="font-size: 6.8pt; color: #64748b;">' + safePhone + '</div></td>' +
+        '<td><div style="font-weight: 600;">' + safeBrand + ' ' + safeModel + '</div><div style="font-size: 6.8pt; color: #64748b;">Tech: ' + safeTech + '</div></td>' +
+        '<td><span class="status-badge ' + (isClosed ? 'badge-green' : 'badge-blue') + '">' + (j.status || 'In Progress') + '</span></td>' +
+        '<td class="right" style="font-weight: 700; font-family: monospace;">₹' + cost.toLocaleString('en-IN') + '</td>' +
+        '<td class="right" style="color: #0369a1; font-weight: 700; font-family: monospace;">₹' + advance.toLocaleString('en-IN') + '</td>' +
+        '<td class="right" style="color: ' + (pending > 0 ? '#c2410c' : '#166534') + '; font-weight: 800; font-family: monospace;">₹' + pending.toLocaleString('en-IN') + '</td>' +
+        '<td style="text-align: center;"><span class="status-badge ' + badgeClass + '">' + settlementLabel + '</span></td>' +
+      '</tr>';
+    }).join('');
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write('<!DOCTYPE html>' +
+      '<html><head>' +
+      '<title>Workshop Revenue Statement - ' + periodText + '</title>' +
+      '<meta charset="utf-8" />' +
+      '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+      '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+      '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">' +
+      '<style>' +
+        '@page { size: A4 portrait; margin: 8mm 10mm; }' +
+        '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+        'html, body { width: 100%; background: #ffffff; font-family: "Inter", -apple-system, BlinkMacSystemFont, Arial, sans-serif; color: #0f172a; font-size: 8pt; line-height: 1.35; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }' +
+        '.statement-wrap { width: 100%; max-width: 100%; margin: 0 auto; }' +
+        'table.header-tbl { width: 100%; border-collapse: collapse; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; }' +
+        'table.header-tbl td { vertical-align: top; }' +
+        '.shop-name { font-size: 13pt; font-weight: 900; color: #0f172a; letter-spacing: -0.02em; }' +
+        '.shop-tagline { font-size: 7.5pt; font-weight: 800; color: #ea580c; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1px; }' +
+        '.shop-meta { font-size: 7.5pt; color: #475569; margin-top: 3px; line-height: 1.3; }' +
+        '.stmt-badge-wrap { text-align: right; }' +
+        '.stmt-title { font-size: 11pt; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.02em; }' +
+        '.stmt-period { display: inline-block; background: #ffedd5; color: #c2410c; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 7.5pt; margin-top: 4px; border: 1px solid #fed7aa; }' +
+        '.stmt-meta { font-size: 7pt; color: #64748b; margin-top: 4px; }' +
+        '.kpi-table { width: 100%; border-collapse: separate; border-spacing: 6px; margin-bottom: 12px; }' +
+        '.kpi-box { padding: 8px 10px; border-radius: 6px; border: 1px solid #cbd5e1; }' +
+        '.kpi-green { background: #f0fdf4 !important; border-color: #86efac !important; }' +
+        '.kpi-orange { background: #fff7ed !important; border-color: #fdba74 !important; }' +
+        '.kpi-blue { background: #f0f9ff !important; border-color: #7dd3fc !important; }' +
+        '.kpi-slate { background: #f8fafc !important; border-color: #cbd5e1 !important; }' +
+        '.kpi-title { font-size: 6.8pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }' +
+        '.kpi-val { font-size: 11.5pt; font-weight: 900; font-family: Consolas, monospace; line-height: 1.2; }' +
+        '.kpi-sub { font-size: 6.5pt; margin-top: 2px; }' +
+        '.ledger-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 7.5pt; }' +
+        '.ledger-table th { background: #0f172a !important; color: #ffffff !important; padding: 6px 7px; font-size: 7pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid #0f172a; text-align: left; }' +
+        '.ledger-table th.right, .ledger-table td.right { text-align: right; }' +
+        '.ledger-table td { padding: 5px 7px; border: 1px solid #cbd5e1; vertical-align: middle; }' +
+        '.ledger-table tr:nth-child(even) td { background: #f8fafc; }' +
+        '.ledger-table tfoot td { background: #f1f5f9 !important; font-weight: 900; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; color: #0f172a; }' +
+        '.status-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 6.5pt; font-weight: 800; white-space: nowrap; }' +
+        '.badge-green { background: #dcfce7 !important; color: #166534 !important; border: 1px solid #bbf7d0; }' +
+        '.badge-orange { background: #ffedd5 !important; color: #c2410c !important; border: 1px solid #fed7aa; }' +
+        '.badge-blue { background: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd; }' +
+        '.sig-table { width: 100%; border-collapse: collapse; margin-top: 22px; page-break-inside: avoid; }' +
+        '.sig-table td { vertical-align: top; }' +
+        '.sig-line { border-top: 1.5px dashed #475569; width: 220px; padding-top: 5px; font-size: 7.2pt; font-weight: 800; color: #1e293b; text-align: center; }' +
+        '.print-footer-note { margin-top: 16px; padding-top: 6px; border-top: 1px solid #e2e8f0; font-size: 6.8pt; color: #94a3b8; text-align: center; }' +
+      '</style>' +
+      '</head><body>' +
+      '<div class="statement-wrap">' +
+        '<table class="header-tbl"><tr>' +
+          '<td>' +
+            '<div class="shop-name">VANATHU POWER TOOLS &amp; WORKSHOP</div>' +
+            '<div class="shop-tagline">Sales, Authorized Service &amp; Industrial Tool Repair Center</div>' +
+            '<div class="shop-meta">Poyanil Building, Near Private Bus Stand, Kozhencherry, Kerala - 689641<br/>Phone: +91 94473 05658 / 0468 222 2841 &bull; GSTIN: 32AABFV9876Q1Z9</div>' +
+          '</td>' +
+          '<td class="stmt-badge-wrap">' +
+            '<div class="stmt-title">Workshop Revenue Statement</div>' +
+            '<div class="stmt-period">' + periodText + '</div>' +
+            '<div class="stmt-meta">Generated: ' + generatedAtText + '<br/>Total Jobs in Scope: <strong>' + filteredRepairs.length + '</strong></div>' +
+          '</td>' +
+        '</tr></table>' +
+        '<table class="kpi-table"><tr>' +
+          '<td style="width: 25%;"><div class="kpi-box kpi-green"><div class="kpi-title" style="color: #166534;">Total Realized Collected</div><div class="kpi-val" style="color: #14532d;">₹' + repairsFinancialSummary.totalCollected.toLocaleString('en-IN') + '</div><div class="kpi-sub" style="color: #166534;">' + repairsFinancialSummary.collectionRate + '% Realization Rate</div></div></td>' +
+          '<td style="width: 25%;"><div class="kpi-box kpi-orange"><div class="kpi-title" style="color: #9a3412;">Pending Balance Due</div><div class="kpi-val" style="color: #c2410c;">₹' + repairsFinancialSummary.totalPending.toLocaleString('en-IN') + '</div><div class="kpi-sub" style="color: #9a3412;">' + repairsFinancialSummary.pendingJobsCount + ' tickets with balance due</div></div></td>' +
+          '<td style="width: 25%;"><div class="kpi-box kpi-blue"><div class="kpi-title" style="color: #075985;">Customer Advances Held</div><div class="kpi-val" style="color: #0369a1;">₹' + repairsFinancialSummary.totalAdvance.toLocaleString('en-IN') + '</div><div class="kpi-sub" style="color: #075985;">' + repairsFinancialSummary.advanceJobsList.length + ' active jobs with advance</div></div></td>' +
+          '<td style="width: 25%;"><div class="kpi-box kpi-slate"><div class="kpi-title" style="color: #334155;">Gross Billed / Volume</div><div class="kpi-val" style="color: #0f172a;">₹' + repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN') + '</div><div class="kpi-sub" style="color: #64748b;">' + filteredRepairs.length + ' tickets total repair volume</div></div></td>' +
+        '</tr></table>' +
+        '<table class="ledger-table">' +
+          '<thead><tr>' +
+            '<th style="width: 28px; text-align: center;">#</th>' +
+            '<th style="width: 85px;">Job Card #</th>' +
+            '<th style="width: 70px;">Date</th>' +
+            '<th>Customer &amp; Phone</th>' +
+            '<th>Tool &amp; Technician</th>' +
+            '<th style="width: 85px;">Status</th>' +
+            '<th class="right" style="width: 75px;">Gross Bill (₹)</th>' +
+            '<th class="right" style="width: 70px;">Advance (₹)</th>' +
+            '<th class="right" style="width: 75px;">Balance Due (₹)</th>' +
+            '<th style="width: 105px; text-align: center;">Settlement</th>' +
+          '</tr></thead>' +
+          '<tbody>' + rowsHtml + '</tbody>' +
+          '<tfoot><tr>' +
+            '<td colspan="6" style="text-align: right; padding: 7px; font-weight: 800;">TOTALS:</td>' +
+            '<td class="right" style="font-family: monospace;">₹' + repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN') + '</td>' +
+            '<td class="right" style="font-family: monospace; color: #0369a1;">₹' + repairsFinancialSummary.totalAdvance.toLocaleString('en-IN') + '</td>' +
+            '<td class="right" style="font-family: monospace; color: ' + (repairsFinancialSummary.totalPending > 0 ? '#c2410c' : '#166534') + ';">₹' + repairsFinancialSummary.totalPending.toLocaleString('en-IN') + '</td>' +
+            '<td style="text-align: center; font-weight: 800;">' + (repairsFinancialSummary.totalPending === 0 ? '✅ All Settled' : ('⏳ ₹' + repairsFinancialSummary.totalPending.toLocaleString('en-IN') + ' Due')) + '</td>' +
+          '</tr></tfoot>' +
+        '</table>' +
+        '<table class="sig-table"><tr>' +
+          '<td style="text-align: left;"><div class="sig-line">Workshop Desk / Cashier<br/><span style="font-size: 6.5pt; font-weight: 500; color: #64748b;">Prepared By</span></div></td>' +
+          '<td style="text-align: right;"><div class="sig-line" style="margin-left: auto;">Authorized Signatory &amp; Workshop Stamp<br/><span style="font-size: 6.5pt; font-weight: 500; color: #64748b;">Vanathu Power Tools &bull; Kozhencherry</span></div></td>' +
+        '</tr></table>' +
+        '<div class="print-footer-note">This computer-generated statement was produced by Vanathu Power Tools Workshop ERP on ' + generatedAtText + '. All financial values in Indian National Rupees (INR ₹).</div>' +
+      '</div></body></html>');
+    doc.close();
+
+    const triggerPrint = () => {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 2500);
+    };
+
+    setTimeout(triggerPrint, 350);
   };
 
   // Repair status counts across all jobs
@@ -6724,7 +6907,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 count: repairsFinancialSummary.totalPending > 0
                   ? `₹${repairsFinancialSummary.totalPending.toLocaleString('en-IN')} due`
                   : 'All Settled',
-                icon: DollarSign,
+                icon: IndianRupee,
                 color: '#0284c7'
               }
             ].map(chip => {
@@ -7044,7 +7227,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       boxShadow: '0 4px 10px rgba(2, 132, 199, 0.4)'
                     }}
                   >
-                    <DollarSign size={24} />
+                    <IndianRupee size={24} />
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -7099,7 +7282,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                   <button
                     type="button"
-                    onClick={() => window.print()}
+                    onClick={printWorkshopRevenueStatement}
                     style={{
                       background: 'rgba(255, 255, 255, 0.12)',
                       border: '1px solid rgba(255, 255, 255, 0.25)',
@@ -7366,7 +7549,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               {/* 5. Main Revenue Content Sections */}
               {filteredRepairs.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                  <DollarSign size={32} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+                  <IndianRupee size={32} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
                   <strong style={{ fontSize: '0.95rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
                     No Financial Records Found For Selected Period
                   </strong>
@@ -12837,7 +13020,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   {/* Pricing & Payment Breakdown Card */}
                   <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', color: '#0f172a', fontWeight: '800', fontSize: '0.84rem' }}>
-                      <DollarSign size={14} style={{ color: '#ea580c' }} />
+                      <IndianRupee size={14} style={{ color: '#ea580c' }} />
                       <span>Payment & Price Breakdown</span>
                     </div>
 

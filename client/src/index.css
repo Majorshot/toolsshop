@@ -6068,7 +6068,11 @@ body.product-loading-active .main-footer-clean {
   .unified-gst-invoice-sheet,
   .unified-gst-invoice-sheet *,
   #printable-label-modal-content,
-  #printable-label-modal-content * {
+  #printable-label-modal-content *,
+  #printable-revenue-statement,
+  #printable-revenue-statement *,
+  #workshop-revenue-dashboard,
+  #workshop-revenue-dashboard * {
     visibility: visible !important;
   }
 
