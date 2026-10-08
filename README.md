@@ -2,100 +2,108 @@
 
 An end-to-end, bespoke digital commerce and service workshop hub designed and engineered from the ground up for **Variathu Power Tools** (*Poyanil Junction, Kozhencherry, Kerala • Est. 2005*).
 
-This platform combines a high-performance equipment storefront with an integrated authorized service workshop tracking engine, real-time inventory management, dual WhatsApp & Email communications, and a discrete store administration system.
+This platform combines a high-performance industrial equipment storefront with an authorized service workshop tracking engine, real-time inventory management, Kerala GST-compliant invoicing, dual WhatsApp & Email communications, and a discrete store administration system.
 
 ---
 
-## 🌟 Architectural Highlights & Core Systems
+## 🌟 Core Systems & Key Features
 
-### 1. 📱 Mobile-First Interactive Storefront
-* **App-Style Bottom Navigation:** Engineered with a native app-like bottom bar on mobile devices (`Home`, `Shop`, `Orders`, `Account`), keeping all primary actions easily within thumb reach.
-* **Instant Equipment Catalog:** Real-time search with multi-parameter filtering across brands (Bosch, Makita, Dewalt, Stanley), tool categories, voltage ratings, and price bands.
-* **Live Stock Verification:** Dynamic inventory counters that prevent overselling and sync state instantly across concurrent customer sessions.
+### 1. 📱 Interactive Customer Storefront & Catalog
+* **App-Style Mobile Navigation:** Native app-like bottom navigation on mobile devices (`Home`, `Shop`, `Orders`, `Account`), keeping primary actions within thumb reach.
+* **Instant Search & Multi-Filters:** Real-time search with multi-parameter filtering across brands (iBELL, Bosch, Makita, Dewalt, Stanley), categories, cordless/corded variants, and price ranges.
+* **Live Stock Verification:** Real-time inventory counters and low-stock indicators that sync state instantly to prevent overselling.
+* **Buy Now & Flexible Cart:** Quick one-click "Buy Now" checkout alongside an interactive Cart Drawer and dedicated Cart Page with responsive pricing breakdowns.
 
-### 2. 🔐 Frictionless Unified Authentication
-* **Single Smart Input:** Customers sign in using either their **10-digit mobile number** or **registered email address** via a single adaptive input.
-* **Dynamic Iconography:** The input intelligently shifts its visual badge between the Indian flag (`+91`) and an email icon based on input character patterns.
-* **Smart Tab Routing:** Entering an unregistered email automatically maps it to the Email Address field when switching to *New Customer* registration, eliminating re-typing.
-* **One-Time Passwords (OTP):** High-entropy 6-digit numeric codes generated with cryptographic security (`crypto.randomInt`), dispatched simultaneously across SMS, WhatsApp, and Email.
-* **Zero Public Admin Footprint:** Normal visitors see no administrative links or staff toggles. The platform dynamically detects store administrator credentials and shifts to password verification seamlessly.
+### 2. 🚚 Dual Delivery & Transparent Kerala Shipping
+* **Express Courier Delivery (Kerala):** Automated per-item courier fee calculation supporting door-step delivery via **Delhivery** and nearest-hub collection via **APS (Alleppey Parcel Service), DTDC, and The Professional Couriers**.
+* **Store Counter Pickup:** Customers can choose instant collection at the Kozhencherry showroom with zero delivery fees and counter verification passes.
+* **Dynamic Courier Rate Aggregation:** Real-time fee recalculation ensuring exact per-item rates are preserved while store pickup remains completely free.
 
-### 3. 🛠️ Integrated Equipment Workshop & Repair Tracker
-A purpose-built lifecycle management system designed specifically for industrial tool repair workshops:
-* **Unique Job Identification:** Every tool brought to the Kozhencherry counter receives a tracking ID (e.g. `VPT-REP-8021`).
-* **Live Repair Stages:** Customers can monitor equipment progress online across distinct phases:
+### 3. 💳 Kerala GST Compliance & Digital Payments
+* **Razorpay Gateway Integration:** Seamless payments supporting UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, NetBanking, and Wallets with verified server-side HMAC signatures.
+* **Statutory Kerala GST Invoicing:** Automatic calculation of CGST (9%) and SGST (9%), financial year sequence billing (e.g. `VPT/26-27/...`), statutory HSN/SAC codes, and dispatch serial numbers.
+* **Official A4 Printable Invoices:** High-resolution, clean print layout tailored for physical A4 printing, GST billing, and transport waybills.
+
+### 4. 🛠️ Authorized Equipment Workshop & Repair Engine
+A purpose-built lifecycle management system designed specifically for industrial tool repair shops:
+* **Dual Job Tracking:** Every tool is assigned a unique Repair ID (e.g. `VPT-REP-8021`) and a Workshop Job Card Number (e.g. `JC-1042`).
+* **Live Status Stages:** Customers and technicians track equipment progress across:
   - 📥 `Received`
   - 🔍 `Diagnosing`
   - ⚙️ `Waiting for Spares`
+  - ⏳ `Repair in Progress (Not Ready)`
   - ✅ `Repaired & Ready`
   - 🤝 `Handed Over`
-* **OTP-Secured Handover:** Tools can only be released upon verifying a dynamic 4-digit Handover OTP generated for the registered customer, ensuring zero tool misplacement.
+* **Printable Job Card Customer Slip:** Formal A4 customer receipt with store branding, GST identification, customer details, barcode, QR verification, and statutory service terms.
+* **OTP-Secured Tool Release:** Equipment can only be handed over after verifying a dynamic 4-digit Handover OTP sent to the registered customer, preventing tool misplacement.
+* **Workshop Revenue & Accounts Statement:** Dedicated accounts tab in the admin dashboard tracking total billed repairs, advance collected, and pending balances with an isolated A4 printable financial statement.
 
-### 4. 💳 Frictionless Checkout & Kerala GST Compliance
-* **Payment Flexibility:** Integrated with **Razorpay** for digital payments (UPI, Cards, NetBanking, Wallets) along with Cash on Delivery (COD) and Store Pickup Handover.
-* **Tax Invoicing:** Automatic calculation of CGST (9%) and SGST (9%) compliant with Kerala state tax standards.
-* **Store Counter Pickup Pass:** Customers choosing local pickup at Kozhencherry receive a digital pickup pass with counter verification codes.
+### 5. 🔐 Frictionless Unified Authentication
+* **Single Adaptive Input:** Customers sign in using either their **10-digit mobile number** or **registered email address** with automatic Indian flag (`+91`) detection.
+* **Passwordless OTP:** Cryptographically generated 6-digit numeric OTPs (`crypto.randomInt`) dispatched across SMS, WhatsApp, and Email.
+* **Discrete Store Staff & Admin Login:** Normal visitors see no administrative links. Entering authorized staff credentials seamlessly triggers secure password verification.
 
-### 5. 🎨 Dynamic Visual Order Pipeline
-Orders are presented in status cards using a dedicated pastel color-coding taxonomy for instant visual recognition:
-* 🔵 **Ordered:** `#eff6ff` (Soft Blue) — Order acknowledged and queued for processing.
-* 🟠 **Dispatched:** `#fff7ed` (Soft Orange) — Packed with courier partner and AWB tracking details.
-* 🟢 **Completed:** `#f0fdf4` (Soft Green) — Delivered or collected at the workshop counter.
-* 🔴 **Cancelled:** `#fef2f2` (Soft Red) — Cancelled with automated stock rollback.
-
-### 6. 📡 Automated Dual-Channel Communication Engine
-* **WhatsApp Cloud API:** Dispatches rich transaction receipts, delivery notices, and security codes directly to the customer's WhatsApp chat from the official business profile.
-* **Resend Transactional Email:** Generates branded, responsive HTML tax invoices, order receipts, and welcome digests.
-* **Resilient Sandbox Fallback:** Automatically intercepts and reroutes test messages during development without failing transactions.
-
-### 7. 🛡️ Discrete Store Administration Hub (`/admin`)
+### 6. 🛡️ Discrete Store Administration Hub (`/admin`)
 An isolated, high-productivity control center accessible exclusively by authenticated store staff:
-* **Real-Time Revenue Telemetry:** Gross sales, pending orders, and active repair metrics.
-* **Inventory Control:** Live stock adjustments, low-stock alerts, and pricing updates.
-* **Order Fulfillment Pipeline:** One-click status transitions, courier partner assignment, and AWB tracking number injection.
-* **Workshop Workbench:** Technician diagnostic notes, cost estimation, advance payment logging, and final billing.
-* **Promotions Engine:** Single-use and multi-use coupon code generation with per-user limits and validity expiration.
+* **Interactive Guided Tours:** Integrated **Driver.js** step-by-step walkthroughs for Overview, Orders, Inventory, Repairs, Cancellations, Customers, and Coupons.
+* **10-per-Page Performance Pagination:** Smooth previous/next paginated navigation for Customer Orders and Workshop Repairs to maintain optimal loading speeds.
+* **Mobile-Optimized Add/Edit Equipment Modal:** 
+  - Responsive 1-column layout on mobile devices.
+  - Direct Cloudinary CDN photo uploads with automatic compression and deletion garbage collection.
+  - Statutory HSN/SAC code selector, per-tool coupon assignment, and custom warranty builder.
+  - Outside-click protection to prevent accidental data loss.
+* **Staff Access Management:** Multi-tier staff role assignment (Admin, Technician, Billing, Sales) with automated WhatsApp onboarding messages containing credentials.
+* **Order Pipeline & Courier AWB Tracking:** One-click order status progression, courier partner assignment, and live tracking links.
+* **Cancellation & Restock Manager:** Structured 2-column cancellation review with instant stock replenishment rollback and customer notifications.
+* **CRM Customer Directory:** Quick customer lookups with purchase history, active repair tickets, and direct WhatsApp chat launchers.
+
+### 7. 📡 Automated Dual-Channel Communication Engine
+* **Meta WhatsApp Cloud API (`v22.0`):** Rich transactional updates for order placements, dispatches, repair stages, handover OTPs, and staff onboarding alerts.
+* **Resend Transactional Email:** Branded, responsive HTML emails for welcome messages, order confirmations, and official GST tax invoices.
 
 ---
 
 ## 🏗️ Technical Stack
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                      FRONTEND                          │
-│  React 19 • Vite • React Router v7 • Vanilla CSS      │
-│  Lucide React • Canvas Confetti • Responsive Viewports │
-└──────────────────────────┬─────────────────────────────┘
-                           │ REST API / JSON
-┌──────────────────────────▼─────────────────────────────┐
-│                       BACKEND                          │
-│  Node.js • Express • Mongoose • Crypto Random Security │
-└────────────┬─────────────┬─────────────┬───────────────┘
-             │             │             │
-   ┌─────────▼──────┐ ┌────▼───────┐ ┌───▼────────────┐
-   │ MongoDB Atlas  │ │  Resend    │ │ Meta WhatsApp  │
-   │  Mumbai Cloud  │ │ Transaction│ │   Cloud API    │
-   │    Cluster     │ │   Emails   │ │  Notifications │
-   └────────────────┘ └────────────┘ └────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                               FRONTEND                                 │
+│  React 19 • Vite 8 • React Router v7 • Vanilla CSS Design System       │
+│  Lucide React • Driver.js • JsBarcode • Vercel Analytics & Speed       │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ REST API / JSON
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                                BACKEND                                 │
+│  Node.js (v18+) • Express • Mongoose • Cloudinary • Crypto Security   │
+└─────────────┬─────────────────────┬─────────────────────┬──────────────┘
+              │                     │                     │
+    ┌─────────▼────────┐  ┌─────────▼────────┐  ┌─────────▼────────┐
+    │  MongoDB Atlas   │  │  Resend Email    │  │  Meta WhatsApp   │
+    │  Mumbai Cluster  │  │  Transactional   │  │    Cloud API     │
+    └──────────────────┘  └──────────────────┘  └──────────────────┘
 ```
 
 ### Frontend (`/client`)
 | Layer | Technology |
 | :--- | :--- |
-| **Core Framework** | React 19 + Vite |
-| **Design System** | Custom Vanilla CSS with tokenized variables (Dark/Light harmony) |
-| **Client Routing** | React Router v7 |
-| **Icons & Micro-Interactions** | Lucide React, Canvas Confetti |
-| **Gateway Client** | Razorpay Standard Checkout JS SDK |
+| **Framework & Build** | React 19 + Vite 8 |
+| **Design System** | Custom Vanilla CSS with tokenized variables & responsive mobile layouts |
+| **Routing** | React Router v7 |
+| **Icons & UI Utilities** | Lucide React, HugeIcons, Canvas Confetti |
+| **Guided Tours** | Driver.js |
+| **Barcodes** | JsBarcode |
+| **Telemetry** | `@vercel/analytics`, `@vercel/speed-insights` |
+| **Payments** | Razorpay Standard Checkout SDK |
 
 ### Backend (`/server`)
 | Layer | Technology |
 | :--- | :--- |
-| **Runtime & Server** | Node.js (v18+) with Express |
-| **Primary Database** | MongoDB Atlas (Hosted in Mumbai AWS `ap-south-1`) via Mongoose |
-| **Security & Auth** | JWT (`jsonwebtoken`), Constant-time credential comparison, Rate-limited in-memory OTP vaults |
-| **Transactional Email** | Resend Node SDK |
-| **Messaging Engine** | Meta WhatsApp Cloud API (`v22.0`) |
+| **Runtime & Framework** | Node.js (v18+) + Express |
+| **Database & ODM** | MongoDB Atlas (`ap-south-1` Mumbai) via Mongoose |
+| **Image CDN & Storage** | Cloudinary SDK (Direct optimization & auto-purging) |
+| **Security & Auth** | JWT (`jsonwebtoken`), in-memory rate-limited OTP vaults, crypto random generation |
+| **Email Service** | Resend Node SDK |
+| **Messaging Service** | Meta WhatsApp Cloud API |
 | **Payment Gateway** | Razorpay Node.js SDK |
 
 ---
@@ -103,63 +111,70 @@ An isolated, high-productivity control center accessible exclusively by authenti
 ## 📁 Repository Structure
 
 ```
-├── client/                      # Frontend Application
-│   ├── public/                  # Static assets & Store Logo
+├── client/                              # Frontend Web Application
+│   ├── public/                          # Static assets & Store Logo
 │   ├── src/
-│   │   ├── components/          # Reusable UI components
-│   │   │   ├── AnimatedContent.jsx
-│   │   │   ├── CheckoutModal.jsx
-│   │   │   ├── CodeSlots.jsx    # Custom 6-digit OTP slot inputs
-│   │   │   ├── Navbar.jsx       # Adaptive desktop header & mobile nav
+│   │   ├── components/                  # Reusable UI components
+│   │   │   ├── AddEquipmentModal.jsx    # Mobile-responsive add/edit product modal
+│   │   │   ├── CartDrawer.jsx           # Slide-out cart drawer
+│   │   │   ├── GstInvoiceModal.jsx      # Official A4 GST tax invoice generator
+│   │   │   ├── JobCardPrintModal.jsx    # Printable workshop job card slip
+│   │   │   ├── Navbar.jsx               # Desktop header & mobile bottom navigation
+│   │   │   ├── ProductCard.jsx          # Catalog item card with live preview
 │   │   │   └── ...
-│   │   ├── context/             # Global Auth, Cart & Store state providers
-│   │   ├── pages/               # Application Views
-│   │   │   ├── AdminDashboard.jsx # Store Owner Administration Portal
-│   │   │   ├── CheckoutPage.jsx # Multi-step checkout pipeline
-│   │   │   ├── HomePage.jsx     # Landing showcase & featured equipment
-│   │   │   ├── LoginPage.jsx    # Unified Phone/Email customer & admin sign-in
-│   │   │   ├── ShopPage.jsx     # Searchable product catalog
-│   │   │   └── TrackingPage.jsx # Workshop repair & courier delivery tracker
-│   │   ├── services/            # Client HTTP API client (`api.js`)
-│   │   └── index.css            # Custom Design System
+│   │   ├── context/                     # Global Auth, Cart & Confirmation state
+│   │   ├── pages/                       # Primary views
+│   │   │   ├── StoreDashboardPage.jsx   # Full-featured staff & admin control center
+│   │   │   ├── CheckoutPage.jsx         # 3-step checkout with Kerala delivery & pickup
+│   │   │   ├── CustomerAccountPage.jsx  # Customer order history, repairs & cancellations
+│   │   │   ├── HomePage.jsx             # Showcase landing page
+│   │   │   ├── ShopPage.jsx             # Searchable equipment catalog
+│   │   │   └── TrackingPage.jsx         # Live courier & workshop tracker
+│   │   ├── services/                    # API client (`api.js`) & Guided tours (`tourService.js`)
+│   │   └── utils/                       # Courier partner resolvers & image optimizers
 │   └── vite.config.js
 │
-└── server/                      # Backend API Engine
-    ├── routes/                  # Express route controllers
-    │   ├── authRoutes.js        # Phone/Email OTP, registration & secure admin login
-    │   ├── orderRoutes.js       # Order creation, verification & status management
-    │   ├── paymentRoutes.js     # Razorpay order generation & HMAC signature verification
-    │   ├── productRoutes.js     # Equipment catalog & category management
-    │   └── repairRoutes.js      # Workshop repair jobs & OTP handover verification
-    ├── services/
-    │   ├── emailService.js      # Resend automated tax invoices & templates
-    │   └── whatsappService.js   # Meta WhatsApp Cloud API messaging
-    ├── utils/
-    │   └── db.js                # MongoDB Atlas connection & resilient data layer
-    └── server.js                # Express app entrypoint & middleware
+├── server/                              # Backend API Server
+│   ├── routes/                          # Express controllers
+│   │   ├── authRoutes.js                # Unified customer OTP & staff login
+│   │   ├── orderRoutes.js               # Order placement, updates & cancellations
+│   │   ├── paymentRoutes.js             # Razorpay order generation & signature validation
+│   │   ├── productRoutes.js             # Inventory CRUD & Cloudinary uploads
+│   │   ├── repairRoutes.js              # Workshop repair jobs, Job Cards & OTP handovers
+│   │   └── staffRoutes.js               # Staff accounts, roles & WhatsApp onboarding
+│   ├── services/
+│   │   ├── emailService.js              # Resend email templates & tax invoices
+│   │   └── whatsappService.js           # Meta WhatsApp Cloud API dispatcher
+│   ├── utils/
+│   │   └── db.js                        # MongoDB Atlas connection & Mongoose schemas
+│   └── server.js                        # Server entrypoint, CORS & error handlers
+│
+└── package.json                         # Root workspace runner (concurrently)
 ```
 
 ---
 
 ## 🚀 Local Development Setup
 
-### 1. Clone & Install Dependencies
+### 1. Prerequisites
+- **Node.js** (v18 or higher)
+- **npm** (v9 or higher)
+- **MongoDB Atlas** account or local MongoDB instance
+
+### 2. Clone Repository & Install Dependencies
 
 ```bash
 # Clone the repository
 git clone https://github.com/Majorshot/toolsshop.git
 cd toolsshop
 
-# Install server dependencies
-cd server
+# Install all dependencies (root, server, and client)
 npm install
-
-# Install client dependencies
-cd ../client
-npm install
+npm --prefix server install
+npm --prefix client install
 ```
 
-### 2. Configure Environment Variables
+### 3. Configure Environment Variables
 
 Create `.env` in `/server`:
 ```env
@@ -173,6 +188,9 @@ RESEND_API_KEY=your_resend_api_key
 RESEND_FROM_EMAIL=Variathu Power Tools <orders@yourdomain.com>
 WHATSAPP_PHONE_NUMBER_ID=your_meta_phone_number_id
 WHATSAPP_ACCESS_TOKEN=your_meta_system_user_token
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 Create `.env` in `/client`:
@@ -181,19 +199,22 @@ VITE_API_URL=http://localhost:5000/api
 VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
 ```
 
-### 3. Launch the Application
+### 4. Run Locally
+
+Start both the backend server and frontend client concurrently with a single command from the project root:
 
 ```bash
-# Terminal 1: Launch Backend API Server (Port 5000)
-cd server
-npm run dev
-
-# Terminal 2: Launch Frontend Dev Server (Port 3000)
-cd client
 npm run dev
 ```
 
-Visit `http://localhost:3000` in your browser.
+* **Frontend:** `http://localhost:3000`
+* **Backend API:** `http://localhost:5000`
+* **Admin Dashboard:** `http://localhost:3000/admin`
+
+To build the client bundle for production:
+```bash
+npm run build
+```
 
 ---
 
