@@ -623,9 +623,9 @@ export const AddEquipmentModal = ({
         <div className="eq-modal-header">
           <div className="eq-modal-header-left">
             <div className="eq-modal-icon-badge">
-              <Zap size={22} />
+              <Zap size={20} />
             </div>
-            <div>
+            <div className="eq-modal-title-group">
               <h3 className="eq-modal-title">
                 {editingProduct ? 'Edit Tool Details & Price' : 'Add New Equipment to Catalog'}
               </h3>
@@ -638,7 +638,7 @@ export const AddEquipmentModal = ({
           <div className="eq-modal-header-right">
             <span className="eq-protected-badge" title="Outside clicking is disabled to prevent accidental data loss">
               <ShieldCheck size={13} />
-              <span>Outside Click Protected</span>
+              <span className="eq-protected-badge-text">Outside Click Protected</span>
             </span>
 
             <button
@@ -686,7 +686,7 @@ export const AddEquipmentModal = ({
               </div>
 
               {/* Brand & Category Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="eq-form-grid-2col">
                 {/* Brand */}
                 <div>
                   <div className="eq-field-label">
@@ -908,7 +908,7 @@ export const AddEquipmentModal = ({
               )}
 
               {/* Stock Units & Quick Stepper */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="eq-form-grid-2col">
                 <div>
                   <label className="eq-field-label" htmlFor="input-tool-stock">
                     <span>Stock Units <span className="req">*</span></span>
@@ -1388,7 +1388,7 @@ export const AddEquipmentModal = ({
                     </div>
 
                     {/* Controls: Duration Number, Unit, and Type */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '80px 110px 1fr', gap: '8px' }}>
+                    <div className="eq-warranty-grid">
                       {/* Number Input */}
                       <div>
                         <label style={{ fontSize: '0.68rem', fontWeight: '700', color: '#9a3412', display: 'block', marginBottom: '4px' }}>
@@ -1591,7 +1591,8 @@ export const AddEquipmentModal = ({
             disabled={isSubmitting}
             id="btn-cancel-equipment-modal"
           >
-            Cancel & Discard
+            <span className="eq-btn-cancel-text-full">Cancel & Discard</span>
+            <span className="eq-btn-cancel-text-mobile">Cancel</span>
           </button>
 
           <div className="eq-footer-actions-right">
@@ -1619,12 +1620,12 @@ export const AddEquipmentModal = ({
               {isSubmitting ? (
                 <>
                   <div style={{ width: '14px', height: '14px', border: '2px solid #ffffff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                  <span>Saving to MongoDB...</span>
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
                   <Check size={16} />
-                  <span>{editingProduct ? 'Save Changes' : 'Add to Store Catalog'}</span>
+                  <span>{editingProduct ? 'Save Changes' : 'Add to Catalog'}</span>
                 </>
               )}
             </button>
