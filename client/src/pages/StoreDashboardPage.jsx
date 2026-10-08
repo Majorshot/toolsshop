@@ -3430,7 +3430,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
       {/* Daily Action Center Banner */}
       {(() => {
-        const readyRepairsCount = repairs.filter(r => r.status === 'Repaired & Ready').length;
+        const readyRepairsCount = repairStatusCounts.ready;
         const lowStockCount = products.filter(p => (Number(p.stock) || 0) <= 3).length;
         const hasUrgentActions = orderCounts.undispatched > 0 || orderCounts.pickupPending > 0 || orderCounts.cancelPending > 0 || readyRepairsCount > 0 || lowStockCount > 0;
 
@@ -3489,7 +3489,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               {readyRepairsCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => { setActiveTab('repairs'); }}
+                  onClick={() => { setActiveTab('repairs'); setRepairsStatusFilter('ready'); }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: '#16a34a', color: '#fff', borderRadius: '20px', border: 'none', fontSize: '0.76rem', fontWeight: '800', cursor: 'pointer', boxShadow: '0 1px 3px rgba(22,163,74,0.3)' }}
                 >
                   🔧 {readyRepairsCount} Tool{readyRepairsCount > 1 ? 's' : ''} Repaired & Ready
@@ -3739,7 +3739,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <span>📦 Active Pending: <strong style={{ color: orderCounts.all > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.all}</strong></span>
               <span>🚚 Undispatched: <strong style={{ color: orderCounts.undispatched > 0 ? '#ea580c' : '#0f172a' }}>{orderCounts.undispatched}</strong></span>
               <span>🏬 Pickup Pending: <strong style={{ color: '#0f172a' }}>{orderCounts.pickupPending}</strong></span>
-              <span>🔧 Workshop: <strong style={{ color: '#0f172a' }}>{repairs.filter(r => r.status !== 'Handed Over' && !r.handoverVerified).length}</strong> jobs</span>
+              <span>🔧 In Workshop: <strong style={{ color: '#0f172a' }}>{repairStatusCounts.in_progress}</strong> jobs</span>
+              {repairStatusCounts.ready > 0 && (
+                <span>✅ Ready: <strong style={{ color: '#16a34a' }}>{repairStatusCounts.ready}</strong></span>
+              )}
             </div>
             <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
               Orders brought above the fold • Click 'Expand Reports' for full details
@@ -3814,13 +3817,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 Workshop & Repairs Active
               </span>
               <div className="store-metric-split-list">
-                <div className="store-metric-split-item">
+                <div
+                  className="store-metric-split-item"
+                  onClick={() => { setActiveTab('repairs'); setRepairsStatusFilter('in_progress'); }}
+                  style={{ cursor: 'pointer' }}
+                  title="View repairs currently undergoing work in workshop (Not Ready)"
+                >
                   <span className="store-metric-item-label" style={{ color: '#ea580c' }}>● In Workshop</span>
-                  <span className="store-metric-item-value">{repairs.filter(r => r.status !== 'Handed Over' && !r.handoverVerified).length} <small>jobs</small></span>
+                  <span className="store-metric-item-value">{repairStatusCounts.in_progress} <small>jobs</small></span>
                 </div>
-                <div className="store-metric-split-item">
+                <div
+                  className="store-metric-split-item"
+                  onClick={() => { setActiveTab('repairs'); setRepairsStatusFilter('ready'); }}
+                  style={{ cursor: 'pointer' }}
+                  title="View tools repaired and ready for pickup"
+                >
                   <span className="store-metric-item-label" style={{ color: '#16a34a' }}>● Ready for Pickup</span>
-                  <span className="store-metric-item-value" style={{ color: '#16a34a' }}>{repairs.filter(r => r.status === 'Repaired & Ready' && !r.handoverVerified).length} <small>ready</small></span>
+                  <span className="store-metric-item-value" style={{ color: '#16a34a' }}>{repairStatusCounts.ready} <small>ready</small></span>
                 </div>
               </div>
             </div>
@@ -3935,7 +3948,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 title="Workshop & Repairs"
                 subtitle="Machinery clinic service queue, job estimates & counter handover OTPs"
                 Icon={Wrench}
-                badge={`${repairs.filter(r => r.status !== 'Handed Over' && !r.handoverVerified).length} active jobs`}
+                badge={repairStatusCounts.ready > 0 ? `${repairStatusCounts.in_progress} in workshop • ${repairStatusCounts.ready} ready` : `${repairStatusCounts.in_progress} active jobs`}
                 badgeBg="#d1fae5"
                 badgeColor="#065f46"
                 iconColor="#10b981"
