@@ -4,7 +4,7 @@ import {
   User, Package, MapPin, Truck, CheckCircle2, Clock, MessageCircle, LogOut,
   ShoppingBag, ArrowRight, Phone, RefreshCw, FileText, Printer, Shield, QrCode,
   X, ExternalLink, Navigation, Copy, Check, XCircle, AlertCircle, Edit3, Plus, Trash2,
-  Building, Home, Briefcase, LayoutDashboard, ChevronDown, ChevronUp, ArrowLeft, Menu
+  Building, Home, Briefcase, LayoutDashboard, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ArrowLeft, Menu
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -37,6 +37,13 @@ export const CustomerAccountPage = () => {
     });
   };
   const [orders, setOrders] = useState([]);
+  const [customerOrdersPage, setCustomerOrdersPage] = useState(1);
+  const CUSTOMER_ORDERS_PER_PAGE = 10;
+  const totalCustomerOrdersPages = Math.max(1, Math.ceil((orders || []).length / CUSTOMER_ORDERS_PER_PAGE));
+  const paginatedCustomerOrders = React.useMemo(() => {
+    const start = (customerOrdersPage - 1) * CUSTOMER_ORDERS_PER_PAGE;
+    return (orders || []).slice(start, start + CUSTOMER_ORDERS_PER_PAGE);
+  }, [orders, customerOrdersPage]);
   const [loading, setLoading] = useState(true);
   const [copiedAwb, setCopiedAwb] = useState(null);
   const [invoiceOrder, setInvoiceOrder] = useState(null); // Selected order for GST Invoice modal
@@ -1854,7 +1861,110 @@ export const CustomerAccountPage = () => {
             </div>
           ) : (
             <div>
-              {orders.map((order) => renderOrderProductCard(order))}
+              {paginatedCustomerOrders.map((order) => renderOrderProductCard(order))}
+
+              {/* Customer Orders Pagination Controls */}
+              {totalCustomerOrdersPages > 1 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 18px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  marginTop: '16px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                  flexWrap: 'wrap',
+                  gap: '12px'
+                }}>
+                  <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>
+                    Showing <strong style={{ color: '#0f172a' }}>{(customerOrdersPage - 1) * CUSTOMER_ORDERS_PER_PAGE + 1}</strong> to{' '}
+                    <strong style={{ color: '#0f172a' }}>{Math.min(customerOrdersPage * CUSTOMER_ORDERS_PER_PAGE, orders.length)}</strong> of{' '}
+                    <strong style={{ color: '#0f172a' }}>{orders.length}</strong> orders (Page {customerOrdersPage} of {totalCustomerOrdersPages})
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setCustomerOrdersPage(prev => Math.max(1, prev - 1))}
+                      disabled={customerOrdersPage === 1}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: customerOrdersPage === 1 ? '#f8fafc' : '#ffffff',
+                        color: customerOrdersPage === 1 ? '#94a3b8' : '#0f172a',
+                        fontSize: '0.8rem',
+                        fontWeight: '700',
+                        cursor: customerOrdersPage === 1 ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <ChevronLeft size={16} />
+                      <span>Previous</span>
+                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {Array.from({ length: totalCustomerOrdersPages }, (_, i) => i + 1)
+                        .filter(p => p === 1 || p === totalCustomerOrdersPages || Math.abs(p - customerOrdersPage) <= 2)
+                        .map((p, idx, arr) => {
+                          const isCurrent = p === customerOrdersPage;
+                          const prevP = arr[idx - 1];
+                          const showEllipsis = prevP && p - prevP > 1;
+
+                          return (
+                            <React.Fragment key={p}>
+                              {showEllipsis && <span style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.8rem' }}>...</span>}
+                              <button
+                                type="button"
+                                onClick={() => setCustomerOrdersPage(p)}
+                                style={{
+                                  minWidth: '32px',
+                                  height: '32px',
+                                  padding: '0 8px',
+                                  borderRadius: '8px',
+                                  border: isCurrent ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                                  background: isCurrent ? '#ea580c' : '#ffffff',
+                                  color: isCurrent ? '#ffffff' : '#334155',
+                                  fontSize: '0.8rem',
+                                  fontWeight: isCurrent ? '800' : '600',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {p}
+                              </button>
+                            </React.Fragment>
+                          );
+                        })}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomerOrdersPage(prev => Math.min(totalCustomerOrdersPages, prev + 1))}
+                      disabled={customerOrdersPage === totalCustomerOrdersPages}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        background: customerOrdersPage === totalCustomerOrdersPages ? '#f8fafc' : '#ffffff',
+                        color: customerOrdersPage === totalCustomerOrdersPages ? '#94a3b8' : '#0f172a',
+                        fontSize: '0.8rem',
+                        fontWeight: '700',
+                        cursor: customerOrdersPage === totalCustomerOrdersPages ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      <span>Next</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>

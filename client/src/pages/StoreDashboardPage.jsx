@@ -327,6 +327,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [orderPaymentFilter, setOrderPaymentFilter] = useState('all'); // 'all', 'paid', 'cod', 'refunded'
   const [orderSortFilter, setOrderSortFilter] = useState('newest'); // 'newest', 'oldest', 'amount-high', 'amount-low'
 
+  // Customer Orders Pagination (10 per page)
+  const [ordersPage, setOrdersPage] = useState(1);
+  const ORDERS_PER_PAGE = 10;
+
   const isOrderDateToday = (dateVal) => {
     if (!dateVal) return false;
     const d = new Date(dateVal);
@@ -509,6 +513,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       return new Date(b.createdAt || b.date || 0) - new Date(a.createdAt || a.date || 0);
     });
   }, [orders, orderStatusFilter, orderSearchQuery, orderDateFilter, orderDeliveryFilter, orderPaymentFilter, orderSortFilter]);
+
+  // Reset ordersPage to 1 whenever filters change
+  useEffect(() => {
+    setOrdersPage(1);
+  }, [orderStatusFilter, orderSearchQuery, orderDateFilter, orderDeliveryFilter, orderPaymentFilter, orderSortFilter]);
+
+  const totalOrdersPages = Math.max(1, Math.ceil(filteredOrders.length / ORDERS_PER_PAGE));
+  const paginatedOrders = useMemo(() => {
+    const start = (ordersPage - 1) * ORDERS_PER_PAGE;
+    return filteredOrders.slice(start, start + ORDERS_PER_PAGE);
+  }, [filteredOrders, ordersPage]);
+
+  useEffect(() => {
+    if (ordersPage > totalOrdersPages) {
+      setOrdersPage(totalOrdersPages);
+    }
+  }, [totalOrdersPages, ordersPage]);
 
   const handleResetOrderFilters = () => {
     setOrderStatusFilter('all');
@@ -846,6 +867,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [repairsEndDate, setRepairsEndDate] = useState('');
   const [repairsStatusFilter, setRepairsStatusFilter] = useState('all'); // 'all' | 'in_progress' | 'ready' | 'handed_over' | 'revenue'
   const [repairRevenueSubTab, setRepairRevenueSubTab] = useState('all'); // 'all' | 'pending' | 'advances' | 'settled'
+  const [repairsPage, setRepairsPage] = useState(1);
+  const REPAIRS_PER_PAGE = 10;
 
   // Customer Autocomplete for Workshop Inward Tool Logging
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
@@ -2397,6 +2420,23 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       return true;
     });
   }, [repairs, repairsStatusFilter, repairsSearch, repairsDateFilter, repairsStartDate, repairsEndDate]);
+
+  // Reset repairsPage to 1 whenever filters change
+  useEffect(() => {
+    setRepairsPage(1);
+  }, [repairsStatusFilter, repairsSearch, repairsDateFilter, repairsStartDate, repairsEndDate]);
+
+  const totalRepairsPages = Math.max(1, Math.ceil(filteredRepairs.length / REPAIRS_PER_PAGE));
+  const paginatedRepairs = useMemo(() => {
+    const start = (repairsPage - 1) * REPAIRS_PER_PAGE;
+    return filteredRepairs.slice(start, start + REPAIRS_PER_PAGE);
+  }, [filteredRepairs, repairsPage]);
+
+  useEffect(() => {
+    if (repairsPage > totalRepairsPages) {
+      setRepairsPage(totalRepairsPages);
+    }
+  }, [totalRepairsPages, repairsPage]);
 
   // Workshop financial summary for the selected period / filters
   const repairsFinancialSummary = useMemo(() => {
@@ -4629,10 +4669,20 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               {/* Active Filter Counter Bar with View Switcher (Cards vs Compact Table) */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: '0.84rem', color: '#64748b' }}>
-                    Showing <strong style={{ color: '#0f172a' }}>{filteredOrders.length}</strong> of <strong style={{ color: '#0f172a' }}>{orders.length}</strong> customer orders
+                  <div style={{ fontSize: '0.84rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span>Showing <strong style={{ color: '#0f172a' }}>{filteredOrders.length === 0 ? 0 : `${(ordersPage - 1) * ORDERS_PER_PAGE + 1}-${Math.min(ordersPage * ORDERS_PER_PAGE, filteredOrders.length)}`}</strong> of <strong style={{ color: '#0f172a' }}>{filteredOrders.length}</strong> customer orders</span>
+                    {orders.length !== filteredOrders.length && (
+                      <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                        ({orders.length} total)
+                      </span>
+                    )}
+                    {totalOrdersPages > 1 && (
+                      <span style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '800', background: '#fff7ed', border: '1px solid #fed7aa', padding: '1px 8px', borderRadius: '12px' }}>
+                        Page {ordersPage} of {totalOrdersPages}
+                      </span>
+                    )}
                     {hasActiveOrderFilters && (
-                      <span style={{ marginLeft: '8px', fontSize: '0.76rem', color: '#ea580c', fontWeight: '700' }}>
+                      <span style={{ fontSize: '0.76rem', color: '#ea580c', fontWeight: '700' }}>
                         (Filtered)
                       </span>
                     )}
@@ -4952,7 +5002,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredOrders.map((order, idx) => {
+                      {paginatedOrders.map((order, idx) => {
                         const isCancelled = (order.status || '').toLowerCase() === 'cancelled';
                         const isStorePickup = order.deliveryType === 'store-pickup';
                         const isPaid = order.paymentStatus === 'PAID';
@@ -5175,7 +5225,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {filteredOrders.map((order) => {
+                  {paginatedOrders.map((order) => {
                     const isPickup = order.deliveryType === 'store-pickup';
                     const isCancelled = (order.status || '').toLowerCase() === 'cancelled';
                     const isCancelRequested = order.cancellationRequested && !isCancelled;
@@ -5852,6 +5902,123 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </div>
                     );
                   })}
+            </div>
+          )}
+
+          {/* Customer Orders Pagination Controls */}
+          {totalOrdersPages > 1 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 18px',
+              background: '#ffffff',
+              border: '1.5px solid #e2e8f0',
+              borderRadius: '12px',
+              marginTop: '16px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>
+                Showing <strong style={{ color: '#0f172a' }}>{(ordersPage - 1) * ORDERS_PER_PAGE + 1}</strong> to{' '}
+                <strong style={{ color: '#0f172a' }}>{Math.min(ordersPage * ORDERS_PER_PAGE, filteredOrders.length)}</strong> of{' '}
+                <strong style={{ color: '#0f172a' }}>{filteredOrders.length}</strong> orders (Page {ordersPage} of {totalOrdersPages})
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrdersPage(prev => Math.max(1, prev - 1));
+                    document.getElementById('orders-section-header')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  disabled={ordersPage === 1}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: ordersPage === 1 ? '#f8fafc' : '#ffffff',
+                    color: ordersPage === 1 ? '#94a3b8' : '#0f172a',
+                    fontSize: '0.8rem',
+                    fontWeight: '700',
+                    cursor: ordersPage === 1 ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  id="btn-orders-prev-page"
+                >
+                  <ChevronLeft size={16} />
+                  <span>Previous</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {Array.from({ length: totalOrdersPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalOrdersPages || Math.abs(p - ordersPage) <= 2)
+                    .map((p, idx, arr) => {
+                      const isCurrent = p === ordersPage;
+                      const prevP = arr[idx - 1];
+                      const showEllipsis = prevP && p - prevP > 1;
+
+                      return (
+                        <React.Fragment key={p}>
+                          {showEllipsis && <span style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.8rem' }}>...</span>}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOrdersPage(p);
+                              document.getElementById('orders-section-header')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            style={{
+                              minWidth: '32px',
+                              height: '32px',
+                              padding: '0 8px',
+                              borderRadius: '8px',
+                              border: isCurrent ? '1.5px solid #ea580c' : '1px solid #cbd5e1',
+                              background: isCurrent ? '#ea580c' : '#ffffff',
+                              color: isCurrent ? '#ffffff' : '#334155',
+                              fontSize: '0.8rem',
+                              fontWeight: isCurrent ? '800' : '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOrdersPage(prev => Math.min(totalOrdersPages, prev + 1));
+                    document.getElementById('orders-section-header')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  disabled={ordersPage === totalOrdersPages}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: ordersPage === totalOrdersPages ? '#f8fafc' : '#ffffff',
+                    color: ordersPage === totalOrdersPages ? '#94a3b8' : '#0f172a',
+                    fontSize: '0.8rem',
+                    fontWeight: '700',
+                    cursor: ordersPage === totalOrdersPages ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  id="btn-orders-next-page"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
           )}
         </>
@@ -7016,11 +7183,19 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 </button>
               )}
             </div>
-            {(repairsSearch || repairsStatusFilter !== 'all' || repairsDateFilter !== 'all') && (
-              <span style={{ fontSize: '0.82rem', color: '#ea580c', fontWeight: '700', whiteSpace: 'nowrap' }}>
-                Showing {filteredRepairs.length} of {repairs.length} tickets
-              </span>
-            )}
+            <div style={{ fontSize: '0.82rem', color: '#ea580c', fontWeight: '700', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>Showing {filteredRepairs.length === 0 ? 0 : `${(repairsPage - 1) * REPAIRS_PER_PAGE + 1}-${Math.min(repairsPage * REPAIRS_PER_PAGE, filteredRepairs.length)}`} of {filteredRepairs.length} tickets</span>
+              {repairs.length !== filteredRepairs.length && (
+                <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '600' }}>
+                  ({repairs.length} total)
+                </span>
+              )}
+              {totalRepairsPages > 1 && (
+                <span style={{ fontSize: '0.72rem', background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', padding: '1px 7px', borderRadius: '10px', fontWeight: '800' }}>
+                  Page {repairsPage} of {totalRepairsPages}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Workshop Date Range Filter Bar (Feature 5) */}
@@ -8043,8 +8218,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredRepairs.map(job => {
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {paginatedRepairs.map(job => {
                 const isHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
                 return (
                 <div
@@ -8435,6 +8611,124 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               );
               })}
             </div>
+
+            {/* Workshop Repairs Pagination Controls */}
+            {totalRepairsPages > 1 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 18px',
+                background: '#ffffff',
+                border: '1.5px solid #e2e8f0',
+                borderRadius: '12px',
+                marginTop: '16px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>
+                  Showing <strong style={{ color: '#0f172a' }}>{(repairsPage - 1) * REPAIRS_PER_PAGE + 1}</strong> to{' '}
+                  <strong style={{ color: '#0f172a' }}>{Math.min(repairsPage * REPAIRS_PER_PAGE, filteredRepairs.length)}</strong> of{' '}
+                  <strong style={{ color: '#0f172a' }}>{filteredRepairs.length}</strong> repair tickets (Page {repairsPage} of {totalRepairsPages})
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRepairsPage(prev => Math.max(1, prev - 1));
+                      document.getElementById('repairs-section-header')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    disabled={repairsPage === 1}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      background: repairsPage === 1 ? '#f8fafc' : '#ffffff',
+                      color: repairsPage === 1 ? '#94a3b8' : '#0f172a',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: repairsPage === 1 ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    id="btn-repairs-prev-page"
+                  >
+                    <ChevronLeft size={16} />
+                    <span>Previous</span>
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {Array.from({ length: totalRepairsPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalRepairsPages || Math.abs(p - repairsPage) <= 2)
+                      .map((p, idx, arr) => {
+                        const isCurrent = p === repairsPage;
+                        const prevP = arr[idx - 1];
+                        const showEllipsis = prevP && p - prevP > 1;
+
+                        return (
+                          <React.Fragment key={p}>
+                            {showEllipsis && <span style={{ padding: '0 4px', color: '#94a3b8', fontSize: '0.8rem' }}>...</span>}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRepairsPage(p);
+                                document.getElementById('repairs-section-header')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              style={{
+                                minWidth: '32px',
+                                height: '32px',
+                                padding: '0 8px',
+                                borderRadius: '8px',
+                                border: isCurrent ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                                background: isCurrent ? '#0284c7' : '#ffffff',
+                                color: isCurrent ? '#ffffff' : '#334155',
+                                fontSize: '0.8rem',
+                                fontWeight: isCurrent ? '800' : '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {p}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRepairsPage(prev => Math.min(totalRepairsPages, prev + 1));
+                      document.getElementById('repairs-section-header')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    disabled={repairsPage === totalRepairsPages}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      background: repairsPage === totalRepairsPages ? '#f8fafc' : '#ffffff',
+                      color: repairsPage === totalRepairsPages ? '#94a3b8' : '#0f172a',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: repairsPage === totalRepairsPages ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    id="btn-repairs-next-page"
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       )}
