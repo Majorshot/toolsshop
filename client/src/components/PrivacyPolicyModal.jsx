@@ -330,27 +330,21 @@ export const PrivacyPolicyModal = ({ isOpen, onClose, initialTab = 'privacy' }) 
 
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>
-                  4. Cancellation, Returns &amp; Refund Policy
+                  4. No Return &amp; No Cancellation Policy
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.84rem', color: '#475569', lineHeight: '1.5' }}>
                   <p style={{ margin: 0 }}>
-                    We want you to shop with complete peace of mind at Variathu Power Tools. Our return and cancellation policy is straightforward:
+                    Please note our store policy regarding orders, cancellations, and returns:
                   </p>
                   <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <li>
-                      <strong>Cancellation Before Dispatch / Pickup:</strong> You can cancel any order directly from your Customer Account Dashboard with immediate confirmation. Paid online orders (UPI, Debit/Credit Card, Net Banking) receive a <strong>100% full automatic refund</strong> back to the original payment source.
+                      <strong>No Cancellation:</strong> Once an order is placed and confirmed, customer cancellations are not accepted. There is no cancellation option for customers once ordered.
                     </li>
                     <li>
-                      <strong>Cancellation After Dispatch:</strong> For shipments already in transit with an active courier tracking number (AWB), you can submit a cancellation request via your Customer Dashboard. Our store team will coordinate with the courier partner to intercept or initiate return processing.
+                      <strong>No Returns:</strong> All equipment, machinery, power tools, and accessories sales are final. We do not accept returns, exchanges, or refunds once purchased.
                     </li>
                     <li>
-                      <strong>Damaged, Defective or Incorrect Items:</strong> If equipment arrives damaged or defective, notify us within 7 days. We provide immediate replacement or repair through our authorized clinic at Poyanil Building, Kozhencherry.
-                    </li>
-                    <li>
-                      <strong>Store Counter Pickups:</strong> Pickup orders can be cancelled anytime before counter handover for an immediate 100% refund.
-                    </li>
-                    <li>
-                      <strong>Refund Timeline:</strong> UPI and wallet refunds are generally instantaneous; card and bank account refunds reflect within 3 to 5 business days per banking partner timelines.
+                      <strong>Manufacturer Brand Warranty:</strong> All equipment is 100% genuine and covered by official manufacturer brand warranty. Any servicing, technical faults, or repairs are supported through authorized brand service networks and our machinery workshop clinic at Poyanil Building, Kozhencherry.
                     </li>
                   </ul>
                 </div>

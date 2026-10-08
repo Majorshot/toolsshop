@@ -1086,22 +1086,22 @@ export const ProductDetailPage = () => {
               </a>
             )}
 
-            {/* Cancellation & Return Policy Guarantee */}
+            {/* No Return & No Cancellation Policy Notice */}
             <div style={{
-              background: '#fff7ed',
-              border: '1.5px solid #fed7aa',
+              background: '#fef2f2',
+              border: '1.5px solid #fecaca',
               borderRadius: '10px',
               padding: '12px 14px',
               marginTop: '14px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '6px'
+              gap: '5px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <RotateCcw size={15} style={{ color: '#ea580c', flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#9a3412' }}>
-                    Return &amp; Cancellation Policy
+                  <Ban size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#991b1b' }}>
+                    No Return &amp; No Cancellation
                   </span>
                 </div>
                 <button
@@ -1110,7 +1110,7 @@ export const ProductDetailPage = () => {
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#c2410c',
+                    color: '#b91c1c',
                     fontSize: '0.73rem',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -1119,14 +1119,12 @@ export const ProductDetailPage = () => {
                   }}
                   id="btn-pdp-view-cancel-policy"
                 >
-                  View Details
+                  Policy Details
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.76rem', color: '#7c2d12', lineHeight: '1.4' }}>
-                <div>• <strong>Easy Pre-Dispatch Cancellation:</strong> 100% full instant refund before item is shipped or collected.</div>
-                <div>• <strong>After Dispatch / In Transit:</strong> Submit a cancellation or return request from your dashboard for store verification.</div>
-                <div>• <strong>Defect &amp; Damage:</strong> Covered with prompt replacement or repair at our Kozhencherry workshop clinic.</div>
-              </div>
+              <p style={{ margin: 0, fontSize: '0.77rem', color: '#7f1d1d', lineHeight: '1.45' }}>
+                Once ordered, <strong>there is no option to cancel or return the product</strong>. All sales are final. Technical issues or defects are covered under official brand warranty.
+              </p>
             </div>
 
             {/* Trust Badges */}
@@ -1136,8 +1134,8 @@ export const ProductDetailPage = () => {
                 <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>100% Genuine</span>
               </div>
               <div>
-                <RotateCcw size={18} style={{ color: '#ea580c', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>Easy Returns</span>
+                <Ban size={18} style={{ color: '#dc2626', margin: '0 auto 4px' }} />
+                <span style={{ fontSize: '0.7rem', color: '#991b1b', fontWeight: '800', display: 'block' }}>No Returns</span>
               </div>
               <div>
                 <Wrench size={18} style={{ color: '#0284c7', margin: '0 auto 4px' }} />
