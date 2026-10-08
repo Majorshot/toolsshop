@@ -398,7 +398,68 @@ Variathu Power Tools, Poyanil Building, Kozhencherry
   return sendWhatsAppMessage(job.customerPhone, message);
 };
 
+/**
+ * 10. Generate Staff Onboarding / Welcome WhatsApp Text
+ */
+const getStaffWelcomeWhatsAppText = ({ staff, password, clientUrl }) => {
+  if (!staff) return '';
+  const baseUrl = clientUrl || process.env.CLIENT_URL || 'http://localhost:3000';
+  const loginUrl = `${baseUrl.replace(/\/$/, '')}/login`;
+
+  let roleTitle = 'Team Member';
+  if (staff.role === 'technician') {
+    roleTitle = 'Workshop Floor Technician';
+  } else if (staff.role === 'workshop_manager') {
+    roleTitle = 'Workshop Manager';
+  } else if (staff.role === 'manager') {
+    roleTitle = 'Store Manager';
+  }
+
+  let message = `🛠️ *VARIATHU POWER TOOLS - EMPLOYEE ONBOARDING*\n`;
+  message += `*Welcome to the Team, ${staff.name}!* 🎉\n\n`;
+  message += `You have been officially registered as a *${roleTitle}* at Variathu Power Tools.\n\n`;
+  message += `📋 *Employee Profile:*\n`;
+  message += `• *Name:* ${staff.name}\n`;
+  message += `• *Role:* ${roleTitle}\n`;
+  if (staff.specialization) {
+    message += `• *Department / Trade:* ${staff.specialization}\n`;
+  }
+  if (staff.phone) {
+    message += `• *Registered Phone:* ${staff.phone}\n`;
+  }
+
+  if (['workshop_manager', 'manager'].includes(staff.role)) {
+    message += `\n🔐 *Your Store Portal Credentials:*\n`;
+    message += `• *Portal URL:* ${loginUrl}\n`;
+    if (staff.email) {
+      message += `• *Login Email:* ${staff.email}\n`;
+    }
+    if (password) {
+      message += `• *Password:* ${password}\n`;
+    }
+    message += `\n_Please sign in and keep your password secure._\n`;
+  } else {
+    message += `\n🧑‍🔧 *Floor Status:*\nYour profile is now live in the workshop inward system. Customer equipment repair tickets assigned to you will track under your name and specialization.\n`;
+  }
+
+  message += `\n📍 *Workshop & Showroom:* Poyanil Building, Kozhencherry\n`;
+  message += `📞 *Admin Office:* +91 94475 59574\n\n`;
+  message += `Welcome aboard! Let's power ahead. ⚡`;
+
+  return message;
+};
+
+/**
+ * 11. Send Staff Onboarding / Welcome WhatsApp
+ */
+const sendStaffWelcomeWhatsApp = async ({ staff, password, clientUrl }) => {
+  if (!staff || !staff.phone) return { skipped: true, reason: 'No phone number' };
+  const message = getStaffWelcomeWhatsAppText({ staff, password, clientUrl });
+  return sendWhatsAppMessage(staff.phone, message);
+};
+
 module.exports = {
+  formatPhoneNumber,
   sendWhatsAppMessage,
   sendOrderConfirmationWhatsApp,
   sendOrderDispatchedWhatsApp,
@@ -408,6 +469,9 @@ module.exports = {
   sendRepairTicketCreatedWhatsApp,
   sendRepairReadyWhatsApp,
   sendRepairDeliveredWhatsApp,
-  sendRepairEstimateUpdatedWhatsApp
+  sendRepairEstimateUpdatedWhatsApp,
+  getStaffWelcomeWhatsAppText,
+  sendStaffWelcomeWhatsApp
 };
+
 

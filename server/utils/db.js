@@ -254,6 +254,7 @@ const repairSchema = new mongoose.Schema({
     default: 'Received'
   },
   assignedTechnician: { type: String, default: '' },
+  assignedTechnicianDepartment: { type: String, default: '' },
   technicianNotes: String,
   handoverOtp: { type: String, default: () => String(crypto.randomInt(1000, 10000)) },
   handoverVerified: { type: Boolean, default: false },
@@ -1769,20 +1770,69 @@ const db = {
   // ==========================================
   async getRepairJobs() {
     ensureMongoConnected();
-    return await RepairModel.find().sort({ createdAt: -1 }).lean();
+    const jobs = await RepairModel.find().sort({ createdAt: -1 }).lean();
+    if (!jobs || jobs.length === 0) return [];
+
+    // Auto-resolve technician department from StaffModel if not populated on older tickets
+    const missingDept = jobs.some(j => j.assignedTechnician && !j.assignedTechnicianDepartment);
+    let specMap = new Map();
+    if (missingDept) {
+      try {
+        const staffList = await StaffModel.find({}, 'name specialization').lean();
+        staffList.forEach(s => {
+          if (s.name) specMap.set(s.name.trim().toLowerCase(), s.specialization || '');
+        });
+      } catch (e) {}
+    }
+
+    jobs.forEach(j => {
+      const isHandedOver = Boolean(j.handoverVerified) || j.status === 'Handed Over';
+      if (isHandedOver) {
+        const total = Number(j.finalCost || j.estimatedCost || 0);
+        j.advancePaid = total; // Balance payment marked as whole paid at handover
+      }
+      if (j.assignedTechnician && !j.assignedTechnicianDepartment) {
+        j.assignedTechnicianDepartment = specMap.get(j.assignedTechnician.trim().toLowerCase()) || '';
+      }
+    });
+    return jobs;
   },
 
   async getRepairJobById(id) {
     ensureMongoConnected();
     const isObjectId = mongoose.isValidObjectId(id);
     const query = isObjectId ? { $or: [{ id: String(id) }, { jobId: id }, { _id: id }] } : { $or: [{ id: String(id) }, { jobId: id }] };
-    return await RepairModel.findOne(query).lean();
+    const job = await RepairModel.findOne(query).lean();
+    if (job) {
+      if (job.handoverVerified || job.status === 'Handed Over') {
+        job.advancePaid = Number(job.finalCost || job.estimatedCost || 0);
+      }
+      if (job.assignedTechnician && !job.assignedTechnicianDepartment) {
+        try {
+          const staffDoc = await StaffModel.findOne({ name: String(job.assignedTechnician).trim() }).lean();
+          if (staffDoc?.specialization) {
+            job.assignedTechnicianDepartment = staffDoc.specialization.trim();
+          }
+        } catch (e) {}
+      }
+    }
+    return job;
   },
 
   async createRepairJob(jobData) {
     ensureMongoConnected();
     const jobId = `VPT-REP-${Date.now().toString().slice(-4)}`;
     const handoverOtp = String(crypto.randomInt(1000, 10000));
+
+    let techDept = (jobData.assignedTechnicianDepartment || '').trim();
+    if (!techDept && jobData.assignedTechnician) {
+      try {
+        const staffDoc = await StaffModel.findOne({ name: String(jobData.assignedTechnician).trim() }).lean();
+        if (staffDoc?.specialization) {
+          techDept = staffDoc.specialization.trim();
+        }
+      } catch (e) {}
+    }
 
     const newJob = {
       id: `rep-${Date.now().toString().slice(-6)}`,
@@ -1799,6 +1849,7 @@ const db = {
       advancePaid: Number(jobData.advancePaid) || 0,
       status: jobData.status || 'Received',
       assignedTechnician: (jobData.assignedTechnician || '').trim(),
+      assignedTechnicianDepartment: techDept,
       technicianNotes: jobData.technicianNotes || '',
       handoverOtp,
       handoverVerified: false,
@@ -1818,6 +1869,16 @@ const db = {
     ensureMongoConnected();
     const isObjectId = mongoose.isValidObjectId(id);
     const query = isObjectId ? { $or: [{ id: String(id) }, { jobId: id }, { _id: id }] } : { $or: [{ id: String(id) }, { jobId: id }] };
+    
+    if (updates.assignedTechnician && !updates.assignedTechnicianDepartment) {
+      try {
+        const staffDoc = await StaffModel.findOne({ name: String(updates.assignedTechnician).trim() }).lean();
+        if (staffDoc?.specialization) {
+          updates.assignedTechnicianDepartment = staffDoc.specialization.trim();
+        }
+      } catch (e) {}
+    }
+
     return await RepairModel.findOneAndUpdate(query, updates, { new: true }).lean();
   },
 
@@ -1838,9 +1899,12 @@ const db = {
       return { success: false, message: "Invalid 4-digit handover OTP. Please verify with customer." };
     }
 
+    const totalBill = Number(job.finalCost || job.estimatedCost || 0);
+
     const updates = {
       status: "Handed Over",
       handoverVerified: true,
+      advancePaid: totalBill, // Balance marked as whole paid upon handover
       completedAt: new Date().toISOString()
     };
 

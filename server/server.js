@@ -54,10 +54,14 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (like direct browser visits, same-origin, curl, or mobile apps)
+    if (!origin) return callback(null, true);
+
     // Allow all vercel preview/production domains, custom company domains, and local development
     if (
       origin.endsWith('.vercel.app') ||
       origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
       origin.endsWith('variathupowertools.in') ||
       origin.endsWith('variathupowertools.com')
     ) {
@@ -124,6 +128,17 @@ app.use('/api', (req, res, next) => {
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
   next();
+});
+
+// Root welcome & status endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'Variathu Power Tools API',
+    uptimeSeconds: Math.floor(process.uptime()),
+    healthCheck: '/api/health',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Health check

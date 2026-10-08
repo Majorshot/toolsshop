@@ -393,7 +393,14 @@ export const JobCardPrintModal = ({ job, onClose }) => {
                     {job.serialNumber || 'N/A'}
                   </td>
                   <td style={{ padding: '3px 6px', fontWeight: '700', color: '#1e40af' }}>
-                    {job.assignedTechnician || 'Senior Specialist'}
+                    {job.assignedTechnician ? (
+                      <>
+                        {job.assignedTechnician}
+                        {job.assignedTechnicianDepartment ? (
+                          <span style={{ fontSize: '7.8pt', color: '#2563eb', fontWeight: '600' }}> ({job.assignedTechnicianDepartment})</span>
+                        ) : ''}
+                      </>
+                    ) : 'Senior Specialist'}
                   </td>
                 </tr>
               </tbody>
@@ -422,8 +429,8 @@ export const JobCardPrintModal = ({ job, onClose }) => {
                   <td style={{ width: '26%', padding: '5px 8px', borderRight: '1px solid #000000', borderBottom: '1px solid #000000', background: '#f8fafc', fontWeight: '800' }}>
                     Technician Work / Diagnosis:
                   </td>
-                  <td style={{ padding: '5px 8px', borderBottom: '1px solid #000000', color: '#0369a1', fontWeight: '600' }}>
-                    {job.technicianNotes || 'Initial diagnostics, teardown inspection, field coil & armature testing.'}
+                  <td style={{ padding: '5px 8px', borderBottom: '1px solid #000000', color: job.technicianNotes ? '#0369a1' : '#94a3b8', fontWeight: job.technicianNotes ? '600' : '400', fontStyle: job.technicianNotes ? 'normal' : 'italic' }}>
+                    {job.technicianNotes ? job.technicianNotes : 'Awaiting technician teardown & diagnosis notes'}
                   </td>
                 </tr>
                 <tr>

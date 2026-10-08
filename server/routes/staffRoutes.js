@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
+const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
 const { requireStoreOwner, requireFullStoreManager } = require('../utils/auth');
 
 // GET /api/staff - List all staff members
@@ -41,13 +43,93 @@ router.post('/', requireFullStoreManager, async (req, res) => {
       active: active !== undefined ? Boolean(active) : true
     });
 
+    const clientOrigin = req.headers.origin || req.headers.referer;
+
+    // 1. Send credentials email ONLY for workshop_manager and manager (technician requires no email/login)
+    let emailDispatched = false;
+    if (['workshop_manager', 'manager'].includes(created.role) && created.email) {
+      emailService.sendStaffWelcomeEmail({
+        staff: created,
+        password: password ? String(password).trim() : '',
+        clientUrl: clientOrigin
+      }).catch(err => {
+        console.warn('[Staff Email] Non-fatal error sending welcome email:', err.message);
+      });
+      emailDispatched = true;
+    }
+
+    // 2. Send WhatsApp notification for ALL roles (including technician who has a phone number!)
+    let whatsappDispatched = false;
+    let whatsappUrl = null;
+    if (created.phone) {
+      whatsappService.sendStaffWelcomeWhatsApp({
+        staff: created,
+        password: password ? String(password).trim() : '',
+        clientUrl: clientOrigin
+      }).catch(err => {
+        console.warn('[Staff WhatsApp] Non-fatal error sending WhatsApp message:', err.message);
+      });
+      whatsappDispatched = true;
+
+      const cleanPhone = whatsappService.formatPhoneNumber(created.phone);
+      const textMsg = whatsappService.getStaffWelcomeWhatsAppText({
+        staff: created,
+        password: password ? String(password).trim() : '',
+        clientUrl: clientOrigin
+      });
+      whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(textMsg)}`;
+    }
+
     res.status(201).json({
       success: true,
-      message: `${created.role === 'technician' ? 'Technician' : 'Staff member'} registered successfully`,
-      staff: created
+      message: `${created.role === 'technician' ? 'Technician' : 'Staff member'} registered successfully${emailDispatched ? ' & credentials emailed' : ''}${whatsappDispatched ? ' & WhatsApp notified' : ''}`,
+      staff: created,
+      emailDispatched,
+      whatsappDispatched,
+      whatsappUrl
     });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// POST /api/staff/:id/notify-whatsapp - Send/Resend WhatsApp notification to staff member
+router.post('/:id/notify-whatsapp', requireFullStoreManager, async (req, res) => {
+  try {
+    const staff = await db.getStaffMemberById(req.params.id);
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'Staff member not found' });
+    }
+    if (!staff.phone) {
+      return res.status(400).json({ success: false, message: 'Staff member does not have a registered phone number' });
+    }
+
+    const clientOrigin = req.headers.origin || req.headers.referer;
+    const { tempPassword } = req.body || {};
+
+    whatsappService.sendStaffWelcomeWhatsApp({
+      staff,
+      password: tempPassword ? String(tempPassword).trim() : '',
+      clientUrl: clientOrigin
+    }).catch(err => {
+      console.warn('[Staff WhatsApp Resend] Non-fatal error sending WhatsApp:', err.message);
+    });
+
+    const cleanPhone = whatsappService.formatPhoneNumber(staff.phone);
+    const textMsg = whatsappService.getStaffWelcomeWhatsAppText({
+      staff,
+      password: tempPassword ? String(tempPassword).trim() : '',
+      clientUrl: clientOrigin
+    });
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(textMsg)}`;
+
+    res.json({
+      success: true,
+      message: `WhatsApp notification dispatched to ${staff.name} (${staff.phone})`,
+      whatsappUrl
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

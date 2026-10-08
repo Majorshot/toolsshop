@@ -974,6 +974,150 @@ async function sendOtpEmail({ to, name, otp, purpose = 'login', clientUrl }) {
   }
 }
 
+/**
+ * Send Staff Account Credentials & Welcome Email (Workshop Manager & Store Manager)
+ */
+async function sendStaffWelcomeEmail({ staff, password, clientUrl }) {
+  try {
+    if (!staff || !staff.email || !staff.email.includes('@')) {
+      console.warn('[Resend Email] Notice: Invalid staff email for welcome email');
+      return { success: false, message: 'Invalid recipient email' };
+    }
+
+    const resend = getResendClient();
+    if (!resend) {
+      console.log(`[Resend Email Simulation] API key not configured. Simulated staff credentials email to ${staff.email}`);
+      return { success: true, simulated: true };
+    }
+
+    const baseUrl = getClientUrl(clientUrl);
+    const loginUrl = `${baseUrl}/login?portal=admin`;
+    const isWorkshopManager = staff.role === 'workshop_manager';
+    const roleTitle = isWorkshopManager ? 'Workshop Manager' : 'Store Manager';
+    const roleBadgeBg = isWorkshopManager ? '#fff7ed' : '#faf5ff';
+    const roleBadgeBorder = isWorkshopManager ? '#fed7aa' : '#e9d5ff';
+    const roleBadgeColor = isWorkshopManager ? '#c2410c' : '#7e22ce';
+
+    const bodyContent = `
+      <!-- Header Banner -->
+      <div style="padding: 28px 24px 20px; text-align: center; border-bottom: 1px solid #f1f5f9; background: #ffffff;">
+        <div style="display: inline-block; background: ${roleBadgeBg}; border: 1px solid ${roleBadgeBorder}; color: ${roleBadgeColor}; font-weight: 800; font-size: 11px; padding: 5px 14px; border-radius: 20px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px;">
+          ${isWorkshopManager ? '🛠️ WORKSHOP CLINIC' : '🏢 STORE ADMINISTRATION'} &bull; ${roleTitle.toUpperCase()}
+        </div>
+        <h2 style="font-size: 22px; font-weight: 800; margin: 0 0 8px; color: #0f172a;">
+          Welcome to the Team, ${staff.name}!
+        </h2>
+        <p style="color: #64748b; font-size: 14px; margin: 0 auto; max-width: 480px; line-height: 1.5;">
+          Your staff account has been set up at <strong>Variathu Power Tools</strong>. Below are your login credentials and portal access details.
+        </p>
+      </div>
+
+      <!-- Account Credentials Box -->
+      <div style="padding: 24px; background: #f8fafc;">
+        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          
+          <div style="background: #0f172a; padding: 12px 18px; color: #ffffff; display: flex; align-items: center; justify-content: space-between;">
+            <strong style="font-size: 13px; letter-spacing: 0.03em;">🔐 Your Login Credentials</strong>
+            <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">CONFIDENTIAL</span>
+          </div>
+
+          <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+            <tbody>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px 18px; font-size: 12px; color: #64748b; font-weight: 600; width: 38%;">
+                  Login Email
+                </td>
+                <td style="padding: 12px 18px; font-size: 13px; color: #0f172a; font-weight: 700;">
+                  <span style="font-family: monospace; background: #f1f5f9; padding: 3px 8px; border-radius: 6px; font-size: 13px;">${staff.email}</span>
+                </td>
+              </tr>
+
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px 18px; font-size: 12px; color: #64748b; font-weight: 600;">
+                  Account Password
+                </td>
+                <td style="padding: 12px 18px; font-size: 13px; color: #dc2626; font-weight: 800;">
+                  <span style="font-family: monospace; background: #fef2f2; border: 1px solid #fecaca; padding: 3px 10px; border-radius: 6px; font-size: 14px; letter-spacing: 0.5px;">${password}</span>
+                </td>
+              </tr>
+
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px 18px; font-size: 12px; color: #64748b; font-weight: 600;">
+                  Role / Designation
+                </td>
+                <td style="padding: 12px 18px; font-size: 13px; color: #0f172a; font-weight: 700;">
+                  ${roleTitle}
+                </td>
+              </tr>
+
+              ${staff.specialization ? `
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 12px 18px; font-size: 12px; color: #64748b; font-weight: 600;">
+                  Department / Specialization
+                </td>
+                <td style="padding: 12px 18px; font-size: 13px; color: #0f172a; font-weight: 600;">
+                  ${staff.specialization}
+                </td>
+              </tr>
+              ` : ''}
+
+              ${staff.phone ? `
+              <tr>
+                <td style="padding: 12px 18px; font-size: 12px; color: #64748b; font-weight: 600;">
+                  Registered Phone
+                </td>
+                <td style="padding: 12px 18px; font-size: 13px; color: #0f172a; font-weight: 600;">
+                  ${staff.phone}
+                </td>
+              </tr>
+              ` : ''}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Access Scope / Responsibilities -->
+      <div style="padding: 20px 24px; background: #ffffff; border-bottom: 1px solid #f1f5f9;">
+        <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin: 0 0 10px; font-weight: 700;">
+          ${isWorkshopManager ? '🛠️ Workshop Repairs Privileges' : '🏢 Management Privileges'}
+        </h3>
+        <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.6;">
+          ${isWorkshopManager 
+            ? 'As Workshop Manager, you can log inward machinery repairs, manage repair diagnosis and spare parts billing, track workshop progress stages, and verify customer 4-digit collection OTPs upon tool handover.'
+            : 'As Store Manager, you have full administrative privileges to oversee customer orders, catalog stock inventory, workshop repairs, customer CRM directory, and promotional campaigns.'}
+        </p>
+      </div>
+
+      <!-- Login CTA Button -->
+      <div style="padding: 28px 24px; text-align: center; background: #ffffff;">
+        <p style="font-size: 13px; color: #64748b; margin: 0 0 16px;">
+          Click the button below to sign in using your email and password:
+        </p>
+        <a href="${loginUrl}" target="_blank" style="display: inline-block; background: #ea580c; color: #ffffff; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.02em; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);">
+          Sign In to Staff Portal &rarr;
+        </a>
+        <div style="margin-top: 14px; font-size: 11px; color: #94a3b8;">
+          Direct Link: <a href="${loginUrl}" style="color: #ea580c; text-decoration: none;">${loginUrl}</a>
+        </div>
+      </div>
+
+      <!-- Security Advisory -->
+      <div style="padding: 16px 24px; background: #fefce8; border-top: 1px solid #fef08a; font-size: 12px; color: #713f12; line-height: 1.5;">
+        <strong>🔒 Security Notice:</strong> Please keep your credentials confidential. If you need to change your password or experience any issues accessing your account, please notify the store administrator or contact our Kozhencherry store helpline at +91 94475 59333.
+      </div>
+    `;
+
+    return await sendEmailSafely(resend, {
+      to: staff.email,
+      subject: `🔐 Your Login Credentials & Staff Access (${roleTitle}) - Variathu Power Tools`,
+      html: emailWrapper(`Staff Account Credentials - ${roleTitle}`, bodyContent, { clientUrl: baseUrl })
+    });
+  } catch (err) {
+    console.warn('[Resend Email] Error sending staff welcome email:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendOrderConfirmationEmail,
   sendOrderCompletedEmail,
@@ -982,6 +1126,7 @@ module.exports = {
   sendOrderCancelledEmail,
   sendWelcomeEmail,
   sendOtpEmail,
+  sendStaffWelcomeEmail,
   setDynamicClientUrl,
   getClientUrl
 };

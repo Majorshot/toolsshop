@@ -90,6 +90,12 @@ router.put('/:id', requireStoreOwner, async (req, res) => {
       }
     }
 
+    // When handed over, mark balance as whole paid
+    if (req.body.status === 'Handed Over' || req.body.handoverVerified) {
+      const finalBill = Number(req.body.finalCost !== undefined ? req.body.finalCost : (oldJob.finalCost || oldJob.estimatedCost || 0));
+      req.body.advancePaid = finalBill;
+    }
+
     const updated = await db.updateRepairJob(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Repair job not found' });

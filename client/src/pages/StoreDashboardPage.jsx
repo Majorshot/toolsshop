@@ -824,6 +824,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [copiedCancelAwb, setCopiedCancelAwb] = useState(null);
   const [copiedCancelOrderId, setCopiedCancelOrderId] = useState(null);
   const [unmaskedRepairOtps, setUnmaskedRepairOtps] = useState({});
+  const [adminOtpWarningJob, setAdminOtpWarningJob] = useState(null);
 
   // Inline Stock & Price Editing
   const [editingPriceId, setEditingPriceId] = useState(null);
@@ -843,7 +844,8 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   const [repairsDateFilter, setRepairsDateFilter] = useState('all'); // 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'
   const [repairsStartDate, setRepairsStartDate] = useState('');
   const [repairsEndDate, setRepairsEndDate] = useState('');
-  const [repairsStatusFilter, setRepairsStatusFilter] = useState('all'); // 'all' | 'in_progress' | 'ready' | 'handed_over'
+  const [repairsStatusFilter, setRepairsStatusFilter] = useState('all'); // 'all' | 'in_progress' | 'ready' | 'handed_over' | 'revenue'
+  const [repairRevenueSubTab, setRepairRevenueSubTab] = useState('all'); // 'all' | 'pending' | 'advances' | 'settled'
 
   // Customer Autocomplete for Workshop Inward Tool Logging
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
@@ -1480,11 +1482,15 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     try {
       const res = await api.getRepairJobs();
       const raw = Array.isArray(res) ? res : (res.data || []);
-      // Client-side auto-heal: if a job was handed over / handoverVerified, ensure status is "Handed Over"
+      // Client-side auto-heal: if a job was handed over / handoverVerified, ensure status is "Handed Over" and advancePaid is whole total
       const cleaned = raw.map(j => {
-        if (j.handoverVerified && j.status !== 'Handed Over') {
-          api.updateRepairJob(j.id || j.jobId || j._id, { status: 'Handed Over' }).catch(() => {});
-          return { ...j, status: 'Handed Over' };
+        const isHandedOver = Boolean(j.handoverVerified) || j.status === 'Handed Over';
+        if (isHandedOver) {
+          const total = Number(j.finalCost || j.estimatedCost || 0);
+          if (j.status !== 'Handed Over') {
+            api.updateRepairJob(j.id || j.jobId || j._id, { status: 'Handed Over', advancePaid: total }).catch(() => {});
+          }
+          return { ...j, status: 'Handed Over', advancePaid: total };
         }
         return j;
       });
@@ -1846,7 +1852,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         estimatedCost: Number(repairForm.estimatedCost) || 0,
         advancePaid: Number(repairForm.advancePaid) || 0,
         technicianNotes: repairForm.technicianNotes.trim(),
-        assignedTechnician: (repairForm.assignedTechnician || '').trim()
+        assignedTechnician: (repairForm.assignedTechnician || '').trim(),
+        assignedTechnicianDepartment: (() => {
+          const t = (technicians || []).find(tech => tech.name === (repairForm.assignedTechnician || '').trim());
+          return t?.specialization || '';
+        })()
       });
 
       // Auto-save new customer to CRM directory if not already existing
@@ -1867,7 +1877,12 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       showNotification(`🛠️ Repair Job #${res.job?.jobId || 'created'} logged! Saved to CRM & WhatsApp confirmation dispatched.`);
       setIsAddRepairModalOpen(false);
       if (res.job) {
-        setSelectedJobForPrint(res.job);
+        const enriched = { ...res.job };
+        if (enriched.assignedTechnician && !enriched.assignedTechnicianDepartment) {
+          const t = (staffList || []).find(s => s.name?.trim().toLowerCase() === enriched.assignedTechnician.trim().toLowerCase());
+          if (t?.specialization) enriched.assignedTechnicianDepartment = t.specialization;
+        }
+        setSelectedJobForPrint(enriched);
       }
       setShowCustomerSuggestions(false);
       setShowPhoneSuggestions(false);
@@ -1984,6 +1999,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         advancePaid: advNum,
         technicianNotes: editRepairForm.technicianNotes.trim(),
         assignedTechnician: (editRepairForm.assignedTechnician || '').trim(),
+        assignedTechnicianDepartment: (() => {
+          const t = (technicians || []).find(tech => tech.name === (editRepairForm.assignedTechnician || '').trim());
+          return t?.specialization || '';
+        })(),
         sendWhatsAppUpdate: Boolean(editRepairForm.sendWhatsApp)
       });
       showNotification(`✅ Repair bill & parts updated! ${editRepairForm.sendWhatsApp ? 'WhatsApp notification sent to customer.' : ''}`);
@@ -2009,9 +2028,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       const advance = Number(job.advancePaid || 0);
       const balance = Math.max(0, finalBill - advance);
       text += `✅ *Machine Delivered & Collected!* 🛠️\n`;
-      text += `💰 *Total Bill:* ₹${finalBill.toLocaleString('en-IN')}\n`;
-      if (advance > 0) text += `💵 *Advance Paid:* ₹${advance.toLocaleString('en-IN')}\n`;
-      if (balance > 0) text += `💵 *Balance Settled:* ₹${balance.toLocaleString('en-IN')}\n`;
+      text += `💰 *Total Bill:* ₹${finalBill.toLocaleString('en-IN')} (Paid in full)\n`;
       text += `🛡️ *Service Guarantee:* Covered under workshop warranty on replaced parts.\n\n`;
       text += `Thank you for trusting Variathu Power Tools, Poyanil Building, Kozhencherry!`;
     } else if (job.status === 'Repaired & Ready') {
@@ -2032,11 +2049,76 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
   };
 
+  // Prefilled WhatsApp Balance & Handover Reminder
+  const getWhatsAppBalanceReminderText = (job) => {
+    if (!job) return '#';
+    const isJobHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
+    const cleanPhone = (job.customerPhone || '').replace(/[^0-9]/g, '');
+    const cost = Number(job.finalCost || job.estimatedCost || 0);
+    const advance = Number(job.advancePaid || 0);
+    const pending = isJobHandedOver ? 0 : Math.max(0, cost - advance);
+
+    let text = `Hello ${job.customerName || 'Customer'},\n`;
+    text += `Friendly update from *Variathu Power Tools Kozhencherry* regarding Ticket *${job.jobId}*:\n\n`;
+    text += `🔧 *Machine:* ${job.toolBrand ? job.toolBrand + ' ' : ''}${job.toolModel}\n`;
+    text += `🚦 *Status:* ${job.status || 'Workshop Servicing'}\n`;
+    text += `💰 *Total Bill:* ₹${cost.toLocaleString('en-IN')}\n`;
+    if (advance > 0) {
+      text += `💵 *Advance Paid:* ₹${advance.toLocaleString('en-IN')}\n`;
+    }
+    text += `⏳ *Outstanding Balance Due:* ₹${pending.toLocaleString('en-IN')}\n\n`;
+    if (job.status === 'Repaired & Ready') {
+      text += `Your tool is tested and ready for pickup at our counter (Poyanil Building, Kozhencherry). Please share your 4-digit OTP at collection.\n\n`;
+    } else {
+      text += `Your machinery is currently undergoing repair/servicing in our workshop.\n\n`;
+    }
+    text += `📍 Variathu Power Tools, Poyanil Building, Kozhencherry\n`;
+    text += `📞 Support: +91 94475 59574`;
+
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+  };
+
+  // Export Workshop Revenue Ledger as CSV
+  const exportRepairsRevenueCsv = () => {
+    if (!filteredRepairs || filteredRepairs.length === 0) return;
+    const headers = ['Ticket ID', 'Job Card No', 'Customer Name', 'Phone', 'Brand', 'Model', 'Technician', 'Status', 'Total Bill (INR)', 'Advance Paid (INR)', 'Pending Due (INR)', 'Logged Date'];
+    const rows = filteredRepairs.map(j => {
+      const isClosed = Boolean(j.handoverVerified) || j.status === 'Handed Over';
+      const cost = Number(j.finalCost || j.estimatedCost || 0);
+      const advance = Number(j.advancePaid || 0);
+      const pending = isClosed ? 0 : Math.max(0, cost - advance);
+      return [
+        `"${j.jobId || ''}"`,
+        `"${j.jobCardNumber || ''}"`,
+        `"${(j.customerName || '').replace(/"/g, '""')}"`,
+        `"${j.customerPhone || ''}"`,
+        `"${(j.toolBrand || '').replace(/"/g, '""')}"`,
+        `"${(j.toolModel || '').replace(/"/g, '""')}"`,
+        `"${(j.assignedTechnician || '').replace(/"/g, '""')}"`,
+        `"${j.status || ''}"`,
+        cost,
+        advance,
+        pending,
+        `"${j.createdAt ? new Date(j.createdAt).toLocaleDateString() : ''}"`
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Workshop_Revenue_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Repair status counts across all jobs
   const repairStatusCounts = useMemo(() => {
     let inProgress = 0;
     let ready = 0;
     let handedOver = 0;
+    let pendingCount = 0;
     (repairs || []).forEach(job => {
       const isClosed = Boolean(job.handoverVerified) || job.status === 'Handed Over';
       const isJobReady = !isClosed && (job.status === 'Repaired & Ready' || job.status === 'Ready for Pickup');
@@ -2047,19 +2129,27 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       } else {
         inProgress++;
       }
+      if (!isClosed) {
+        const cost = Number(job.finalCost || job.estimatedCost || 0);
+        const adv = Number(job.advancePaid || 0);
+        if (cost - adv > 0) {
+          pendingCount++;
+        }
+      }
     });
     return {
       all: (repairs || []).length,
       in_progress: inProgress,
       ready: ready,
-      handed_over: handedOver
+      handed_over: handedOver,
+      pending_count: pendingCount
     };
   }, [repairs]);
 
   const filteredRepairs = useMemo(() => {
     return repairs.filter(job => {
-      // 1. Status Filter (e.g. 'in_progress' means tool is in workshop and not ready yet)
-      if (repairsStatusFilter !== 'all') {
+      // 1. Status Filter (e.g. 'in_progress' means tool is in workshop and not ready yet; 'revenue' shows all jobs for financial accounting)
+      if (repairsStatusFilter !== 'all' && repairsStatusFilter !== 'revenue') {
         const isHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
         const isReady = !isHandedOver && (job.status === 'Repaired & Ready' || job.status === 'Ready for Pickup');
         if (repairsStatusFilter === 'in_progress') {
@@ -2128,30 +2218,85 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
   // Workshop financial summary for the selected period / filters
   const repairsFinancialSummary = useMemo(() => {
     let totalEstOrBill = 0;
-    let totalAdvance = 0;
+    let totalCollected = 0;
+    let totalPending = 0;
+    let totalAdvanceActive = 0;
+    let totalAdvanceAll = 0;
     let openCount = 0;
     let readyCount = 0;
     let closedCount = 0;
+    let pendingJobsCount = 0;
+
+    const pendingJobsList = [];
+    const settledJobsList = [];
+    const advanceJobsList = [];
 
     filteredRepairs.forEach(job => {
-      totalEstOrBill += Number(job.finalCost || job.estimatedCost || 0);
-      totalAdvance += Number(job.advancePaid || 0);
-      if (job.status === 'Handed Over' || job.handoverVerified) {
+      const isHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
+      const isReady = !isHandedOver && (job.status === 'Repaired & Ready' || job.status === 'Ready for Pickup');
+      const cost = Number(job.finalCost || job.estimatedCost || 0);
+      const advance = Number(job.advancePaid || 0);
+
+      totalEstOrBill += cost;
+      totalAdvanceAll += advance;
+
+      if (isHandedOver) {
         closedCount++;
-      } else if (job.status === 'Ready for Pickup') {
-        readyCount++;
+        totalCollected += cost;
+        settledJobsList.push({
+          ...job,
+          totalCost: cost,
+          paidTotal: cost,
+          balance: 0
+        });
       } else {
-        openCount++;
+        if (isReady) readyCount++;
+        else openCount++;
+
+        const pending = Math.max(0, cost - advance);
+        totalPending += pending;
+        totalCollected += Math.min(advance, cost);
+        totalAdvanceActive += advance;
+
+        if (advance > 0) {
+          advanceJobsList.push({
+            ...job,
+            totalCost: cost,
+            advancePaid: advance,
+            pendingAmount: pending
+          });
+        }
+
+        if (pending > 0) {
+          pendingJobsCount++;
+          pendingJobsList.push({
+            ...job,
+            totalCost: cost,
+            advancePaid: advance,
+            pendingAmount: pending
+          });
+        }
       }
     });
 
+    const collectionRate = totalEstOrBill > 0 ? Math.round((totalCollected / totalEstOrBill) * 100) : 0;
+    const pendingRate = totalEstOrBill > 0 ? Math.round((totalPending / totalEstOrBill) * 100) : 0;
+
     return {
       totalEstOrBill,
-      totalAdvance,
-      balanceDue: Math.max(0, totalEstOrBill - totalAdvance),
+      totalCollected,
+      totalPending,
+      totalAdvance: totalAdvanceActive,
+      totalAdvanceAll,
+      collectionRate,
+      pendingRate,
       openCount,
       readyCount,
-      closedCount
+      closedCount,
+      pendingJobsCount,
+      pendingJobsList,
+      settledJobsList,
+      advanceJobsList
     };
   }, [filteredRepairs]);
 
@@ -2170,6 +2315,54 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       return nameMatch || emailMatch || phoneMatch || specMatch;
     });
   }, [staffList, staffRoleFilter, staffSearch]);
+
+  // Direct WhatsApp Onboarding & Duty Assignment link for staff
+  const getStaffWhatsAppUrl = (member, password = '') => {
+    if (!member || !member.phone) return '#';
+    const cleanPhone = String(member.phone).replace(/[^0-9]/g, '');
+    const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const loginUrl = `${window.location.origin}/login`;
+
+    let roleTitle = 'Team Member';
+    if (member.role === 'technician') {
+      roleTitle = 'Workshop Floor Technician';
+    } else if (member.role === 'workshop_manager') {
+      roleTitle = 'Workshop Manager';
+    } else if (member.role === 'manager') {
+      roleTitle = 'Store Manager';
+    }
+
+    let text = `🛠️ *VARIATHU POWER TOOLS - EMPLOYEE ONBOARDING*\n`;
+    text += `*Welcome to the Team, ${member.name}!* 🎉\n\n`;
+    text += `You have been officially registered as a *${roleTitle}* at Variathu Power Tools.\n\n`;
+    text += `📋 *Employee Profile:*\n`;
+    text += `• *Name:* ${member.name}\n`;
+    text += `• *Role:* ${roleTitle}\n`;
+    if (member.specialization) {
+      text += `• *Department / Trade:* ${member.specialization}\n`;
+    }
+    text += `• *Registered Phone:* ${member.phone}\n`;
+
+    if (['workshop_manager', 'manager'].includes(member.role)) {
+      text += `\n🔐 *Store Portal Login:*\n`;
+      text += `• *Portal URL:* ${loginUrl}\n`;
+      if (member.email) {
+        text += `• *Login Email:* ${member.email}\n`;
+      }
+      if (password) {
+        text += `• *Password:* ${password}\n`;
+      }
+      text += `\n_Please log in and keep your password secure._\n`;
+    } else {
+      text += `\n🧑‍🔧 *Floor Status:*\nYour profile is now live in the workshop inward system. Customer equipment repair tickets assigned to you will track under your name and specialization.\n`;
+    }
+
+    text += `\n📍 *Workshop & Showroom:* Poyanil Building, Kozhencherry\n`;
+    text += `📞 *Admin Office:* +91 94475 59574\n\n`;
+    text += `Welcome aboard! Let's power ahead. ⚡`;
+
+    return `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`;
+  };
 
   const handleOpenAddStaff = () => {
     setEditingStaffMember(null);
@@ -2240,7 +2433,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
         showNotification(`✅ Employee "${payload.name}" updated successfully.`);
       } else {
         await api.createStaff(payload);
-        showNotification(`✅ New employee "${payload.name}" added successfully.`);
+        let msg = `✅ New ${payload.role === 'technician' ? 'technician' : 'employee'} "${payload.name}" registered!`;
+        if (payload.role !== 'technician' && payload.email) {
+          msg += ` Credentials emailed to ${payload.email}.`;
+        }
+        if (payload.phone) {
+          msg += ` WhatsApp welcome notification dispatched to ${payload.phone}.`;
+        }
+        showNotification(msg);
       }
       setIsAddStaffModalOpen(false);
       setEditingStaffMember(null);
@@ -6516,7 +6716,17 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               { id: 'all', label: 'All Jobs', count: repairStatusCounts.all, icon: Layers, color: '#0f172a' },
               { id: 'in_progress', label: 'Repair in Progress', badgeLabel: 'Not Ready', count: repairStatusCounts.in_progress, icon: Wrench, color: '#ea580c' },
               { id: 'ready', label: 'Repaired & Ready', count: repairStatusCounts.ready, icon: CheckCircle2, color: '#16a34a' },
-              { id: 'handed_over', label: 'Handed Over', count: repairStatusCounts.handed_over, icon: ShieldCheck, color: '#64748b' }
+              { id: 'handed_over', label: 'Handed Over', count: repairStatusCounts.handed_over, icon: ShieldCheck, color: '#64748b' },
+              {
+                id: 'revenue',
+                label: 'Revenue & Accounts',
+                badgeLabel: 'Financials',
+                count: repairsFinancialSummary.totalPending > 0
+                  ? `₹${repairsFinancialSummary.totalPending.toLocaleString('en-IN')} due`
+                  : 'All Settled',
+                icon: DollarSign,
+                color: '#0284c7'
+              }
             ].map(chip => {
               const isSelected = repairsStatusFilter === chip.id;
               const IconComp = chip.icon;
@@ -6681,16 +6891,42 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               </div>
 
               {/* Live Count & Financial Summary */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
                 <span style={{ color: '#0f172a', fontWeight: '700' }}>
                   📋 <strong>{filteredRepairs.length}</strong> {filteredRepairs.length === 1 ? 'ticket' : 'tickets'}
                 </span>
+                <span style={{ color: '#0f172a', fontWeight: '700' }}>
+                  💰 Billed: <strong>₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')}</strong>
+                </span>
                 <span style={{ color: '#16a34a', fontWeight: '700' }}>
-                  💰 Est/Bill: <strong>₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')}</strong>
+                  ✅ Collected: <strong>₹{repairsFinancialSummary.totalCollected.toLocaleString('en-IN')}</strong>
                 </span>
                 <span style={{ color: '#0284c7', fontWeight: '700' }}>
                   💵 Advance: <strong>₹{repairsFinancialSummary.totalAdvance.toLocaleString('en-IN')}</strong>
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setRepairsStatusFilter('revenue')}
+                  style={{
+                    background: repairsFinancialSummary.totalPending > 0 ? '#ffedd5' : '#f0fdf4',
+                    border: `1px solid ${repairsFinancialSummary.totalPending > 0 ? '#fdba74' : '#86efac'}`,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    color: repairsFinancialSummary.totalPending > 0 ? '#c2410c' : '#166534',
+                    fontWeight: '800',
+                    fontSize: '0.76rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Click to view Revenue & Accounts Ledger"
+                  id="btn-quick-view-revenue"
+                >
+                  <span>⏳ Pending:</span>
+                  <strong>₹{repairsFinancialSummary.totalPending.toLocaleString('en-IN')}</strong>
+                </button>
               </div>
             </div>
 
@@ -6776,6 +7012,813 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               <Wrench size={36} style={{ color: '#94a3b8', margin: '0 auto 12px', display: 'block' }} />
               <strong style={{ fontSize: '1rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>No Active Repair Jobs</strong>
               <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>Click "Log Inward Tool" to create a new job ticket when a customer brings a broken machine to Poyanil Building.</p>
+            </div>
+          ) : repairsStatusFilter === 'revenue' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} id="workshop-revenue-dashboard">
+              {/* 1. Header Banner */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                  color: '#ffffff',
+                  borderRadius: '14px',
+                  padding: '20px 24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '16px',
+                  boxShadow: '0 4px 15px rgba(15, 23, 42, 0.15)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff',
+                      boxShadow: '0 4px 10px rgba(2, 132, 199, 0.4)'
+                    }}
+                  >
+                    <DollarSign size={24} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: '#ffffff' }}>
+                        Workshop Revenue &amp; Accounts Ledger
+                      </h3>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          background: 'rgba(56, 189, 248, 0.2)',
+                          color: '#38bdf8',
+                          fontWeight: '700',
+                          border: '1px solid rgba(56, 189, 248, 0.3)'
+                        }}
+                      >
+                        Financial Tracking
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '4px 0 0' }}>
+                      Track gross billing volume, realized counter collections, customer advance deposits, and pending balances due.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={exportRepairsRevenueCsv}
+                    disabled={filteredRepairs.length === 0}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: '#ffffff',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: filteredRepairs.length === 0 ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease'
+                    }}
+                    title="Export financial records as CSV spreadsheet"
+                    id="btn-export-revenue-csv"
+                  >
+                    <Download size={14} />
+                    <span>Export CSV</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: '1px solid rgba(255, 255, 255, 0.25)',
+                      color: '#ffffff',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    title="Print financial summary report"
+                    id="btn-print-revenue-ledger"
+                  >
+                    <Printer size={14} />
+                    <span>Print Statement</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRepairsStatusFilter('all')}
+                    style={{
+                      background: '#ffffff',
+                      border: 'none',
+                      color: '#0f172a',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                    id="btn-switch-all-jobs"
+                  >
+                    <span>View All Jobs</span>
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. 4 Primary Financial KPI Metric Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px' }}>
+                {/* 1. Total Collected */}
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1.5px solid #86efac',
+                    borderRadius: '12px',
+                    padding: '18px 20px',
+                    boxShadow: '0 2px 6px rgba(22, 163, 74, 0.08)'
+                  }}
+                  id="card-revenue-collected"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Total Collected
+                    </span>
+                    <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.7rem', fontWeight: '800', padding: '2px 7px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                      {repairsFinancialSummary.collectionRate}% Realized
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: '900', color: '#14532d', fontFamily: 'var(--font-mono)', lineHeight: '1.2' }}>
+                    ₹{repairsFinancialSummary.totalCollected.toLocaleString('en-IN')}
+                  </div>
+                  <p style={{ fontSize: '0.76rem', color: '#166534', margin: '8px 0 0', lineHeight: '1.4' }}>
+                    Realized counter cash/UPI ({repairsFinancialSummary.closedCount} handed-over jobs + active deposits).
+                  </p>
+                </div>
+
+                {/* 2. Outstanding Pending Balance */}
+                <div
+                  style={{
+                    background: repairsFinancialSummary.totalPending > 0 ? '#fff7ed' : '#f8fafc',
+                    border: `1.5px solid ${repairsFinancialSummary.totalPending > 0 ? '#fdba74' : '#cbd5e1'}`,
+                    borderRadius: '12px',
+                    padding: '18px 20px',
+                    boxShadow: repairsFinancialSummary.totalPending > 0 ? '0 2px 6px rgba(234, 88, 12, 0.08)' : 'none'
+                  }}
+                  id="card-revenue-pending"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: repairsFinancialSummary.totalPending > 0 ? '#9a3412' : '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Pending Balance Due
+                    </span>
+                    <span style={{
+                      background: repairsFinancialSummary.totalPending > 0 ? '#ffedd5' : '#f1f5f9',
+                      color: repairsFinancialSummary.totalPending > 0 ? '#c2410c' : '#475569',
+                      fontSize: '0.7rem',
+                      fontWeight: '800',
+                      padding: '2px 7px',
+                      borderRadius: '4px',
+                      border: `1px solid ${repairsFinancialSummary.totalPending > 0 ? '#fed7aa' : '#e2e8f0'}`
+                    }}>
+                      {repairsFinancialSummary.pendingJobsCount} {repairsFinancialSummary.pendingJobsCount === 1 ? 'ticket' : 'tickets'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: '900', color: repairsFinancialSummary.totalPending > 0 ? '#c2410c' : '#0f172a', fontFamily: 'var(--font-mono)', lineHeight: '1.2' }}>
+                    ₹{repairsFinancialSummary.totalPending.toLocaleString('en-IN')}
+                  </div>
+                  <p style={{ fontSize: '0.76rem', color: repairsFinancialSummary.totalPending > 0 ? '#9a3412' : '#64748b', margin: '8px 0 0', lineHeight: '1.4' }}>
+                    {repairsFinancialSummary.totalPending > 0
+                      ? 'Uncollected balances awaiting customer collection at counter.'
+                      : 'Zero pending balance! All workshop accounts are settled.'}
+                  </p>
+                </div>
+
+                {/* 3. Advance Deposits Collected */}
+                <div
+                  style={{
+                    background: '#f0f9ff',
+                    border: '1.5px solid #7dd3fc',
+                    borderRadius: '12px',
+                    padding: '18px 20px',
+                    boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)'
+                  }}
+                  id="card-revenue-advance"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#075985', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Advance Collected
+                    </span>
+                    <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem', fontWeight: '800', padding: '2px 7px', borderRadius: '4px', border: '1px solid #bae6fd' }}>
+                      Active Held
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: '900', color: '#0369a1', fontFamily: 'var(--font-mono)', lineHeight: '1.2' }}>
+                    ₹{repairsFinancialSummary.totalAdvance.toLocaleString('en-IN')}
+                  </div>
+                  <p style={{ fontSize: '0.76rem', color: '#0369a1', margin: '8px 0 0', lineHeight: '1.4' }}>
+                    Upfront customer deposits held on {repairsFinancialSummary.advanceJobsList.length} active jobs currently in workshop.
+                  </p>
+                </div>
+
+                {/* 4. Gross Total Billed / Estimates */}
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '12px',
+                    padding: '18px 20px',
+                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)'
+                  }}
+                  id="card-revenue-total-billed"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Gross Billed / Volume
+                    </span>
+                    <span style={{ background: '#f1f5f9', color: '#334155', fontSize: '0.7rem', fontWeight: '800', padding: '2px 7px', borderRadius: '4px', border: '1px solid #cbd5e1' }}>
+                      {filteredRepairs.length} Total
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '1.75rem', fontWeight: '900', color: '#0f172a', fontFamily: 'var(--font-mono)', lineHeight: '1.2' }}>
+                    ₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')}
+                  </div>
+                  <p style={{ fontSize: '0.76rem', color: '#64748b', margin: '8px 0 0', lineHeight: '1.4' }}>
+                    {repairsFinancialSummary.closedCount} delivered • {repairsFinancialSummary.readyCount} ready • {repairsFinancialSummary.openCount} in progress.
+                  </p>
+                </div>
+              </div>
+
+              {/* 3. Collection Health & Realization Rate Bar */}
+              <div style={{ background: '#ffffff', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.82rem', fontWeight: '700', flexWrap: 'wrap', gap: '8px' }}>
+                  <span style={{ color: '#0f172a' }}>Realization Ratio: Collected vs Outstanding</span>
+                  <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
+                    ₹{repairsFinancialSummary.totalCollected.toLocaleString('en-IN')} collected of ₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')} gross volume
+                  </span>
+                </div>
+                <div style={{ height: '14px', borderRadius: '7px', background: '#e2e8f0', overflow: 'hidden', display: 'flex' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${repairsFinancialSummary.collectionRate}%`,
+                      background: 'linear-gradient(90deg, #16a34a, #22c55e)',
+                      transition: 'width 0.3s ease'
+                    }}
+                    title={`Collected: ${repairsFinancialSummary.collectionRate}%`}
+                  />
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${100 - repairsFinancialSummary.collectionRate}%`,
+                      background: 'linear-gradient(90deg, #ea580c, #f97316)',
+                      transition: 'width 0.3s ease'
+                    }}
+                    title={`Pending: ${100 - repairsFinancialSummary.collectionRate}%`}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '10px', fontSize: '0.76rem', fontWeight: '700', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#16a34a' }} />
+                    <span style={{ color: '#166534' }}>
+                      Collected: <strong>₹{repairsFinancialSummary.totalCollected.toLocaleString('en-IN')}</strong> ({repairsFinancialSummary.collectionRate}%)
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c' }} />
+                    <span style={{ color: '#c2410c' }}>
+                      Pending Due: <strong>₹{repairsFinancialSummary.totalPending.toLocaleString('en-IN')}</strong> ({100 - repairsFinancialSummary.collectionRate}%)
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#0284c7' }} />
+                    <span style={{ color: '#0369a1' }}>
+                      Active Advance Held: <strong>₹{repairsFinancialSummary.totalAdvance.toLocaleString('en-IN')}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Revenue Sub-Navigation Pills */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                {[
+                  { id: 'all', label: 'All Financial Records', count: filteredRepairs.length },
+                  { id: 'pending', label: 'Pending Balances', count: repairsFinancialSummary.pendingJobsCount, alert: repairsFinancialSummary.pendingJobsCount > 0 },
+                  { id: 'advances', label: 'Advance Deposits', count: repairsFinancialSummary.advanceJobsList.length },
+                  { id: 'settled', label: 'Settled & Handed Over', count: repairsFinancialSummary.settledJobsList.length }
+                ].map(st => {
+                  const isCurrent = repairRevenueSubTab === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setRepairRevenueSubTab(st.id)}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: isCurrent ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                        background: isCurrent ? '#0284c7' : '#ffffff',
+                        color: isCurrent ? '#ffffff' : '#475569',
+                        fontSize: '0.8rem',
+                        fontWeight: isCurrent ? '800' : '600',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s ease'
+                      }}
+                      id={`btn-revenue-subtab-${st.id}`}
+                    >
+                      <span>{st.label}</span>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          padding: '1px 6px',
+                          borderRadius: '9999px',
+                          background: isCurrent ? 'rgba(255,255,255,0.25)' : (st.alert ? '#ffedd5' : '#f1f5f9'),
+                          color: isCurrent ? '#ffffff' : (st.alert ? '#c2410c' : '#64748b'),
+                          fontWeight: '800'
+                        }}
+                      >
+                        {st.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 5. Main Revenue Content Sections */}
+              {filteredRepairs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+                  <DollarSign size={32} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />
+                  <strong style={{ fontSize: '0.95rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                    No Financial Records Found For Selected Period
+                  </strong>
+                  <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '0 0 12px' }}>
+                    Try selecting "All Time" or clearing your date/search filters to view repair financial accounts.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRepairsSearch('');
+                      setRepairsDateFilter('all');
+                      setRepairsStartDate('');
+                      setRepairsEndDate('');
+                    }}
+                    style={{
+                      background: '#0284c7',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '6px 14px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Reset Period to All Time
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* SUB-VIEW A: PENDING BALANCES TRACKER */}
+                  {(repairRevenueSubTab === 'pending' || (repairRevenueSubTab === 'all' && repairsFinancialSummary.pendingJobsCount > 0)) && (
+                    <div style={{ background: '#ffffff', border: '1.5px solid #fed7aa', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 6px rgba(234, 88, 12, 0.05)' }}>
+                      <div style={{ background: '#fff7ed', padding: '14px 18px', borderBottom: '1px solid #fed7aa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <AlertTriangle size={18} style={{ color: '#ea580c' }} />
+                          <div>
+                            <strong style={{ fontSize: '0.92rem', color: '#9a3412', display: 'block' }}>
+                              Outstanding Balances Awaiting Collection (₹{repairsFinancialSummary.totalPending.toLocaleString('en-IN')})
+                            </strong>
+                            <span style={{ fontSize: '0.76rem', color: '#c2410c' }}>
+                              {repairsFinancialSummary.pendingJobsCount} customer {repairsFinancialSummary.pendingJobsCount === 1 ? 'machine' : 'machines'} with pending balance dues. Send instant WhatsApp payment reminders or call.
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {repairsFinancialSummary.pendingJobsList.length === 0 ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: '#16a34a', fontWeight: '700', fontSize: '0.86rem' }}>
+                          🎉 No pending balances! All customer repair bills are fully collected.
+                        </div>
+                      ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                            <thead>
+                              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                <th style={{ padding: '10px 14px' }}>Ticket &amp; Job Card</th>
+                                <th style={{ padding: '10px 14px' }}>Customer Details</th>
+                                <th style={{ padding: '10px 14px' }}>Machine &amp; Tech</th>
+                                <th style={{ padding: '10px 14px' }}>Status</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Bill</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Advance</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Pending Due</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'center' }}>Quick Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {repairsFinancialSummary.pendingJobsList.map(job => {
+                                const isReady = job.status === 'Repaired & Ready' || job.status === 'Ready for Pickup';
+                                return (
+                                  <tr key={job.jobId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '12px 14px' }}>
+                                      <div style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', color: '#0f172a' }}>
+                                        {job.jobId}
+                                      </div>
+                                      {job.jobCardNumber && (
+                                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#0369a1', fontWeight: '700' }}>
+                                          JC: {job.jobCardNumber}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '12px 14px' }}>
+                                      <strong style={{ color: '#0f172a', display: 'block' }}>{job.customerName}</strong>
+                                      <a href={`tel:${job.customerPhone}`} style={{ color: '#0284c7', textDecoration: 'none', fontSize: '0.76rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                        <Phone size={11} />
+                                        <span>{job.customerPhone}</span>
+                                      </a>
+                                    </td>
+                                    <td style={{ padding: '12px 14px' }}>
+                                      <strong style={{ color: '#0f172a', display: 'block' }}>
+                                        {job.toolBrand ? `${job.toolBrand} ` : ''}{job.toolModel}
+                                      </strong>
+                                      <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                                        🧑‍🔧 {job.assignedTechnician || 'Unassigned'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '12px 14px' }}>
+                                      <span
+                                        style={{
+                                          padding: '3px 8px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.72rem',
+                                          fontWeight: '800',
+                                          background: isReady ? '#eff6ff' : '#fff7ed',
+                                          color: isReady ? '#1d4ed8' : '#c2410c',
+                                          border: `1px solid ${isReady ? '#bfdbfe' : '#fed7aa'}`,
+                                          whiteSpace: 'nowrap'
+                                        }}
+                                      >
+                                        {isReady ? 'Ready for Pickup' : 'Under Repair'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '700', color: '#0f172a' }}>
+                                      ₹{job.totalCost.toLocaleString('en-IN')}
+                                    </td>
+                                    <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: job.advancePaid > 0 ? '#16a34a' : '#94a3b8', fontWeight: '700' }}>
+                                      ₹{job.advancePaid.toLocaleString('en-IN')}
+                                    </td>
+                                    <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '900', color: '#dc2626', fontSize: '0.92rem' }}>
+                                      ₹{job.pendingAmount.toLocaleString('en-IN')}
+                                    </td>
+                                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        <a
+                                          href={getWhatsAppBalanceReminderText(job)}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          style={{
+                                            padding: '5px 10px',
+                                            borderRadius: '6px',
+                                            background: '#f0fdf4',
+                                            border: '1px solid #86efac',
+                                            color: '#16a34a',
+                                            fontSize: '0.74rem',
+                                            fontWeight: '800',
+                                            textDecoration: 'none',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                          }}
+                                          title="Send WhatsApp payment reminder with bill breakdown and OTP info"
+                                          id={`btn-wa-reminder-${job.jobId}`}
+                                        >
+                                          <MessageCircle size={12} />
+                                          <span>WhatsApp</span>
+                                        </a>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenEditRepair(job)}
+                                          style={{
+                                            padding: '5px 8px',
+                                            borderRadius: '6px',
+                                            background: '#f8fafc',
+                                            border: '1px solid #cbd5e1',
+                                            color: '#475569',
+                                            fontSize: '0.74rem',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '3px'
+                                          }}
+                                          title="Update Bill, Advance, or Parts"
+                                        >
+                                          <Edit3 size={11} />
+                                          <span>Bill</span>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SUB-VIEW B: ADVANCE DEPOSITS */}
+                  {(repairRevenueSubTab === 'advances') && (
+                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                      <div style={{ background: '#f0f9ff', padding: '14px 18px', borderBottom: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#0369a1', display: 'block' }}>
+                            Customer Advance Deposits Held (₹{repairsFinancialSummary.totalAdvance.toLocaleString('en-IN')})
+                          </strong>
+                          <span style={{ fontSize: '0.76rem', color: '#0284c7' }}>
+                            Upfront deposits collected upon machine inward handover at Poyanil Building.
+                          </span>
+                        </div>
+                      </div>
+
+                      {repairsFinancialSummary.advanceJobsList.length === 0 ? (
+                        <div style={{ padding: '32px', textAlign: 'center', color: '#64748b', fontSize: '0.84rem' }}>
+                          No active advance deposits recorded for this period.
+                        </div>
+                      ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                            <thead>
+                              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                                <th style={{ padding: '10px 14px' }}>Ticket</th>
+                                <th style={{ padding: '10px 14px' }}>Customer</th>
+                                <th style={{ padding: '10px 14px' }}>Machine</th>
+                                <th style={{ padding: '10px 14px' }}>Status</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Estimate</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Advance Collected</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Remaining Due</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {repairsFinancialSummary.advanceJobsList.map(job => (
+                                <tr key={job.jobId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: '12px 14px', fontFamily: 'var(--font-mono)', fontWeight: '800' }}>
+                                    {job.jobId}
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <strong>{job.customerName}</strong> ({job.customerPhone})
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    {job.toolBrand} {job.toolModel}
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', background: '#eff6ff', color: '#1d4ed8' }}>
+                                      {job.status}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
+                                    ₹{job.totalCost.toLocaleString('en-IN')}
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '900', color: '#0284c7' }}>
+                                    ₹{job.advancePaid.toLocaleString('en-IN')}
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '800', color: job.pendingAmount > 0 ? '#ea580c' : '#16a34a' }}>
+                                    ₹{job.pendingAmount.toLocaleString('en-IN')}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SUB-VIEW C: SETTLED & HANDED OVER */}
+                  {(repairRevenueSubTab === 'settled') && (
+                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                      <div style={{ background: '#f0fdf4', padding: '14px 18px', borderBottom: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#166534', display: 'block' }}>
+                            Settled Handover Collections (₹{repairsFinancialSummary.settledJobsList.reduce((s, j) => s + (j.totalCost || 0), 0).toLocaleString('en-IN')})
+                          </strong>
+                          <span style={{ fontSize: '0.76rem', color: '#15803d' }}>
+                            Machinery collected by customer with 100% bill settlement verified at counter.
+                          </span>
+                        </div>
+                      </div>
+
+                      {repairsFinancialSummary.settledJobsList.length === 0 ? (
+                        <div style={{ padding: '32px', textAlign: 'center', color: '#64748b', fontSize: '0.84rem' }}>
+                          No handed over jobs in this period.
+                        </div>
+                      ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                            <thead>
+                              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                                <th style={{ padding: '10px 14px' }}>Ticket &amp; Job Card</th>
+                                <th style={{ padding: '10px 14px' }}>Customer Details</th>
+                                <th style={{ padding: '10px 14px' }}>Machine &amp; Technician</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Settled</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'center' }}>Settlement Status</th>
+                                <th style={{ padding: '10px 14px', textAlign: 'center' }}>Receipt</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {repairsFinancialSummary.settledJobsList.map(job => (
+                                <tr key={job.jobId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', color: '#0f172a' }}>
+                                      {job.jobId}
+                                    </div>
+                                    {job.jobCardNumber && (
+                                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: '#0369a1' }}>
+                                        JC: {job.jobCardNumber}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <strong style={{ color: '#0f172a', display: 'block' }}>{job.customerName}</strong>
+                                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{job.customerPhone}</span>
+                                  </td>
+                                  <td style={{ padding: '12px 14px' }}>
+                                    <strong>{job.toolBrand} {job.toolModel}</strong>
+                                    <div style={{ fontSize: '0.74rem', color: '#64748b' }}>🧑‍🔧 {job.assignedTechnician || 'Workshop'}</div>
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '900', color: '#16a34a', fontSize: '0.95rem' }}>
+                                    ₹{job.totalCost.toLocaleString('en-IN')}
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                    <span style={{ padding: '3px 8px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontWeight: '800', fontSize: '0.72rem', border: '1px solid #bbf7d0', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      <CheckCircle2 size={11} />
+                                      <span>Paid in Full</span>
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const enriched = { ...job };
+                                        if (enriched.assignedTechnician && !enriched.assignedTechnicianDepartment) {
+                                          const matched = (staffList || []).find(s => s.name?.trim().toLowerCase() === enriched.assignedTechnician.trim().toLowerCase());
+                                          if (matched?.specialization) enriched.assignedTechnicianDepartment = matched.specialization;
+                                        }
+                                        setSelectedJobForPrint(enriched);
+                                      }}
+                                      style={{
+                                        padding: '4px 8px',
+                                        background: '#f8fafc',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '6px',
+                                        fontSize: '0.74rem',
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        color: '#334155'
+                                      }}
+                                      title="Print Job Card Slip"
+                                    >
+                                      <Printer size={12} />
+                                      <span>Job Card</span>
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SUB-VIEW D: ALL JOBS COMPLETE FINANCIAL LEDGER */}
+                  {repairRevenueSubTab === 'all' && (
+                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden' }}>
+                      <div style={{ background: '#f8fafc', padding: '14px 18px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <strong style={{ fontSize: '0.92rem', color: '#0f172a', display: 'block' }}>
+                            Master Financial Ledger ({filteredRepairs.length} records)
+                          </strong>
+                          <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                            Full transaction accounting record across all workshop job tickets.
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '700' }}>
+                          Total: ₹{repairsFinancialSummary.totalEstOrBill.toLocaleString('en-IN')} (Collected: ₹{repairsFinancialSummary.totalCollected.toLocaleString('en-IN')} • Pending: ₹{repairsFinancialSummary.totalPending.toLocaleString('en-IN')})
+                        </span>
+                      </div>
+
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                          <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '0.74rem', textTransform: 'uppercase' }}>
+                              <th style={{ padding: '10px 14px' }}>Ticket &amp; JC</th>
+                              <th style={{ padding: '10px 14px' }}>Customer</th>
+                              <th style={{ padding: '10px 14px' }}>Tool Model</th>
+                              <th style={{ padding: '10px 14px' }}>Technician</th>
+                              <th style={{ padding: '10px 14px' }}>Stage</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Bill</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Advance</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'right' }}>Pending Due</th>
+                              <th style={{ padding: '10px 14px', textAlign: 'center' }}>Account Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredRepairs.map(job => {
+                              const isHandedOver = Boolean(job.handoverVerified) || job.status === 'Handed Over';
+                              const cost = Number(job.finalCost || job.estimatedCost || 0);
+                              const advance = Number(job.advancePaid || 0);
+                              const pending = isHandedOver ? 0 : Math.max(0, cost - advance);
+                              return (
+                                <tr key={job.jobId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: '11px 14px' }}>
+                                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: '800', color: '#0f172a' }}>
+                                      {job.jobId}
+                                    </div>
+                                    {job.jobCardNumber && (
+                                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: '#0369a1' }}>
+                                        JC: {job.jobCardNumber}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '11px 14px' }}>
+                                    <strong style={{ color: '#0f172a', display: 'block' }}>{job.customerName}</strong>
+                                    <span style={{ fontSize: '0.74rem', color: '#64748b' }}>{job.customerPhone}</span>
+                                  </td>
+                                  <td style={{ padding: '11px 14px' }}>
+                                    <strong>{job.toolBrand} {job.toolModel}</strong>
+                                  </td>
+                                  <td style={{ padding: '11px 14px', fontSize: '0.78rem', color: '#475569' }}>
+                                    🧑‍🔧 {job.assignedTechnician || 'Unassigned'}
+                                  </td>
+                                  <td style={{ padding: '11px 14px' }}>
+                                    <span style={{
+                                      padding: '2px 7px',
+                                      borderRadius: '4px',
+                                      fontSize: '0.7rem',
+                                      fontWeight: '800',
+                                      background: isHandedOver ? '#f1f5f9' : job.status === 'Repaired & Ready' ? '#eff6ff' : '#fff7ed',
+                                      color: isHandedOver ? '#475569' : job.status === 'Repaired & Ready' ? '#1d4ed8' : '#c2410c'
+                                    }}>
+                                      {job.status}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '11px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '700' }}>
+                                    ₹{cost.toLocaleString('en-IN')}
+                                  </td>
+                                  <td style={{ padding: '11px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: advance > 0 ? '#0284c7' : '#94a3b8', fontWeight: '700' }}>
+                                    ₹{advance.toLocaleString('en-IN')}
+                                  </td>
+                                  <td style={{ padding: '11px 14px', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: '900', color: pending > 0 ? '#dc2626' : '#16a34a' }}>
+                                    {pending > 0 ? `₹${pending.toLocaleString('en-IN')}` : '₹0'}
+                                  </td>
+                                  <td style={{ padding: '11px 14px', textAlign: 'center' }}>
+                                    {isHandedOver ? (
+                                      <span style={{ padding: '2px 7px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontWeight: '800', fontSize: '0.7rem' }}>
+                                        ✓ Paid in Full
+                                      </span>
+                                    ) : pending > 0 ? (
+                                      <span style={{ padding: '2px 7px', borderRadius: '4px', background: '#ffedd5', color: '#c2410c', fontWeight: '800', fontSize: '0.7rem' }}>
+                                        ⏳ ₹{pending.toLocaleString('en-IN')} Due
+                                      </span>
+                                    ) : (
+                                      <span style={{ padding: '2px 7px', borderRadius: '4px', background: '#e0f2fe', color: '#0369a1', fontWeight: '800', fontSize: '0.7rem' }}>
+                                        ✓ Settled
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : filteredRepairs.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
@@ -6900,10 +7943,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                               type="button"
                               onClick={() => {
                                 const jobKey = job.id || job.jobId || job._id;
-                                const isRevealed = !unmaskedRepairOtps[jobKey];
-                                setUnmaskedRepairOtps(prev => ({ ...prev, [jobKey]: isRevealed }));
-                                if (isRevealed && !repairOtpInputs[jobKey]) {
-                                  setRepairOtpInputs(prev => ({ ...prev, [jobKey]: job.handoverOtp }));
+                                const isRevealed = Boolean(unmaskedRepairOtps[jobKey]);
+                                if (isRevealed) {
+                                  setUnmaskedRepairOtps(prev => ({ ...prev, [jobKey]: false }));
+                                } else {
+                                  setAdminOtpWarningJob(job);
                                 }
                               }}
                               style={{
@@ -6998,13 +8042,19 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </div>
 
                       <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        {job.assignedTechnician ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '6px', fontSize: '0.76rem', fontWeight: '700' }} title="Assigned Workshop Floor Technician (Store Internal Data)">
-                            <span>🧑‍🔧 Floor Technician:</span>
-                            <strong>{job.assignedTechnician}</strong>
-                            <span style={{ fontSize: '0.68rem', color: '#60a5fa', fontWeight: '500' }}>(Internal)</span>
-                          </span>
-                        ) : (
+                        {job.assignedTechnician ? (() => {
+                          const matchedStaff = (staffList || []).find(s => s.name && s.name.trim().toLowerCase() === job.assignedTechnician.trim().toLowerCase());
+                          const department = job.assignedTechnicianDepartment || matchedStaff?.specialization;
+                          return (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1d4ed8', padding: '2px 8px', borderRadius: '6px', fontSize: '0.76rem', fontWeight: '700' }} title={`Assigned Workshop Floor Technician${department ? ` (${department})` : ''}`}>
+                              <span>🧑‍🔧 Floor Technician:</span>
+                              <strong>{job.assignedTechnician}</strong>
+                              {department ? (
+                                <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: '600' }}>({department})</span>
+                              ) : null}
+                            </span>
+                          );
+                        })() : (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px dashed #cbd5e1', color: '#64748b', padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '600' }} title="No floor technician assigned yet">
                             <span>🧑‍🔧 Technician: Unassigned</span>
                           </span>
@@ -7014,17 +8064,26 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0f172a', fontFamily: 'var(--font-mono)' }}>
-                        {isHandedOver ? 'Bill: ' : 'Est: '}{formatPrice(job.finalCost || job.estimatedCost || 0)}
+                        {isHandedOver ? 'Total: ' : 'Est: '}{formatPrice(job.finalCost || job.estimatedCost || 0)}
                       </span>
-                      {job.advancePaid > 0 && (
-                        <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700' }}>
-                          Advance Paid: {formatPrice(job.advancePaid)}
+                      {isHandedOver ? (
+                        <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
+                          <CheckCircle2 size={12} style={{ color: '#16a34a' }} />
+                          <span>Paid in Full</span>
                         </div>
-                      )}
-                      {((job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)) > 0 && (
-                        <div style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '700' }}>
-                          Balance Due: {formatPrice(Math.max(0, (job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)))}
-                        </div>
+                      ) : (
+                        <>
+                          {job.advancePaid > 0 && (
+                            <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '700' }}>
+                              Advance Paid: {formatPrice(job.advancePaid)}
+                            </div>
+                          )}
+                          {((job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)) > 0 && (
+                            <div style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: '700' }}>
+                              Balance Due: {formatPrice(Math.max(0, (job.finalCost || job.estimatedCost || 0) - (job.advancePaid || 0)))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -7094,7 +8153,14 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                     {/* Print Job Card Button */}
                     <button
                       type="button"
-                      onClick={() => setSelectedJobForPrint(job)}
+                      onClick={() => {
+                        const enriched = { ...job };
+                        if (enriched.assignedTechnician && !enriched.assignedTechnicianDepartment) {
+                          const matched = (staffList || []).find(s => s.name?.trim().toLowerCase() === enriched.assignedTechnician.trim().toLowerCase());
+                          if (matched?.specialization) enriched.assignedTechnicianDepartment = matched.specialization;
+                        }
+                        setSelectedJobForPrint(enriched);
+                      }}
                       style={{
                         padding: '6px 14px',
                         background: '#133886',
@@ -9085,6 +10151,32 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       </button>
 
                       <div style={{ display: 'flex', gap: '6px' }}>
+                        {member.phone && (
+                          <a
+                            href={getStaffWhatsAppUrl(member)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: '#f0fdf4',
+                              border: '1px solid #86efac',
+                              color: '#16a34a',
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.76rem',
+                              fontWeight: '700',
+                              textDecoration: 'none'
+                            }}
+                            title={`Send WhatsApp welcome / duty notification to ${member.name} (${member.phone})`}
+                            id={`btn-wa-staff-${member._id || member.id}`}
+                          >
+                            <MessageCircle size={12} />
+                            <span>WhatsApp</span>
+                          </a>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => handleOpenEditStaff(member)}
@@ -10862,6 +11954,157 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
       )}
 
       {/* ========================================================================= */}
+      {/* MODAL: ADMIN OTP REVEAL & FALLBACK OVERRIDE WARNING                       */}
+      {/* ========================================================================= */}
+      {adminOtpWarningJob && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+          onClick={() => setAdminOtpWarningJob(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '480px',
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1.5px solid #fed7aa',
+              animation: 'slideUp 0.2s ease'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+                padding: '18px 20px',
+                borderBottom: '1px solid #fed7aa',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#ea580c', color: '#ffffff', padding: '7px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#9a3412' }}>
+                    Customer Handover Security Check
+                  </h3>
+                  <span style={{ fontSize: '0.72rem', color: '#c2410c', fontWeight: '600' }}>
+                    Ask customer for their secret 4-digit collection OTP first
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdminOtpWarningJob(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9a3412', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: '20px' }}>
+              {/* Ticket & Customer Summary Pill */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <strong style={{ fontSize: '0.86rem', color: '#0f172a' }}>{adminOtpWarningJob.customerName}</strong>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.76rem', background: '#e2e8f0', padding: '2px 8px', borderRadius: '4px', fontWeight: '700' }}>
+                    {adminOtpWarningJob.jobId}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#475569' }}>
+                  Phone: <strong>{adminOtpWarningJob.customerPhone}</strong> • Machine: <strong>{adminOtpWarningJob.toolBrand} {adminOtpWarningJob.toolModel}</strong>
+                </div>
+              </div>
+
+              {/* Warning Notice Box */}
+              <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontWeight: '800', fontSize: '0.84rem', marginBottom: '6px' }}>
+                  <Shield size={16} />
+                  <span>Important Security Rule</span>
+                </div>
+                <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#7f1d1d', lineHeight: 1.5 }}>
+                  The secret 4-digit collection OTP was already sent to this customer's WhatsApp (<strong>{adminOtpWarningJob.customerPhone}</strong>). Please ask the customer to check and read it out from their phone before releasing the tool.
+                </p>
+                <div style={{ fontSize: '0.76rem', color: '#991b1b', lineHeight: 1.5 }}>
+                  <strong>Only use this Admin OTP override if:</strong>
+                  <ul style={{ margin: '4px 0 0', paddingLeft: '18px' }}>
+                    <li>Customer does not have WhatsApp or access to SMS/Email</li>
+                    <li>Customer's phone battery died or is using a basic phone</li>
+                    <li>Customer identity has been physically verified at the Poyanil counter</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAdminOtpWarningJob(null)}
+                  style={{
+                    padding: '9px 16px',
+                    background: '#f1f5f9',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    color: '#334155'
+                  }}
+                >
+                  Cancel (Ask Customer First)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const jobKey = adminOtpWarningJob.id || adminOtpWarningJob.jobId || adminOtpWarningJob._id;
+                    setUnmaskedRepairOtps(prev => ({ ...prev, [jobKey]: true }));
+                    if (!repairOtpInputs[jobKey]) {
+                      setRepairOtpInputs(prev => ({ ...prev, [jobKey]: adminOtpWarningJob.handoverOtp }));
+                    }
+                    showNotification(`⚠️ Admin override used for #${adminOtpWarningJob.jobId}. Customer OTP revealed & auto-filled.`);
+                    setAdminOtpWarningJob(null);
+                  }}
+                  style={{
+                    padding: '9px 18px',
+                    background: '#ea580c',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(234, 88, 12, 0.25)'
+                  }}
+                >
+                  <Eye size={15} />
+                  <span>Override &amp; Reveal OTP</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* MODAL 4: PRINTABLE 4X6 COURIER SHIPPING LABEL (Feature 1)                 */}
       {/* ========================================================================= */}
       {selectedOrderForLabel && (
@@ -11940,6 +13183,9 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                   <div style={{ marginTop: '6px', fontSize: '0.74rem', color: '#0284c7', fontWeight: '600' }}>
                     🔒 Customer Privacy Guard: The technician's name will strictly remain in store records and will NEVER be included in WhatsApp messages sent to customers.
                   </div>
+                  <div style={{ marginTop: '6px', fontSize: '0.74rem', color: '#15803d', fontWeight: '700', background: '#dcfce7', border: '1px solid #86efac', padding: '6px 10px', borderRadius: '6px' }}>
+                    📱 WhatsApp Welcome: When registered, a WhatsApp duty &amp; workshop assignment message will automatically be sent to the technician's phone number.
+                  </div>
                 </div>
               ) : (
                 <div style={{ background: '#faf5ff', border: '1.5px solid #e9d5ff', borderRadius: '10px', padding: '14px' }}>
@@ -11985,6 +13231,11 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                       {staffForm.role === 'workshop_manager'
                         ? 'ℹ️ When this Workshop Manager signs in, they will ONLY have access to the Workshop Repairs page.'
                         : 'ℹ️ When this Store Manager signs in, they will have full administrative dashboard access.'}
+                    </div>
+
+                    <div style={{ fontSize: '0.72rem', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '8px 10px', borderRadius: '6px', fontWeight: '600', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div>📧 An onboarding email with login email, password, and portal link will automatically be sent to this email upon registration.</div>
+                      <div style={{ color: '#15803d', fontWeight: '700' }}>📱 Login credentials and portal access will also be dispatched via WhatsApp to the registered phone number.</div>
                     </div>
                   </div>
                 </div>

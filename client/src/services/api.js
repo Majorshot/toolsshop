@@ -622,6 +622,17 @@ export const api = {
     return result;
   },
 
+  async notifyStaffWhatsApp(id, data = {}) {
+    const res = await authFetch(`${API_BASE}/staff/${id}/notify-whatsapp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'Failed to dispatch WhatsApp notification');
+    return result;
+  },
+
   // Customer Directory & CRM
   async getCustomers(params = {}) {
     const query = new URLSearchParams();
