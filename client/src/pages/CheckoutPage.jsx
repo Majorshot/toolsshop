@@ -4,7 +4,7 @@ import {
   CheckCircle, MapPin, Truck, ShieldCheck, AlertCircle, ArrowRight,
   User, Lock, Mail, Phone, MessageCircle, FileText, CheckCircle2, ChevronRight, Edit3,
   ShoppingBag, Shield, Check, Package, Building, Plus, Navigation, Home, Briefcase, Trash2,
-  Minus, X, Zap
+  Minus, X, Zap, RotateCcw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useCart } from '../context/CartContext';
@@ -1868,6 +1868,10 @@ export const CheckoutPage = () => {
                 <Mail size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
                 <span>Instant WhatsApp & Email Order Receipts</span>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#475569' }}>
+                <RotateCcw size={16} style={{ color: '#ea580c', flexShrink: 0 }} />
+                <span>Easy Cancellation &amp; 100% Refund Before Dispatch</span>
+              </div>
             </div>
 
           </div>
@@ -2991,6 +2995,46 @@ export const CheckoutPage = () => {
                     </div>
                   </div>
 
+                  {/* Cancellation & Return Policy Notice (Before Payment) */}
+                  <div style={{
+                    background: '#fff7ed',
+                    border: '1.5px solid #fed7aa',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <RotateCcw size={15} style={{ color: '#ea580c', flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#9a3412' }}>
+                          Cancellation &amp; Return Policy (Before You Pay)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setLegalModalTab('shipping')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#c2410c',
+                          fontSize: '0.73rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: 0
+                        }}
+                      >
+                        Policy Details
+                      </button>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.76rem', color: '#7c2d12', lineHeight: '1.45' }}>
+                      • <strong>Pre-Dispatch Cancellation:</strong> Cancel anytime from your account dashboard for an automatic <strong>100% full refund</strong> back to your original payment method.<br />
+                      • <strong>Post-Dispatch / Returns:</strong> Once dispatched with courier tracking, submit a return or cancellation request online for quick verification by our store team.
+                    </p>
+                  </div>
+
                   {/* Full Width Continue Button */}
                   <button
                     type="button"
@@ -3375,6 +3419,45 @@ export const CheckoutPage = () => {
                   {/* Primary Account Notification Reminder */}
                   <div style={{ fontSize: '0.76rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd', lineHeight: '1.45' }}>
                     📱 <strong>Account Notice:</strong> WhatsApp order receipt and live dispatch updates will be sent to primary number <strong>+91 {user?.phone}</strong>.
+                  </div>
+
+                  {/* Post-Payment Cancellation & Refund Guarantee */}
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ShieldCheck size={16} style={{ color: '#16a34a', flexShrink: 0 }} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0f172a' }}>
+                          Post-Payment Cancellation &amp; Refund Assurance
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setLegalModalTab('shipping')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#0284c7',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          padding: 0
+                        }}
+                      >
+                        Learn More
+                      </button>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#475569', lineHeight: '1.45' }}>
+                      Need to cancel after paying? Orders awaiting dispatch can be cancelled directly from your Account Dashboard with an automatic <strong>100% full refund</strong>. If already handed to the courier, submit a return/cancellation request from your dashboard.
+                    </p>
                   </div>
 
                   {/* Slide to Confirm & Place Order (Swipe Interaction - White Theme) */}

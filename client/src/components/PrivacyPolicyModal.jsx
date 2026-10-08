@@ -330,11 +330,30 @@ export const PrivacyPolicyModal = ({ isOpen, onClose, initialTab = 'privacy' }) 
 
               <div>
                 <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', margin: '0 0 8px' }}>
-                  4. Cancellation & Returns
+                  4. Cancellation, Returns &amp; Refund Policy
                 </h3>
-                <p style={{ margin: 0 }}>
-                  Orders awaiting processing can be cancelled directly by the customer with immediate confirmation. For orders already dispatched with an active AWB, a cancellation request can be submitted through the Customer Dashboard for store review.
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.84rem', color: '#475569', lineHeight: '1.5' }}>
+                  <p style={{ margin: 0 }}>
+                    We want you to shop with complete peace of mind at Variathu Power Tools. Our return and cancellation policy is straightforward:
+                  </p>
+                  <ul style={{ margin: 0, paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <li>
+                      <strong>Cancellation Before Dispatch / Pickup:</strong> You can cancel any order directly from your Customer Account Dashboard with immediate confirmation. Paid online orders (UPI, Debit/Credit Card, Net Banking) receive a <strong>100% full automatic refund</strong> back to the original payment source.
+                    </li>
+                    <li>
+                      <strong>Cancellation After Dispatch:</strong> For shipments already in transit with an active courier tracking number (AWB), you can submit a cancellation request via your Customer Dashboard. Our store team will coordinate with the courier partner to intercept or initiate return processing.
+                    </li>
+                    <li>
+                      <strong>Damaged, Defective or Incorrect Items:</strong> If equipment arrives damaged or defective, notify us within 7 days. We provide immediate replacement or repair through our authorized clinic at Poyanil Building, Kozhencherry.
+                    </li>
+                    <li>
+                      <strong>Store Counter Pickups:</strong> Pickup orders can be cancelled anytime before counter handover for an immediate 100% refund.
+                    </li>
+                    <li>
+                      <strong>Refund Timeline:</strong> UPI and wallet refunds are generally instantaneous; card and bank account refunds reflect within 3 to 5 business days per banking partner timelines.
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           )}

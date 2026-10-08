@@ -13,6 +13,7 @@ import { ProductCard } from '../components/ProductCard';
 import AnimatedContent from '../components/AnimatedContent';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 import { COURIER_PARTNERS } from '../utils/courierPartners';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 
 export const ProductDetailPage = () => {
   const { id } = useParams();
@@ -29,6 +30,7 @@ export const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
 
   // Check if description is long enough to require collapsible 'View More' toggle
   const isLongDesc = Boolean(
@@ -1084,19 +1086,66 @@ export const ProductDetailPage = () => {
               </a>
             )}
 
+            {/* Cancellation & Return Policy Guarantee */}
+            <div style={{
+              background: '#fff7ed',
+              border: '1.5px solid #fed7aa',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              marginTop: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <RotateCcw size={15} style={{ color: '#ea580c', flexShrink: 0 }} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#9a3412' }}>
+                    Return &amp; Cancellation Policy
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPolicyModalOpen(true)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#c2410c',
+                    fontSize: '0.73rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0
+                  }}
+                  id="btn-pdp-view-cancel-policy"
+                >
+                  View Details
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.76rem', color: '#7c2d12', lineHeight: '1.4' }}>
+                <div>• <strong>Easy Pre-Dispatch Cancellation:</strong> 100% full instant refund before item is shipped or collected.</div>
+                <div>• <strong>After Dispatch / In Transit:</strong> Submit a cancellation or return request from your dashboard for store verification.</div>
+                <div>• <strong>Defect &amp; Damage:</strong> Covered with prompt replacement or repair at our Kozhencherry workshop clinic.</div>
+              </div>
+            </div>
+
             {/* Trust Badges */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px', textAlign: 'center' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px', textAlign: 'center' }}>
               <div>
                 <ShieldCheck size={18} style={{ color: '#16a34a', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '700', display: 'block' }}>100% Genuine</span>
+                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>100% Genuine</span>
               </div>
               <div>
-                <RotateCcw size={18} style={{ color: '#0284c7', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '700', display: 'block' }}>Workshop Tested</span>
+                <RotateCcw size={18} style={{ color: '#ea580c', margin: '0 auto 4px' }} />
+                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>Easy Returns</span>
+              </div>
+              <div>
+                <Wrench size={18} style={{ color: '#0284c7', margin: '0 auto 4px' }} />
+                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>Clinic Tested</span>
               </div>
               <div>
                 <Award size={18} style={{ color: '#eab308', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: '700', display: 'block' }}>
+                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>
                   {product.specs?.warranty || product.warranty || 'Official Warranty'}
                 </span>
               </div>
@@ -1344,6 +1393,13 @@ export const ProductDetailPage = () => {
           )}
         </div>
       )}
+
+      {/* Cancellation & Return Policy Modal */}
+      <PrivacyPolicyModal
+        isOpen={isPolicyModalOpen}
+        onClose={() => setIsPolicyModalOpen(false)}
+        initialTab="shipping"
+      />
     </div>
   );
 };
