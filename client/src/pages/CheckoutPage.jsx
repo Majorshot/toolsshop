@@ -1870,7 +1870,7 @@ export const CheckoutPage = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.78rem', color: '#991b1b' }}>
                 <Ban size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
-                <span style={{ fontWeight: '700' }}>Strictly No Return &amp; No Cancellation Once Ordered</span>
+                <span style={{ fontWeight: '700' }}>No Return &amp; No Cancellation</span>
               </div>
             </div>
 
@@ -2995,45 +2995,6 @@ export const CheckoutPage = () => {
                     </div>
                   </div>
 
-                  {/* Strict No Return & No Cancellation Notice (Before Payment) */}
-                  <div style={{
-                    background: '#fef2f2',
-                    border: '1.5px solid #fecaca',
-                    borderRadius: '10px',
-                    padding: '12px 14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Ban size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#991b1b' }}>
-                          No Return &amp; No Cancellation
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setLegalModalTab('shipping')}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#b91c1c',
-                          fontSize: '0.73rem',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                          padding: 0
-                        }}
-                      >
-                        Policy Details
-                      </button>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.76rem', color: '#7f1d1d', lineHeight: '1.45' }}>
-                      Please review your cart carefully before proceeding. Once an order is placed, <strong>there is no return or cancellation option</strong>. All equipment is covered under manufacturer brand warranty.
-                    </p>
-                  </div>
-
                   {/* Full Width Continue Button */}
                   <button
                     type="button"
@@ -3418,27 +3379,6 @@ export const CheckoutPage = () => {
                   {/* Primary Account Notification Reminder */}
                   <div style={{ fontSize: '0.76rem', color: '#0369a1', background: '#f0f9ff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #bae6fd', lineHeight: '1.45' }}>
                     📱 <strong>Account Notice:</strong> WhatsApp order receipt and live dispatch updates will be sent to primary number <strong>+91 {user?.phone}</strong>.
-                  </div>
-
-                  {/* Final Order Confirmation & No Cancellation Notice */}
-                  <div style={{
-                    background: '#fef2f2',
-                    border: '1.5px solid #fecaca',
-                    borderRadius: '10px',
-                    padding: '12px 14px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Ban size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#991b1b' }}>
-                        Important: No Return or Cancellation
-                      </span>
-                    </div>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#7f1d1d', lineHeight: '1.45' }}>
-                      Once this payment is confirmed and the order is placed, <strong>there is no option to cancel or return</strong>. All sales are final.
-                    </p>
                   </div>
 
                   {/* Slide to Confirm & Place Order (Swipe Interaction - White Theme) */}

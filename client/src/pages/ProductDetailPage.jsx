@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle, CheckCircle2, 
-  Package, Truck, Zap, ArrowLeft, ChevronRight, ChevronLeft, Share2, Award, 
+import {
+  Star, ShoppingCart, MessageCircle, ShieldCheck, Wrench, CheckCircle, CheckCircle2,
+  Package, Truck, Zap, ArrowLeft, ChevronRight, ChevronLeft, Share2, Award,
   RotateCcw, MapPin, Check, Heart, Eye, Sparkles, Layers, Maximize2, ZoomIn, ZoomOut, Camera, X, Ban,
   ChevronDown, ChevronUp
 } from 'lucide-react';
@@ -54,7 +54,7 @@ export const ProductDetailPage = () => {
           setTaxonomyCategories(res.categories);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Fetch current product and related products
@@ -154,9 +154,9 @@ export const ProductDetailPage = () => {
   // Live in-cart quantity
   const cartItem = cart?.find(
     item => item.id === product?.id ||
-            item.id === id ||
-            String(item._id) === String(product?._id) ||
-            String(item.id) === String(id)
+      item.id === id ||
+      String(item._id) === String(product?._id) ||
+      String(item.id) === String(id)
   );
   const inCartQty = cartItem ? cartItem.quantity : 0;
 
@@ -228,7 +228,7 @@ export const ProductDetailPage = () => {
     };
     try {
       sessionStorage.setItem('vpt_buy_now', JSON.stringify(buyNowProduct));
-    } catch {}
+    } catch { }
     navigate('/checkout', { state: { buyNow: true, item: buyNowProduct } });
   };
 
@@ -397,8 +397,8 @@ export const ProductDetailPage = () => {
     );
   }
 
-  const discountAmount = product.originalPrice && product.originalPrice > product.price 
-    ? product.originalPrice - product.price 
+  const discountAmount = product.originalPrice && product.originalPrice > product.price
+    ? product.originalPrice - product.price
     : 0;
 
   // Known category display dictionary
@@ -455,15 +455,15 @@ export const ProductDetailPage = () => {
     <div style={{ padding: '16px 0 70px' }}>
       {/* Product Navigation Breadcrumbs */}
       <AnimatedContent distance={20} delay={0.05}>
-        <nav 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            fontSize: '0.82rem', 
-            color: '#64748b', 
-            marginBottom: '20px', 
-            flexWrap: 'wrap' 
+        <nav
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '0.82rem',
+            color: '#64748b',
+            marginBottom: '20px',
+            flexWrap: 'wrap'
           }}
           aria-label="Breadcrumb"
         >
@@ -492,8 +492,8 @@ export const ProductDetailPage = () => {
           <ChevronRight size={13} style={{ color: '#94a3b8' }} />
           <Link to="/shop" style={{ color: '#64748b', textDecoration: 'none', fontWeight: '500' }}>Catalog</Link>
           <ChevronRight size={13} style={{ color: '#94a3b8' }} />
-          <Link 
-            to={`/shop?category=${encodeURIComponent(product.category || '')}`} 
+          <Link
+            to={`/shop?category=${encodeURIComponent(product.category || '')}`}
             style={{ color: '#64748b', textDecoration: 'none', textTransform: 'capitalize', fontWeight: '500' }}
           >
             {categoryLabel}
@@ -510,122 +510,49 @@ export const ProductDetailPage = () => {
         <div className="product-detail-card">
           {/* ================= LEFT COLUMN: PRODUCT GALLERY ================= */}
           <div className="product-gallery-col">
-          {/* 1. MOBILE SWIPEABLE CAROUSEL */}
-          <div className="mobile-product-gallery">
-            <div className="mobile-slider-wrapper">
-              <div
-                className="mobile-slider-track no-scrollbar"
-                ref={mobileSliderRef}
-                onScroll={handleMobileSliderScroll}
-              >
-                {galleryImages.map((imgUrl, idx) => (
-                  <div
-                    key={idx}
-                    className="mobile-slide-item"
-                    onClick={() => openFullScreen(idx)}
-                    title="Tap to view full screen"
-                  >
-                    <img
-                      src={imgUrl}
-                      alt={`${product.name} view ${idx + 1}`}
-                      className="mobile-slide-img"
-                      onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Badges on mobile slider */}
-              {isOutOfStock ? (
-                <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#dc2626', color: '#ffffff', padding: '4px 9px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)' }}>
-                  <Ban size={12} strokeWidth={2.5} /> Out of Stock
-                </span>
-              ) : product.cordless ? (
-                <span className="gallery-badge-cordless">
-                  <Zap size={11} /> Cordless
-                </span>
-              ) : null}
-
-              {/* Action button on mobile slider */}
-              <div className="gallery-top-right-actions">
-                <button
-                  type="button"
-                  onClick={() => openFullScreen(activeImgIdx)}
-                  className="gallery-action-circle-btn"
-                  title="View full screen"
+            {/* 1. MOBILE SWIPEABLE CAROUSEL */}
+            <div className="mobile-product-gallery">
+              <div className="mobile-slider-wrapper">
+                <div
+                  className="mobile-slider-track no-scrollbar"
+                  ref={mobileSliderRef}
+                  onScroll={handleMobileSliderScroll}
                 >
-                  <Maximize2 size={16} />
-                </button>
-              </div>
+                  {galleryImages.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      className="mobile-slide-item"
+                      onClick={() => openFullScreen(idx)}
+                      title="Tap to view full screen"
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`${product.name} view ${idx + 1}`}
+                        className="mobile-slide-img"
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
 
-              {/* Image counter pill */}
-              <div className="mobile-gallery-counter-pill">
-                <Camera size={11} />
-                <span>{activeImgIdx + 1} / {galleryImages.length}</span>
-              </div>
-            </div>
-
-            {/* Pagination dots */}
-            {galleryImages.length > 1 && (
-              <div className="mobile-gallery-dots">
-                {galleryImages.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => scrollToSlide(idx)}
-                    className={`mobile-slider-dot ${activeImgIdx === idx ? 'active' : ''}`}
-                    aria-label={`Slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Tap to expand hint */}
-            <div
-              className="tap-to-expand-hint"
-              onClick={() => openFullScreen(activeImgIdx)}
-            >
-              <Maximize2 size={12} />
-              <span>Tap image to view full screen</span>
-            </div>
-          </div>
-
-          {/* 2. DESKTOP GALLERY (Vertical Strip + Stage Preview on >= 768px) */}
-          <div className="desktop-product-gallery">
-            <div style={{ display: 'flex', gap: '16px', flexDirection: 'row-reverse' }}>
-              {/* Main Stage Image */}
-              <div
-                className="desktop-main-stage"
-                onClick={() => openFullScreen(activeImgIdx)}
-                title="Click to view full screen"
-              >
-                <img
-                  src={galleryImages[activeImgIdx] || product.image}
-                  alt={product.name}
-                  id="main-product-image"
-                  onError={(e) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
-                  }}
-                />
-
-                {/* Badges */}
+                {/* Badges on mobile slider */}
                 {isOutOfStock ? (
-                  <span style={{ position: 'absolute', top: '14px', left: '14px', background: '#dc2626', color: '#ffffff', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)' }}>
-                    <Ban size={13} strokeWidth={2.5} /> Out of Stock
+                  <span style={{ position: 'absolute', top: '12px', left: '12px', background: '#dc2626', color: '#ffffff', padding: '4px 9px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)' }}>
+                    <Ban size={12} strokeWidth={2.5} /> Out of Stock
                   </span>
                 ) : product.cordless ? (
                   <span className="gallery-badge-cordless">
-                    <Zap size={12} /> Cordless
+                    <Zap size={11} /> Cordless
                   </span>
                 ) : null}
 
-                {/* Top action button */}
+                {/* Action button on mobile slider */}
                 <div className="gallery-top-right-actions">
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); openFullScreen(activeImgIdx); }}
+                    onClick={() => openFullScreen(activeImgIdx)}
                     className="gallery-action-circle-btn"
                     title="View full screen"
                   >
@@ -633,37 +560,90 @@ export const ProductDetailPage = () => {
                   </button>
                 </div>
 
-                <div className="desktop-expand-badge">
-                  <Maximize2 size={12} />
-                  <span>Click to zoom</span>
+                {/* Image counter pill */}
+                <div className="mobile-gallery-counter-pill">
+                  <Camera size={11} />
+                  <span>{activeImgIdx + 1} / {galleryImages.length}</span>
                 </div>
               </div>
 
-              {/* Thumbnail Strip (on left) */}
+              {/* Pagination dots */}
               {galleryImages.length > 1 && (
-                <div className="desktop-thumbnails-strip">
-                  {galleryImages.length <= 5 ? (
-                    galleryImages.map((imgUrl, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setActiveImgIdx(idx)}
-                        onMouseEnter={() => setActiveImgIdx(idx)}
-                        className={`desktop-thumb-btn ${activeImgIdx === idx ? 'active' : ''}`}
-                        title={`View photo ${idx + 1}`}
-                      >
-                        <img
-                          src={imgUrl}
-                          alt={`Thumbnail ${idx + 1}`}
-                          onError={(e) => {
-                            e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
-                          }}
-                        />
-                      </button>
-                    ))
-                  ) : (
-                    <>
-                      {galleryImages.slice(0, 4).map((imgUrl, idx) => (
+                <div className="mobile-gallery-dots">
+                  {galleryImages.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => scrollToSlide(idx)}
+                      className={`mobile-slider-dot ${activeImgIdx === idx ? 'active' : ''}`}
+                      aria-label={`Slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Tap to expand hint */}
+              <div
+                className="tap-to-expand-hint"
+                onClick={() => openFullScreen(activeImgIdx)}
+              >
+                <Maximize2 size={12} />
+                <span>Tap image to view full screen</span>
+              </div>
+            </div>
+
+            {/* 2. DESKTOP GALLERY (Vertical Strip + Stage Preview on >= 768px) */}
+            <div className="desktop-product-gallery">
+              <div style={{ display: 'flex', gap: '16px', flexDirection: 'row-reverse' }}>
+                {/* Main Stage Image */}
+                <div
+                  className="desktop-main-stage"
+                  onClick={() => openFullScreen(activeImgIdx)}
+                  title="Click to view full screen"
+                >
+                  <img
+                    src={galleryImages[activeImgIdx] || product.image}
+                    alt={product.name}
+                    id="main-product-image"
+                    onError={(e) => {
+                      e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
+
+                  {/* Badges */}
+                  {isOutOfStock ? (
+                    <span style={{ position: 'absolute', top: '14px', left: '14px', background: '#dc2626', color: '#ffffff', padding: '5px 11px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', zIndex: 3, display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)' }}>
+                      <Ban size={13} strokeWidth={2.5} /> Out of Stock
+                    </span>
+                  ) : product.cordless ? (
+                    <span className="gallery-badge-cordless">
+                      <Zap size={12} /> Cordless
+                    </span>
+                  ) : null}
+
+                  {/* Top action button */}
+                  <div className="gallery-top-right-actions">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); openFullScreen(activeImgIdx); }}
+                      className="gallery-action-circle-btn"
+                      title="View full screen"
+                    >
+                      <Maximize2 size={16} />
+                    </button>
+                  </div>
+
+                  <div className="desktop-expand-badge">
+                    <Maximize2 size={12} />
+                    <span>Click to zoom</span>
+                  </div>
+                </div>
+
+                {/* Thumbnail Strip (on left) */}
+                {galleryImages.length > 1 && (
+                  <div className="desktop-thumbnails-strip">
+                    {galleryImages.length <= 5 ? (
+                      galleryImages.map((imgUrl, idx) => (
                         <button
                           key={idx}
                           type="button"
@@ -680,529 +660,508 @@ export const ProductDetailPage = () => {
                             }}
                           />
                         </button>
-                      ))}
-
-                      {/* 5th slot: "+X Photos" button to open full screen image viewer */}
-                      <button
-                        type="button"
-                        onClick={() => openFullScreen(activeImgIdx >= 4 ? activeImgIdx : 4)}
-                        className={`desktop-thumb-btn desktop-thumb-more-btn ${activeImgIdx >= 4 ? 'active' : ''}`}
-                        title={`Click to view all ${galleryImages.length} photos in full screen`}
-                        id="btn-desktop-more-images"
-                      >
-                        <img
-                          src={galleryImages[4]}
-                          alt="More photos"
-                          onError={(e) => {
-                            e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
-                          }}
-                        />
-                        <div className="desktop-thumb-more-overlay">
-                          <span className="desktop-thumb-more-count">+{galleryImages.length - 4}</span>
-                          <span className="desktop-thumb-more-label">Photos</span>
-                        </div>
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ================= RIGHT COLUMN: PRODUCT INFO & BUY BOX ================= */}
-        <div>
-          {/* Brand & Store Tag */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
-            <Link 
-              to={`/shop?brand=${encodeURIComponent(product.brand?.toLowerCase() || '')}`}
-              style={{
-                color: '#0284c7',
-                fontSize: '0.84rem',
-                fontWeight: '800',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              <span>Brand: {product.brand}</span>
-              <ChevronRight size={13} />
-            </Link>
-
-            <span 
-              style={{ 
-                background: '#f1f5f9', 
-                color: '#475569', 
-                fontSize: '0.72rem', 
-                fontWeight: '700', 
-                padding: '2px 8px', 
-                borderRadius: '9999px',
-                border: '1px solid #e2e8f0'
-              }}
-            >
-              SKU: {product.id}
-            </span>
-          </div>
-
-          {/* Title */}
-          <h1 
-            style={{ 
-              fontSize: 'clamp(1.3rem, 2.2vw, 1.75rem)', 
-              fontWeight: '800', 
-              color: '#0f172a', 
-              lineHeight: 1.35, 
-              marginBottom: '12px' 
-            }}
-          >
-            {product.name}
-          </h1>
-
-          {/* Price Box */}
-          <div 
-            style={{ 
-              borderTop: '1px solid #f1f5f9', 
-              borderBottom: '1px solid #f1f5f9', 
-              padding: '16px 0', 
-              marginBottom: '20px' 
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '14px', flexWrap: 'wrap' }}>
-              <span 
-                style={{ 
-                  fontSize: 'clamp(1.8rem, 3vw, 2.2rem)', 
-                  fontWeight: '900', 
-                  color: '#0f172a', 
-                  fontFamily: 'var(--font-mono)' 
-                }}
-              >
-                {formatPrice(product.price)}
-              </span>
-
-              {product.originalPrice && product.originalPrice > product.price && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '0.96rem', color: '#94a3b8', textDecoration: 'line-through', fontFamily: 'var(--font-mono)' }}>
-                    M.R.P.: {formatPrice(product.originalPrice)}
-                  </span>
-
-                  <span 
-                    style={{ 
-                      background: '#fef2f2', 
-                      color: '#dc2626', 
-                      border: '1px solid #fecaca', 
-                      padding: '2px 8px', 
-                      borderRadius: '6px', 
-                      fontSize: '0.78rem', 
-                      fontWeight: '800' 
-                    }}
-                  >
-                    {product.discount || `${Math.round((discountAmount / product.originalPrice) * 100)}% OFF`}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {discountAmount > 0 && (
-              <p style={{ color: '#dc2626', fontSize: '0.84rem', fontWeight: '700', margin: '4px 0 0' }}>
-                You save: {formatPrice(discountAmount)} ({Math.round((discountAmount / product.originalPrice) * 100)}%)
-              </p>
-            )}
-
-            {product.couponCode && (
-              <div 
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  background: '#eff6ff', 
-                  border: '1px solid #bfdbfe', 
-                  color: '#1d4ed8', 
-                  padding: '6px 12px', 
-                  borderRadius: '8px', 
-                  fontSize: '0.82rem', 
-                  fontWeight: '700', 
-                  marginTop: '8px' 
-                }}
-              >
-                <span>🏷️ Special Offer: Apply coupon</span>
-                <strong style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', background: '#dbeafe', padding: '1px 6px', borderRadius: '4px' }}>{product.couponCode}</strong>
-                <span>at checkout</span>
-              </div>
-            )}
-
-            <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0 0' }}>
-              Inclusive of all taxes • Official GST Tax Invoice provided
-            </p>
-          </div>
-
-          {/* Real-Time Stock & Store Location Info */}
-          <div style={{ marginBottom: '22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <span 
-                style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%', 
-                  background: isOutOfStock ? '#dc2626' : (maxStock === 1 ? '#ea580c' : '#16a34a') 
-                }} 
-              />
-              <strong 
-                style={{ 
-                  color: isOutOfStock ? '#dc2626' : (maxStock === 1 ? '#dc2626' : '#16a34a'), 
-                  fontSize: '0.92rem' 
-                }}
-              >
-                {isOutOfStock 
-                  ? 'Out of Stock (Currently Unavailable)' 
-                  : (maxStock === 1 
-                      ? '⚠️ Only 1 unit left in stock - order soon!' 
-                      : `In Stock (${maxStock} units available)`
-                    )}
-              </strong>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.84rem', color: '#475569' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MapPin size={15} style={{ color: 'var(--brand-primary)' }} />
-                <span>
-                  <strong>Pickup Ready Today:</strong> Poyanil Building, Kozhencherry (Counter Handover with OTP)
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Truck size={15} style={{ color: '#0284c7' }} />
-                  <span>
-                    <strong>Express Courier:</strong>{' '}
-                    {product.deliveryCost === 0 ? (
-                      <span style={{ color: '#16a34a', fontWeight: '800' }}>FREE Delivery</span>
+                      ))
                     ) : (
-                      <span><strong>₹{product.deliveryCost ?? 120}</strong> delivery fee</span>
-                    )}{' '}
-                    • Speed delivery across Kerala
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '21px', flexWrap: 'wrap' }}>
-                  {COURIER_PARTNERS.map(cp => (
-                    <div
-                      key={cp.id}
-                      title={`${cp.name} (${cp.id === 'delhivery' ? 'Doorstep Delivery' : 'Nearest Hub Collection'})`}
-                      style={{
-                        background: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        padding: '2px 8px',
-                        height: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
-                      }}
-                    >
-                      <img
-                        src={cp.logo}
-                        alt={cp.name}
-                        style={{ maxHeight: '16px', maxWidth: '70px', objectFit: 'contain' }}
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginLeft: '21px', fontSize: '0.73rem', color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '5px 10px', borderRadius: '6px', lineHeight: 1.4 }}>
-                  📍 <strong>Delivery Notice:</strong> Only <strong>Delhivery</strong> offers direct doorstep delivery. Shipments via <strong>APS (Alleppey Parcel), DTDC Express, or The Professional Couriers</strong> are collected from your nearest local hub.
-                </div>
+                      <>
+                        {galleryImages.slice(0, 4).map((imgUrl, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setActiveImgIdx(idx)}
+                            onMouseEnter={() => setActiveImgIdx(idx)}
+                            className={`desktop-thumb-btn ${activeImgIdx === idx ? 'active' : ''}`}
+                            title={`View photo ${idx + 1}`}
+                          >
+                            <img
+                              src={imgUrl}
+                              alt={`Thumbnail ${idx + 1}`}
+                              onError={(e) => {
+                                e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                              }}
+                            />
+                          </button>
+                        ))}
+
+                        {/* 5th slot: "+X Photos" button to open full screen image viewer */}
+                        <button
+                          type="button"
+                          onClick={() => openFullScreen(activeImgIdx >= 4 ? activeImgIdx : 4)}
+                          className={`desktop-thumb-btn desktop-thumb-more-btn ${activeImgIdx >= 4 ? 'active' : ''}`}
+                          title={`Click to view all ${galleryImages.length} photos in full screen`}
+                          id="btn-desktop-more-images"
+                        >
+                          <img
+                            src={galleryImages[4]}
+                            alt="More photos"
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80';
+                            }}
+                          />
+                          <div className="desktop-thumb-more-overlay">
+                            <span className="desktop-thumb-more-count">+{galleryImages.length - 4}</span>
+                            <span className="desktop-thumb-more-label">Photos</span>
+                          </div>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Action Box (Buy Buttons) */}
-          <div 
-            style={{ 
-              background: '#f8fafc', 
-              border: '1px solid #e2e8f0', 
-              borderRadius: '12px', 
-              padding: '20px', 
-              marginBottom: '26px' 
-            }}
-          >
-            {/* Quantity Selector & Live Cart Sync */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '700' }}>Quantity:</span>
-                <div className="qty-counter">
-                  <button
-                    className="btn-qty"
-                    onClick={handleDecreaseQty}
-                    disabled={(quantity <= 1 && inCartQty === 0) || isOutOfStock}
-                    style={{
-                      width: '34px',
-                      height: '34px',
-                      fontSize: '1.1rem',
-                      cursor: ((quantity <= 1 && inCartQty === 0) || isOutOfStock) ? 'not-allowed' : 'pointer'
-                    }}
-                    title={inCartQty > 0 && quantity <= 1 ? "Remove from cart" : "Decrease quantity"}
-                    id="btn-pdp-qty-minus"
-                  >
-                    -
-                  </button>
-                  <span className="qty-value" style={{ minWidth: '36px', textAlign: 'center', fontWeight: '800' }}>
-                    {isOutOfStock ? 0 : quantity}
-                  </span>
-                  <button
-                    className="btn-qty"
-                    onClick={handleIncreaseQty}
-                    disabled={quantity >= maxStock || isOutOfStock}
-                    style={{
-                      width: '34px',
-                      height: '34px',
-                      fontSize: '1.1rem',
-                      cursor: (quantity >= maxStock || isOutOfStock) ? 'not-allowed' : 'pointer',
-                      opacity: (quantity >= maxStock || isOutOfStock) ? 0.4 : 1
-                    }}
-                    title={quantity >= maxStock ? `Only ${maxStock} in stock` : 'Increase quantity'}
-                    id="btn-pdp-qty-plus"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+          {/* ================= RIGHT COLUMN: PRODUCT INFO & BUY BOX ================= */}
+          <div>
+            {/* Brand & Store Tag */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+              <Link
+                to={`/shop?brand=${encodeURIComponent(product.brand?.toLowerCase() || '')}`}
+                style={{
+                  color: '#0284c7',
+                  fontSize: '0.84rem',
+                  fontWeight: '800',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span>Brand: {product.brand}</span>
+                <ChevronRight size={13} />
+              </Link>
 
-              <span style={{ fontSize: '0.88rem', color: '#64748b' }}>
-                Subtotal: <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)' }}>{formatPrice(product.price * (isOutOfStock ? 0 : quantity))}</strong>
+              <span
+                style={{
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  fontSize: '0.72rem',
+                  fontWeight: '700',
+                  padding: '2px 8px',
+                  borderRadius: '9999px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                SKU: {product.id}
               </span>
+            </div>
 
-              {inCartQty > 0 && (
+            {/* Title */}
+            <h1
+              style={{
+                fontSize: 'clamp(1.3rem, 2.2vw, 1.75rem)',
+                fontWeight: '800',
+                color: '#0f172a',
+                lineHeight: 1.35,
+                marginBottom: '12px'
+              }}
+            >
+              {product.name}
+            </h1>
+
+            {/* Price Box */}
+            <div
+              style={{
+                borderTop: '1px solid #f1f5f9',
+                borderBottom: '1px solid #f1f5f9',
+                padding: '16px 0',
+                marginBottom: '20px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '14px', flexWrap: 'wrap' }}>
                 <span
                   style={{
-                    fontSize: '0.78rem',
-                    color: '#16a34a',
-                    fontWeight: '800',
-                    background: '#f0fdf4',
-                    border: '1.5px solid #86efac',
-                    padding: '3px 10px',
-                    borderRadius: '20px',
+                    fontSize: 'clamp(1.8rem, 3vw, 2.2rem)',
+                    fontWeight: '900',
+                    color: '#0f172a',
+                    fontFamily: 'var(--font-mono)'
+                  }}
+                >
+                  {formatPrice(product.price)}
+                </span>
+
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.96rem', color: '#94a3b8', textDecoration: 'line-through', fontFamily: 'var(--font-mono)' }}>
+                      M.R.P.: {formatPrice(product.originalPrice)}
+                    </span>
+
+                    <span
+                      style={{
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontSize: '0.78rem',
+                        fontWeight: '800'
+                      }}
+                    >
+                      {product.discount || `${Math.round((discountAmount / product.originalPrice) * 100)}% OFF`}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {discountAmount > 0 && (
+                <p style={{ color: '#dc2626', fontSize: '0.84rem', fontWeight: '700', margin: '4px 0 0' }}>
+                  You save: {formatPrice(discountAmount)} ({Math.round((discountAmount / product.originalPrice) * 100)}%)
+                </p>
+              )}
+
+              {product.couponCode && (
+                <div
+                  style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '5px'
-                  }}
-                  title="Currently in your cart"
-                  id="pdp-in-cart-status"
-                >
-                  <CheckCircle size={13} />
-                  <span>{inCartQty} in Cart (Live)</span>
-                </span>
-              )}
-
-              {quantity >= maxStock && !isOutOfStock && (
-                <span style={{ fontSize: '0.76rem', color: '#dc2626', fontWeight: '700', background: '#fef2f2', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '4px' }}>
-                  Max limit reached ({maxStock} in stock)
-                </span>
-              )}
-            </div>
-
-            {/* Primary Action Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '12px' }}>
-              <button
-                className="btn-hero-clean"
-                onClick={handleAddToCart}
-                disabled={isOutOfStock}
-                style={{
-                  padding: '12px 18px',
-                  justifyContent: 'center',
-                  fontSize: '0.9rem',
-                  opacity: isOutOfStock ? 0.5 : 1,
-                  cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                  background: inCartQty > 0 ? '#16a34a' : undefined,
-                  borderColor: inCartQty > 0 ? '#16a34a' : undefined
-                }}
-                id="btn-pdp-add-cart"
-              >
-                {inCartQty > 0 ? (
-                  <>
-                    <CheckCircle size={18} />
-                    <span>In Cart ({inCartQty}) • View Cart</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart size={18} />
-                    <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={handleBuyNow}
-                disabled={isOutOfStock}
-                style={{
-                  background: isOutOfStock ? '#94a3b8' : '#0f172a',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: '800',
-                  fontSize: '0.9rem',
-                  padding: '12px 18px',
-                  cursor: isOutOfStock ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: 'var(--shadow-xs)',
-                  transition: 'opacity 0.2s ease',
-                  opacity: isOutOfStock ? 0.5 : 1
-                }}
-                id="btn-pdp-buy-now"
-              >
-                <Zap size={18} style={{ color: '#fbbf24' }} />
-                <span>{isOutOfStock ? 'Unavailable' : 'Buy Now'}</span>
-              </button>
-            </div>
-
-            {/* WhatsApp Instant Order Button */}
-            {!isOutOfStock && (
-              <a
-                href={getWhatsAppOrderUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  width: '100%',
-                  background: '#f0fdf4',
-                  border: '1.5px solid #86efac',
-                  color: '#166534',
-                  borderRadius: '10px',
-                  padding: '10px',
-                  fontWeight: '800',
-                  fontSize: '0.88rem',
-                  textDecoration: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-                id="btn-pdp-whatsapp"
-              >
-                <MessageCircle size={18} style={{ color: '#16a34a' }} />
-                <span>Instant WhatsApp Order ({formatPrice(product.price * quantity)})</span>
-              </a>
-            )}
-
-            {/* No Return & No Cancellation Policy Notice */}
-            <div style={{
-              background: '#fef2f2',
-              border: '1.5px solid #fecaca',
-              borderRadius: '10px',
-              padding: '12px 14px',
-              marginTop: '14px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '5px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Ban size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
-                  <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#991b1b' }}>
-                    No Return &amp; No Cancellation
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPolicyModalOpen(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#b91c1c',
-                    fontSize: '0.73rem',
+                    gap: '6px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#1d4ed8',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
                     fontWeight: '700',
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    padding: 0
+                    marginTop: '8px'
                   }}
-                  id="btn-pdp-view-cancel-policy"
                 >
-                  Policy Details
-                </button>
-              </div>
-              <p style={{ margin: 0, fontSize: '0.77rem', color: '#7f1d1d', lineHeight: '1.45' }}>
-                Once ordered, <strong>there is no option to cancel or return the product</strong>. All sales are final. Technical issues or defects are covered under official brand warranty.
+                  <span>🏷️ Special Offer: Apply coupon</span>
+                  <strong style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.5px', background: '#dbeafe', padding: '1px 6px', borderRadius: '4px' }}>{product.couponCode}</strong>
+                  <span>at checkout</span>
+                </div>
+              )}
+
+              <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '4px 0 0' }}>
+                Inclusive of all taxes • Official GST Tax Invoice provided
               </p>
             </div>
 
-            {/* Trust Badges */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px', textAlign: 'center' }}>
-              <div>
-                <ShieldCheck size={18} style={{ color: '#16a34a', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>100% Genuine</span>
+            {/* Real-Time Stock & Store Location Info */}
+            <div style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: isOutOfStock ? '#dc2626' : (maxStock === 1 ? '#ea580c' : '#16a34a')
+                  }}
+                />
+                <strong
+                  style={{
+                    color: isOutOfStock ? '#dc2626' : (maxStock === 1 ? '#dc2626' : '#16a34a'),
+                    fontSize: '0.92rem'
+                  }}
+                >
+                  {isOutOfStock
+                    ? 'Out of Stock (Currently Unavailable)'
+                    : (maxStock === 1
+                      ? '⚠️ Only 1 unit left in stock - order soon!'
+                      : `In Stock (${maxStock} units available)`
+                    )}
+                </strong>
               </div>
-              <div>
-                <Ban size={18} style={{ color: '#dc2626', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.7rem', color: '#991b1b', fontWeight: '800', display: 'block' }}>No Returns</span>
-              </div>
-              <div>
-                <Wrench size={18} style={{ color: '#0284c7', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>Clinic Tested</span>
-              </div>
-              <div>
-                <Award size={18} style={{ color: '#eab308', margin: '0 auto 4px' }} />
-                <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>
-                  {product.specs?.warranty || product.warranty || 'Official Warranty'}
-                </span>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.84rem', color: '#475569' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MapPin size={15} style={{ color: 'var(--brand-primary)' }} />
+                  <span>
+                    <strong>Pickup Ready Today:</strong> Poyanil Building, Kozhencherry (Counter Handover with OTP)
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Truck size={15} style={{ color: '#0284c7' }} />
+                    <span>
+                      <strong>Express Courier:</strong>{' '}
+                      {product.deliveryCost === 0 ? (
+                        <span style={{ color: '#16a34a', fontWeight: '800' }}>FREE Delivery</span>
+                      ) : (
+                        <span><strong>₹{product.deliveryCost ?? 120}</strong> delivery fee</span>
+                      )}{' '}
+                      • Speed delivery across Kerala
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingLeft: '21px', flexWrap: 'wrap' }}>
+                    {COURIER_PARTNERS.map(cp => (
+                      <div
+                        key={cp.id}
+                        title={`${cp.name} (${cp.id === 'delhivery' ? 'Doorstep Delivery' : 'Nearest Hub Collection'})`}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '2px 8px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)'
+                        }}
+                      >
+                        <img
+                          src={cp.logo}
+                          alt={cp.name}
+                          style={{ maxHeight: '16px', maxWidth: '70px', objectFit: 'contain' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginLeft: '21px', fontSize: '0.73rem', color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', padding: '5px 10px', borderRadius: '6px', lineHeight: 1.4 }}>
+                    📍 <strong>Delivery Notice:</strong> Only <strong>Delhivery</strong> offers direct doorstep delivery. Shipments via <strong>APS (Alleppey Parcel), DTDC Express, or The Professional Couriers</strong> are collected from your nearest local hub.
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Description Section */}
-          {product.description && (
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
-                Product Overview
-              </h3>
-              <div className="pdp-description-wrapper">
-                <div 
-                  className={`pdp-description-content ${!isDescExpanded && isLongDesc ? 'collapsed' : ''}`}
-                >
-                  <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-line' }}>
-                    {product.description}
-                  </p>
+            {/* Action Box (Buy Buttons) */}
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '26px'
+              }}
+            >
+              {/* Quantity Selector & Live Cart Sync */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '0.9rem', color: '#475569', fontWeight: '700' }}>Quantity:</span>
+                  <div className="qty-counter">
+                    <button
+                      className="btn-qty"
+                      onClick={handleDecreaseQty}
+                      disabled={(quantity <= 1 && inCartQty === 0) || isOutOfStock}
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        fontSize: '1.1rem',
+                        cursor: ((quantity <= 1 && inCartQty === 0) || isOutOfStock) ? 'not-allowed' : 'pointer'
+                      }}
+                      title={inCartQty > 0 && quantity <= 1 ? "Remove from cart" : "Decrease quantity"}
+                      id="btn-pdp-qty-minus"
+                    >
+                      -
+                    </button>
+                    <span className="qty-value" style={{ minWidth: '36px', textAlign: 'center', fontWeight: '800' }}>
+                      {isOutOfStock ? 0 : quantity}
+                    </span>
+                    <button
+                      className="btn-qty"
+                      onClick={handleIncreaseQty}
+                      disabled={quantity >= maxStock || isOutOfStock}
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        fontSize: '1.1rem',
+                        cursor: (quantity >= maxStock || isOutOfStock) ? 'not-allowed' : 'pointer',
+                        opacity: (quantity >= maxStock || isOutOfStock) ? 0.4 : 1
+                      }}
+                      title={quantity >= maxStock ? `Only ${maxStock} in stock` : 'Increase quantity'}
+                      id="btn-pdp-qty-plus"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                {!isDescExpanded && isLongDesc && (
-                  <div className="pdp-description-fade" />
+
+                <span style={{ fontSize: '0.88rem', color: '#64748b' }}>
+                  Subtotal: <strong style={{ color: '#0f172a', fontFamily: 'var(--font-mono)' }}>{formatPrice(product.price * (isOutOfStock ? 0 : quantity))}</strong>
+                </span>
+
+                {inCartQty > 0 && (
+                  <span
+                    style={{
+                      fontSize: '0.78rem',
+                      color: '#16a34a',
+                      fontWeight: '800',
+                      background: '#f0fdf4',
+                      border: '1.5px solid #86efac',
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                    title="Currently in your cart"
+                    id="pdp-in-cart-status"
+                  >
+                    <CheckCircle size={13} />
+                    <span>{inCartQty} in Cart (Live)</span>
+                  </span>
+                )}
+
+                {quantity >= maxStock && !isOutOfStock && (
+                  <span style={{ fontSize: '0.76rem', color: '#dc2626', fontWeight: '700', background: '#fef2f2', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '4px' }}>
+                    Max limit reached ({maxStock} in stock)
+                  </span>
                 )}
               </div>
 
-              {isLongDesc && (
+              {/* Primary Action Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '12px' }}>
                 <button
-                  type="button"
-                  onClick={() => setIsDescExpanded(!isDescExpanded)}
-                  className="pdp-desc-toggle-btn"
-                  id="btn-toggle-description"
+                  className="btn-hero-clean"
+                  onClick={handleAddToCart}
+                  disabled={isOutOfStock}
+                  style={{
+                    padding: '12px 18px',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem',
+                    opacity: isOutOfStock ? 0.5 : 1,
+                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                    background: inCartQty > 0 ? '#16a34a' : undefined,
+                    borderColor: inCartQty > 0 ? '#16a34a' : undefined
+                  }}
+                  id="btn-pdp-add-cart"
                 >
-                  <span>{isDescExpanded ? 'View Less' : 'View More'}</span>
-                  {isDescExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                  {inCartQty > 0 ? (
+                    <>
+                      <CheckCircle size={18} />
+                      <span>In Cart ({inCartQty}) • View Cart</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart size={18} />
+                      <span>{isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</span>
+                    </>
+                  )}
                 </button>
+
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isOutOfStock}
+                  style={{
+                    background: isOutOfStock ? '#94a3b8' : '#0f172a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '800',
+                    fontSize: '0.9rem',
+                    padding: '12px 18px',
+                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: 'var(--shadow-xs)',
+                    transition: 'opacity 0.2s ease',
+                    opacity: isOutOfStock ? 0.5 : 1
+                  }}
+                  id="btn-pdp-buy-now"
+                >
+                  <Zap size={18} style={{ color: '#fbbf24' }} />
+                  <span>{isOutOfStock ? 'Unavailable' : 'Buy Now'}</span>
+                </button>
+              </div>
+
+              {/* WhatsApp Instant Order Button */}
+              {!isOutOfStock && (
+                <a
+                  href={getWhatsAppOrderUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    width: '100%',
+                    background: '#f0fdf4',
+                    border: '1.5px solid #86efac',
+                    color: '#166534',
+                    borderRadius: '10px',
+                    padding: '10px',
+                    fontWeight: '800',
+                    fontSize: '0.88rem',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  id="btn-pdp-whatsapp"
+                >
+                  <MessageCircle size={18} style={{ color: '#16a34a' }} />
+                  <span>Instant WhatsApp Order ({formatPrice(product.price * quantity)})</span>
+                </a>
               )}
-            </div>
-          )}
 
-          {/* Features Highlights Bullet Points */}
-          {product.features && product.features.length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
-                Key Highlights & Features
-              </h3>
-              <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {product.features.map((feat, idx) => (
-                  <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.88rem', color: '#334155' }}>
-                    <CheckCircle2 size={16} style={{ color: '#ea580c', flexShrink: 0, marginTop: 2 }} />
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
+              {/* Trust Badges */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px', textAlign: 'center' }}>
+                <div>
+                  <ShieldCheck size={18} style={{ color: '#16a34a', margin: '0 auto 4px' }} />
+                  <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>100% Genuine</span>
+                </div>
+                <div>
+                  <Ban size={18} style={{ color: '#dc2626', margin: '0 auto 4px' }} />
+                  <span style={{ fontSize: '0.7rem', color: '#991b1b', fontWeight: '800', display: 'block' }}>No Returns<br />No Cancellation</span>
+                </div>
+                <div>
+                  <Wrench size={18} style={{ color: '#0284c7', margin: '0 auto 4px' }} />
+                  <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>Clinic Tested</span>
+                </div>
+                <div>
+                  <Award size={18} style={{ color: '#eab308', margin: '0 auto 4px' }} />
+                  <span style={{ fontSize: '0.7rem', color: '#475569', fontWeight: '700', display: 'block' }}>
+                    {product.specs?.warranty || product.warranty || 'Official Warranty'}
+                  </span>
+                </div>
+              </div>
             </div>
-          )}
 
-          {/* Technical Specifications Removed for Clean Layout */}
+            {/* Description Section */}
+            {product.description && (
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>
+                  Product Overview
+                </h3>
+                <div className="pdp-description-wrapper">
+                  <div
+                    className={`pdp-description-content ${!isDescExpanded && isLongDesc ? 'collapsed' : ''}`}
+                  >
+                    <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.65, margin: 0, whiteSpace: 'pre-line' }}>
+                      {product.description}
+                    </p>
+                  </div>
+                  {!isDescExpanded && isLongDesc && (
+                    <div className="pdp-description-fade" />
+                  )}
+                </div>
+
+                {isLongDesc && (
+                  <button
+                    type="button"
+                    onClick={() => setIsDescExpanded(!isDescExpanded)}
+                    className="pdp-desc-toggle-btn"
+                    id="btn-toggle-description"
+                  >
+                    <span>{isDescExpanded ? 'View Less' : 'View More'}</span>
+                    {isDescExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Features Highlights Bullet Points */}
+            {product.features && product.features.length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '10px' }}>
+                  Key Highlights & Features
+                </h3>
+                <ul style={{ paddingLeft: 0, listStyle: 'none', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {product.features.map((feat, idx) => (
+                    <li key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.88rem', color: '#334155' }}>
+                      <CheckCircle2 size={16} style={{ color: '#ea580c', flexShrink: 0, marginTop: 2 }} />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Technical Specifications Removed for Clean Layout */}
+          </div>
         </div>
-      </div>
       </AnimatedContent>
 
       {/* ================= BOTTOM SECTION: RELATED PRODUCTS IN CATEGORY ================= */}
@@ -1238,14 +1197,14 @@ export const ProductDetailPage = () => {
 
         {relatedProducts.length === 0 ? (
           <AnimatedContent distance={25} delay={0.15}>
-            <div 
-              style={{ 
-                background: '#f8fafc', 
-                border: '1px dashed #cbd5e1', 
-                borderRadius: '14px', 
-                padding: '36px 20px', 
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px dashed #cbd5e1',
+                borderRadius: '14px',
+                padding: '36px 20px',
                 textAlign: 'center',
-                color: '#64748b' 
+                color: '#64748b'
               }}
             >
               <Package size={32} style={{ color: '#94a3b8', margin: '0 auto 10px', display: 'block' }} />

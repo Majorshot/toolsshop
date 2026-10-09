@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage';
 import { ShopPage } from './pages/ShopPage';
 import { CartProvider, useCart } from './context/CartContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NavigationProvider, useSafeNavigate } from './context/NavigationContext';
 import { api } from './services/api';
 import { CheckCircle, MessageCircle } from 'lucide-react';
 import AnimatedContent from './components/AnimatedContent';
@@ -34,7 +35,7 @@ const lazyWithRetry = (componentImport) =>
       if (!pageHasAlreadyBeenForceRefreshed) {
         window.sessionStorage.setItem('vpt_chunk_reload', 'true');
         window.location.reload();
-        return new Promise(() => {});
+        return new Promise(() => { });
       }
       throw error;
     }
@@ -51,18 +52,28 @@ const StoreDashboardPage = lazyWithRetry(() => import('./pages/StoreDashboardPag
 const StoreInfoModal = lazyWithRetry(() => import('./components/StoreInfoModal').then(m => ({ default: m.StoreInfoModal })));
 const AdminModal = lazyWithRetry(() => import('./components/AdminModal').then(m => ({ default: m.AdminModal })));
 
+// Preload primary route chunks on idle to eliminate first-touch lag on mobile
+export const preloadPrimaryRoutes = () => {
+  try {
+    import('./pages/ProductDetailPage').catch(() => {});
+    import('./pages/CartPage').catch(() => {});
+    import('./pages/AboutPage').catch(() => {});
+  } catch (e) {}
+};
+
 const RouteLoadingFallback = () => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '60px 20px' }}>
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', padding: '60px 20px', gap: '12px' }}>
     <div
       style={{
         width: '36px',
         height: '36px',
         border: '3px solid #e2e8f0',
-        borderTopColor: '#dc2626',
+        borderTopColor: '#ea580c',
         borderRadius: '50%',
         animation: 'spin 0.7s linear infinite'
       }}
     />
+    <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 600 }}>Loading page...</span>
   </div>
 );
 
@@ -85,7 +96,7 @@ function ScrollToTop() {
       setTimeout(() => {
         ScrollTrigger.refresh();
       }, 100);
-    } catch {}
+    } catch { }
   }, [pathname, navType]);
   return null;
 }
@@ -102,8 +113,28 @@ function ProtectedAdminRoute({ children }) {
 const MainApp = () => {
   const { toastMessage } = useCart() || {};
   const navigate = useNavigate();
+  const { safeNavigate } = useSafeNavigate();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
+
+  // Idle preload of primary routes to guarantee 0ms delay on first mobile click
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const schedulePreload = () => {
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(() => preloadPrimaryRoutes(), { timeout: 2500 });
+        } else {
+          setTimeout(preloadPrimaryRoutes, 1500);
+        }
+      };
+
+      if (document.readyState === 'complete') {
+        schedulePreload();
+      } else {
+        window.addEventListener('load', schedulePreload, { once: true });
+      }
+    }
+  }, []);
 
   // All Catalog Products (Unfiltered base for HomePage, Catalog counts and Shop)
   const [allProducts, setAllProducts] = useState([]);
@@ -134,7 +165,7 @@ const MainApp = () => {
       // Also refresh store info if needed
       api.getStoreInfo()
         .then(sRes => { if (sRes?.data) setStoreInfo(sRes.data); })
-        .catch(() => {});
+        .catch(() => { });
     } catch (err) {
       console.error('Failed to load products from backend:', err);
       if (retryCount < 3) {
@@ -179,7 +210,7 @@ const MainApp = () => {
         }
         loadProducts(0, true);
       };
-    } catch (e) {}
+    } catch (e) { }
     return () => {
       if (bc) bc.close();
     };
@@ -190,7 +221,7 @@ const MainApp = () => {
   // 24/7 Render Keep-Alive: Client heartbeat pings backend every 10 minutes
   useEffect(() => {
     const heartbeatTimer = setInterval(() => {
-      api.pingKeepAlive().catch(() => {});
+      api.pingKeepAlive().catch(() => { });
     }, 10 * 60 * 1000);
     return () => clearInterval(heartbeatTimer);
   }, []);
@@ -260,7 +291,7 @@ const MainApp = () => {
                 element={
                   <HomePage
                     products={allProducts}
-                    onSelectProduct={(p) => navigate(`/product/${p.id || p._id}`)}
+                    onSelectProduct={(p) => safeNavigate(`/product/${p.id || p._id}`, { state: { product: p } })}
                   />
                 }
               />
@@ -286,8 +317,8 @@ const MainApp = () => {
                         try {
                           if (key) sessionStorage.setItem('shop_last_product_id', String(key));
                           sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
-                        } catch (e) {}
-                        navigate(`/product/${key}`);
+                        } catch (e) { }
+                        safeNavigate(`/product/${key}`, { state: { product: p } });
                       }}
                     />
                   </div>
@@ -549,13 +580,15 @@ const MainApp = () => {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <ConfirmationProvider>
-            <MainApp />
-          </ConfirmationProvider>
-        </CartProvider>
-      </AuthProvider>
+      <NavigationProvider>
+        <AuthProvider>
+          <CartProvider>
+            <ConfirmationProvider>
+              <MainApp />
+            </ConfirmationProvider>
+          </CartProvider>
+        </AuthProvider>
+      </NavigationProvider>
     </BrowserRouter>
   );
 }

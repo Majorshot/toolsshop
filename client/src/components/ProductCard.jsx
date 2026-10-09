@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingCart, MessageCircle, Zap, ShieldCheck, Plus, Minus, Ban,
   Sparkles, Flame, Wrench, Award, Tag, Image as ImageIcon
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useSafeNavigate } from '../context/NavigationContext';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 
 // Helper to style highlight badges into attractive storefront pills
@@ -65,6 +66,17 @@ export const getBadgeConfig = (badge) => {
 export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => {
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
+  const { safeNavigate } = useSafeNavigate();
+
+  const [isNavigating, setIsNavigating] = useState(false);
+  const clickLockRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      clickLockRef.current = false;
+      setIsNavigating(false);
+    };
+  }, []);
 
   const maxStock = typeof product?.stock === 'number' ? product.stock : 999;
   const isOutOfStock = maxStock <= 0 || product?.inStock === false;
@@ -76,20 +88,37 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
 
   const badgeConfig = getBadgeConfig(product?.badge);
 
+  const handlePreload = () => {
+    try {
+      import('../pages/ProductDetailPage').catch(() => {});
+    } catch (e) {}
+  };
+
   const handleCardClick = (e) => {
     if (e && (e.defaultPrevented || e.isDefaultPrevented?.())) return;
     if (isPreview) return;
+
+    // Prevent rapid multiple clicks on this card
+    if (clickLockRef.current) return;
+    clickLockRef.current = true;
+    setTimeout(() => {
+      clickLockRef.current = false;
+    }, 500);
+
+    // Immediate tactile visual feedback on mobile
+    setIsNavigating(true);
+
     try {
       if (prodKey) {
         sessionStorage.setItem('shop_last_product_id', String(prodKey));
       }
       sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
-    } catch (e) {}
+    } catch (e) { }
 
     if (onSelectProduct) {
       onSelectProduct(product);
     } else {
-      navigate(`/product/${prodKey}`);
+      safeNavigate(`/product/${prodKey}`, { state: { product } });
     }
   };
 
@@ -111,18 +140,20 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
     if (isPreview) return '#';
     const text = isOutOfStock
       ? encodeURIComponent(
-          `Hello Variathu Power Tools Kozhencherry,\nI want to inquire about:\n*${product.name}*\nPrice: ${formatPrice(product.price)}\nBrand: ${product.brand}\nThis tool is currently Out of Stock online. When will new units arrive at Poyanil Building?`
-        )
+        `Hello Variathu Power Tools Kozhencherry,\nI want to inquire about:\n*${product.name}*\nPrice: ${formatPrice(product.price)}\nBrand: ${product.brand}\nThis tool is currently Out of Stock online. When will new units arrive at Poyanil Building?`
+      )
       : encodeURIComponent(
-          `Hello Variathu Power Tools Kozhencherry,\nI want to inquire about:\n*${product.name}*\nPrice: ${formatPrice(product.price)}\nBrand: ${product.brand}\nIs this in stock for pickup at Poyanil Building?`
-        );
+        `Hello Variathu Power Tools Kozhencherry,\nI want to inquire about:\n*${product.name}*\nPrice: ${formatPrice(product.price)}\nBrand: ${product.brand}\nIs this in stock for pickup at Poyanil Building?`
+      );
     return `https://wa.me/919447559333?text=${text}`;
   };
 
   return (
     <div
-      className={`product-card ${isOutOfStock ? 'is-out-of-stock' : ''}`}
+      className={`product-card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isNavigating ? 'is-navigating' : ''}`}
       onClick={handleCardClick}
+      onPointerEnter={handlePreload}
+      onTouchStart={handlePreload}
       id={`product-card-${prodKey}`}
       data-product-id={prodKey}
       style={{ cursor: isPreview ? 'default' : 'pointer' }}
@@ -299,7 +330,7 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
           )}
 
           <a
-            href={getWhatsAppLink({ stopPropagation: () => {} })}
+            href={getWhatsAppLink({ stopPropagation: () => { } })}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-card-whatsapp"
