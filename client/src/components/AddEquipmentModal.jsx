@@ -140,11 +140,32 @@ export const AddEquipmentModal = ({
     formColRef.current.scrollTop += e.deltaY;
   };
 
+  // Track previous modal state to only initialize when opened or switching editingProduct
+  const prevOpenRef = useRef(false);
+  const prevEditingIdRef = useRef(null);
+
   // Initialize or Reset Form when modal opens or editingProduct changes
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      prevOpenRef.current = false;
+      prevEditingIdRef.current = null;
+      return;
+    }
 
-    if (formColRef.current) {
+    const currentEditingId = editingProduct ? (editingProduct.id || editingProduct._id) : null;
+    const isFirstOpen = !prevOpenRef.current;
+    const isDifferentProduct = currentEditingId !== prevEditingIdRef.current;
+
+    if (!isFirstOpen && !isDifferentProduct) {
+      // Modal is already open and not switching products.
+      // Do NOT wipe or overwrite entered form data when taxonomy (brand/category list) updates!
+      return;
+    }
+
+    prevOpenRef.current = true;
+    prevEditingIdRef.current = currentEditingId;
+
+    if (isFirstOpen && formColRef.current) {
       formColRef.current.scrollTop = 0;
     }
 
@@ -667,25 +688,7 @@ export const AddEquipmentModal = ({
                 <span className="eq-section-subtitle">Catalog Details</span>
               </div>
 
-              {/* Equipment Name */}
-              <div>
-                <label className="eq-field-label" htmlFor="input-tool-name">
-                  <span>Equipment Name & Model <span className="req">*</span></span>
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{form.name.length} chars</span>
-                </label>
-                <input
-                  id="input-tool-name"
-                  type="text"
-                  required
-                  placeholder="e.g. Bosch GWS 600 Heavy Duty Angle Grinder 100mm"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="eq-input"
-                  autoFocus
-                />
-              </div>
-
-              {/* Brand & Category Grid */}
+              {/* Brand & Category Grid (Placed above Equipment Name for seamless creation workflow) */}
               <div className="eq-form-grid-2col">
                 {/* Brand */}
                 <div>
@@ -831,6 +834,23 @@ export const AddEquipmentModal = ({
                     highlightColor="#fff7ed"
                   />
                 </div>
+              </div>
+
+              {/* Equipment Name */}
+              <div>
+                <label className="eq-field-label" htmlFor="input-tool-name">
+                  <span>Equipment Name & Model <span className="req">*</span></span>
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>{form.name.length} chars</span>
+                </label>
+                <input
+                  id="input-tool-name"
+                  type="text"
+                  required
+                  placeholder="e.g. Bosch GWS 600 Heavy Duty Angle Grinder 100mm"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="eq-input"
+                />
               </div>
 
               {/* Badge Selection */}
