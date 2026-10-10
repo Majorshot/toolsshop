@@ -84,7 +84,7 @@ const storeInfo = {
   phone: "+91 94475 59333",
   whatsapp: "919447559333",
   gstin: "32BJEPG6328P2ZZ",
-  email: "variathupowertools@gmail.com",
+  email: "variathupowertoolskzy@gmail.com",
   timings: "Monday - Saturday: 8:00 AM - 8:00 PM | Sunday: Closed",
   geo: {
     lat: 9.3414,

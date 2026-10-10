@@ -47,6 +47,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5000',
+      'https://www.variathupowertools.in',
+      'https://variathupowertools.in',
       'https://variathupowertools.vercel.app',
       'https://toolsshop.vercel.app',
       'https://toolsshop-pied.vercel.app'

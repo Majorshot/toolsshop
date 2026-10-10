@@ -424,7 +424,7 @@ export const PrivacyPolicyModal = ({ isOpen, onClose, initialTab = 'privacy' }) 
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <Mail size={16} style={{ color: '#2563eb' }} />
-                    <span><strong>Official Email:</strong> <a href="mailto:variathupowertools@gmail.com" style={{ color: '#0f172a', textDecoration: 'none' }}>variathupowertools@gmail.com</a></span>
+                    <span><strong>Official Email:</strong> <a href="mailto:variathupowertoolskzy@gmail.com" style={{ color: '#0f172a', textDecoration: 'none' }}>variathupowertoolskzy@gmail.com</a></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                     <span style={{ fontSize: '16px' }}>📍</span>

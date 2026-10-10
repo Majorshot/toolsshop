@@ -69,9 +69,9 @@ export const Navbar = ({
                 <span>+91 94475 59333</span>
               </a>
               <span className="top-contact-sep">•</span>
-              <a href="mailto:variathupowertools@gmail.com" className="top-contact-item" title="Email Store">
+              <a href="mailto:variathupowertoolskzy@gmail.com" className="top-contact-item" title="Email Store">
                 <Mail size={11} style={{ color: 'var(--brand-primary)' }} />
-                <span>variathupowertools@gmail.com</span>
+                <span>variathupowertoolskzy@gmail.com</span>
               </a>
             </div>
           </div>

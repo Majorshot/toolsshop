@@ -3,14 +3,14 @@ import { MapPin, Phone, MessageCircle, Clock, Wrench, ShieldCheck, CheckCircle2,
 import AnimatedContent from '../components/AnimatedContent';
 
 export const AboutPage = () => {
-  const [serviceModel, setServiceModel] = useState('');
-  const [serviceIssue, setServiceIssue] = useState('');
+  const [toolModel, setToolModel] = useState('');
+  const [toolInquiry, setToolInquiry] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const handleServiceSubmit = (e) => {
+  const handleToolInquirySubmit = (e) => {
     e.preventDefault();
     const text = encodeURIComponent(
-      `Hello Variathu Power Tools Kozhencherry,\nI would like to request repair/service for:\nTool Model: ${serviceModel}\nProblem: ${serviceIssue}\nPlease let me know when I can bring it to Poyanil Building.`
+      `Hello Variathu Power Tools Kozhencherry,\nI have a tool / equipment inquiry:\nTool / Model: ${toolModel}\nDetails / Requirement: ${toolInquiry}\nPlease share price, availability, and warranty details.`
     );
     window.open(`https://wa.me/919447559333?text=${text}`, '_blank');
     setSubmitted(true);
@@ -49,7 +49,7 @@ export const AboutPage = () => {
                 Authorized Dealership
               </h3>
               <p style={{ fontSize: '0.86rem', color: '#475569', lineHeight: 1.6 }}>
-                We deal exclusively in 100% original, brand-new equipment from trusted global manufacturers: <strong>Bosch, Makita, DeWalt, Dongcheng, and HiKOKI</strong>. Every purchase is backed by manufacturer warranty certificates.
+                We deal exclusively in 100% original, brand-new equipment from trusted global manufacturers: <strong>Bosch, Makita, DeWalt and HiKOKI</strong>. Every purchase is backed by manufacturer warranty certificates.
               </p>
             </div>
           </AnimatedContent>
@@ -162,7 +162,7 @@ export const AboutPage = () => {
               </div>
             </div>
 
-            {/* Workshop Service Inquiry Form */}
+            {/* Tool & Equipment Inquiry Form */}
             <div
               style={{
                 background: '#f8fafc',
@@ -172,24 +172,24 @@ export const AboutPage = () => {
               }}
             >
               <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
-                Service & Repair Inquiry
+                Tool & Equipment Inquiry
               </h3>
               <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '16px' }}>
-                Need an armature replacement, carbon brushes, or repair estimate? Submit details directly to our Kozhencherry workshop.
+                Looking for a specific power tool, machine availability, bulk contractor rates, or accessories? Submit your requirements directly to our showroom team.
               </p>
 
               {submitted ? (
                 <div style={{ color: '#16a34a', fontSize: '0.86rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle2 size={18} /> Request generated! Opening WhatsApp...
+                  <CheckCircle2 size={18} /> Inquiry generated! Opening WhatsApp...
                 </div>
               ) : (
-                <form onSubmit={handleServiceSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <form onSubmit={handleToolInquirySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <input
                     type="text"
                     required
-                    placeholder="Tool model (e.g. Bosch GDC 120 Marble Cutter)"
-                    value={serviceModel}
-                    onChange={(e) => setServiceModel(e.target.value)}
+                    placeholder="Tool / Machine model (e.g. Bosch GDC 120 Marble Cutter / Makita Rotary Hammer)"
+                    value={toolModel}
+                    onChange={(e) => setToolModel(e.target.value)}
                     style={{
                       padding: '10px 12px',
                       background: '#ffffff',
@@ -204,9 +204,9 @@ export const AboutPage = () => {
                   <textarea
                     rows={3}
                     required
-                    placeholder="Issue details (e.g. motor sparks, unusual sound, broken cord)"
-                    value={serviceIssue}
-                    onChange={(e) => setServiceIssue(e.target.value)}
+                    placeholder="Inquiry details (e.g. price quote, stock availability, bulk contractor requirements)"
+                    value={toolInquiry}
+                    onChange={(e) => setToolInquiry(e.target.value)}
                     style={{
                       padding: '10px 12px',
                       background: '#ffffff',
@@ -224,7 +224,7 @@ export const AboutPage = () => {
                     style={{ justifyContent: 'center', padding: '11px', fontSize: '0.86rem' }}
                   >
                     <MessageCircle size={16} />
-                    <span>Send Request to Workshop</span>
+                    <span>Send Inquiry to Showroom</span>
                   </button>
                 </form>
               )}

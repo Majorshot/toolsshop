@@ -443,7 +443,7 @@ const MainApp = () => {
                 <ul>
                   <li><a href="tel:+919447559333">📞 +91 94475 59333</a></li>
                   <li><a href="https://wa.me/919447559333" target="_blank" rel="noopener noreferrer">💬 WhatsApp Support</a></li>
-                  <li><span style={{ color: '#64748b' }}>✉️ variathupowertools@gmail.com</span></li>
+                  <li><a href="mailto:variathupowertoolskzy@gmail.com" style={{ color: '#64748b', textDecoration: 'none' }}>✉️ variathupowertoolskzy@gmail.com</a></li>
                   <li><span style={{ color: '#64748b' }}>🕒 Mon - Sat: 8:00 AM - 8:00 PM</span></li>
                 </ul>
               </div>

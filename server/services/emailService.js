@@ -13,7 +13,7 @@ const getResendClient = () => {
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Variathu Power Tools <onboarding@resend.dev>';
 const REAL_LOGO_URL = 'https://raw.githubusercontent.com/Majorshot/toolsshop/main/client/public/Logo.jpeg';
 
-// ─── Dynamic Client URL Resolver (Auto-detects live Vercel / custom domain) ────
+// ─── Dynamic Client URL Resolver (Canonical official domain variathupowertools.in) ────
 let dynamicClientUrl = null;
 
 function setDynamicClientUrl(url) {
@@ -23,26 +23,17 @@ function setDynamicClientUrl(url) {
 }
 
 function getClientUrl(explicitUrl) {
-  if (explicitUrl && typeof explicitUrl === 'string' && explicitUrl.startsWith('http') && !explicitUrl.includes('localhost')) {
+  // Always ensure all email buttons, customer notification links, and invoices use the official domain: variathupowertools.in
+  if (explicitUrl && typeof explicitUrl === 'string' && explicitUrl.includes('variathupowertools.in')) {
     return explicitUrl.replace(/\/$/, '');
   }
-  if (dynamicClientUrl) {
+  if (dynamicClientUrl && dynamicClientUrl.includes('variathupowertools.in')) {
     return dynamicClientUrl;
   }
-  if (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) {
+  if (process.env.CLIENT_URL && process.env.CLIENT_URL.includes('variathupowertools.in')) {
     return process.env.CLIENT_URL.replace(/\/$/, '');
   }
-  if (process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost')) {
-    return process.env.FRONTEND_URL.replace(/\/$/, '');
-  }
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.replace(/\/$/, '')}`;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL.replace(/\/$/, '')}`;
-  }
-  // Default to live Vercel deployment domain instead of localhost
-  return 'https://toolsshop-pied.vercel.app';
+  return 'https://www.variathupowertools.in';
 }
 
 // ─── Helper: Resolve customer email from order or MongoDB CustomerModel ───────
@@ -661,7 +652,7 @@ async function sendCancellationRequestEmail(order, reason, options = {}) {
     });
 
     // 2. Also send real-time notification to Store Owner / Manager
-    const adminEmail = process.env.STORE_ADMIN_EMAIL || process.env.RESEND_TEST_EMAIL || 'homekzhy@gmail.com';
+    const adminEmail = process.env.STORE_ADMIN_EMAIL || process.env.RESEND_TEST_EMAIL || 'variathupowertoolskzy@gmail.com';
     if (adminEmail) {
       const adminHtml = emailWrapper(`⚠️ New Cancellation Request #${order.id}`, `
         <div style="padding: 24px;">
