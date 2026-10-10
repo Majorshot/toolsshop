@@ -1,0 +1,18 @@
+# Variathu Power Tools - Search Engine Crawler Directive
+# Domain: https://www.variathupowertools.in/
+# Location: Kozhencherry, Pathanamthitta, Kerala
+
+User-agent: *
+Allow: /
+Allow: /shop
+Allow: /about
+Allow: /product/
+
+Disallow: /admin
+Disallow: /portal
+Disallow: /checkout
+Disallow: /account
+Disallow: /login
+
+Sitemap: https://www.variathupowertools.in/sitemap.xml
+Host: https://www.variathupowertools.in

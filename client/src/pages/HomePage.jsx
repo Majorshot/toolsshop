@@ -607,6 +607,26 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
                 </a>
               </div>
             </div>
+
+            {/* Local Towns & Specialized Categories SEO Badges */}
+            <div style={{ marginTop: '22px', paddingTop: '18px', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  📍 Serving Central Travancore:
+                </span>
+                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                  Kozhencherry • Pathanamthitta • Aranmula • Maramon • Chengannur • Ranni • Thiruvalla • Kumbanad • Pandalam &amp; across Kerala
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  ⚡ Specialized Products &amp; Services:
+                </span>
+                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                  High Pressure Washers • Car Wash Accessories &amp; Foam Sprayers • Power Tool Repairs &amp; Armature Rewinding • Genuine Carbon Brushes
+                </span>
+              </div>
+            </div>
           </section>
         </AnimatedContent>
       </div>

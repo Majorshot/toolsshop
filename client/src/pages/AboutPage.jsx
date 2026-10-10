@@ -32,7 +32,7 @@ export const AboutPage = () => {
             Powering Kerala's Builders, Fabricators & Craftsmen
           </h1>
           <p style={{ fontSize: '1rem', color: '#475569', lineHeight: 1.7, maxWidth: '720px', margin: '0 auto' }}>
-            Located at <strong>Poyanil Junction, Kozhencherry</strong>, Variathu Power Tools is a premier destination for heavy duty industrial tools, precision machinery, authentic spare parts, and authorized warranty servicing across Pathanamthitta district.
+            Located at <strong>Poyanil Junction, Kozhencherry</strong>, Variathu Power Tools is a premier destination for heavy duty industrial tools, high pressure washers, car wash accessories, authentic spare parts, and authorized warranty servicing across Pathanamthitta district and Central Travancore (serving Kozhencherry, Aranmula, Chengannur, Ranni, Thiruvalla, and Kumbanad).
           </p>
         </section>
       </AnimatedContent>
