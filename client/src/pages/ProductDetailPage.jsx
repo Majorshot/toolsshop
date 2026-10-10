@@ -233,11 +233,72 @@ export const ProductDetailPage = () => {
     navigate('/checkout', { state: { buyNow: true, item: buyNowProduct } });
   };
 
-  const handleShare = () => {
+  // Dynamic document title and Open Graph meta tags for browser and bookmarks
+  useEffect(() => {
+    if (!product) return;
+    const formattedPrice = product.price ? `₹${Number(product.price).toLocaleString('en-IN')}` : '';
+    const pageTitle = formattedPrice
+      ? `${product.name} (${formattedPrice}) | Variathu Power Tools`
+      : `${product.name} | Variathu Power Tools`;
+    document.title = pageTitle;
+
+    const setMeta = (attr, key, content) => {
+      let el = document.querySelector(`meta[${attr}="${key}"]`);
+      if (el) {
+        el.setAttribute('content', content);
+      } else {
+        el = document.createElement('meta');
+        el.setAttribute(attr, key);
+        el.setAttribute('content', content);
+        document.head.appendChild(el);
+      }
+    };
+
+    const ogDesc = formattedPrice
+      ? `${formattedPrice} • ${product.brand || 'Variathu'} - Genuine equipment with manufacturer warranty. Fast doorstep delivery across Kerala.`
+      : `Authorized sales & service for ${product.brand || 'Variathu'} equipment in Kozhencherry, Kerala.`;
+
+    const imgUrl = product.image ? (product.image.startsWith('http') ? product.image : `${window.location.origin}${product.image}`) : `${window.location.origin}/logo.jpg`;
+
+    setMeta('property', 'og:title', `${product.name} • ${formattedPrice}`);
+    setMeta('property', 'og:description', ogDesc);
+    setMeta('property', 'og:image', imgUrl);
+    setMeta('property', 'og:url', window.location.href);
+    setMeta('name', 'twitter:title', `${product.name} • ${formattedPrice}`);
+    setMeta('name', 'twitter:description', ogDesc);
+    setMeta('name', 'twitter:image', imgUrl);
+  }, [product]);
+
+  const handleShare = async () => {
+    if (!product) return;
+    const shareUrl = window.location.href;
+    const formattedPrice = product.price ? `₹${Number(product.price).toLocaleString('en-IN')}` : '';
+    const shareTitle = `${product.name} • ${formattedPrice}`;
+    const shareText = `Check out ${product.name} for ${formattedPrice} at Variathu Power Tools Kozhencherry!\n\n${shareUrl}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        });
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.warn('Share error:', err);
+        }
+      }
+    }
+
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+      } catch {
+        // Fallback
+      }
     }
   };
 
@@ -549,8 +610,17 @@ export const ProductDetailPage = () => {
                   </span>
                 ) : null}
 
-                {/* Action button on mobile slider */}
+                {/* Action buttons on mobile slider */}
                 <div className="gallery-top-right-actions">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                    className="gallery-action-circle-btn"
+                    title="Share product link"
+                    id="btn-mobile-gallery-share"
+                  >
+                    {copiedLink ? <Check size={16} style={{ color: '#16a34a' }} /> : <Share2 size={16} />}
+                  </button>
                   <button
                     type="button"
                     onClick={() => openFullScreen(activeImgIdx)}
@@ -622,8 +692,17 @@ export const ProductDetailPage = () => {
                     </span>
                   ) : null}
 
-                  {/* Top action button */}
+                  {/* Top action buttons */}
                   <div className="gallery-top-right-actions">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                      className="gallery-action-circle-btn"
+                      title="Share product link"
+                      id="btn-desktop-gallery-share"
+                    >
+                      {copiedLink ? <Check size={16} style={{ color: '#16a34a' }} /> : <Share2 size={16} />}
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); openFullScreen(activeImgIdx); }}
@@ -1059,33 +1138,60 @@ export const ProductDetailPage = () => {
                 </button>
               </div>
 
-              {/* WhatsApp Instant Order Button */}
-              {!isOutOfStock && (
-                <a
-                  href={getWhatsAppOrderUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              {/* WhatsApp Instant Order & Share Row */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                {!isOutOfStock && (
+                  <a
+                    href={getWhatsAppOrderUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      flex: 1,
+                      background: '#f0fdf4',
+                      border: '1.5px solid #86efac',
+                      color: '#166534',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      fontWeight: '800',
+                      fontSize: '0.88rem',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                    id="btn-pdp-whatsapp"
+                  >
+                    <MessageCircle size={18} style={{ color: '#16a34a' }} />
+                    <span>Instant WhatsApp Order ({formatPrice(product.price * quantity)})</span>
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleShare}
                   style={{
-                    width: '100%',
-                    background: '#f0fdf4',
-                    border: '1.5px solid #86efac',
-                    color: '#166534',
+                    padding: '10px 16px',
+                    background: copiedLink ? '#f0fdf4' : '#ffffff',
+                    border: copiedLink ? '1.5px solid #16a34a' : '1.5px solid #cbd5e1',
                     borderRadius: '10px',
-                    padding: '10px',
-                    fontWeight: '800',
-                    fontSize: '0.88rem',
-                    textDecoration: 'none',
+                    color: copiedLink ? '#16a34a' : '#0f172a',
+                    fontWeight: '700',
+                    fontSize: '0.86rem',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
+                    gap: '6px',
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap'
                   }}
-                  id="btn-pdp-whatsapp"
+                  title="Share product with cover photo and price preview"
+                  id="btn-pdp-share-product"
                 >
-                  <MessageCircle size={18} style={{ color: '#16a34a' }} />
-                  <span>Instant WhatsApp Order ({formatPrice(product.price * quantity)})</span>
-                </a>
-              )}
+                  {copiedLink ? <Check size={16} style={{ color: '#16a34a' }} /> : <Share2 size={16} />}
+                  <span>{copiedLink ? 'Link Copied!' : 'Share'}</span>
+                </button>
+              </div>
 
               {/* Trust Badges */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px', textAlign: 'center' }}>
