@@ -24,7 +24,7 @@ const formatPhoneNumber = (phone) => {
 /**
  * Core function: Sends your approved Meta Template (Bypasses 24-hr restriction!)
  */
-const sendWhatsAppTemplate = (toPhone, templateName = 'store_update', languageCode = 'en_US', parameters = []) => {
+const sendWhatsAppTemplate = (toPhone, templateName = 'order_repair', languageCode = 'en', parameters = []) => {
   return new Promise((resolve, reject) => {
     const formattedPhone = formatPhoneNumber(toPhone);
     if (!formattedPhone) {
@@ -107,20 +107,20 @@ const sendWhatsAppTemplate = (toPhone, templateName = 'store_update', languageCo
 };
 
 /**
- * Universal helper that sends your notification via the approved 'store_update' template
+ * Universal helper that sends your notification via the approved 'order_repair' template
  * {{1}} = Customer Name
- * {{2}} = Main Header / Title
- * {{3}} = Details / Bill / OTP / Tracking
+ * {{2}} = Order/Ticket ID
+ * {{3}} = Status & Details
  */
-const sendStoreNotification = (phone, customerName, mainUpdate, details) => {
+const sendStoreNotification = (phone, customerName, identifier, statusDetails) => {
   return sendWhatsAppTemplate(
     phone,
-    'store_update',
-    'en_US',
+    'order_repair',
+    'en',
     [
       customerName || 'Valued Customer',
-      mainUpdate,
-      details
+      identifier || 'N/A',
+      statusDetails
     ]
   );
 };
@@ -147,12 +147,11 @@ const resolveCourierTracking = (courierName = '', awb = '') => {
 const sendOrderConfirmationWhatsApp = async (order) => {
   if (!order || !order.customer?.phone) return;
 
-  const header = `Your order #${order.id} has been confirmed! Total Amount: ₹${order.totalAmount} (${order.paymentStatus === 'PAID' ? 'Paid Online' : 'COD'}).`;
-  const details = order.deliveryType === 'store-pickup'
-    ? `🏬 Showroom Pickup: Poyanil Building, Kozhencherry. 🔐 Pickup OTP: ${order.pickupOtp || '4819'}`
-    : `🚚 Courier Delivery to ${order.customer?.city || 'Kerala'} - PIN: ${order.customer?.pincode || ''}`;
+  const statusText = order.deliveryType === 'store-pickup'
+    ? `Confirmed! Total: ₹${order.totalAmount} (${order.paymentStatus === 'PAID' ? 'Paid' : 'COD'}). Showroom Pickup: Poyanil Building, Kozhencherry. Pickup OTP: ${order.pickupOtp || '4819'}`
+    : `Confirmed! Total: ₹${order.totalAmount} (${order.paymentStatus === 'PAID' ? 'Paid' : 'COD'}). Processing delivery to ${order.customer?.city || 'Kerala'} - PIN: ${order.customer?.pincode || ''}`;
 
-  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
+  return sendStoreNotification(order.customer.phone, order.customer?.name, order.id, statusText);
 };
 
 /**
@@ -164,11 +163,9 @@ const sendOrderDispatchedWhatsApp = async (order, courierPartner, awb) => {
   const rawPartner = courierPartner || order.courierPartner || 'DTDC Express';
   const trackingNumber = awb || order.awb || 'Assigned at Hub';
   const courierInfo = resolveCourierTracking(rawPartner, trackingNumber);
+  const statusText = `Dispatched via ${courierInfo.name}. AWB: ${trackingNumber}. Tracking: ${courierInfo.trackingUrl}`;
 
-  const header = `Your order #${order.id} has been packed & dispatched from our Kozhencherry store!`;
-  const details = `📦 Courier: ${courierInfo.name} | AWB: ${trackingNumber}\n🔗 Track: ${courierInfo.trackingUrl}`;
-
-  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
+  return sendStoreNotification(order.customer.phone, order.customer?.name, order.id, statusText);
 };
 
 /**
@@ -177,10 +174,8 @@ const sendOrderDispatchedWhatsApp = async (order, courierPartner, awb) => {
 const sendPickupReadyWhatsApp = async (order) => {
   if (!order || !order.customer?.phone) return;
 
-  const header = `Your power tools for order #${order.id} are tested, packed, and waiting at our showroom counter!`;
-  const details = `🏢 Poyanil Building, Kozhencherry.\n🔐 YOUR SECRET HANDOVER OTP: ${order.pickupOtp || '4819'}`;
-
-  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
+  const statusText = `Ready for counter pickup at Poyanil Building, Kozhencherry. Handover OTP: ${order.pickupOtp || '4819'}`;
+  return sendStoreNotification(order.customer.phone, order.customer?.name, order.id, statusText);
 };
 
 /**
@@ -189,12 +184,8 @@ const sendPickupReadyWhatsApp = async (order) => {
 const sendOrderCancelledWhatsApp = async (order, reason) => {
   if (!order || !order.customer?.phone) return;
 
-  const header = `Your order #${order.id} has been cancelled. Reason: ${reason || 'Customer request'}.`;
-  const details = order.paymentStatus === 'REFUNDED'
-    ? `💳 Refund of ₹${order.totalAmount} initiated to your account.`
-    : `If this was an error, please contact our helpdesk.`;
-
-  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
+  const statusText = `Cancelled (${reason || 'Customer request'}). ${order.paymentStatus === 'REFUNDED' ? `Refund of ₹${order.totalAmount} initiated.` : ''}`;
+  return sendStoreNotification(order.customer.phone, order.customer?.name, order.id, statusText);
 };
 
 /**
@@ -203,10 +194,8 @@ const sendOrderCancelledWhatsApp = async (order, reason) => {
 const sendOrderCompletedWhatsApp = async (order) => {
   if (!order || !order.customer?.phone) return;
 
-  const header = `Your order #${order.id} has been successfully completed and received!`;
-  const details = `Total: ₹${order.totalAmount}. Thank you for choosing Variathu Power Tools!`;
-
-  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
+  const statusText = `Completed and handed over. Total: ₹${order.totalAmount}. Thank you for choosing us!`;
+  return sendStoreNotification(order.customer.phone, order.customer?.name, order.id, statusText);
 };
 
 /**
@@ -215,11 +204,10 @@ const sendOrderCompletedWhatsApp = async (order) => {
 const sendRepairTicketCreatedWhatsApp = async (job) => {
   if (!job || !job.customerPhone) return;
 
-  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
-  const header = `Repair ticket logged for your machine: ${brandModel} (Ticket: ${job.jobId}).`;
-  const details = `Issue: ${job.issueDescription || 'Inspection'}. Estimated Cost: ₹${job.estimatedCost || 0}. Technician inspecting now.`;
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Tool');
+  const statusText = `Logged for service (${brandModel}). Issue: ${job.issueDescription || 'Inspection'}. Est. Cost: ₹${job.estimatedCost || 0}. Under inspection.`;
 
-  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
+  return sendStoreNotification(job.customerPhone, job.customerName, job.jobId, statusText);
 };
 
 /**
@@ -228,13 +216,11 @@ const sendRepairTicketCreatedWhatsApp = async (job) => {
 const sendRepairReadyWhatsApp = async (job) => {
   if (!job || !job.customerPhone) return;
 
-  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Tool');
   const finalBill = Number(job.finalCost || job.estimatedCost || 0);
+  const statusText = `Repaired & ready for collection (${brandModel})! Bill: ₹${finalBill.toLocaleString('en-IN')}. Counter Collection OTP: ${job.handoverOtp || '4819'}`;
 
-  const header = `Great news! Your ${brandModel} (Ticket: ${job.jobId}) is repaired and ready for pickup!`;
-  const details = `💰 Bill: ₹${finalBill.toLocaleString('en-IN')}.\n🔐 YOUR COUNTER COLLECTION OTP: ${job.handoverOtp || '4819'}. Show this at the counter.`;
-
-  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
+  return sendStoreNotification(job.customerPhone, job.customerName, job.jobId, statusText);
 };
 
 /**
@@ -243,11 +229,10 @@ const sendRepairReadyWhatsApp = async (job) => {
 const sendRepairDeliveredWhatsApp = async (job) => {
   if (!job || !job.customerPhone) return;
 
-  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
-  const header = `Service receipt: Your machine ${brandModel} (Ticket: ${job.jobId}) was handed over!`;
-  const details = `Bill settled in full. All replaced parts carry our workshop guarantee. Thank you!`;
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Tool');
+  const statusText = `Delivered and settled in full (${brandModel}). Repaired parts carry warranty. Thank you!`;
 
-  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
+  return sendStoreNotification(job.customerPhone, job.customerName, job.jobId, statusText);
 };
 
 /**
@@ -256,18 +241,17 @@ const sendRepairDeliveredWhatsApp = async (job) => {
 const sendRepairEstimateUpdatedWhatsApp = async (job, prevCost) => {
   if (!job || !job.customerPhone) return;
 
-  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
-  const header = `Technical diagnosis update for ${brandModel} (Ticket: ${job.jobId}).`;
-  const details = `Revised Estimate: ₹${job.finalCost || job.estimatedCost || 0}. Work: ${job.technicianNotes || 'Parts update'}.`;
+  const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Tool');
+  const statusText = `Technical estimate updated for ${brandModel}. Revised Cost: ₹${job.finalCost || job.estimatedCost || 0}. Notes: ${job.technicianNotes || 'Parts update'}`;
 
-  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
+  return sendStoreNotification(job.customerPhone, job.customerName, job.jobId, statusText);
 };
 
 /**
  * Fallback raw sender
  */
 const sendWhatsAppMessage = (toPhone, messageBody) => {
-  return sendStoreNotification(toPhone, 'Customer', 'Important Notice from Variathu Power Tools', messageBody);
+  return sendStoreNotification(toPhone, 'Customer', 'General Update', messageBody);
 };
 
 module.exports = {
