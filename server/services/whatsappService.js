@@ -50,7 +50,8 @@ const sendWhatsAppTemplate = (toPhone, templateName = 'order_repair', languageCo
           type: 'body',
           parameters: parameters.map((val) => ({
             type: 'text',
-            text: String(val ?? '')
+            // Sanitize text to remove line breaks and extra whitespace that trigger #132018
+            text: String(val ?? '').replace(/[\r\n]+/g, ' ').trim()
           }))
         }
       ];
@@ -113,15 +114,16 @@ const sendWhatsAppTemplate = (toPhone, templateName = 'order_repair', languageCo
  * {{3}} = Status & Details
  */
 const sendStoreNotification = (phone, customerName, identifier, statusDetails) => {
+  // Extra safety wrapper to ensure clean string parameters
+  const cleanName = String(customerName || 'Valued Customer').replace(/[\r\n]+/g, ' ').trim();
+  const cleanId = String(identifier || 'N/A').replace(/[\r\n]+/g, ' ').trim();
+  const cleanStatus = String(statusDetails || 'Updated').replace(/[\r\n]+/g, ' ').trim();
+
   return sendWhatsAppTemplate(
     phone,
     'order_repair',
-    'en',
-    [
-      customerName || 'Valued Customer',
-      identifier || 'N/A',
-      statusDetails
-    ]
+    'en', // Matches default English template language
+    [cleanName, cleanId, cleanStatus]
   );
 };
 
