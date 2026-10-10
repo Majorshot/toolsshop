@@ -4,6 +4,7 @@ import { Trash2, Plus, Minus, ArrowRight, MessageCircle, Tag, ShoppingBag, MapPi
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedContent from '../components/AnimatedContent';
+import { safeSessionStorage } from '../utils/safeStorage';
 
 export const CartPage = ({ onOpenCheckout }) => {
   const {
@@ -539,7 +540,7 @@ export const CartPage = ({ onOpenCheckout }) => {
               className="btn-hero-clean"
               onClick={() => {
                 try {
-                  sessionStorage.removeItem('vpt_buy_now');
+                  safeSessionStorage.removeItem('vpt_buy_now');
                 } catch {}
                 navigate('/checkout', { state: { buyNow: false } });
               }}

@@ -14,9 +14,12 @@ const formatPhoneNumber = (phone) => {
   if (clean.length === 10) {
     clean = '91' + clean;
   } else if (clean.length === 12 && clean.startsWith('91')) {
-    // Already formatted
+    // Already formatted with 91 prefix
   } else if (clean.startsWith('0') && clean.length === 11) {
     clean = '91' + clean.slice(1);
+  } else {
+    // Invalid phone number length (e.g. less than 10 digits)
+    return null;
   }
   return clean;
 };
@@ -249,20 +252,69 @@ const sendRepairEstimateUpdatedWhatsApp = async (job, prevCost) => {
 };
 
 /**
+ * Helper to normalize staff arguments whether passed as { staff, password, clientUrl } or (staff, password, clientUrl)
+ */
+const normalizeStaffArgs = (staffOrOptions, maybePassword, maybeClientUrl) => {
+  let staff = staffOrOptions;
+  let password = maybePassword;
+  let clientUrl = maybeClientUrl;
+
+  if (staffOrOptions && typeof staffOrOptions === 'object' && staffOrOptions.staff && typeof staffOrOptions.staff === 'object') {
+    staff = staffOrOptions.staff;
+    password = staffOrOptions.password ?? maybePassword;
+    clientUrl = staffOrOptions.clientUrl ?? maybeClientUrl;
+  }
+  return {
+    staff: staff || null,
+    password: password ? String(password).trim() : '',
+    clientUrl: clientUrl ? String(clientUrl).trim() : ''
+  };
+};
+
+/**
  * 10. Staff Welcome Text Generator
  */
-const getStaffWelcomeWhatsAppText = (staff, temporaryPassword) => {
+const getStaffWelcomeWhatsAppText = (staffOrOptions, maybePassword, maybeClientUrl) => {
+  const { staff, password, clientUrl } = normalizeStaffArgs(staffOrOptions, maybePassword, maybeClientUrl);
   if (!staff) return '';
-  return `Welcome to Variathu Powertools! Your staff account has been created. Role: ${staff.role || 'Staff'}. Login email: ${staff.email}. Temp Password: ${temporaryPassword || 'As provided'}. Please change your password upon first login.`;
+
+  const role = String(staff.role || 'technician').toLowerCase();
+  const baseUrl = (clientUrl || process.env.CLIENT_URL || 'https://www.variathupowertools.in').replace(/\/$/, '');
+
+  if (role === 'technician') {
+    return `Registered as Workshop Floor Technician. Inward equipment repair tickets will be tracked under your profile. Showroom & Workshop: Poyanil Building, Kozhencherry.`;
+  }
+
+  const roleTitle = role === 'workshop_manager' ? 'Workshop Manager' : 'Store Manager';
+  let text = `Registered as ${roleTitle}. Login Portal: ${baseUrl}/login. Email: ${staff.email || 'N/A'}.`;
+  if (password) {
+    text += ` Temp Password: ${password}.`;
+  }
+  text += ` Showroom & Workshop: Poyanil Building, Kozhencherry.`;
+  return text;
 };
 
 /**
  * 11. Staff Welcome / Credentials Notification
+ * Formatted identically to order and repair notifications using the approved Meta template 'order_repair'
+ * {{1}} = Staff Name
+ * {{2}} = Staff / Ticket Reference Code (e.g. STAFF-TECH-0613)
+ * {{3}} = Status Details
  */
-const sendStaffWelcomeWhatsApp = async (staff, temporaryPassword) => {
-  if (!staff || !staff.phone) return;
-  const statusText = getStaffWelcomeWhatsAppText(staff, temporaryPassword);
-  return sendStoreNotification(staff.phone, staff.name, staff.role || 'Staff Portal', statusText);
+const sendStaffWelcomeWhatsApp = async (staffOrOptions, maybePassword, maybeClientUrl) => {
+  const { staff, password, clientUrl } = normalizeStaffArgs(staffOrOptions, maybePassword, maybeClientUrl);
+  if (!staff || !staff.phone) {
+    console.warn('[Staff WhatsApp] Missing staff details or phone number:', staff);
+    return { skipped: true, reason: 'Missing phone number' };
+  }
+
+  const role = String(staff.role || 'technician').toLowerCase();
+  const phoneDigits = String(staff.phone).replace(/[^0-9]/g, '').slice(-4) || '01';
+  const identifier = staff.employeeId || `STAFF-${role === 'technician' ? 'TECH' : 'MGR'}-${phoneDigits}`;
+  const statusText = getStaffWelcomeWhatsAppText(staff, password, clientUrl);
+
+  console.log(`[Staff WhatsApp] Dispatching welcome notification to ${staff.name} (${staff.phone}) using approved Meta template 'order_repair'...`);
+  return sendStoreNotification(staff.phone, staff.name, identifier, statusText);
 };
 
 /**

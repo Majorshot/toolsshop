@@ -1,8 +1,10 @@
+import { safeLocalStorage } from '../utils/safeStorage';
+
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 export function getAuthHeaders() {
   try {
-    const token = localStorage.getItem('vpt_token');
+    const token = safeLocalStorage.getItem('vpt_token');
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   } catch {
     return {};
@@ -29,7 +31,7 @@ export const api = {
     });
     const data = await res.json();
     if (data.token) {
-      try { localStorage.setItem('vpt_token', data.token); } catch {}
+      try { safeLocalStorage.setItem('vpt_token', data.token); } catch {}
     }
     return data;
   },
@@ -43,7 +45,7 @@ export const api = {
     });
     const result = await res.json();
     if (result.token) {
-      try { localStorage.setItem('vpt_token', result.token); } catch {}
+      try { safeLocalStorage.setItem('vpt_token', result.token); } catch {}
     }
     return result;
   },
@@ -88,7 +90,7 @@ export const api = {
     });
     const data = await res.json();
     if (data.token) {
-      try { localStorage.setItem('vpt_token', data.token); } catch {}
+      try { safeLocalStorage.setItem('vpt_token', data.token); } catch {}
     }
     if (!res.ok) throw new Error(data.message || 'Verification failed');
     return data;

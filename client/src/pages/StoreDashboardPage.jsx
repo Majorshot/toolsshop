@@ -16,6 +16,7 @@ import CourierLogo from '../components/CourierLogo';
 import { getBadgeConfig } from '../components/ProductCard';
 import { COURIER_PARTNERS, resolveCourierConfig, resolveCourierPartner, getCourierTrackingLink } from '../utils/courierPartners';
 import { startOverviewTour, startOrdersTour, startInventoryTour, startRepairsTour, startCancellationsTour, startCustomersTour, startCouponsTour } from '../services/tourService';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 const ORDER_DATE_OPTIONS = [
   { value: 'all', label: 'All Time', tag: 'All' },
@@ -927,13 +928,21 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
   // Space Optimizer: Collapsible Analytics Mode
   const [analyticsCollapsed, setAnalyticsCollapsed] = useState(() => {
-    const saved = localStorage.getItem('vpt_analytics_collapsed');
-    return saved !== null ? saved === 'true' : false;
+    try {
+      const saved = safeLocalStorage.getItem('vpt_analytics_collapsed');
+      return saved !== null ? saved === 'true' : false;
+    } catch {
+      return false;
+    }
   });
 
   // Orders Display Mode: 'cards' or 'table'
   const [ordersViewMode, setOrdersViewMode] = useState(() => {
-    return localStorage.getItem('vpt_orders_view_mode') || 'cards';
+    try {
+      return safeLocalStorage.getItem('vpt_orders_view_mode') || 'cards';
+    } catch {
+      return 'cards';
+    }
   });
 
   // Live Auto-Refresh & Audio Notification
@@ -2696,6 +2705,35 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
     }
   };
 
+  const [notifyingStaffId, setNotifyingStaffId] = useState(null);
+
+  const handleNotifyStaffWhatsApp = async (member) => {
+    if (!member || !member.phone) {
+      showNotification('Employee has no phone number recorded.');
+      return;
+    }
+    const targetId = member._id || member.id;
+    setNotifyingStaffId(targetId);
+    try {
+      showNotification(`📲 Dispatching WhatsApp notification to ${member.name} (${member.phone})...`);
+      const res = await api.notifyStaffWhatsApp(targetId);
+      if (res.waResult?.error) {
+        const errDetail = res.waResult.error?.message || JSON.stringify(res.waResult.error);
+        showNotification(`⚠️ Meta WhatsApp: ${errDetail}`);
+      } else {
+        showNotification(`✅ Meta template notification dispatched to ${member.name} (${member.phone})!`);
+      }
+    } catch (err) {
+      const fallbackUrl = getStaffWhatsAppUrl(member);
+      if (fallbackUrl && fallbackUrl !== '#') {
+        window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+      }
+      showNotification(`Opened direct WhatsApp chat for ${member.name}.`);
+    } finally {
+      setNotifyingStaffId(null);
+    }
+  };
+
   const handleDeleteStaff = (member) => {
     confirm({
       title: `Delete Employee "${member.name}"?`,
@@ -3618,7 +3656,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
               onClick={() => {
                 const next = !analyticsCollapsed;
                 setAnalyticsCollapsed(next);
-                localStorage.setItem('vpt_analytics_collapsed', String(next));
+                try { safeLocalStorage.setItem('vpt_analytics_collapsed', String(next)); } catch {}
               }}
               style={{
                 display: 'inline-flex',
@@ -4723,7 +4761,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                 <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '3px', border: '1px solid #cbd5e1' }}>
                   <button
                     type="button"
-                    onClick={() => { setOrdersViewMode('cards'); localStorage.setItem('vpt_orders_view_mode', 'cards'); }}
+                    onClick={() => { setOrdersViewMode('cards'); try { safeLocalStorage.setItem('vpt_orders_view_mode', 'cards'); } catch {} }}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -4747,7 +4785,7 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                   <button
                     type="button"
-                    onClick={() => { setOrdersViewMode('table'); localStorage.setItem('vpt_orders_view_mode', 'table'); }}
+                    onClick={() => { setOrdersViewMode('table'); try { safeLocalStorage.setItem('vpt_orders_view_mode', 'table'); } catch {} }}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -10508,10 +10546,10 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
 
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {member.phone && (
-                          <a
-                            href={getStaffWhatsAppUrl(member)}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => handleNotifyStaffWhatsApp(member)}
+                            disabled={notifyingStaffId === (member._id || member.id)}
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -10523,14 +10561,16 @@ export const StoreDashboardPage = ({ onProductUpdated }) => {
                               borderRadius: '6px',
                               fontSize: '0.76rem',
                               fontWeight: '700',
-                              textDecoration: 'none'
+                              cursor: notifyingStaffId === (member._id || member.id) ? 'wait' : 'pointer',
+                              opacity: notifyingStaffId === (member._id || member.id) ? 0.65 : 1,
+                              transition: 'all 0.15s ease'
                             }}
-                            title={`Send WhatsApp welcome / duty notification to ${member.name} (${member.phone})`}
+                            title={`Dispatch WhatsApp welcome notification & open chat with ${member.name} (${member.phone})`}
                             id={`btn-wa-staff-${member._id || member.id}`}
                           >
                             <MessageCircle size={12} />
-                            <span>WhatsApp</span>
-                          </a>
+                            <span>{notifyingStaffId === (member._id || member.id) ? 'Sending...' : 'WhatsApp'}</span>
+                          </button>
                         )}
 
                         <button

@@ -1,5 +1,6 @@
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 /**
  * Driver.js Interactive Guided Tours for Variathu Power Tools Store Manager
@@ -26,7 +27,7 @@ const baseDriverConfig = {
 export const startOverviewTour = (force = false) => {
   if (typeof window === 'undefined') return;
 
-  if (!force && localStorage.getItem('vpt_tour_overview_seen') === 'true') {
+  if (!force && safeLocalStorage.getItem('vpt_tour_overview_seen') === 'true') {
     return;
   }
 
@@ -145,7 +146,7 @@ export const startOverviewTour = (force = false) => {
     ...baseDriverConfig,
     steps: validSteps,
     onDestroyed: () => {
-      localStorage.setItem('vpt_tour_overview_seen', 'true');
+      safeLocalStorage.setItem('vpt_tour_overview_seen', 'true');
     }
   });
 
@@ -160,7 +161,7 @@ export const startOverviewTour = (force = false) => {
 export const startOrdersTour = (force = false) => {
   if (typeof window === 'undefined') return;
 
-  if (!force && localStorage.getItem('vpt_tour_orders_seen') === 'true') {
+  if (!force && safeLocalStorage.getItem('vpt_tour_orders_seen') === 'true') {
     return;
   }
 
@@ -286,7 +287,7 @@ export const startOrdersTour = (force = false) => {
     ...baseDriverConfig,
     steps: validSteps,
     onDestroyed: () => {
-      localStorage.setItem('vpt_tour_orders_seen', 'true');
+      safeLocalStorage.setItem('vpt_tour_orders_seen', 'true');
     }
   });
 
@@ -301,7 +302,7 @@ export const startOrdersTour = (force = false) => {
 export const startInventoryTour = (force = false) => {
   if (typeof window === 'undefined') return;
 
-  if (!force && localStorage.getItem('vpt_tour_inventory_seen') === 'true') {
+  if (!force && safeLocalStorage.getItem('vpt_tour_inventory_seen') === 'true') {
     return;
   }
 
@@ -427,7 +428,7 @@ export const startInventoryTour = (force = false) => {
     ...baseDriverConfig,
     steps: validSteps,
     onDestroyed: () => {
-      localStorage.setItem('vpt_tour_inventory_seen', 'true');
+      safeLocalStorage.setItem('vpt_tour_inventory_seen', 'true');
     }
   });
 
@@ -442,7 +443,7 @@ export const startInventoryTour = (force = false) => {
 export const startRepairsTour = (force = false) => {
   if (typeof window === 'undefined') return;
 
-  if (!force && localStorage.getItem('vpt_tour_repairs_seen') === 'true') {
+  if (!force && safeLocalStorage.getItem('vpt_tour_repairs_seen') === 'true') {
     return;
   }
 
@@ -514,7 +515,7 @@ export const startRepairsTour = (force = false) => {
     ...baseDriverConfig,
     steps: validSteps,
     onDestroyed: () => {
-      localStorage.setItem('vpt_tour_repairs_seen', 'true');
+      safeLocalStorage.setItem('vpt_tour_repairs_seen', 'true');
     }
   });
 
@@ -529,7 +530,7 @@ export const startRepairsTour = (force = false) => {
 export const startCancellationsTour = (force = false) => {
   if (typeof window === 'undefined') return;
 
-  if (!force && localStorage.getItem('vpt_tour_cancellations_seen') === 'true') {
+  if (!force && safeLocalStorage.getItem('vpt_tour_cancellations_seen') === 'true') {
     return;
   }
 
@@ -574,7 +575,7 @@ export const startCancellationsTour = (force = false) => {
     ...baseDriverConfig,
     steps: validSteps,
     onDestroyed: () => {
-      localStorage.setItem('vpt_tour_cancellations_seen', 'true');
+      safeLocalStorage.setItem('vpt_tour_cancellations_seen', 'true');
     }
   });
 
@@ -589,7 +590,7 @@ export const startCancellationsTour = (force = false) => {
 export const startCustomersTour = (force = false) => {
   if (typeof window === 'undefined') return;
 
-  if (!force && localStorage.getItem('vpt_tour_customers_seen') === 'true') {
+  if (!force && safeLocalStorage.getItem('vpt_tour_customers_seen') === 'true') {
     return;
   }
 
@@ -661,7 +662,7 @@ export const startCustomersTour = (force = false) => {
     ...baseDriverConfig,
     steps: validSteps,
     onDestroyed: () => {
-      localStorage.setItem('vpt_tour_customers_seen', 'true');
+      safeLocalStorage.setItem('vpt_tour_customers_seen', 'true');
     }
   });
 
@@ -676,7 +677,7 @@ export const startCustomersTour = (force = false) => {
 export const startCouponsTour = (force = false) => {
   if (typeof window === 'undefined') return;
 
-  if (!force && localStorage.getItem('vpt_tour_coupons_seen') === 'true') {
+  if (!force && safeLocalStorage.getItem('vpt_tour_coupons_seen') === 'true') {
     return;
   }
 
@@ -730,7 +731,7 @@ export const startCouponsTour = (force = false) => {
     ...baseDriverConfig,
     steps: validSteps,
     onDestroyed: () => {
-      localStorage.setItem('vpt_tour_coupons_seen', 'true');
+      safeLocalStorage.setItem('vpt_tour_coupons_seen', 'true');
     }
   });
 

@@ -61,15 +61,19 @@ router.post('/', requireFullStoreManager, async (req, res) => {
     // 2. Send WhatsApp notification for ALL roles (including technician who has a phone number!)
     let whatsappDispatched = false;
     let whatsappUrl = null;
+    let waResult = null;
     if (created.phone) {
-      whatsappService.sendStaffWelcomeWhatsApp({
-        staff: created,
-        password: password ? String(password).trim() : '',
-        clientUrl: clientOrigin
-      }).catch(err => {
+      try {
+        waResult = await whatsappService.sendStaffWelcomeWhatsApp({
+          staff: created,
+          password: password ? String(password).trim() : '',
+          clientUrl: clientOrigin
+        });
+        whatsappDispatched = !waResult?.error && !waResult?.skipped;
+        console.log(`[Staff WhatsApp Registration] Result for ${created.name} (${created.phone}):`, waResult);
+      } catch (err) {
         console.warn('[Staff WhatsApp] Non-fatal error sending WhatsApp message:', err.message);
-      });
-      whatsappDispatched = true;
+      }
 
       const cleanPhone = whatsappService.formatPhoneNumber(created.phone);
       const textMsg = whatsappService.getStaffWelcomeWhatsAppText({
@@ -77,7 +81,7 @@ router.post('/', requireFullStoreManager, async (req, res) => {
         password: password ? String(password).trim() : '',
         clientUrl: clientOrigin
       });
-      whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(textMsg)}`;
+      whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(textMsg)}` : null;
     }
 
     res.status(201).json({
@@ -107,13 +111,17 @@ router.post('/:id/notify-whatsapp', requireFullStoreManager, async (req, res) =>
     const clientOrigin = req.headers.origin || req.headers.referer;
     const { tempPassword } = req.body || {};
 
-    whatsappService.sendStaffWelcomeWhatsApp({
-      staff,
-      password: tempPassword ? String(tempPassword).trim() : '',
-      clientUrl: clientOrigin
-    }).catch(err => {
+    let waResult = null;
+    try {
+      waResult = await whatsappService.sendStaffWelcomeWhatsApp({
+        staff,
+        password: tempPassword ? String(tempPassword).trim() : '',
+        clientUrl: clientOrigin
+      });
+      console.log(`[Staff WhatsApp Resend] Result for ${staff.name} (${staff.phone}):`, waResult);
+    } catch (err) {
       console.warn('[Staff WhatsApp Resend] Non-fatal error sending WhatsApp:', err.message);
-    });
+    }
 
     const cleanPhone = whatsappService.formatPhoneNumber(staff.phone);
     const textMsg = whatsappService.getStaffWelcomeWhatsAppText({
@@ -121,12 +129,13 @@ router.post('/:id/notify-whatsapp', requireFullStoreManager, async (req, res) =>
       password: tempPassword ? String(tempPassword).trim() : '',
       clientUrl: clientOrigin
     });
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(textMsg)}`;
+    const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(textMsg)}` : null;
 
     res.json({
       success: true,
       message: `WhatsApp notification dispatched to ${staff.name} (${staff.phone})`,
-      whatsappUrl
+      whatsappUrl,
+      waResult
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -14,6 +14,7 @@ import AnimatedContent from '../components/AnimatedContent';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
 import { COURIER_PARTNERS } from '../utils/courierPartners';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
+import { safeSessionStorage } from '../utils/safeStorage';
 
 export const ProductDetailPage = () => {
   const { id } = useParams();
@@ -227,7 +228,7 @@ export const ProductDetailPage = () => {
       deliveryCost: product.deliveryCost
     };
     try {
-      sessionStorage.setItem('vpt_buy_now', JSON.stringify(buyNowProduct));
+      safeSessionStorage.setItem('vpt_buy_now', JSON.stringify(buyNowProduct));
     } catch { }
     navigate('/checkout', { state: { buyNow: true, item: buyNowProduct } });
   };

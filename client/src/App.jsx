@@ -18,22 +18,26 @@ import CookieConsentBanner from './components/CookieConsentBanner';
 import PrivacyPolicyModal from './components/PrivacyPolicyModal';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { safeSessionStorage } from './utils/safeStorage';
 
 // Robust lazy-load wrapper that auto-reloads if a new deployment changes chunk hashes
 const lazyWithRetry = (componentImport) =>
   lazy(async () => {
-    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
-      window.sessionStorage.getItem('vpt_chunk_reload') || 'false'
-    );
+    let pageHasAlreadyBeenForceRefreshed = false;
+    try {
+      pageHasAlreadyBeenForceRefreshed = JSON.parse(
+        safeSessionStorage.getItem('vpt_chunk_reload') || 'false'
+      );
+    } catch {}
 
     try {
       const component = await componentImport();
-      window.sessionStorage.setItem('vpt_chunk_reload', 'false');
+      safeSessionStorage.setItem('vpt_chunk_reload', 'false');
       return component;
     } catch (error) {
       console.warn('Dynamic chunk import error detected:', error);
       if (!pageHasAlreadyBeenForceRefreshed) {
-        window.sessionStorage.setItem('vpt_chunk_reload', 'true');
+        safeSessionStorage.setItem('vpt_chunk_reload', 'true');
         window.location.reload();
         return new Promise(() => { });
       }
@@ -315,8 +319,8 @@ const MainApp = () => {
                       onSelectProduct={(p) => {
                         const key = p.id || p._id;
                         try {
-                          if (key) sessionStorage.setItem('shop_last_product_id', String(key));
-                          sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
+                          if (key) safeSessionStorage.setItem('shop_last_product_id', String(key));
+                          safeSessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
                         } catch (e) { }
                         safeNavigate(`/product/${key}`, { state: { product: p } });
                       }}

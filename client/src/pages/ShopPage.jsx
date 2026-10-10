@@ -23,6 +23,7 @@ import { ProductCard } from '../components/ProductCard';
 import AnimatedContent from '../components/AnimatedContent';
 import GlideSelect from '../components/GlideSelect';
 import { api } from '../services/api';
+import { safeSessionStorage } from '../utils/safeStorage';
 
 const SHOP_SORT_OPTIONS = [
   { value: 'featured', label: 'Featured / Recommended', tag: 'Best' },
@@ -109,15 +110,15 @@ export const ShopPage = ({
       Object.entries(updates).forEach(([key, val]) => {
         if (val === null || val === undefined || val === '' || val === 'all' || val === false || (key === 'sort' && val === 'featured')) {
           next.delete(key);
-          try { sessionStorage.removeItem(`shop_${key}_filter`); } catch (e) {}
+          try { safeSessionStorage.removeItem(`shop_${key}_filter`); } catch (e) {}
           if (key === 'sort') {
-            try { sessionStorage.removeItem('shop_sort'); } catch (e) {}
+            try { safeSessionStorage.removeItem('shop_sort'); } catch (e) {}
           }
         } else {
           next.set(key, String(val));
-          try { sessionStorage.setItem(`shop_${key}_filter`, String(val)); } catch (e) {}
+          try { safeSessionStorage.setItem(`shop_${key}_filter`, String(val)); } catch (e) {}
           if (key === 'sort') {
-            try { sessionStorage.setItem('shop_sort', String(val)); } catch (e) {}
+            try { safeSessionStorage.setItem('shop_sort', String(val)); } catch (e) {}
           }
         }
       });
@@ -127,7 +128,7 @@ export const ShopPage = ({
 
   // Resilient Sort State: supports external prop, fallback internal state, and URL sync
   const [internalSortBy, setInternalSortBy] = useState(() => {
-    return searchParams.get('sort') || sessionStorage.getItem('shop_sort') || propSortBy || 'featured';
+    return searchParams.get('sort') || safeSessionStorage.getItem('shop_sort') || propSortBy || 'featured';
   });
 
   const sortBy = propSortBy !== undefined ? propSortBy : internalSortBy;
@@ -197,13 +198,13 @@ export const ShopPage = ({
 
   // Sync URL search params and sessionStorage on mount / URL changes
   useEffect(() => {
-    const brandParam = searchParams.get('brand') || sessionStorage.getItem('shop_brand_filter');
-    const catParam = searchParams.get('category') || sessionStorage.getItem('shop_category_filter');
-    const powerParam = searchParams.get('power') || sessionStorage.getItem('shop_power_filter');
-    const priceParam = searchParams.get('price') || sessionStorage.getItem('shop_price_filter');
-    const minPriceParam = searchParams.get('minPrice') || sessionStorage.getItem('shop_minPrice_filter');
-    const maxPriceParam = searchParams.get('maxPrice') || sessionStorage.getItem('shop_maxPrice_filter');
-    const inStockParam = searchParams.get('inStock') ?? sessionStorage.getItem('shop_inStock_filter');
+    const brandParam = searchParams.get('brand') || safeSessionStorage.getItem('shop_brand_filter');
+    const catParam = searchParams.get('category') || safeSessionStorage.getItem('shop_category_filter');
+    const powerParam = searchParams.get('power') || safeSessionStorage.getItem('shop_power_filter');
+    const priceParam = searchParams.get('price') || safeSessionStorage.getItem('shop_price_filter');
+    const minPriceParam = searchParams.get('minPrice') || safeSessionStorage.getItem('shop_minPrice_filter');
+    const maxPriceParam = searchParams.get('maxPrice') || safeSessionStorage.getItem('shop_maxPrice_filter');
+    const inStockParam = searchParams.get('inStock') ?? safeSessionStorage.getItem('shop_inStock_filter');
 
     if (brandParam) setActiveBrand(brandParam);
     else setActiveBrand('all');
@@ -239,7 +240,7 @@ export const ShopPage = ({
       setInStockOnly(false);
     }
 
-    const sortParam = searchParams.get('sort') || sessionStorage.getItem('shop_sort');
+    const sortParam = searchParams.get('sort') || safeSessionStorage.getItem('shop_sort');
     if (sortParam && ['featured', 'price-low', 'price-high'].includes(sortParam)) {
       setInternalSortBy(sortParam);
       if (typeof propSetSortBy === 'function') {
@@ -458,14 +459,14 @@ export const ShopPage = ({
     setBrandSearch('');
     setCategorySearch('');
     try {
-      sessionStorage.removeItem('shop_brand_filter');
-      sessionStorage.removeItem('shop_category_filter');
-      sessionStorage.removeItem('shop_power_filter');
-      sessionStorage.removeItem('shop_price_filter');
-      sessionStorage.removeItem('shop_minPrice_filter');
-      sessionStorage.removeItem('shop_maxPrice_filter');
-      sessionStorage.removeItem('shop_inStock_filter');
-      sessionStorage.removeItem('shop_sort');
+      safeSessionStorage.removeItem('shop_brand_filter');
+      safeSessionStorage.removeItem('shop_category_filter');
+      safeSessionStorage.removeItem('shop_power_filter');
+      safeSessionStorage.removeItem('shop_price_filter');
+      safeSessionStorage.removeItem('shop_minPrice_filter');
+      safeSessionStorage.removeItem('shop_maxPrice_filter');
+      safeSessionStorage.removeItem('shop_inStock_filter');
+      safeSessionStorage.removeItem('shop_sort');
     } catch (e) {}
     setSearchParams({});
   };
@@ -477,8 +478,8 @@ export const ShopPage = ({
     let savedProdId = null;
     let savedScrollPos = null;
     try {
-      savedProdId = sessionStorage.getItem('shop_last_product_id');
-      savedScrollPos = sessionStorage.getItem('shop_scroll_pos');
+      savedProdId = safeSessionStorage.getItem('shop_last_product_id');
+      savedScrollPos = safeSessionStorage.getItem('shop_scroll_pos');
     } catch (e) {}
 
     if (!savedProdId && !savedScrollPos) return;
@@ -517,8 +518,8 @@ export const ShopPage = ({
         }, 1200);
 
         try {
-          sessionStorage.removeItem('shop_last_product_id');
-          sessionStorage.removeItem('shop_scroll_pos');
+          safeSessionStorage.removeItem('shop_last_product_id');
+          safeSessionStorage.removeItem('shop_scroll_pos');
         } catch (e) {}
       } else if (attempts < maxAttempts) {
         setTimeout(performScroll, 50);
@@ -528,8 +529,8 @@ export const ShopPage = ({
           window.scrollTo({ top: y, behavior: 'auto' });
         }
         try {
-          sessionStorage.removeItem('shop_last_product_id');
-          sessionStorage.removeItem('shop_scroll_pos');
+          safeSessionStorage.removeItem('shop_last_product_id');
+          safeSessionStorage.removeItem('shop_scroll_pos');
         } catch (e) {}
       }
     };

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../services/api';
 import { useAuth } from './AuthContext';
+import { safeLocalStorage, safeSessionStorage } from '../utils/safeStorage';
 
 const CartContext = createContext();
 
@@ -10,7 +11,7 @@ export const CartProvider = ({ children }) => {
 
   const [cart, setCart] = useState(() => {
     try {
-      const saved = localStorage.getItem('vpt_cart');
+      const saved = safeLocalStorage.getItem('vpt_cart');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -27,7 +28,7 @@ export const CartProvider = ({ children }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [deliveryType, setDeliveryType] = useState(() => {
     try {
-      const saved = localStorage.getItem('vpt_delivery_type');
+      const saved = safeLocalStorage.getItem('vpt_delivery_type');
       return saved === 'store-pickup' ? 'store-pickup' : 'kerala-courier';
     } catch {
       return 'kerala-courier';
@@ -41,7 +42,7 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('vpt_delivery_type', deliveryType);
+      safeLocalStorage.setItem('vpt_delivery_type', deliveryType);
     } catch {}
   }, [deliveryType]);
 
@@ -89,13 +90,13 @@ export const CartProvider = ({ children }) => {
               const merged = mergeCarts(cloudCart, localCart);
               cartRef.current = merged;
               setCart(merged);
-              try { localStorage.setItem('vpt_cart', JSON.stringify(merged)); } catch {}
+              try { safeLocalStorage.setItem('vpt_cart', JSON.stringify(merged)); } catch {}
               api.saveCustomerCart(merged).catch(() => {});
             } else if (cloudCart.length > 0 && localCart.length === 0) {
               // Cloud has items, local was empty: restore cloud cart
               cartRef.current = cloudCart;
               setCart(cloudCart);
-              try { localStorage.setItem('vpt_cart', JSON.stringify(cloudCart)); } catch {}
+              try { safeLocalStorage.setItem('vpt_cart', JSON.stringify(cloudCart)); } catch {}
             } else if (localCart.length > 0 && cloudCart.length === 0) {
               // Local cart has items, cloud was empty: keep local and sync to cloud
               api.saveCustomerCart(localCart).catch(() => {});
@@ -119,13 +120,13 @@ export const CartProvider = ({ children }) => {
   // Keep localStorage continuously updated whenever cart changes
   useEffect(() => {
     try {
-      localStorage.setItem('vpt_cart', JSON.stringify(cart));
+      safeLocalStorage.setItem('vpt_cart', JSON.stringify(cart));
     } catch {}
   }, [cart]);
 
   useEffect(() => {
     try {
-      localStorage.removeItem('vpt_redeemed_coupons');
+      safeLocalStorage.removeItem('vpt_redeemed_coupons');
     } catch {}
   }, []);
 
@@ -207,7 +208,7 @@ export const CartProvider = ({ children }) => {
     setCart(nextCart);
 
     try {
-      localStorage.setItem('vpt_cart', JSON.stringify(nextCart));
+      safeLocalStorage.setItem('vpt_cart', JSON.stringify(nextCart));
     } catch {}
 
     if (token && isCustomer) {
@@ -243,7 +244,7 @@ export const CartProvider = ({ children }) => {
     setCart(nextCart);
 
     try {
-      localStorage.setItem('vpt_cart', JSON.stringify(nextCart));
+      safeLocalStorage.setItem('vpt_cart', JSON.stringify(nextCart));
     } catch {}
 
     if (token && isCustomer) {
@@ -260,7 +261,7 @@ export const CartProvider = ({ children }) => {
     setCart(nextCart);
 
     try {
-      localStorage.setItem('vpt_cart', JSON.stringify(nextCart));
+      safeLocalStorage.setItem('vpt_cart', JSON.stringify(nextCart));
     } catch {}
 
     showToast("Item removed from cart");
@@ -274,7 +275,7 @@ export const CartProvider = ({ children }) => {
     cartRef.current = [];
     setCart([]);
     try {
-      localStorage.removeItem('vpt_cart');
+      safeLocalStorage.removeItem('vpt_cart');
     } catch {}
     setCouponCode('');
     setAppliedDiscount(0);
@@ -293,7 +294,7 @@ export const CartProvider = ({ children }) => {
     if (cartSum > 0) return cartSum;
 
     try {
-      const bn = sessionStorage.getItem('vpt_buy_now');
+      const bn = safeSessionStorage.getItem('vpt_buy_now');
       if (bn) {
         const parsed = JSON.parse(bn);
         if (parsed && typeof parsed === 'object') {
@@ -463,7 +464,7 @@ export const CartProvider = ({ children }) => {
     let hasBuyNow = false;
     let buyNowSubtotal = 0;
     try {
-      const bn = sessionStorage.getItem('vpt_buy_now');
+      const bn = safeSessionStorage.getItem('vpt_buy_now');
       if (bn) {
         const parsed = JSON.parse(bn);
         if (parsed && typeof parsed === 'object') {

@@ -15,6 +15,7 @@ import SlideCommit from '../components/SlideCommit';
 import CodeSlots from '../components/CodeSlots';
 import { COURIER_PARTNERS } from '../utils/courierPartners';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
+import { safeSessionStorage } from '../utils/safeStorage';
 
 const KERALA_DISTRICTS = [
   'Pathanamthitta',
@@ -42,14 +43,14 @@ export const CheckoutPage = () => {
   // Their saved cart items in CartContext remain completely intact and untouched!
   const [buyNowItem, setBuyNowItem] = useState(() => {
     if (location.state?.buyNow === false) {
-      try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
+      try { safeSessionStorage.removeItem('vpt_buy_now'); } catch {}
       return null;
     }
     if (location.state?.buyNow && location.state?.item) {
       return location.state.item;
     }
     try {
-      const saved = sessionStorage.getItem('vpt_buy_now');
+      const saved = safeSessionStorage.getItem('vpt_buy_now');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -129,7 +130,7 @@ export const CheckoutPage = () => {
       const updated = { ...buyNowItem, quantity: safeQty };
       setBuyNowItem(updated);
       try {
-        sessionStorage.setItem('vpt_buy_now', JSON.stringify(updated));
+        safeSessionStorage.setItem('vpt_buy_now', JSON.stringify(updated));
       } catch {}
     } else {
       updateCartQuantity(itemId, newQty);
@@ -140,7 +141,7 @@ export const CheckoutPage = () => {
     if (isBuyNow) {
       setBuyNowItem(null);
       try {
-        sessionStorage.removeItem('vpt_buy_now');
+        safeSessionStorage.removeItem('vpt_buy_now');
       } catch {}
       navigate('/shop');
     } else {
@@ -1191,7 +1192,7 @@ export const CheckoutPage = () => {
                   if (document.body) document.body.scrollTop = 0;
                   setCompletedOrder(verifyRes.data);
                   if (isBuyNow) {
-                    try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
+                    try { safeSessionStorage.removeItem('vpt_buy_now'); } catch {}
                   } else {
                     clearCart();
                   }
@@ -1253,7 +1254,7 @@ export const CheckoutPage = () => {
       if (document.body) document.body.scrollTop = 0;
       setCompletedOrder(result.data);
       if (isBuyNow) {
-        try { sessionStorage.removeItem('vpt_buy_now'); } catch {}
+        try { safeSessionStorage.removeItem('vpt_buy_now'); } catch {}
       } else {
         clearCart();
       }

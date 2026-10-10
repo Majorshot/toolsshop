@@ -7,6 +7,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { useSafeNavigate } from '../context/NavigationContext';
 import { getOptimizedImageUrl } from '../utils/imageOptimizer';
+import { safeSessionStorage } from '../utils/safeStorage';
 
 // Helper to style highlight badges into attractive storefront pills
 export const getBadgeConfig = (badge) => {
@@ -110,9 +111,9 @@ export const ProductCard = ({ product, onSelectProduct, isPreview = false }) => 
 
     try {
       if (prodKey) {
-        sessionStorage.setItem('shop_last_product_id', String(prodKey));
+        safeSessionStorage.setItem('shop_last_product_id', String(prodKey));
       }
-      sessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
+      safeSessionStorage.setItem('shop_scroll_pos', String(window.scrollY || window.pageYOffset || 0));
     } catch (e) { }
 
     if (onSelectProduct) {

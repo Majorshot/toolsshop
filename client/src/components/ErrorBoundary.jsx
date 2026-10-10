@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, Home, ChevronDown, ChevronUp } from 'lucide-react';
+import { safeSessionStorage } from '../utils/safeStorage';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -30,15 +31,19 @@ export class ErrorBoundary extends React.Component {
       errorString.includes('syntaxerror');
 
     if (isChunkLoadFailed) {
-      const reloadKey = 'vpt_auto_chunk_reload';
-      const lastReload = sessionStorage.getItem(reloadKey);
-      const now = Date.now();
+      try {
+        const reloadKey = 'vpt_auto_chunk_reload';
+        const lastReload = safeSessionStorage.getItem(reloadKey);
+        const now = Date.now();
 
-      // Only auto-reload if we haven't done so in the last 10 seconds (prevents reload loop)
-      if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-        sessionStorage.setItem(reloadKey, String(now));
-        console.warn('Detected stale chunk after deployment. Auto-reloading page to fetch latest build...');
-        window.location.reload();
+        // Only auto-reload if we haven't done so in the last 10 seconds (prevents reload loop)
+        if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+          safeSessionStorage.setItem(reloadKey, String(now));
+          console.warn('Detected stale chunk after deployment. Auto-reloading page to fetch latest build...');
+          window.location.reload();
+        }
+      } catch (e) {
+        console.warn('Error in ErrorBoundary chunk auto-reload:', e);
       }
     }
   }

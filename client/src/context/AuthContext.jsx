@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => {
     try {
-      return localStorage.getItem('vpt_token') || null;
+      return safeLocalStorage.getItem('vpt_token') || null;
     } catch {
       return null;
     }
@@ -14,7 +15,7 @@ export const AuthProvider = ({ children }) => {
 
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('vpt_user');
+      const saved = safeLocalStorage.getItem('vpt_user');
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
@@ -28,7 +29,7 @@ export const AuthProvider = ({ children }) => {
         if (res.success && res.user) {
           setUser(res.user);
           try {
-            localStorage.setItem('vpt_user', JSON.stringify(res.user));
+            safeLocalStorage.setItem('vpt_user', JSON.stringify(res.user));
           } catch {}
         } else {
           // Token invalid or expired
@@ -46,12 +47,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (user) {
       try {
-        localStorage.setItem('vpt_user', JSON.stringify(user));
+        safeLocalStorage.setItem('vpt_user', JSON.stringify(user));
       } catch {}
     } else {
       try {
-        localStorage.removeItem('vpt_user');
-        localStorage.removeItem('vpt_token');
+        safeLocalStorage.removeItem('vpt_user');
+        safeLocalStorage.removeItem('vpt_token');
       } catch {}
     }
   }, [user]);
@@ -62,7 +63,7 @@ export const AuthProvider = ({ children }) => {
     if (res.success && res.user) {
       if (res.token) {
         setToken(res.token);
-        try { localStorage.setItem('vpt_token', res.token); } catch {}
+        try { safeLocalStorage.setItem('vpt_token', res.token); } catch {}
       }
       setUser(res.user);
       return res.user;
@@ -76,7 +77,7 @@ export const AuthProvider = ({ children }) => {
     if (res.success && res.user) {
       if (res.token) {
         setToken(res.token);
-        try { localStorage.setItem('vpt_token', res.token); } catch {}
+        try { safeLocalStorage.setItem('vpt_token', res.token); } catch {}
       }
       setUser(res.user);
       return res.user;
@@ -94,7 +95,7 @@ export const AuthProvider = ({ children }) => {
     if (res.success && res.user) {
       if (res.token) {
         setToken(res.token);
-        try { localStorage.setItem('vpt_token', res.token); } catch {}
+        try { safeLocalStorage.setItem('vpt_token', res.token); } catch {}
       }
       setUser(res.user);
       return res;
@@ -111,8 +112,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     try {
-      localStorage.removeItem('vpt_user');
-      localStorage.removeItem('vpt_token');
+      safeLocalStorage.removeItem('vpt_user');
+      safeLocalStorage.removeItem('vpt_token');
     } catch {}
   };
 
@@ -121,7 +122,7 @@ export const AuthProvider = ({ children }) => {
       if (!prev) return updates;
       const updated = { ...prev, ...updates };
       try {
-        localStorage.setItem('vpt_user', JSON.stringify(updated));
+        safeLocalStorage.setItem('vpt_user', JSON.stringify(updated));
       } catch {}
       return updated;
     });
