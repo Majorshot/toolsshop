@@ -234,7 +234,7 @@ const sendRepairDeliveredWhatsApp = async (job) => {
   if (!job || !job.customerPhone) return;
 
   const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Tool');
-  const statusText = `Delivered and settled in full (${brandModel}). Repaired parts carry warranty. Thank you!`;
+  const statusText = `Delivered and settled in full (${brandModel}). Thank you!`;
 
   return sendStoreNotification(job.customerPhone, job.customerName, job.jobId, statusText);
 };
