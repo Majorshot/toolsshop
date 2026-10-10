@@ -5,9 +5,8 @@ const getPhoneNumberId = () => process.env.WHATSAPP_PHONE_NUMBER_ID || '13528120
 const getAccessToken = () => process.env.WHATSAPP_ACCESS_TOKEN;
 
 /**
- * Clean and format Indian phone number to international E.164 without '+'
+ * Format Indian phone number to international E.164 without '+'
  * e.g., '6238270613' -> '916238270613'
- * e.g., '+91 94475 59333' -> '919447559333'
  */
 const formatPhoneNumber = (phone) => {
   if (!phone) return null;
@@ -15,7 +14,7 @@ const formatPhoneNumber = (phone) => {
   if (clean.length === 10) {
     clean = '91' + clean;
   } else if (clean.length === 12 && clean.startsWith('91')) {
-    // Already good
+    // Already formatted
   } else if (clean.startsWith('0') && clean.length === 11) {
     clean = '91' + clean.slice(1);
   }
@@ -23,9 +22,9 @@ const formatPhoneNumber = (phone) => {
 };
 
 /**
- * Send a WhatsApp message via Meta Cloud API
+ * Core function: Sends your approved Meta Template (Bypasses 24-hr restriction!)
  */
-const sendWhatsAppMessage = (toPhone, messageBody) => {
+const sendWhatsAppTemplate = (toPhone, templateName = 'store_update', languageCode = 'en_US', parameters = []) => {
   return new Promise((resolve, reject) => {
     const formattedPhone = formatPhoneNumber(toPhone);
     if (!formattedPhone) {
@@ -36,49 +35,66 @@ const sendWhatsAppMessage = (toPhone, messageBody) => {
     const phoneId = getPhoneNumberId();
 
     if (!token) {
-      console.warn('[WhatsApp Service] WHATSAPP_ACCESS_TOKEN is missing. Skipping message dispatch.');
+      console.warn('[WhatsApp Service] WHATSAPP_ACCESS_TOKEN is missing.');
       return resolve({ skipped: true, reason: 'Token missing' });
+    }
+
+    const templateObj = {
+      name: templateName,
+      language: { code: languageCode }
+    };
+
+    if (Array.isArray(parameters) && parameters.length > 0) {
+      templateObj.components = [
+        {
+          type: 'body',
+          parameters: parameters.map((val) => ({
+            type: 'text',
+            text: String(val ?? '')
+          }))
+        }
+      ];
     }
 
     const payload = JSON.stringify({
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
       to: formattedPhone,
-      type: 'text',
-      text: {
-        preview_url: false,
-        body: messageBody
-      }
+      type: 'template',
+      template: templateObj
     });
 
-    const req = https.request({
-      hostname: 'graph.facebook.com',
-      path: `/v22.0/${phoneId}/messages`,
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload)
-      }
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log(`[WhatsApp Service] ✅ Message sent to ${formattedPhone} (Message ID: ${parsed.messages?.[0]?.id || 'N/A'})`);
-            resolve(parsed);
-          } else {
-            console.warn(`[WhatsApp Service] ⚠️ Meta API notice (${res.statusCode}):`, parsed.error?.message || data);
-            resolve({ error: parsed.error || data });
-          }
-        } catch (err) {
-          console.warn('[WhatsApp Service] Parse error:', err.message);
-          resolve({ raw: data });
+    const req = https.request(
+      {
+        hostname: 'graph.facebook.com',
+        path: `/v22.0/${phoneId}/messages`,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
         }
-      });
-    });
+      },
+      (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              console.log(`[WhatsApp Service] ✅ Notification sent to ${formattedPhone} (ID: ${parsed.messages?.[0]?.id || 'N/A'})`);
+              resolve(parsed);
+            } else {
+              console.warn(`[WhatsApp Service] ⚠️ Meta API Error (${res.statusCode}):`, parsed.error?.message || data);
+              resolve({ error: parsed.error || data });
+            }
+          } catch (err) {
+            console.warn('[WhatsApp Service] Parse error:', err.message);
+            resolve({ raw: data });
+          }
+        });
+      }
+    );
 
     req.on('error', (err) => {
       console.error('[WhatsApp Service] Request error:', err.message);
@@ -91,41 +107,22 @@ const sendWhatsAppMessage = (toPhone, messageBody) => {
 };
 
 /**
- * 1. Send Order Confirmation WhatsApp
+ * Universal helper that sends your notification via the approved 'store_update' template
+ * {{1}} = Customer Name
+ * {{2}} = Main Header / Title
+ * {{3}} = Details / Bill / OTP / Tracking
  */
-const sendOrderConfirmationWhatsApp = async (order) => {
-  if (!order || !order.customer?.phone) return;
-
-  const itemsList = (order.items || [])
-    .map((item, idx) => `${idx + 1}. *${item.name || item.title}* (Qty: ${item.quantity || 1}) - ₹${item.price}`)
-    .join('\n');
-
-  const recipientPart = order.customer?.recipientName && order.customer.recipientName !== order.customer.name
-    ? `👤 *Delivery Recipient:* *${order.customer.recipientName}*${order.customer.recipientPhone ? ` (📞 ${order.customer.recipientPhone})` : ''}\n`
-    : (order.customer?.recipientPhone && order.customer.recipientPhone !== order.customer.phone ? `📞 *Delivery Contact:* *${order.customer.recipientPhone}*\n` : '');
-
-  const deliveryNotice = order.deliveryType === 'store-pickup'
-    ? `🏬 *Pickup Location:* Poyanil Building, Kozhencherry\n🔐 *Your Pickup OTP:* *${order.pickupOtp || '4819'}*\n_Please present this 4-digit code at the store counter to collect your tools._`
-    : `🚚 *Delivery Method:* Courier Express Delivery\n${recipientPart}📍 *Deliver To:* ${order.customer?.address || ''}, ${order.customer?.city || order.customer?.district || 'Kerala'} - PIN: ${order.customer?.pincode || ''}`;
-
-  const message = `🛠️ *VARIATHU POWER TOOLS*
-*Order Confirmed!*
-
-Dear *${order.customer?.name || 'Valued Customer'}*,
-Thank you for your order with Variathu Power Tools, Kozhencherry.
-
-📋 *Order ID:* *${order.id}*
-💰 *Total Amount:* *₹${order.totalAmount}* (${order.paymentStatus === 'PAID' ? '✅ Paid Online' : '💵 Cash on Delivery'})
-
-📦 *Ordered Items:*
-${itemsList}
-
-${deliveryNotice}
-
-📞 Need assistance? Call our showroom at *+91 94475 59333*.
-🌐 Visit: https://variathupowertools.com`;
-
-  return sendWhatsAppMessage(order.customer.phone, message);
+const sendStoreNotification = (phone, customerName, mainUpdate, details) => {
+  return sendWhatsAppTemplate(
+    phone,
+    'store_update',
+    'en_US',
+    [
+      customerName || 'Valued Customer',
+      mainUpdate,
+      details
+    ]
+  );
 };
 
 const resolveCourierTracking = (courierName = '', awb = '') => {
@@ -133,333 +130,150 @@ const resolveCourierTracking = (courierName = '', awb = '') => {
   const cleanAwb = String(awb || '').trim();
 
   if (c.includes('delh')) {
-    return {
-      name: 'Delhivery',
-      badge: 'DELHIVERY',
-      trackingUrl: cleanAwb ? `https://www.delhivery.com/tracking?tracking_id=${encodeURIComponent(cleanAwb)}` : 'https://www.delhivery.com/'
-    };
+    return { name: 'Delhivery', trackingUrl: cleanAwb ? `https://www.delhivery.com/tracking?tracking_id=${encodeURIComponent(cleanAwb)}` : 'https://www.delhivery.com/' };
   }
   if (c.includes('alep') || c.includes('allep') || c.includes('aps')) {
-    return {
-      name: 'Alleppey Parcel Service (APS Cargo)',
-      badge: 'APS',
-      trackingUrl: 'https://www.apscargo.com/index'
-    };
+    return { name: 'Alleppey Parcel Service (APS Cargo)', trackingUrl: 'https://www.apscargo.com/index' };
   }
   if (c.includes('prof') || c.includes('tpc')) {
-    return {
-      name: 'The Professional Couriers',
-      badge: 'TPC',
-      trackingUrl: 'https://www.tpcindia.com/'
-    };
+    return { name: 'The Professional Couriers', trackingUrl: 'https://www.tpcindia.com/' };
   }
-  return {
-    name: 'DTDC Express',
-    badge: 'DTDC',
-    trackingUrl: 'https://www.dtdc.com/track-your-shipment/'
-  };
+  return { name: 'DTDC Express', trackingUrl: 'https://www.dtdc.com/track-your-shipment/' };
 };
 
 /**
- * 2. Send Order Dispatched via Courier WhatsApp
+ * 1. Order Confirmed
+ */
+const sendOrderConfirmationWhatsApp = async (order) => {
+  if (!order || !order.customer?.phone) return;
+
+  const header = `Your order #${order.id} has been confirmed! Total Amount: ₹${order.totalAmount} (${order.paymentStatus === 'PAID' ? 'Paid Online' : 'COD'}).`;
+  const details = order.deliveryType === 'store-pickup'
+    ? `🏬 Showroom Pickup: Poyanil Building, Kozhencherry. 🔐 Pickup OTP: ${order.pickupOtp || '4819'}`
+    : `🚚 Courier Delivery to ${order.customer?.city || 'Kerala'} - PIN: ${order.customer?.pincode || ''}`;
+
+  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
+};
+
+/**
+ * 2. Order Dispatched
  */
 const sendOrderDispatchedWhatsApp = async (order, courierPartner, awb) => {
   if (!order || !order.customer?.phone) return;
 
   const rawPartner = courierPartner || order.courierPartner || 'DTDC Express';
   const trackingNumber = awb || order.awb || 'Assigned at Hub';
-  const consigneeName = order.customer?.recipientName || order.customer?.name || 'Customer';
-  const consigneePhone = order.customer?.recipientPhone || order.customer?.phone || '';
-
   const courierInfo = resolveCourierTracking(rawPartner, trackingNumber);
 
-  const message = `🚚 *VARIATHU POWER TOOLS*
-*Your Order is on the Way!*
+  const header = `Your order #${order.id} has been packed & dispatched from our Kozhencherry store!`;
+  const details = `📦 Courier: ${courierInfo.name} | AWB: ${trackingNumber}\n🔗 Track: ${courierInfo.trackingUrl}`;
 
-Dear *${order.customer?.name || 'Customer'}*,
-Great news! Your order *#${order.id}* has been packed and dispatched from our Kozhencherry store.
-
-📦 *Delivery Partner:* *${courierInfo.name}*
-🔖 *Consignment / AWB No:* *${trackingNumber}*
-🔗 *Track Your Parcel Live:*
-${courierInfo.trackingUrl}
-
-👤 *Consignee:* *${consigneeName}*${consigneePhone && consigneePhone !== order.customer?.phone ? ` (📞 ${consigneePhone})` : ''}
-📍 *Destination:* ${order.customer?.city || order.customer?.district || 'Kerala'} - PIN: ${order.customer?.pincode || '689641'}
-
-You can track your package movement directly on ${courierInfo.name}'s official portal using your AWB number above.
-
-Thank you for choosing Variathu Power Tools!
-📞 Showroom Hotline: *+91 94475 59333*
-🌐 Store: https://toolsshop-pied.vercel.app`;
-
-  return sendWhatsAppMessage(order.customer.phone, message);
+  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
 };
 
 /**
- * 3. Send Ready for Store Pickup WhatsApp
+ * 3. Pickup Ready with OTP
  */
 const sendPickupReadyWhatsApp = async (order) => {
   if (!order || !order.customer?.phone) return;
 
-  const message = `🏬 *VARIATHU POWER TOOLS*
-*Ready for Counter Collection!*
+  const header = `Your power tools for order #${order.id} are tested, packed, and waiting at our showroom counter!`;
+  const details = `🏢 Poyanil Building, Kozhencherry.\n🔐 YOUR SECRET HANDOVER OTP: ${order.pickupOtp || '4819'}`;
 
-Dear *${order.customer?.name || 'Customer'}*,
-Your power tools for order *${order.id}* are tested, packed, and waiting for you at our showroom counter!
-
-🏢 *Collection Address:*
-Variathu Power Tools
-Poyanil Building, Kozhencherry, Pathanamthitta, Kerala
-
-🔐 *Your Counter Handover OTP:* *${order.pickupOtp || '4819'}*
-_Show this 4-digit code to our store executive to collect your tools._
-
-⏱️ *Store Timings:* 8:00 AM - 8:00 PM (Mon - Sat)
-📍 *Location Map:* https://maps.app.goo.gl/YXTeLEdnMQkeNWjK8
-📞 Helpdesk: *+91 94475 59333*`;
-
-  return sendWhatsAppMessage(order.customer.phone, message);
+  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
 };
 
 /**
- * 4. Send Order Cancelled & Refunded WhatsApp
+ * 4. Order Cancelled
  */
 const sendOrderCancelledWhatsApp = async (order, reason) => {
   if (!order || !order.customer?.phone) return;
 
-  const isRefunded = order.paymentStatus === 'REFUNDED';
+  const header = `Your order #${order.id} has been cancelled. Reason: ${reason || 'Customer request'}.`;
+  const details = order.paymentStatus === 'REFUNDED'
+    ? `💳 Refund of ₹${order.totalAmount} initiated to your account.`
+    : `If this was an error, please contact our helpdesk.`;
 
-  const message = `❌ *VARIATHU POWER TOOLS*
-*Order Cancellation Notice*
-
-Dear *${order.customer?.name || 'Customer'}*,
-Your order *${order.id}* has been cancelled.
-
-📝 *Reason:* ${reason || 'Customer request'}
-${isRefunded ? `💳 *Refund Status:* *₹${order.totalAmount}* has been refunded back to your original payment account (${order.refundId || 'UPI'}). It will reflect in your bank account in 1-3 business days.` : ''}
-
-If you have any questions or this was done in error, please call our support desk at *+91 94475 59333*.`;
-
-  return sendWhatsAppMessage(order.customer.phone, message);
+  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
 };
 
 /**
- * 5. Send Order Delivered / Completed WhatsApp
+ * 5. Order Completed
  */
 const sendOrderCompletedWhatsApp = async (order) => {
   if (!order || !order.customer?.phone) return;
 
-  const isPickup = order.deliveryType === 'store-pickup';
-  const courierInfo = !isPickup && order.courierPartner ? resolveCourierTracking(order.courierPartner, order.awb) : null;
-  const message = `✅ *VARIATHU POWER TOOLS*
-*Order Completed* 📦
+  const header = `Your order #${order.id} has been successfully completed and received!`;
+  const details = `Total: ₹${order.totalAmount}. Thank you for choosing Variathu Power Tools!`;
 
-Dear *${order.customer?.name || 'Customer'}*,
-Your order *#${order.id}* has been successfully ${isPickup ? 'collected from our showroom counter' : `delivered to your destination address via ${courierInfo?.name || order.courierPartner || 'Courier'}`}.
-
-💼 *Order Details:*
-• Total Amount: *₹${order.totalAmount}*
-${order.awb ? `• Delivery Partner: *${courierInfo?.name || order.courierPartner}*\n• Courier AWB: *${order.awb}*\n• Tracking Portal: ${courierInfo?.trackingUrl || 'https://www.dtdc.com/track-your-shipment/'}\n` : ''}
-Your official GST tax invoice and manufacturer warranty records are saved in your account. Thank you for choosing Variathu Power Tools!
-
-📞 Showroom Support: *+91 94475 59333*
-🌐 Store: https://toolsshop-pied.vercel.app`;
-
-  return sendWhatsAppMessage(order.customer.phone, message);
+  return sendStoreNotification(order.customer.phone, order.customer?.name, header, details);
 };
 
 /**
- * 6. Send Workshop Repair Ticket Created WhatsApp
+ * 6. Repair Ticket Created
  */
 const sendRepairTicketCreatedWhatsApp = async (job) => {
   if (!job || !job.customerPhone) return;
 
   const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
-  const estCost = Number(job.estimatedCost || 0);
-  const advance = Number(job.advancePaid || 0);
+  const header = `Repair ticket logged for your machine: ${brandModel} (Ticket: ${job.jobId}).`;
+  const details = `Issue: ${job.issueDescription || 'Inspection'}. Estimated Cost: ₹${job.estimatedCost || 0}. Technician inspecting now.`;
 
-  const message = `🔧 *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
-*Repair Job Ticket Logged* 📋
-
-Dear *${job.customerName || 'Valued Customer'}*,
-We have received your machine for servicing & repair at our Kozhencherry workshop clinic.
-
-🏷️ *Ticket ID:* *${job.jobId}*${job.jobCardNumber ? `\n📑 *Job Card No:* *${job.jobCardNumber}*` : ''}
-⚙️ *Tool Model:* *${brandModel}*
-${job.serialNumber ? `🔖 *Serial No:* ${job.serialNumber}\n` : ''}⚠️ *Reported Issue:* ${job.issueDescription || 'Inspection / Servicing'}
-${estCost > 0 ? `💰 *Estimated Bill:* ₹${estCost.toLocaleString('en-IN')}\n` : ''}${advance > 0 ? `💵 *Advance Paid:* ₹${advance.toLocaleString('en-IN')}\n` : ''}
-Our technician is inspecting your machine. You will automatically receive a WhatsApp message with your collection OTP once your tool is repaired, safety-tested, and ready for pickup!
-
-🏢 *Workshop Location:*
-Variathu Power Tools
-Poyanil Building, Kozhencherry, Pathanamthitta
-📞 Helpline: *+91 94475 59333*`;
-
-  return sendWhatsAppMessage(job.customerPhone, message);
+  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
 };
 
 /**
- * 7. Send Workshop Repair Ready with OTP WhatsApp
+ * 7. Repair Ready with OTP
  */
 const sendRepairReadyWhatsApp = async (job) => {
   if (!job || !job.customerPhone) return;
 
   const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
   const finalBill = Number(job.finalCost || job.estimatedCost || 0);
-  const advance = Number(job.advancePaid || 0);
-  const balance = Math.max(0, finalBill - advance);
 
-  const message = `✅ *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
-*Your Tool is Repaired & Ready for Collection!* 🛠️
+  const header = `Great news! Your ${brandModel} (Ticket: ${job.jobId}) is repaired and ready for pickup!`;
+  const details = `💰 Bill: ₹${finalBill.toLocaleString('en-IN')}.\n🔐 YOUR COUNTER COLLECTION OTP: ${job.handoverOtp || '4819'}. Show this at the counter.`;
 
-Dear *${job.customerName || 'Customer'}*,
-Great news! Your power tool has been thoroughly repaired, safety-tested, and is ready for pickup at our showroom counter.
-
-🏷️ *Ticket ID:* *${job.jobId}*${job.jobCardNumber ? `\n📑 *Job Card No:* *${job.jobCardNumber}*` : ''}
-⚙️ *Equipment:* *${brandModel}*
-${job.technicianNotes ? `📝 *Work Done:* ${job.technicianNotes}\n` : ''}💰 *Total Bill:* ₹${finalBill.toLocaleString('en-IN')}${advance > 0 ? ` (Advance Paid: ₹${advance.toLocaleString('en-IN')})` : ''}
-${balance > 0 ? `💵 *Balance to Pay at Counter:* *₹${balance.toLocaleString('en-IN')}*\n` : ''}
-🔐 *YOUR SECRET COLLECTION OTP:* *${job.handoverOtp || '4819'}*
-_Please show this 4-digit code to our store counter executive to collect your machine._
-
-🏢 *Collection Counter:*
-Variathu Power Tools
-Poyanil Building, Poyanil Junction, Kozhencherry, Kerala
-⏱️ *Hours:* 8:00 AM - 8:00 PM (Mon - Sat)
-📞 Helpdesk: *+91 94475 59333*`;
-
-  return sendWhatsAppMessage(job.customerPhone, message);
+  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
 };
 
 /**
- * 8. Send Workshop Repair Completed / Handed Over Receipt WhatsApp
+ * 8. Repair Completed / Delivered
  */
 const sendRepairDeliveredWhatsApp = async (job) => {
   if (!job || !job.customerPhone) return;
 
   const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
-  const finalBill = Number(job.finalCost || job.estimatedCost || 0);
-  const advance = Number(job.advancePaid || 0);
-  const balance = Math.max(0, finalBill - advance);
+  const header = `Service receipt: Your machine ${brandModel} (Ticket: ${job.jobId}) was handed over!`;
+  const details = `Bill settled in full. All replaced parts carry our workshop guarantee. Thank you!`;
 
-  const message = `✅ *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
-*Tool Handover & Service Receipt* 🛠️
-
-Dear *${job.customerName || 'Valued Customer'}*,
-Your power tool has been successfully tested and collected from our showroom counter!
-
-🏷️ *Ticket ID:* *${job.jobId}*${job.jobCardNumber ? `\n📑 *Job Card No:* *${job.jobCardNumber}*` : ''}
-⚙️ *Machine:* *${brandModel}*
-${job.serialNumber ? `🔖 *Serial No:* ${job.serialNumber}\n` : ''}📅 *Handover Date:* ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-
-💰 *Billing Summary:*
-• Total Service Bill: ₹${finalBill.toLocaleString('en-IN')}
-${advance > 0 ? `• Advance Paid: ₹${advance.toLocaleString('en-IN')}\n` : ''}${balance > 0 ? `• Balance Paid at Counter: ₹${balance.toLocaleString('en-IN')} (Settled)\n` : '• Payment Status: Paid in full\n'}
-🛡️ *Workshop Service Guarantee:*
-All armature rewinding and replaced spare parts carry our workshop service guarantee. Please keep this digital receipt for reference.
-
-📍 Variathu Power Tools, Poyanil Building, Kozhencherry, Kerala
-📞 Need spare parts, carbon brushes, or consumables? Call us: *+91 94475 59333*
-
-Thank you for choosing Variathu Power Tools!`;
-
-  return sendWhatsAppMessage(job.customerPhone, message);
+  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
 };
 
 /**
- * 9. Send Workshop Repair Estimate & Additional Parts Update WhatsApp
+ * 9. Repair Estimate Updated
  */
 const sendRepairEstimateUpdatedWhatsApp = async (job, prevCost) => {
   if (!job || !job.customerPhone) return;
 
   const brandModel = (job.toolBrand ? `${job.toolBrand} ` : '') + (job.toolModel || 'Equipment');
-  const currentCost = Number(job.finalCost || job.estimatedCost || 0);
-  const prevNumber = Number(prevCost || 0);
-  const advance = Number(job.advancePaid || 0);
-  const balance = Math.max(0, currentCost - advance);
+  const header = `Technical diagnosis update for ${brandModel} (Ticket: ${job.jobId}).`;
+  const details = `Revised Estimate: ₹${job.finalCost || job.estimatedCost || 0}. Work: ${job.technicianNotes || 'Parts update'}.`;
 
-  const message = `🔧 *VARIATHU POWER TOOLS - WORKSHOP CLINIC*
-*Repair Estimate & Service Update* ⚙️
-
-Dear *${job.customerName || 'Valued Customer'}*,
-During technical inspection of your machine (*${brandModel}* - Ticket *${job.jobId}*${job.jobCardNumber ? ` / Job Card *${job.jobCardNumber}*` : ''}), our workshop technician updated the service diagnosis:
-
-${job.technicianNotes ? `📝 *Technician Work / Replaced Parts:*\n${job.technicianNotes}\n\n` : ''}💰 *Billing Breakdown:*
-• Revised Estimate: *₹${currentCost.toLocaleString('en-IN')}*${prevNumber > 0 && prevNumber !== currentCost ? ` (Previous: ₹${prevNumber.toLocaleString('en-IN')})` : ''}
-${advance > 0 ? `• Advance Paid: ₹${advance.toLocaleString('en-IN')}\n` : ''}• Est. Balance at Counter: *₹${balance.toLocaleString('en-IN')}*
-
-Our technician is working on your machine. You will automatically receive your 4-digit collection OTP via WhatsApp once the tool is tested and ready for collection!
-
-🏢 *Workshop Location:*
-Variathu Power Tools, Poyanil Building, Kozhencherry
-📞 Helpline: *+91 94475 59333*`;
-
-  return sendWhatsAppMessage(job.customerPhone, message);
+  return sendStoreNotification(job.customerPhone, job.customerName, header, details);
 };
 
 /**
- * 10. Generate Staff Onboarding / Welcome WhatsApp Text
+ * Fallback raw sender
  */
-const getStaffWelcomeWhatsAppText = ({ staff, password, clientUrl }) => {
-  if (!staff) return '';
-  const baseUrl = clientUrl || process.env.CLIENT_URL || 'http://localhost:3000';
-  const loginUrl = `${baseUrl.replace(/\/$/, '')}/login`;
-
-  let roleTitle = 'Team Member';
-  if (staff.role === 'technician') {
-    roleTitle = 'Workshop Floor Technician';
-  } else if (staff.role === 'workshop_manager') {
-    roleTitle = 'Workshop Manager';
-  } else if (staff.role === 'manager') {
-    roleTitle = 'Store Manager';
-  }
-
-  let message = `🛠️ *VARIATHU POWER TOOLS - EMPLOYEE ONBOARDING*\n`;
-  message += `*Welcome to the Team, ${staff.name}!* 🎉\n\n`;
-  message += `You have been officially registered as a *${roleTitle}* at Variathu Power Tools.\n\n`;
-  message += `📋 *Employee Profile:*\n`;
-  message += `• *Name:* ${staff.name}\n`;
-  message += `• *Role:* ${roleTitle}\n`;
-  if (staff.specialization) {
-    message += `• *Department / Trade:* ${staff.specialization}\n`;
-  }
-  if (staff.phone) {
-    message += `• *Registered Phone:* ${staff.phone}\n`;
-  }
-
-  if (['workshop_manager', 'manager'].includes(staff.role)) {
-    message += `\n🔐 *Your Store Portal Credentials:*\n`;
-    message += `• *Portal URL:* ${loginUrl}\n`;
-    if (staff.email) {
-      message += `• *Login Email:* ${staff.email}\n`;
-    }
-    if (password) {
-      message += `• *Password:* ${password}\n`;
-    }
-    message += `\n_Please sign in and keep your password secure._\n`;
-  } else {
-    message += `\n🧑‍🔧 *Floor Status:*\nYour profile is now live in the workshop inward system. Customer equipment repair tickets assigned to you will track under your name and specialization.\n`;
-  }
-
-  message += `\n📍 *Workshop & Showroom:* Poyanil Building, Kozhencherry\n`;
-  message += `📞 *Admin Office:* +91 94475 59574\n\n`;
-  message += `Welcome aboard! Let's power ahead. ⚡`;
-
-  return message;
-};
-
-/**
- * 11. Send Staff Onboarding / Welcome WhatsApp
- */
-const sendStaffWelcomeWhatsApp = async ({ staff, password, clientUrl }) => {
-  if (!staff || !staff.phone) return { skipped: true, reason: 'No phone number' };
-  const message = getStaffWelcomeWhatsAppText({ staff, password, clientUrl });
-  return sendWhatsAppMessage(staff.phone, message);
+const sendWhatsAppMessage = (toPhone, messageBody) => {
+  return sendStoreNotification(toPhone, 'Customer', 'Important Notice from Variathu Power Tools', messageBody);
 };
 
 module.exports = {
   formatPhoneNumber,
+  sendWhatsAppTemplate,
+  sendStoreNotification,
   sendWhatsAppMessage,
   sendOrderConfirmationWhatsApp,
   sendOrderDispatchedWhatsApp,
@@ -469,9 +283,5 @@ module.exports = {
   sendRepairTicketCreatedWhatsApp,
   sendRepairReadyWhatsApp,
   sendRepairDeliveredWhatsApp,
-  sendRepairEstimateUpdatedWhatsApp,
-  getStaffWelcomeWhatsAppText,
-  sendStaffWelcomeWhatsApp
+  sendRepairEstimateUpdatedWhatsApp
 };
-
-
