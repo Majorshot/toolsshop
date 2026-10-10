@@ -275,7 +275,7 @@ export const PrivacyPolicyModal = ({ isOpen, onClose, initialTab = 'privacy' }) 
                   3. Logistics & Third-Party Sharing
                 </h3>
                 <p style={{ margin: '0 0 10px' }}>
-                  To deliver equipment to your doorstep across Kerala and India, your shipping address and recipient phone number are shared solely with our authorized courier partners:
+                  To deliver equipment to your doorstep across Kerala, your shipping address and recipient phone number are shared solely with our authorized courier partners:
                 </p>
                 <div style={{ background: '#f1f5f9', padding: '12px 16px', borderRadius: '8px', fontSize: '0.85rem' }}>
                   📦 <strong>Integrated Courier Partners:</strong> Delhivery, DTDC Express, The Professional Couriers, and Alleppey Parcel Service (APS). These partners use your contact details solely for package transit and delivery coordination.

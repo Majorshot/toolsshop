@@ -235,7 +235,7 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
 
               {/* Subtitle Description */}
               <p className="hero-pro-desc">
-                Wide range of genuine power tools for professionals and DIY enthusiasts. Best prices, trusted brands, and fast delivery across India.
+                Wide range of genuine power tools for professionals and DIY enthusiasts. Best prices, trusted brands, and fast delivery across Kerala.
               </p>
 
               {/* 4 Feature / Trust Chips (Desktop Row) */}
@@ -293,7 +293,7 @@ export const HomePage = ({ products = [], onSelectProduct }) => {
                 <Truck size={22} />
               </div>
               <div className="hero-pro-delivery-titles">
-                <span className="hero-pro-delivery-lead">We Deliver Across India</span>
+                <span className="hero-pro-delivery-lead">We Deliver Across Kerala</span>
                 <span className="hero-pro-delivery-sub">with Trusted Partners</span>
               </div>
             </div>
