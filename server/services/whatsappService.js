@@ -114,7 +114,6 @@ const sendWhatsAppTemplate = (toPhone, templateName = 'order_repair', languageCo
  * {{3}} = Status & Details
  */
 const sendStoreNotification = (phone, customerName, identifier, statusDetails) => {
-  // Extra safety wrapper to ensure clean string parameters
   const cleanName = String(customerName || 'Valued Customer').replace(/[\r\n]+/g, ' ').trim();
   const cleanId = String(identifier || 'N/A').replace(/[\r\n]+/g, ' ').trim();
   const cleanStatus = String(statusDetails || 'Updated').replace(/[\r\n]+/g, ' ').trim();
@@ -122,7 +121,7 @@ const sendStoreNotification = (phone, customerName, identifier, statusDetails) =
   return sendWhatsAppTemplate(
     phone,
     'order_repair',
-    'en', // Matches default English template language
+    'en',
     [cleanName, cleanId, cleanStatus]
   );
 };
@@ -250,6 +249,17 @@ const sendRepairEstimateUpdatedWhatsApp = async (job, prevCost) => {
 };
 
 /**
+ * 10. Staff Welcome / Credentials Notification
+ */
+const sendStaffWelcomeWhatsApp = async (staff, temporaryPassword) => {
+  if (!staff || !staff.phone) return;
+
+  const statusText = `Welcome to Variathu Powertools! Your staff account has been created. Role: ${staff.role || 'Staff'}. Login email: ${staff.email}. Temp Password: ${temporaryPassword || 'As provided'}. Please change your password upon first login.`;
+
+  return sendStoreNotification(staff.phone, staff.name, staff.role || 'Staff Portal', statusText);
+};
+
+/**
  * Fallback raw sender
  */
 const sendWhatsAppMessage = (toPhone, messageBody) => {
@@ -269,5 +279,6 @@ module.exports = {
   sendRepairTicketCreatedWhatsApp,
   sendRepairReadyWhatsApp,
   sendRepairDeliveredWhatsApp,
-  sendRepairEstimateUpdatedWhatsApp
+  sendRepairEstimateUpdatedWhatsApp,
+  sendStaffWelcomeWhatsApp
 };
