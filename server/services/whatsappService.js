@@ -249,13 +249,19 @@ const sendRepairEstimateUpdatedWhatsApp = async (job, prevCost) => {
 };
 
 /**
- * 10. Staff Welcome / Credentials Notification
+ * 10. Staff Welcome Text Generator
+ */
+const getStaffWelcomeWhatsAppText = (staff, temporaryPassword) => {
+  if (!staff) return '';
+  return `Welcome to Variathu Powertools! Your staff account has been created. Role: ${staff.role || 'Staff'}. Login email: ${staff.email}. Temp Password: ${temporaryPassword || 'As provided'}. Please change your password upon first login.`;
+};
+
+/**
+ * 11. Staff Welcome / Credentials Notification
  */
 const sendStaffWelcomeWhatsApp = async (staff, temporaryPassword) => {
   if (!staff || !staff.phone) return;
-
-  const statusText = `Welcome to Variathu Powertools! Your staff account has been created. Role: ${staff.role || 'Staff'}. Login email: ${staff.email}. Temp Password: ${temporaryPassword || 'As provided'}. Please change your password upon first login.`;
-
+  const statusText = getStaffWelcomeWhatsAppText(staff, temporaryPassword);
   return sendStoreNotification(staff.phone, staff.name, staff.role || 'Staff Portal', statusText);
 };
 
@@ -280,5 +286,6 @@ module.exports = {
   sendRepairReadyWhatsApp,
   sendRepairDeliveredWhatsApp,
   sendRepairEstimateUpdatedWhatsApp,
+  getStaffWelcomeWhatsAppText,
   sendStaffWelcomeWhatsApp
 };
